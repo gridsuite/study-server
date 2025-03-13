@@ -757,7 +757,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         if (prevResultUuid != null) {
-            loadflowService.deleteLoadFlowResult(prevResultUuid);
+            loadflowService.deleteLoadFlowResults(List.of(prevResultUuid));
         }
 
         UUID lfParametersUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
@@ -1108,7 +1108,7 @@ public class StudyService {
 
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
         if (prevResultUuid != null) {
-            securityAnalysisService.deleteSaResult(prevResultUuid);
+            securityAnalysisService.deleteSecurityAnalysisResults(List.of(prevResultUuid));
         }
 
         var runSecurityAnalysisParametersInfos = new RunSecurityAnalysisParametersInfos(study.getSecurityAnalysisParametersUuid(), study.getLoadFlowParametersUuid(), contingencyListNames);
@@ -1611,12 +1611,10 @@ public class StudyService {
                 studyServerExecutionService.runAsync(() -> nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults(invalidateNodeInfos.getNonEvacuatedEnergyResultUuids())),
                 studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getShortCircuitAnalysisResultUuids())),
                 studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
-                //TODO: voltage init, dynamic sim & dynamic security are done differentely: the
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
-
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids().forEach(dynamicSecurityAnalysisService::deleteResult)),
-                studyServerExecutionService.runAsync(() -> invalidateNodeInfos.getStateEstimationResultUuids().forEach(stateEstimationService::deleteStateEstimationResult)),
+                studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(invalidateNodeInfos.getVoltageInitResultUuids())),
+                studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(invalidateNodeInfos.getDynamicSimulationResultUuids())),
+                studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids())),
+                studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(invalidateNodeInfos.getStateEstimationResultUuids())),
                 studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
         );
         try {
@@ -1735,16 +1733,16 @@ public class StudyService {
             CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
                     studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
                     studyServerExecutionService.runAsync(() -> reportService.deleteReports(deleteNodeInfos.getReportUuids())),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getLoadFlowResultUuids().forEach(loadflowService::deleteLoadFlowResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSecurityAnalysisResultUuids().forEach(securityAnalysisService::deleteSaResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getSensitivityAnalysisResultUuids().forEach(sensitivityAnalysisService::deleteSensitivityAnalysisResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getNonEvacuatedEnergyResultUuids().forEach(nonEvacuatedEnergyService::deleteNonEvacuatedEnergyResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids().forEach(shortCircuitService::deleteShortCircuitAnalysisResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVoltageInitResultUuids().forEach(voltageInitService::deleteVoltageInitResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getDynamicSimulationResultUuids().forEach(dynamicSimulationService::deleteResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getDynamicSecurityAnalysisResultUuids().forEach(dynamicSecurityAnalysisService::deleteResult)),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getStateEstimationResultUuids().forEach(stateEstimationService::deleteStateEstimationResult)),
+                    studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(deleteNodeInfos.getLoadFlowResultUuids())),
+                    studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(deleteNodeInfos.getSecurityAnalysisResultUuids())),
+                    studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(deleteNodeInfos.getSensitivityAnalysisResultUuids())),
+                    studyServerExecutionService.runAsync(() -> nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults(deleteNodeInfos.getNonEvacuatedEnergyResultUuids())),
+                    studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getShortCircuitAnalysisResultUuids())),
+                    studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
+                    studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(deleteNodeInfos.getVoltageInitResultUuids())),
+                    studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(deleteNodeInfos.getDynamicSimulationResultUuids())),
+                    studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(deleteNodeInfos.getDynamicSecurityAnalysisResultUuids())),
+                    studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(deleteNodeInfos.getStateEstimationResultUuids())),
                     studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)),
                     studyServerExecutionService.runAsync(() -> removedNodes.forEach(dynamicSimulationEventService::deleteEventsByNodeId))
             );
@@ -2049,7 +2047,7 @@ public class StudyService {
 
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         if (prevResultUuid != null) {
-            sensitivityAnalysisService.deleteSensitivityAnalysisResult(prevResultUuid);
+            sensitivityAnalysisService.deleteSensitivityAnalysisResults(List.of(prevResultUuid));
         }
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
@@ -2069,7 +2067,7 @@ public class StudyService {
         ComputationType computationType = busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS;
         UUID shortCircuitResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, computationType);
         if (shortCircuitResultUuid != null) {
-            shortCircuitService.deleteShortCircuitAnalysisResult(shortCircuitResultUuid);
+            shortCircuitService.deleteShortCircuitAnalysisResults(List.of(shortCircuitResultUuid));
         }
         final Optional<UUID> parametersUuid = studyRepository.findById(studyUuid).map(StudyEntity::getShortCircuitParametersUuid);
         UUID scReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(computationType.name(), UUID.randomUUID());
@@ -2087,7 +2085,7 @@ public class StudyService {
     public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         if (prevResultUuid != null) {
-            voltageInitService.deleteVoltageInitResult(prevResultUuid);
+            voltageInitService.deleteVoltageInitResults(List.of(prevResultUuid));
         }
 
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
@@ -2242,7 +2240,7 @@ public class StudyService {
         // clean previous result if exist
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
         if (prevResultUuid != null) {
-            dynamicSimulationService.deleteResult(prevResultUuid);
+            dynamicSimulationService.deleteResults(List.of(prevResultUuid));
         }
 
         // load configured parameters persisted in the study server DB
@@ -2363,7 +2361,7 @@ public class StudyService {
         // clean previous result if exist
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS);
         if (prevResultUuid != null) {
-            dynamicSecurityAnalysisService.deleteResult(prevResultUuid);
+            dynamicSecurityAnalysisService.deleteResults(List.of(prevResultUuid));
         }
 
         // get dynamic simulation result uuid
@@ -2548,7 +2546,7 @@ public class StudyService {
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS);
 
         if (prevResultUuid != null) {
-            nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResult(prevResultUuid);
+            nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults(List.of(prevResultUuid));
         }
 
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
@@ -2667,7 +2665,7 @@ public class StudyService {
 
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
         if (prevResultUuid != null) {
-            stateEstimationService.deleteStateEstimationResult(prevResultUuid);
+            stateEstimationService.deleteStateEstimationResults(List.of(prevResultUuid));
         }
 
         UUID result = stateEstimationService.runStateEstimation(networkUuid, variantId, parametersUuid, new ReportInfos(reportUuid, nodeUuid), receiver, userId);

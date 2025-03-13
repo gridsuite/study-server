@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -232,18 +233,13 @@ public class VoltageInitService {
         this.voltageInitServerBaseUri = voltageInitServerBaseUri;
     }
 
-    public void deleteVoltageInitResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}")
-                .buildAndExpand(uuid)
-                .toUriString();
-
-        restTemplate.delete(voltageInitServerBaseUri + path);
-    }
-
-    public void deleteVoltageInitResults() {
+    public void deleteVoltageInitResults(List<UUID> resultsUuids) {
         try {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results")
-                .toUriString();
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results");
+            if (!CollectionUtils.isEmpty(resultsUuids)) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
+            }
+            String path = uriComponentsBuilder.build().toUriString();
             restTemplate.delete(voltageInitServerBaseUri + path);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);

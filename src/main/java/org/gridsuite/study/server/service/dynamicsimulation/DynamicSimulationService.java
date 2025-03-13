@@ -264,15 +264,10 @@ public interface DynamicSimulationService {
     void invalidateStatus(List<UUID> resultUuids);
 
     /**
-     * Delete result uuid
-     * @param resultUuid a given result UUID
+     * Delete results
+     * @param resultsUuids a given results UUID
      */
-    void deleteResult(UUID resultUuid);
-
-    /**
-     * Delete all results
-     */
-    void deleteResults();
+    void deleteResults(List<UUID> resultsUuids);
 
     /**
      * Get results count

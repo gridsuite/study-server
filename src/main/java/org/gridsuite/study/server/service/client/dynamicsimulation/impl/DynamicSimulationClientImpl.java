@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -160,23 +161,14 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public void deleteResult(UUID resultUuid) {
-        Objects.requireNonNull(resultUuid);
-        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-
-        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{resultUuid}")
-                .buildAndExpand(resultUuid);
-
-        // call dynamic-simulation REST API
-        getRestTemplate().delete(uriComponents.toUriString());
-    }
-
-    @Override
-    public void deleteResults() {
+    public void deleteResults(List<UUID> resultsUuids) {
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
         var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl);
+        if (!CollectionUtils.isEmpty(resultsUuids)) {
+            uriComponents.queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
+        }
         // call dynamic-simulation REST API
-        getRestTemplate().delete(uriComponents.toUriString());
+        getRestTemplate().delete(uriComponents.build().toUriString());
     }
 
     @Override

@@ -451,19 +451,19 @@ class RootNetworkTest {
         Mockito.verify(equipmentInfosService, Mockito.times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
         Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID2);
         Mockito.verify(caseService, Mockito.times(1)).deleteCase(CASE_UUID2);
-        Mockito.verify(dynamicSimulationService, Mockito.times(1)).deleteResult(DYNAMIC_SIMULATION_RESULT_UUID);
-        Mockito.verify(dynamicSecurityAnalysisService, Mockito.times(1)).deleteResult(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID);
-        Mockito.verify(loadFlowService, Mockito.times(1)).deleteLoadFlowResult(LOADFLOW_RESULT_UUID);
-        Mockito.verify(securityAnalysisService, Mockito.times(1)).deleteSaResult(SECURITY_ANALYSIS_RESULT_UUID);
-        Mockito.verify(shortCircuitService, Mockito.times(1)).deleteShortCircuitAnalysisResult(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
-        Mockito.verify(shortCircuitService, Mockito.times(1)).deleteShortCircuitAnalysisResult(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
-        Mockito.verify(stateEstimationService, Mockito.times(1)).deleteStateEstimationResult(STATE_ESTIMATION_RESULT_UUID);
-        Mockito.verify(sensitivityAnalysisService, Mockito.times(1)).deleteSensitivityAnalysisResult(SENSITIVITY_ANALYSIS_RESULT_UUID);
-        Mockito.verify(voltageInitService, Mockito.times(1)).deleteVoltageInitResult(VOLTAGE_INIT_RESULT_UUID);
-        Mockito.verify(nonEvacuatedEnergyService, Mockito.times(1)).deleteNonEvacuatedEnergyResult(NON_EVACUATED_ENERGY_RESULT_UUID);
+        Mockito.verify(dynamicSimulationService, Mockito.times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
+        Mockito.verify(dynamicSecurityAnalysisService, Mockito.times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
+        Mockito.verify(loadFlowService, Mockito.times(1)).deleteLoadFlowResults(List.of(LOADFLOW_RESULT_UUID));
+        Mockito.verify(securityAnalysisService, Mockito.times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
+        Mockito.verify(shortCircuitService, Mockito.times(1)).deleteShortCircuitAnalysisResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
+        Mockito.verify(shortCircuitService, Mockito.times(1)).deleteShortCircuitAnalysisResults(List.of(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
+        Mockito.verify(stateEstimationService, Mockito.times(1)).deleteStateEstimationResults(List.of(STATE_ESTIMATION_RESULT_UUID));
+        Mockito.verify(sensitivityAnalysisService, Mockito.times(1)).deleteSensitivityAnalysisResults(List.of(SENSITIVITY_ANALYSIS_RESULT_UUID));
+        Mockito.verify(voltageInitService, Mockito.times(1)).deleteVoltageInitResults(List.of(VOLTAGE_INIT_RESULT_UUID));
+        Mockito.verify(nonEvacuatedEnergyService, Mockito.times(1)).deleteNonEvacuatedEnergyResults(List.of(NON_EVACUATED_ENERGY_RESULT_UUID));
 
         // check deletion of 2nd link remote infos
-        Mockito.verify(loadFlowService, Mockito.times(1)).deleteLoadFlowResult(LOADFLOW_RESULT_UUID2);
+        Mockito.verify(loadFlowService, Mockito.times(1)).deleteLoadFlowResults(List.of(LOADFLOW_RESULT_UUID2));
     }
 
     @Test

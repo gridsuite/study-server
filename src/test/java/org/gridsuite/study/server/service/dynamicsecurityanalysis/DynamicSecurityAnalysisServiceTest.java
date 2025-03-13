@@ -148,20 +148,20 @@ class DynamicSecurityAnalysisServiceTest {
 
     @Test
     void testDeleteResult() {
-        doNothing().when(dynamicSecurityAnalysisClient).deleteResult(RESULT_UUID);
+        doNothing().when(dynamicSecurityAnalysisClient).deleteResults(List.of(RESULT_UUID));
 
-        dynamicSecurityAnalysisService.deleteResult(RESULT_UUID);
+        dynamicSecurityAnalysisService.deleteResults(List.of(RESULT_UUID));
 
-        verify(dynamicSecurityAnalysisClient, times(1)).deleteResult(RESULT_UUID);
+        verify(dynamicSecurityAnalysisClient, times(1)).deleteResults(List.of(RESULT_UUID));
     }
 
     @Test
     void testDeleteResults() {
-        doNothing().when(dynamicSecurityAnalysisClient).deleteResults();
+        doNothing().when(dynamicSecurityAnalysisClient).deleteResults(null);
 
-        dynamicSecurityAnalysisService.deleteResults();
+        dynamicSecurityAnalysisService.deleteResults(null);
 
-        verify(dynamicSecurityAnalysisClient, times(1)).deleteResults();
+        verify(dynamicSecurityAnalysisClient, times(1)).deleteResults(null);
     }
 
     @Test

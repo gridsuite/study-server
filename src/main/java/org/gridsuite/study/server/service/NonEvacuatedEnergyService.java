@@ -208,14 +208,6 @@ public class NonEvacuatedEnergyService {
         }
     }
 
-    public void deleteNonEvacuatedEnergyResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results/{resultUuid}")
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
-    }
-
     public void deleteNonEvacuatedEnergyResults(List<UUID> resultsUuids) {
         try {
             UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results");

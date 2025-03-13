@@ -234,14 +234,6 @@ public class SensitivityAnalysisService {
         }
     }
 
-    public void deleteSensitivityAnalysisResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
-    }
-
     public void deleteSensitivityAnalysisResults(List<UUID> resultsUuids) {
         try {
             UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results");

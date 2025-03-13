@@ -347,7 +347,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        Mockito.doNothing().when(spyDynamicSecurityAnalysisService).deleteResults();
+        Mockito.doNothing().when(spyDynamicSecurityAnalysisService).deleteResults(null);
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_SECURITY_ANALYSIS.toString())
                         .queryParam("dryRun", "false"))

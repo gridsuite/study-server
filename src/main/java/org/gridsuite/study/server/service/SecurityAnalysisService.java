@@ -220,14 +220,6 @@ public class SecurityAnalysisService extends AbstractComputationService {
         return status;
     }
 
-    public void deleteSaResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(securityAnalysisServerBaseUri + path);
-    }
-
     public void deleteSecurityAnalysisResults(List<UUID> resultsUuids) {
         try {
             UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results");

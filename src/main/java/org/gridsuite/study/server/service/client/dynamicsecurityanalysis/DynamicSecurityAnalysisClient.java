@@ -316,28 +316,15 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         }
     }
 
-    public void deleteResult(@NonNull UUID resultUuid) {
-        Objects.requireNonNull(resultUuid);
-
+    public void deleteResults(List<UUID> resultsUuids) {
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
-
-        String url = UriComponentsBuilder
-                .fromHttpUrl(resultBaseUrl + "/{resultUuid}")
-                .buildAndExpand(resultUuid)
-                .toUriString();
-
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(resultBaseUrl);
+        if (!org.springframework.util.CollectionUtils.isEmpty(resultsUuids)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
+        }
+        String path = uriComponentsBuilder.build().toUriString();
         // call dynamic-security-analysis REST API
-        getRestTemplate().delete(url);
-    }
-
-    public void deleteResults() {
-        String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
-        String url = UriComponentsBuilder
-                .fromHttpUrl(resultBaseUrl)
-                .toUriString();
-
-        // call dynamic-security-analysis REST API
-        getRestTemplate().delete(url);
+        getRestTemplate().delete(path);
     }
 
     public Integer getResultsCount() {

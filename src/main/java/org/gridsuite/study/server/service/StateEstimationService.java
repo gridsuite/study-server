@@ -24,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -31,15 +32,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.StudyConstants.PATH_PARAM_PARAMETERS;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyConstants.STATE_ESTIMATION_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RESULTS_UUIDS;
 import static org.gridsuite.study.server.StudyException.Type.CREATE_STATE_ESTIMATION_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DELETE_STATE_ESTIMATION_PARAMETERS_FAILED;
@@ -162,17 +160,13 @@ public class StateEstimationService {
         return status;
     }
 
-    public void deleteStateEstimationResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}")
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(stateEstimationServerServerBaseUri + path);
-    }
-
-    public void deleteStateEstimationResults() {
+    public void deleteStateEstimationResults(List<UUID> resultsUuids) {
         try {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results").toUriString();
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results");
+            if (!CollectionUtils.isEmpty(resultsUuids)) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
+            }
+            String path = uriComponentsBuilder.build().toUriString();
             restTemplate.delete(stateEstimationServerServerBaseUri + path);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);

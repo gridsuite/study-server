@@ -240,14 +240,6 @@ public class ShortCircuitService extends AbstractComputationService {
         restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
-    public void deleteShortCircuitAnalysisResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}")
-                .buildAndExpand(uuid)
-                .toUriString();
-
-        restTemplate.delete(shortCircuitServerBaseUri + path);
-    }
-
     public void deleteShortCircuitAnalysisResults(List<UUID> resultsUuids) {
         try {
             UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results");

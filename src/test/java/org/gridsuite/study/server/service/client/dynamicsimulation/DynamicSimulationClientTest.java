@@ -195,7 +195,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // test service
-        assertDoesNotThrow(() -> dynamicSimulationClient.deleteResult(RESULT_UUID));
+        assertDoesNotThrow(() -> dynamicSimulationClient.deleteResults(List.of(RESULT_UUID)));
     }
 
     @Test
@@ -205,7 +205,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
             .willReturn(WireMock.ok()
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             ));
-        dynamicSimulationClient.deleteResults();
+        dynamicSimulationClient.deleteResults(null);
 
         // configure mock server response for test result count - supervision/results-count
         String resultCountEndPointUrl = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT);

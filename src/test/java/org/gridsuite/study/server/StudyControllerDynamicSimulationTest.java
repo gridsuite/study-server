@@ -396,7 +396,7 @@ class StudyControllerDynamicSimulationTest {
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        Mockito.doNothing().when(dynamicSimulationService).deleteResults();
+        Mockito.doNothing().when(dynamicSimulationService).deleteResults(null);
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_SIMULATION.toString())
                         .queryParam("dryRun", "false"))
