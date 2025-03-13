@@ -33,4 +33,10 @@ public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, 
     int countAllByStudyId(UUID studyUuid);
 
     Optional<RootNetworkEntity> findByNameAndStudyId(String name, UUID studyUuid);
+
+    Optional<RootNetworkEntity> findByTagAndStudyId(String tag, UUID studyUuid);
+
+    boolean existsByIdAndName(UUID rootNetworkUuid, String rootNetworkName);
+
+    boolean existsByIdAndTag(UUID rootNetworkUuid, String rootNetworkName);
 }

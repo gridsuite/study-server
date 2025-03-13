@@ -296,4 +296,14 @@ public class StateEstimationService {
         }
 
     }
+
+    public void invalidateStateEstimationStatus(List<UUID> uuids) {
+        if (!uuids.isEmpty()) {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/invalidate-status")
+                .queryParam(RESULT_UUID, uuids).build().toUriString();
+
+            restTemplate.put(stateEstimationServerServerBaseUri + path, Void.class);
+        }
+    }
 }

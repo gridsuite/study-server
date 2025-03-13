@@ -109,11 +109,29 @@ public class RootNetworkNodeInfoService {
         });
     }
 
+    public void duplicateNodeLinks(List<RootNetworkNodeInfoEntity> sourceNodeLinks, @NonNull NetworkModificationNodeInfoEntity destinationNodeInfoEntity, Map<UUID, UUID> originToDuplicateModificationUuidMap, Map<RootNetworkEntity, RootNetworkEntity> originToDuplicateRootNetworkMap) {
+        // For each root network create a link with the node
+        sourceNodeLinks.forEach(nodeLink -> {
+            // when duplicating a rootNetworkNodeInfoEntity, we need to keep modificationsToExclude
+            // use correspondence map to use duplicate modification uuids
+            RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(
+                destinationNodeInfoEntity.getId(),
+                nodeLink.getModificationsUuidsToExclude().stream().map(originToDuplicateModificationUuidMap::get).collect(Collectors.toSet())
+            );
+            addLink(destinationNodeInfoEntity, originToDuplicateRootNetworkMap.get(nodeLink.getRootNetwork()), newRootNetworkNodeInfoEntity);
+        });
+    }
+
     private static RootNetworkNodeInfoEntity createDefaultEntity(UUID nodeUuid) {
+        return createDefaultEntity(nodeUuid, new HashSet<>());
+    }
+
+    private static RootNetworkNodeInfoEntity createDefaultEntity(UUID nodeUuid, Set<UUID> modificationsToExclude) {
         return RootNetworkNodeInfoEntity.builder()
             .nodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT))
             .variantId(UUID.randomUUID().toString())
             .modificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())))
+            .modificationsUuidsToExclude(modificationsToExclude)
             .build();
     }
 
@@ -337,6 +355,34 @@ public class RootNetworkNodeInfoService {
         changedNodes.add(nodeUuid);
     }
 
+    public void updateModificationsToExclude(UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationUuids, boolean activated) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository
+            .findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
+            .orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        if (activated) {
+            rootNetworkNodeInfoEntity.removeModificationsFromExclude(modificationUuids);
+        } else {
+            rootNetworkNodeInfoEntity.addModificationsToExclude(modificationUuids);
+        }
+    }
+
+    public void moveModificationsToExclude(UUID originNodeUuid, UUID targetNodeUuid, List<UUID> modificationsUuids) {
+        rootNetworkNodeInfoRepository.findAllByNodeInfoId(originNodeUuid)
+            .forEach(rootNetworkNodeInfoEntity -> getRootNetworkNodeInfo(targetNodeUuid, rootNetworkNodeInfoEntity.getRootNetwork().getId()).ifPresent(targetRootNetworkNodeInfoEntity -> {
+                Set<UUID> modificationsToMove = modificationsUuids.stream().filter(m -> rootNetworkNodeInfoEntity.getModificationsUuidsToExclude().contains(m)).collect(Collectors.toSet());
+                rootNetworkNodeInfoEntity.removeModificationsFromExclude(modificationsToMove);
+                targetRootNetworkNodeInfoEntity.addModificationsToExclude(modificationsToMove);
+            }));
+    }
+
+    public void copyModificationsToExclude(UUID originNodeUuid, UUID targetNodeUuid, Map<UUID, UUID> originToDuplicateModificationsUuids) {
+        rootNetworkNodeInfoRepository.findAllByNodeInfoId(originNodeUuid)
+            .forEach(originRootNetworkNodeInfoEntity -> getRootNetworkNodeInfo(targetNodeUuid, originRootNetworkNodeInfoEntity.getRootNetwork().getId()).ifPresent(targetRootNetworkNodeInfoEntity -> {
+                Set<UUID> modificationsToCopy = originRootNetworkNodeInfoEntity.getModificationsUuidsToExclude().stream().map(originToDuplicateModificationsUuids::get).filter(Objects::nonNull).collect(Collectors.toSet());
+                targetRootNetworkNodeInfoEntity.addModificationsToExclude(modificationsToCopy);
+            }));
+    }
+
     @Transactional
     public void updateRootNetworkNode(UUID nodeUuid, UUID rootNetworkUuid, RootNetworkNodeInfo rootNetworkNodeInfo) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
@@ -400,10 +446,10 @@ public class RootNetworkNodeInfoService {
 
     @Transactional
     public ModificationApplicationContext getNetworkModificationApplicationContext(UUID rootNetworkUuid, UUID nodeUuid, UUID networkUuid) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
         UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
-        return new ModificationApplicationContext(networkUuid, variantId, reportUuid, nodeUuid);
+        return new ModificationApplicationContext(networkUuid, variantId, reportUuid, nodeUuid, rootNetworkNodeInfoEntity.getModificationsUuidsToExclude());
     }
 
     private List<UUID> getReportUuids(RootNetworkNodeInfo rootNetworkNodeInfo) {

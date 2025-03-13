@@ -78,6 +78,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.junit.jupiter.api.Assertions.*;
@@ -317,6 +318,7 @@ class NetworkModificationTreeTest {
         studyEntity.addRootNetwork(RootNetworkEntity.builder()
             .id(UUID.randomUUID())
             .name("rootNetworkName")
+            .tag("dum")
             .caseFormat("").caseUuid(UUID.randomUUID())
             .reportUuid(UUID.randomUUID())
             .caseName("caseName1")
@@ -497,10 +499,18 @@ class NetworkModificationTreeTest {
                 .andReturn();
 
         //Only the first level nodes should appear
-        assertTrue(result.getResponse().getContentAsString().contains(n1.getId().toString()));
-        assertFalse(result.getResponse().getContentAsString().contains(n2.getId().toString()));
-        assertFalse(result.getResponse().getContentAsString().contains(n3.getId().toString()));
-        assertTrue(result.getResponse().getContentAsString().contains(n4.getId().toString()));
+        String responseContent = result.getResponse().getContentAsString();
+        assertTrue(responseContent.contains(n1.getId().toString()));
+        assertFalse(responseContent.contains(n2.getId().toString()));
+        assertFalse(responseContent.contains(n3.getId().toString()));
+        assertTrue(responseContent.contains(n4.getId().toString()));
+
+        //The nodes order should be consistent
+        int indexN4 = responseContent.indexOf("\"name\":\"n4\"");
+        int indexN1 = responseContent.indexOf("\"name\":\"n1\"");
+        int indexNotBuilt = responseContent.indexOf("\"name\":\"not_built\"");
+        assertThat(indexN4).isLessThan(indexN1);
+        assertThat(indexN1).isLessThan(indexNotBuilt);
 
         //And now we restore the tree we just stashed
         restoreNode(studyId, List.of(stashedNode1.getIdNode(), stashedNode4.getIdNode()), root.getId(), userId);
@@ -530,10 +540,11 @@ class NetworkModificationTreeTest {
                 .andExpect(status().isOk())
                 .andReturn();
         //Only the first level nodes should appear
-        assertFalse(result.getResponse().getContentAsString().contains(n1.getId().toString()));
-        assertFalse(result.getResponse().getContentAsString().contains(n2.getId().toString()));
-        assertFalse(result.getResponse().getContentAsString().contains(n3.getId().toString()));
-        assertFalse(result.getResponse().getContentAsString().contains(n4.getId().toString()));
+        responseContent = result.getResponse().getContentAsString();
+        assertFalse(responseContent.contains(n1.getId().toString()));
+        assertFalse(responseContent.contains(n2.getId().toString()));
+        assertFalse(responseContent.contains(n3.getId().toString()));
+        assertFalse(responseContent.contains(n4.getId().toString()));
     }
 
     private UUID createNodeTree() throws Exception {
@@ -1474,6 +1485,50 @@ class NetworkModificationTreeTest {
         networkModificationTreeService.updateNodeBuildStatus(leafNodeId, rootNetworkUuid, NodeBuildStatus.from(NetworkModificationResult.ApplicationStatus.ALL_OK, NetworkModificationResult.ApplicationStatus.WITH_ERRORS));
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(leafNodeId, rootNetworkUuid).getGlobalBuildStatus());
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(leafNodeId, rootNetworkUuid).getLocalBuildStatus());
+    }
+
+    @Test
+    void testNodeAliases() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        NetworkModificationNode node1 = buildNetworkModificationNode("modification node 1", "", UUID.randomUUID(), VARIANT_ID,
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, node1, userId);
+        NetworkModificationNode node2 = buildNetworkModificationNode("modification node 2", "", UUID.randomUUID(), VARIANT_ID,
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), node1, node2, userId);
+
+        List<NodeAlias> node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+            });
+        assertEquals(0, node1Aliases.size());
+
+        //Name field is not relevant when posting aliases, it is filled when retrieving them
+        NodeAlias alias = new NodeAlias(node2.getId(), "test", "");
+        List<NodeAlias> aliases = List.of(alias);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectWriter.writeValueAsString(aliases))
+        ).andExpect(status().isOk());
+        node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+            });
+        assertEquals(1, node1Aliases.size());
+        assertEquals("modification node 2", node1Aliases.getFirst().name());
+        assertEquals("test", node1Aliases.getFirst().alias());
+
+        //Removing the referenced node should result in the deletion of the node alias
+        List<AbstractNode> children = List.of(node2);
+        deleteNode(root.getStudyId(), children, true, null, userId);
+        node1Aliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+            });
+        assertEquals(0, node1Aliases.size());
     }
 
     /**

@@ -86,7 +86,7 @@ public class CaseService {
     }
 
     public void assertCaseExists(UUID caseUuid) {
-        if (Boolean.FALSE.equals(caseExists(caseUuid))) {
+        if (caseUuid != null && Boolean.FALSE.equals(caseExists(caseUuid))) {
             throw new StudyException(CASE_NOT_FOUND, "The case '" + caseUuid + "' does not exist");
         }
     }

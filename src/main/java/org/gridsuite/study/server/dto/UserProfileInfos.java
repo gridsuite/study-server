@@ -39,4 +39,8 @@ public class UserProfileInfos {
     private UUID stateEstimationParameterId;
 
     Integer maxAllowedBuilds;
+
+    private UUID spreadsheetConfigCollectionId;
+
+    private UUID networkVisualizationParameterId;
 }
