@@ -1126,6 +1126,19 @@ public class StudyController {
             ResponseEntity.noContent().build();
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram")
+    @Operation(summary = "load a the network area diagram from the config for the given network")
+    @ApiResponse(responseCode = "200", description = "The svg")
+    public ResponseEntity<String> loadNeworkAreaDiagram(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "NAD Config UUID") @RequestParam(name = "nadConfigUuid") UUID nadConfigUuid) {
+        String result = studyService.loadNetworkAreaDiagram(nodeUuid, rootNetworkUuid, nadConfigUuid);
+        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
+            ResponseEntity.noContent().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/status")
     @Operation(summary = "Get the security analysis status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis status"),

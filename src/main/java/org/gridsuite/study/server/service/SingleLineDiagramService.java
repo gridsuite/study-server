@@ -42,7 +42,7 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
     static final String QUERY_PARAM_DEPTH = "depth";
     static final String QUERY_PARAM_INIT_WITH_GEO_DATA = "withGeoData";
-    static final String QUERY_PARAM_VOLTAGE_LEVELS_IDS = "voltageLevelsIds";
+    static final String QUERY_PARAM_NAD_CONFIG_UUID = "nadConfigUuid";
     static final String NOT_FOUND = " not found";
     static final String QUERY_PARAM_DISPLAY_MODE = "sldDisplayMode";
     static final String LANGUAGE = "language";
@@ -184,6 +184,29 @@ public class SingleLineDiagramService {
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelsIds + NOT_FOUND);
+            } else {
+                throw e;
+            }
+        }
+        return result;
+    }
+
+    public String loadNetworkAreaDiagram(UUID networkUuid, String variantId, UUID nadConfigUuid) {
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
+                "/network-area-diagram/{networkUuid}")
+                .queryParam(QUERY_PARAM_NAD_CONFIG_UUID, nadConfigUuid);
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        var path = uriComponentsBuilder
+                .buildAndExpand(networkUuid)
+                .toUriString();
+        String result;
+        try {
+            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + nadConfigUuid + NOT_FOUND);
             } else {
                 throw e;
             }
