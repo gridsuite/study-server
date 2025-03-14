@@ -445,9 +445,11 @@ public class StudyService {
 
             StudyEntity duplicatedStudy = duplicateStudy(basicStudyInfos, sourceStudyUuid, userId);
 
-            getStudyRootNetworks(duplicatedStudy.getId()).forEach(rootNetworkEntity ->
-                reindexStudy(duplicatedStudy, rootNetworkEntity.getId())
-            );
+            getStudyRootNetworks(duplicatedStudy.getId()).forEach(rootNetworkEntity -> {
+                reindexStudy(duplicatedStudy, rootNetworkEntity.getId());
+                invalidateBuild(duplicatedStudy.getId(), networkModificationTreeService.getStudyRootNodeUuid(duplicatedStudy.getId()), rootNetworkEntity.getId(), false, false, true);
+            });
+
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
@@ -1887,7 +1889,6 @@ public class StudyService {
             updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
             throw e;
         }
-        invalidateBuild(study.getId(), networkModificationTreeService.getStudyRootNodeUuid(study.getId()), rootNetworkUuid, false, false, true);
         LOGGER.info("Study with id = '{}' has been reindexed", study.getId());
     }
 
