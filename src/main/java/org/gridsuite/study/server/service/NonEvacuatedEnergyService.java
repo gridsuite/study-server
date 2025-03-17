@@ -36,7 +36,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -51,10 +50,10 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.NON_EVACUATED_ENERGY_ERROR;
 import static org.gridsuite.study.server.StudyException.Type.NON_EVACUATED_ENERGY_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.NON_EVACUATED_ENERGY_RUNNING;
+import static org.gridsuite.study.server.utils.StudyUtils.deleteCalculationResults;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -209,16 +208,7 @@ public class NonEvacuatedEnergyService {
     }
 
     public void deleteNonEvacuatedEnergyResults(List<UUID> resultsUuids) {
-        try {
-            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results");
-            if (!CollectionUtils.isEmpty(resultsUuids)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
-            }
-            String path = uriComponentsBuilder.build().toUriString();
-            restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
+        deleteCalculationResults(resultsUuids, DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results", restTemplate, sensitivityAnalysisServerBaseUri);
     }
 
     public Integer getNonEvacuatedEnergyAnalysisResultsCount() {

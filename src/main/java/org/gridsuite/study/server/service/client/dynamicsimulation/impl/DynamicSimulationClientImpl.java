@@ -162,6 +162,9 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
 
     @Override
     public void deleteResults(List<UUID> resultsUuids) {
+        if (resultsUuids != null && resultsUuids.isEmpty()) {
+            return;
+        }
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
         var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl);
         if (!CollectionUtils.isEmpty(resultsUuids)) {

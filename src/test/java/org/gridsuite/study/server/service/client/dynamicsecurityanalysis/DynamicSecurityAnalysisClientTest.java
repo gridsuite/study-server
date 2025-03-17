@@ -459,8 +459,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testDeleteResult() {
         // configure mock server response
-        String url = RESULT_BASE_URL + DELIMITER + RESULT_UUID;
-        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(url))
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(RESULT_BASE_URL + "?resultsUuids=" + RESULT_UUID))
                 .willReturn(WireMock.ok()));
         // call service to test
         Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisClient.deleteResults(List.of(RESULT_UUID)));

@@ -189,8 +189,8 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
 
     @Test
     void testDeleteResult() {
-        // configure mock server response for test delete result: "results/{resultUuid}"
-        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_UUID))
+        // configure mock server response for test delete result.
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + "?resultsUuids=" + RESULT_UUID))
                 .willReturn(WireMock.ok()
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));

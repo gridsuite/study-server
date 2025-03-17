@@ -292,7 +292,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         return getRestTemplate().getForObject(url, DynamicSecurityAnalysisStatus.class);
     }
 
-    public void invalidateStatus(@NonNull List<UUID> resultUuids) {
+    public void  invalidateStatus(@NonNull List<UUID> resultUuids) {
         if (CollectionUtils.isEmpty(resultUuids)) {
             return;
         }
@@ -317,6 +317,9 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
     }
 
     public void deleteResults(List<UUID> resultsUuids) {
+        if (resultsUuids != null && resultsUuids.isEmpty()) {
+            return;
+        }
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(resultBaseUrl);
         if (!org.springframework.util.CollectionUtils.isEmpty(resultsUuids)) {
