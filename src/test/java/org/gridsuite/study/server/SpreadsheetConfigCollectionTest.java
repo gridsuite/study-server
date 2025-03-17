@@ -280,6 +280,28 @@ class SpreadsheetConfigCollectionTest {
     }
 
     @Test
+    void testSetSpreadsheetConfigCollectionWithNonExistingCollection(final MockWebServer server) throws Exception {
+        // Create a study with an existing spreadsheet config collection
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
+        UUID studyUuid = studyEntity.getId();
+
+        // Test setting a new spreadsheet config collection with body
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
+                        .content(NEW_SPREADSHEET_CONFIG_COLLECTION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(StudyConstants.HEADER_USER_ID, NO_PROFILE_USER_ID))
+                .andExpect(status().isOk());
+
+        // Check that the study have the new created collection
+        StudyEntity updatedStudy = studyRepository.findById(studyUuid).orElseThrow();
+        assertEquals(NEW_SPREADSHEET_CONFIG_COLLECTION_UUID, updatedStudy.getSpreadsheetConfigCollectionUuid());
+
+        // Verify HTTP requests made to the server - look for the POST to create the new collection
+        var requests = TestUtils.getRequestsDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/spreadsheet-config-collections")));
+    }
+
+    @Test
     void testResetToDefaultWithUserProfile(final MockWebServer server) throws Exception {
         // Create a study with an existing spreadsheet config collection
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
