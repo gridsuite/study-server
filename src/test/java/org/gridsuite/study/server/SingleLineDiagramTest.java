@@ -477,10 +477,9 @@ class SingleLineDiagramTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationNotFoundId")).andExpectAll(status().isNotFound());
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substation-svg/%s/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal", NETWORK_UUID_STRING)));
-System.out.println("CHARLY avant");
+
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationNotFoundId")).andExpectAll(status().isNotFound());
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/substation-svg-and-metadata/%s/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en", NETWORK_UUID_STRING)));
-System.out.println("CHARLY après");
 
         // Test other errors when getting voltage level or substation svg
         assertThrows(ServletException.class, () -> mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelErrorId")));
