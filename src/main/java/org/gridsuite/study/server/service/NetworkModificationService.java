@@ -91,7 +91,7 @@ public class NetworkModificationService {
             .toUriString();
 
         try {
-            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<org.gridsuite.modification.dto.ModificationInfos>>() {
+            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<ModificationInfos>>() {
             }).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, GET_MODIFICATIONS_FAILED);

@@ -163,7 +163,7 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
-        <dependency>
+        <dependency><!-- TODO : To remove when integrate in next release of gridsuite-dependencies -->
             <groupId>org.gridsuite</groupId>
             <artifactId>gridsuite-network-modification</artifactId>
             <version>${network-modification.version}</version>
