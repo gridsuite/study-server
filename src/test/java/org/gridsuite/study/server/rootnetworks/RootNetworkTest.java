@@ -520,6 +520,7 @@ class RootNetworkTest {
         Mockito.verify(caseService, Mockito.times(1)).deleteCase(CASE_UUID2);
         Mockito.verify(dynamicSimulationService, Mockito.times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
         Mockito.verify(dynamicSecurityAnalysisService, Mockito.times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
+        // check LOADFLOW_RESULT_UUID2 is also deleted
         Mockito.verify(loadFlowService, Mockito.times(1)).deleteLoadFlowResults(List.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2));
         Mockito.verify(securityAnalysisService, Mockito.times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
         Mockito.verify(shortCircuitService, Mockito.times(1)).deleteShortCircuitAnalysisResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));

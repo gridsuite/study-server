@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
@@ -34,14 +35,13 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.utils.StudyUtils.deleteCalculationResults;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class SensitivityAnalysisService {
+public class SensitivityAnalysisService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
     private static final String RESULTS = "results";
@@ -238,6 +238,10 @@ public class SensitivityAnalysisService {
         deleteCalculationResults(resultsUuids, DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results", restTemplate, sensitivityAnalysisServerBaseUri);
     }
 
+    public void deleteAllSensitivityAnalysisResults() {
+        deleteSensitivityAnalysisResults(null);
+    }
+
     public Integer getSensitivityAnalysisResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/supervision/results-count").toUriString();
@@ -388,5 +392,10 @@ public class SensitivityAnalysisService {
         var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
 
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.GET, null, Long.class).getBody();
+    }
+
+    @Override
+    public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
+        return List.of();
     }
 }

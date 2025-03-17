@@ -205,7 +205,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
             .willReturn(WireMock.ok()
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             ));
-        dynamicSimulationClient.deleteResults(null);
+        dynamicSimulationClient.deleteAllResults();
 
         // configure mock server response for test result count - supervision/results-count
         String resultCountEndPointUrl = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT);

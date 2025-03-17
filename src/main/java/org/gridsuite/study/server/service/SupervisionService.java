@@ -170,8 +170,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.LOAD_FLOW.name());
         });
         reportService.deleteReports(reportsToDelete);
-        // in order to delete all the results, we need to pass null as value
-        loadFlowService.deleteLoadFlowResults(null);
+        loadFlowService.deleteAllLoadFlowResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOAD_FLOW, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -181,8 +180,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSimulationResultUuid(null));
-        // in order to delete all the results, we need to pass null as value
-        dynamicSimulationService.deleteResults(null);
+        dynamicSimulationService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SIMULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
@@ -192,8 +190,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicSecurityAnalysisResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSecurityAnalysisResultUuid(null));
-        // in order to delete all the results, we need to pass null as value
-        dynamicSecurityAnalysisService.deleteResults(null);
+        dynamicSecurityAnalysisService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
@@ -209,8 +206,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.SECURITY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
-        // in order to delete all the results, we need to pass null as value
-        securityAnalysisService.deleteSecurityAnalysisResults(null);
+        securityAnalysisService.deleteAllSecurityAnalysisResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -226,7 +222,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.SENSITIVITY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
-        sensitivityAnalysisService.deleteSensitivityAnalysisResults(null);
+        sensitivityAnalysisService.deleteAllSensitivityAnalysisResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SENSITIVITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
         return rootNetworkNodeInfoEntities.size();
@@ -244,7 +240,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name());
         });
         reportService.deleteReports(reportsToDelete);
-        nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults(null);
+        nonEvacuatedEnergyService.deleteAllNonEvacuatedEnergyResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
         return rootNetworkNodeInfoEntities.size();
@@ -277,7 +273,7 @@ public class SupervisionService {
         }
 
         // Then delete all results (1-bus and all-buses), cause short-circuit-server cannot make the difference
-        shortCircuitService.deleteShortCircuitAnalysisResults(null);
+        shortCircuitService.deleteAllShortCircuitAnalysisResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SHORT_CIRCUIT, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         // return distinct processed time point node info count
         return (int) Stream.concat(allBusesrootNetworkNodeInfoEntities.stream(), oneBusrootNetworkNodeInfoEntities.stream())
@@ -299,8 +295,7 @@ public class SupervisionService {
             });
             reportService.deleteReports(reportsToDelete);
         }
-        // in order to delete all the results, we need to pass null as value
-        voltageInitService.deleteVoltageInitResults(null);
+        voltageInitService.deleteAllVoltageInitResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.VOLTAGE_INITIALIZATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
@@ -316,8 +311,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.STATE_ESTIMATION.name());
         });
         reportService.deleteReports(reportsToDelete);
-        // in order to delete all the results, we need to pass null as value
-        stateEstimationService.deleteStateEstimationResults(null);
+        stateEstimationService.deleteAllStateEstimationResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.STATE_ESTIMATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }

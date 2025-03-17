@@ -32,7 +32,6 @@ import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.utils.StudyUtils.deleteCalculationResults;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -87,6 +86,10 @@ public class LoadFlowService extends AbstractComputationService {
 
     public void deleteLoadFlowResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + LOADFLOW_API_VERSION + "/results", restTemplate, loadFlowServerBaseUri);
+    }
+
+    public void deleteAllLoadFlowResults() {
+        deleteLoadFlowResults(null);
     }
 
     public Integer getLoadFlowResultsCount() {

@@ -184,6 +184,11 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
+    public void deleteAllResults() {
+        deleteResults(null);
+    }
+
+    @Override
     public Integer getResultsCount() {
         return dynamicSimulationClient.getResultsCount();
     }

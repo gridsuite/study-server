@@ -242,6 +242,10 @@ public class ShortCircuitService extends AbstractComputationService {
         deleteCalculationResults(resultsUuids, DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results", restTemplate, shortCircuitServerBaseUri);
     }
 
+    public void deleteAllShortCircuitAnalysisResults() {
+        deleteShortCircuitAnalysisResults(null);
+    }
+
     public Integer getShortCircuitResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/supervision/results-count").toUriString();

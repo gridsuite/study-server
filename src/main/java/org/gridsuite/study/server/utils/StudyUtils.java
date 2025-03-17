@@ -16,16 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import java.util.List;
-import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -66,24 +58,6 @@ public final class StudyUtils {
         builder.queryParam("page", pageable.getPageNumber()).queryParam("size", pageable.getPageSize());
         for (Sort.Order order : pageable.getSort()) {
             builder.queryParam("sort", order.getProperty() + "," + order.getDirection());
-        }
-    }
-
-    public static void deleteCalculationResults(List<UUID> resultsUuids,
-                                                String path,
-                                                RestTemplate restTemplate,
-                                                String serverBaseUri) {
-        if (resultsUuids != null && resultsUuids.isEmpty()) {
-            return;
-        }
-        try {
-            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(path);
-            if (!CollectionUtils.isEmpty(resultsUuids)) {
-                uriComponentsBuilder.queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
-            }
-            restTemplate.delete(serverBaseUri + uriComponentsBuilder.build().toUriString());
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
         }
     }
 }

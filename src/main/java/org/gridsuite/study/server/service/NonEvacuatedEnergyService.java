@@ -29,6 +29,7 @@ import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEner
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyStageDefinitionEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyStagesSelectionEntity;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -53,14 +54,13 @@ import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.NON_EVACUATED_ENERGY_ERROR;
 import static org.gridsuite.study.server.StudyException.Type.NON_EVACUATED_ENERGY_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.NON_EVACUATED_ENERGY_RUNNING;
-import static org.gridsuite.study.server.utils.StudyUtils.deleteCalculationResults;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class NonEvacuatedEnergyService {
+public class NonEvacuatedEnergyService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -211,6 +211,10 @@ public class NonEvacuatedEnergyService {
         deleteCalculationResults(resultsUuids, DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results", restTemplate, sensitivityAnalysisServerBaseUri);
     }
 
+    public void deleteAllNonEvacuatedEnergyResults() {
+        deleteNonEvacuatedEnergyResults(null);
+    }
+
     public Integer getNonEvacuatedEnergyAnalysisResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/supervision/non-evacuated-energy/results-count").toUriString();
@@ -327,5 +331,10 @@ public class NonEvacuatedEnergyService {
                 .monitoredBranches(List.of())
                 .contingencies(List.of())
                 .build();
+    }
+
+    @Override
+    public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
+        return List.of();
     }
 }

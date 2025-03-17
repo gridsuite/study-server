@@ -19,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -166,12 +165,14 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
             return;
         }
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl);
-        if (!CollectionUtils.isEmpty(resultsUuids)) {
-            uriComponents.queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
-        }
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
         // call dynamic-simulation REST API
         getRestTemplate().delete(uriComponents.build().toUriString());
+    }
+
+    @Override
+    public void deleteAllResults() {
+        deleteResults(null);
     }
 
     @Override

@@ -35,7 +35,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.utils.StudyUtils.deleteCalculationResults;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -221,6 +220,10 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
     public void deleteSecurityAnalysisResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results", restTemplate, securityAnalysisServerBaseUri);
+    }
+
+    public void deleteAllSecurityAnalysisResults() {
+        deleteSecurityAnalysisResults(null);
     }
 
     public Integer getSecurityAnalysisResultsCount() {

@@ -270,6 +270,11 @@ public interface DynamicSimulationService {
     void deleteResults(List<UUID> resultsUuids);
 
     /**
+     * Delete all results
+     */
+    void deleteAllResults();
+
+    /**
      * Get results count
      */
     Integer getResultsCount();

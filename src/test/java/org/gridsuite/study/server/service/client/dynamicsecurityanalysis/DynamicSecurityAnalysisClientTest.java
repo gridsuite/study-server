@@ -471,7 +471,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(RESULT_BASE_URL))
                 .willReturn(WireMock.ok()));
         // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisClient.deleteResults(null));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisClient.deleteAllResults());
     }
 
     @Test
