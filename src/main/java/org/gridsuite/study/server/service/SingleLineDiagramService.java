@@ -47,6 +47,7 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_DISPLAY_MODE = "sldDisplayMode";
     static final String LANGUAGE = "language";
     static final String VOLTAGE_LEVEL = "Voltage level ";
+    static final String NAD_CONFIG_UUID = "Nad config UUID ";
 
     private final RestTemplate restTemplate;
 
@@ -206,7 +207,7 @@ public class SingleLineDiagramService {
             result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + nadConfigUuid + NOT_FOUND);
+                throw new StudyException(SVG_NOT_FOUND, NAD_CONFIG_UUID + nadConfigUuid + NOT_FOUND);
             } else {
                 throw e;
             }

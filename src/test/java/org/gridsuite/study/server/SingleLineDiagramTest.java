@@ -93,6 +93,7 @@ class SingleLineDiagramTest {
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
+    private static final String NAD_CONFIG_UUID = "fcb7a608-9a98-4244-aa59-e8ee8226ada5";
 
     @Autowired
     private MockMvc mockMvc;
@@ -219,6 +220,8 @@ class SingleLineDiagramTest {
                         return new MockResponse(500, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"tmp\",\"path\":\"/v1/networks\"}");
                     case "/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "nad-svg");
+                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?nadConfigUuid=" + NAD_CONFIG_UUID:
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "nad-svg-from-config");
 
                     case "/v1/svg-component-libraries":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "[\"GridSuiteAndConvergence\",\"Convergence\"]");
@@ -525,6 +528,47 @@ class SingleLineDiagramTest {
                 .content("[\"vlFr1A\"]")
                 .contentType(MediaType.APPLICATION_JSON)).andExpectAll(
             status().isNoContent());
+    }
+
+    @Test
+    void testLoadNetworkAreaDiagram(final MockWebServer server) throws Exception {
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        // get the network area diagram from a config
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?nadConfigUuid=" + NAD_CONFIG_UUID, studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid))
+                .andExpectAll(
+                content().contentType(MediaType.APPLICATION_JSON),
+                status().isOk(),
+                content().string("nad-svg-from-config")
+            );
+
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/%s?nadConfigUuid=%s", NETWORK_UUID_STRING, NAD_CONFIG_UUID)));
+    }
+
+    @Test
+    void testLoadNetworkAreaDiagramVariantError() throws Exception {
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_VARIANT_ERROR_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ERROR_ID, "node 1");
+        UUID modificationNodeUuid = modificationNode1.getId();
+
+        //get the network area diagram from a config on a non existing variant
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?nadConfigUuid=" + UUID.randomUUID(),
+            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)).andExpectAll(status().isNoContent());
+    }
+
+    @Test
+    void testLoadNetworkAreaDiagramRootNetworkError() throws Exception {
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?nadConfigUuid=" + UUID.randomUUID(),
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())).andExpectAll(status().isNotFound());
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
