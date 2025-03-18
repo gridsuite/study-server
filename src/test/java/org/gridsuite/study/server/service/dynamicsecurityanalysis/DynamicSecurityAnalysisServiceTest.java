@@ -157,11 +157,10 @@ class DynamicSecurityAnalysisServiceTest {
 
     @Test
     void testDeleteResults() {
-        doNothing().when(dynamicSecurityAnalysisClient).deleteAllResults();
+        doNothing().when(dynamicSecurityAnalysisClient).deleteResults(null);
 
         dynamicSecurityAnalysisService.deleteAllResults();
-
-        verify(dynamicSecurityAnalysisClient, times(1)).deleteAllResults();
+        verify(dynamicSecurityAnalysisClient, times(1)).deleteResults(null);
     }
 
     @Test

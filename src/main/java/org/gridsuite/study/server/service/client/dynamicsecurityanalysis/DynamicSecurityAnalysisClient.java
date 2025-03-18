@@ -327,10 +327,6 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         getRestTemplate().delete(path);
     }
 
-    public void deleteAllResults() {
-        deleteResults(null);
-    }
-
     public Integer getResultsCount() {
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
         String url = UriComponentsBuilder
