@@ -10,8 +10,10 @@ import com.powsybl.commons.report.ReportNode;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.modification.dto.ModificationInfos;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.NetworkModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -624,10 +626,45 @@ public class NetworkModificationTreeService {
         return getNetworkModificationNodeInfoEntity(nodeUuid).getModificationGroupUuid();
     }
 
-    // Return json string because modification dtos are not available here
     @Transactional(readOnly = true)
-    public String getNetworkModifications(@NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata) {
-        return networkModificationService.getModifications(self.getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
+    public List<NetworkModificationInfos> getNetworkModifications(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata) {
+        List<ModificationInfos> modificationInfos = networkModificationService.getModifications(self.getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
+        if (!getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+
+        List<NetworkModificationInfos> networkModificationInfosList = new ArrayList<>();
+        // build NetworkModificationInfos for each modification
+        for (ModificationInfos modification : modificationInfos) {
+            // Get the activation status map for each root network
+            Map<UUID, Boolean> rootNetworkActivationMap = getRootNetworkActivationStatus(nodeUuid, modification.getUuid(), studyUuid);
+
+            NetworkModificationInfos networkModificationInfos = NetworkModificationInfos.builder()
+                    .activationStatusByRootNetwork(rootNetworkActivationMap)
+                    .modificationInfos(modification)
+                    .build();
+
+            networkModificationInfosList.add(networkModificationInfos);
+        }
+        return networkModificationInfosList;
+    }
+
+    /**
+     * get modification activation status by root network
+     */
+    private Map<UUID, Boolean> getRootNetworkActivationStatus(UUID nodeUuid, UUID modificationUuid, UUID studyUuid) {
+        List<RootNetworkInfos> rootNetworkInfos = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
+
+        Map<UUID, Boolean> rootNetworkActivationMap = new HashMap<>();
+
+        // Get activation status for each root network
+        for (RootNetworkInfos rootNetworkInfo : rootNetworkInfos) {
+            UUID rootNetworkUuid = rootNetworkInfo.getId();
+            Set<UUID> modificationsToExclude = rootNetworkNodeInfoService.getModificationsToExclude(nodeUuid, rootNetworkUuid);
+            boolean isStatusActivated = !modificationsToExclude.contains(modificationUuid);
+            rootNetworkActivationMap.put(rootNetworkUuid, isStatusActivated);
+        }
+        return rootNetworkActivationMap;
     }
 
     private Integer getNetworkModificationsCount(@NonNull UUID nodeUuid, boolean stashed) {

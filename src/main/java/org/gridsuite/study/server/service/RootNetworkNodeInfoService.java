@@ -355,6 +355,13 @@ public class RootNetworkNodeInfoService {
         changedNodes.add(nodeUuid);
     }
 
+    public Set<UUID> getModificationsToExclude(UUID nodeUuid, UUID rootNetworkUuid) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository
+                .findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
+                .orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        return rootNetworkNodeInfoEntity.getModificationsUuidsToExclude();
+    }
+
     public void updateModificationsToExclude(UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationUuids, boolean activated) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository
             .findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)

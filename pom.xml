@@ -46,6 +46,7 @@
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
         <mockwebserver3.version>5.0.0-alpha.14</mockwebserver3.version>
         <apache.httpclient.version>5.3</apache.httpclient.version>
+        <network-modification.version>0.9.0</network-modification.version>
     </properties>
 
     <build>
@@ -109,6 +110,11 @@
 
     <dependencies>
         <!-- Compilation dependencies -->
+        <dependency>
+            <groupId>org.gridsuite</groupId>
+            <artifactId>gridsuite-network-modification</artifactId>
+            <version>${network-modification.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-commons</artifactId>
