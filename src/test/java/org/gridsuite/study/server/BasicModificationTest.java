@@ -13,17 +13,20 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
-import static org.junit.jupiter.api.Assertions.*;
 
+@DisableElasticsearch
 @SpringBootTest
 public class BasicModificationTest {
 
@@ -39,14 +42,6 @@ public class BasicModificationTest {
     private static final String NODE_4_NAME = "node4";
     private static final String NODE_5_NAME = "node5";
 
-    private static final UUID MODIFICATION_1_UUID = UUID.randomUUID();
-    private static final UUID MODIFICATION_2_UUID = UUID.randomUUID();
-    private static final UUID MODIFICATION_3_UUID = UUID.randomUUID();
-    private static final UUID MODIFICATION_4_UUID = UUID.randomUUID();
-    private static final UUID MODIFICATION_5_UUID = UUID.randomUUID();
-
-    @Autowired
-    private BasicModificationInfosRepository basicModificationInfosRepository;
     @Autowired
     private StudyRepository studyRepository;
     @Autowired
@@ -82,68 +77,64 @@ public class BasicModificationTest {
 
     @Test
     void testInvalidateBuiltNodeAndItsChildren() {
-        networkModificationTreeService.invalidateBuild(node2.getId(), rootNetworkEntity.getId(), false, new InvalidateNodeInfos(), false);
+        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+        networkModificationTreeService.invalidateBuild(node2.getId(), rootNetworkEntity.getId(), false, invalidateNodeInfos, false);
 
-        checkModificationExist(MODIFICATION_1_UUID, true);
-        checkModificationExist(MODIFICATION_2_UUID, false);
-        checkModificationExist(MODIFICATION_3_UUID, false);
-        checkModificationExist(MODIFICATION_4_UUID, true);
-        checkModificationExist(MODIFICATION_5_UUID, true);
+        assertThat(invalidateNodeInfos.getGroupUuids()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(List.of(
+            node2.getModificationGroupUuid(),
+            node3.getModificationGroupUuid()
+        ));
     }
 
     @Test
     void testInvalidateNotBuiltNodeAndItsChildren() {
-        networkModificationTreeService.invalidateBuild(node4.getId(), rootNetworkEntity.getId(), false, new InvalidateNodeInfos(), false);
+        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+        networkModificationTreeService.invalidateBuild(node4.getId(), rootNetworkEntity.getId(), false, invalidateNodeInfos, false);
 
-        checkModificationExist(MODIFICATION_1_UUID, true);
-        checkModificationExist(MODIFICATION_2_UUID, true);
-        checkModificationExist(MODIFICATION_3_UUID, true);
-        checkModificationExist(MODIFICATION_4_UUID, false);
-        checkModificationExist(MODIFICATION_5_UUID, false);
+        assertThat(invalidateNodeInfos.getGroupUuids()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(List.of(
+            node4.getModificationGroupUuid(),
+            node5.getModificationGroupUuid()
+        ));
     }
 
     @Test
     void testInvalidateBuiltNodeChildrenOnly() {
-        networkModificationTreeService.invalidateBuild(node4.getId(), rootNetworkEntity.getId(), true, new InvalidateNodeInfos(), false);
+        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+        networkModificationTreeService.invalidateBuild(node4.getId(), rootNetworkEntity.getId(), true, invalidateNodeInfos, false);
 
-        checkModificationExist(MODIFICATION_1_UUID, true);
-        checkModificationExist(MODIFICATION_2_UUID, true);
-        checkModificationExist(MODIFICATION_3_UUID, true);
-        checkModificationExist(MODIFICATION_4_UUID, true);
-        checkModificationExist(MODIFICATION_5_UUID, false);
+        assertThat(invalidateNodeInfos.getGroupUuids()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(List.of(
+            node5.getModificationGroupUuid()
+        ));
     }
 
     @Test
     void testInvalidateNotBuiltNodeChildrenOnly() {
-        networkModificationTreeService.invalidateBuild(node2.getId(), rootNetworkEntity.getId(), true, new InvalidateNodeInfos(), false);
+        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+        networkModificationTreeService.invalidateBuild(node2.getId(), rootNetworkEntity.getId(), true, invalidateNodeInfos, false);
 
-        checkModificationExist(MODIFICATION_1_UUID, true);
-        checkModificationExist(MODIFICATION_2_UUID, false);
-        checkModificationExist(MODIFICATION_3_UUID, false);
-        checkModificationExist(MODIFICATION_4_UUID, true);
-        checkModificationExist(MODIFICATION_5_UUID, true);
+        assertThat(invalidateNodeInfos.getGroupUuids()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(List.of(
+            node2.getModificationGroupUuid(),
+            node3.getModificationGroupUuid()
+        ));
     }
 
     @Test
     void testInvalidateBuiltNodeOnlyWithBuiltChildren() {
-        networkModificationTreeService.invalidateBuildOfNodeOnly(node4.getId(), rootNetworkEntity.getId(), false, new InvalidateNodeInfos(), false);
+        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+        networkModificationTreeService.invalidateBuildOfNodeOnly(node4.getId(), rootNetworkEntity.getId(), false, invalidateNodeInfos, false);
 
-        checkModificationExist(MODIFICATION_1_UUID, true);
-        checkModificationExist(MODIFICATION_2_UUID, true);
-        checkModificationExist(MODIFICATION_3_UUID, true);
-        checkModificationExist(MODIFICATION_4_UUID, true);
-        checkModificationExist(MODIFICATION_5_UUID, true);
+        assertThat(invalidateNodeInfos.getGroupUuids()).isEmpty();
     }
 
     @Test
     void testInvalidateBuiltNodeOnlyWithoutBuiltChildren() {
-        networkModificationTreeService.invalidateBuildOfNodeOnly(node3.getId(), rootNetworkEntity.getId(), false, new InvalidateNodeInfos(), false);
+        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+        networkModificationTreeService.invalidateBuildOfNodeOnly(node3.getId(), rootNetworkEntity.getId(), false, invalidateNodeInfos, false);
 
-        checkModificationExist(MODIFICATION_1_UUID, true);
-        checkModificationExist(MODIFICATION_2_UUID, false);
-        checkModificationExist(MODIFICATION_3_UUID, false);
-        checkModificationExist(MODIFICATION_4_UUID, true);
-        checkModificationExist(MODIFICATION_5_UUID, true);
+        assertThat(invalidateNodeInfos.getGroupUuids()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(List.of(
+            node2.getModificationGroupUuid(),
+            node3.getModificationGroupUuid()
+        ));
     }
 
     private void createStudyAndNodesWithIndexedModification() {
@@ -169,32 +160,9 @@ public class BasicModificationTest {
         node4 = networkModificationTreeService.createNode(studyEntity, node1.getId(), createModificationNodeInfo(NODE_4_NAME), InsertMode.CHILD, null);
         node5 = networkModificationTreeService.createNode(studyEntity, node4.getId(), createModificationNodeInfo(NODE_5_NAME), InsertMode.AFTER, null);
 
-        createBasicModification(MODIFICATION_1_UUID, node1.getModificationGroupUuid(), rootNetworkEntity.getNetworkUuid());
-        createBasicModification(MODIFICATION_2_UUID, node2.getModificationGroupUuid(), rootNetworkEntity.getNetworkUuid());
-        createBasicModification(MODIFICATION_3_UUID, node3.getModificationGroupUuid(), rootNetworkEntity.getNetworkUuid());
-        createBasicModification(MODIFICATION_4_UUID, node4.getModificationGroupUuid(), rootNetworkEntity.getNetworkUuid());
-        createBasicModification(MODIFICATION_5_UUID, node5.getModificationGroupUuid(), rootNetworkEntity.getNetworkUuid());
-
         networkModificationTreeService.updateNodeBuildStatus(node3.getId(), rootNetworkEntity.getId(), NodeBuildStatus.from(BuildStatus.BUILT));
         networkModificationTreeService.updateNodeBuildStatus(node4.getId(), rootNetworkEntity.getId(), NodeBuildStatus.from(BuildStatus.BUILT));
         networkModificationTreeService.updateNodeBuildStatus(node5.getId(), rootNetworkEntity.getId(), NodeBuildStatus.from(BuildStatus.BUILT));
 
-    }
-
-    private void checkModificationExist(UUID modificationUuid, boolean shouldExist) {
-        assertEquals(shouldExist, basicModificationInfosRepository.existsById(modificationUuid + "_" + rootNetworkEntity.getNetworkUuid()));
-    }
-
-    private BasicModificationInfos createBasicModification(UUID modificationUuid, UUID groupUuid, UUID networkUuid) {
-        return basicModificationInfosRepository.save(BasicModificationInfos.builder()
-            .modificationUuid(modificationUuid)
-            .groupUuid(groupUuid)
-            .networkUuid(networkUuid)
-            .build());
-    }
-
-    @AfterEach
-    void cleanUp() {
-        basicModificationInfosRepository.deleteAll();
     }
 }

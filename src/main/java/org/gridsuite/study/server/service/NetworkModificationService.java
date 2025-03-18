@@ -386,4 +386,17 @@ public class NetworkModificationService {
 
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, Void.class);
     }
+
+    public void deleteIndexedModifications(List<UUID> groupUuids, UUID networkUuid) {
+        if (groupUuids.isEmpty()) {
+            return;
+        }
+
+        String path = UriComponentsBuilder.fromPath(NETWORK_MODIFICATIONS_PATH + DELIMITER + "index")
+            .queryParam("networkUuid", networkUuid)
+            .queryParam("groupUuids", groupUuids)
+            .toUriString();
+
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, null, Void.class);
+    }
 }
