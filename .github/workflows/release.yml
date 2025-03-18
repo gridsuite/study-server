@@ -12,11 +12,9 @@ on:
 
 jobs:
   run-release:
-    uses: powsybl/github-ci/.github/workflows/release-backend-app-generic.yml@8e3547c7f6d98c23095896b6097294f22100b122
+    uses: powsybl/github-ci/.github/workflows/release-backend-app-generic.yml@8e990dd28cbccff180f322903ac1e3131ab3632a
     with:
       githubappId: ${{ vars.GRIDSUITE_ACTIONS_APPID }}
-      sonarOrganization: gridsuite
-      sonarProjectKey: org.gridsuite:study-server
       dockerImage: docker.io/gridsuite/study-server
       dockerUsername: gridsuiteci
       releaseVersion: ${{ github.event.inputs.releaseVersion }}
