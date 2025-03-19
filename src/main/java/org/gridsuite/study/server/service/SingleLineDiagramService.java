@@ -192,7 +192,7 @@ public class SingleLineDiagramService {
         return result;
     }
 
-    public String loadNetworkAreaDiagram(UUID networkUuid, String variantId, UUID nadConfigUuid) {
+    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, UUID nadConfigUuid) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
                 "/network-area-diagram/{networkUuid}")
                 .queryParam(QUERY_PARAM_NAD_CONFIG_UUID, nadConfigUuid);

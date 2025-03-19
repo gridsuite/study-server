@@ -1221,14 +1221,14 @@ public class StudyService {
         }
     }
 
-    public String loadNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, UUID nadConfigUuid) {
+    public String getNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, UUID nadConfigUuid) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(ROOT_NETWORK_NOT_FOUND);
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            return singleLineDiagramService.loadNetworkAreaDiagram(networkUuid, variantId, nadConfigUuid);
+            return singleLineDiagramService.getNetworkAreaDiagram(networkUuid, variantId, nadConfigUuid);
         } else {
             return null;
         }
