@@ -2229,6 +2229,77 @@ public class StudyService {
         return studyConfigService.getSpreadsheetConfigCollection(studyConfigService.getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(studyEntity));
     }
 
+    /**
+     * Set spreadsheet config collection on study or reset to default one if empty body.
+     * Default is the user profile one, or system default if no profile is available.
+     *
+     * @param studyUuid the study UUID
+     * @param configCollection the spreadsheet config collection (null means reset to default)
+     * @param userId the user ID for retrieving profile
+     * @return true if reset with user profile cannot be done, false otherwise
+     */
+    @Transactional
+    public boolean setSpreadsheetConfigCollection(UUID studyUuid, String configCollection, String userId) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return createOrUpdateSpreadsheetConfigCollection(studyEntity, configCollection, userId);
+    }
+
+    /**
+     * Create or update spreadsheet config collection parameters.
+     * If configCollection is null, try to use the one from user profile, or system default if no profile.
+     *
+     * @param studyEntity the study entity
+     * @param configCollection the spreadsheet config collection (null means reset to default)
+     * @param userId the user ID for retrieving profile
+     * @return true if reset with user profile cannot be done, false otherwise
+     */
+    private boolean createOrUpdateSpreadsheetConfigCollection(StudyEntity studyEntity, String configCollection, String userId) {
+        boolean userProfileIssue = false;
+        UUID existingSpreadsheetConfigCollectionUuid = studyEntity.getSpreadsheetConfigCollectionUuid();
+
+        UserProfileInfos userProfileInfos = configCollection == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
+        if (configCollection == null && userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
+            // reset case, with existing profile, having default spreadsheet config collection
+            try {
+                UUID spreadsheetConfigCollectionFromProfileUuid = studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
+                studyEntity.setSpreadsheetConfigCollectionUuid(spreadsheetConfigCollectionFromProfileUuid);
+                removeSpreadsheetConfigCollection(existingSpreadsheetConfigCollectionUuid);
+                return userProfileIssue;
+            } catch (Exception e) {
+                userProfileIssue = true;
+                LOGGER.error(String.format("Could not duplicate spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default collection",
+                        userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
+                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default collection below
+            }
+        }
+
+        if (configCollection != null) {
+            if (existingSpreadsheetConfigCollectionUuid == null) {
+                UUID newUuid = studyConfigService.createSpreadsheetConfigCollection(configCollection);
+                studyEntity.setSpreadsheetConfigCollectionUuid(newUuid);
+            } else {
+                studyConfigService.updateSpreadsheetConfigCollection(existingSpreadsheetConfigCollectionUuid, configCollection);
+            }
+        } else {
+            // No config provided, use system default
+            UUID defaultCollectionUuid = studyConfigService.createDefaultSpreadsheetConfigCollection();
+            studyEntity.setSpreadsheetConfigCollectionUuid(defaultCollectionUuid);
+            removeSpreadsheetConfigCollection(existingSpreadsheetConfigCollectionUuid);
+        }
+
+        return userProfileIssue;
+    }
+
+    private void removeSpreadsheetConfigCollection(@Nullable UUID spreadsheetConfigCollectionUuid) {
+        if (spreadsheetConfigCollectionUuid != null) {
+            try {
+                studyConfigService.deleteSpreadsheetConfigCollection(spreadsheetConfigCollectionUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove spreadsheet config collection with uuid:" + spreadsheetConfigCollectionUuid, e);
+            }
+        }
+    }
+
     @Transactional
     public String updateStudySpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
