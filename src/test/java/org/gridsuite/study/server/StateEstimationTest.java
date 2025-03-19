@@ -210,7 +210,7 @@ class StateEstimationTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
                 } else if (path.matches("/v1/reports")) {
                     return new MockResponse(200);
-                } else if (path.matches("/v1/results")) {
+                } else if (path.matches("/v1/results\\?resultsUuids.*")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/parameters/" + WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING)) {
                     return new MockResponse(404);
@@ -363,7 +363,7 @@ class StateEstimationTest {
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk());
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         // no more result
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());

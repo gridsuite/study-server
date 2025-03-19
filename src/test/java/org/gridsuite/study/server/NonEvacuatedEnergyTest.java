@@ -221,7 +221,7 @@ class NonEvacuatedEnergyTest {
                 } else if (path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_RESULT_UUID + ".*")
                     || path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID + ".*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), FAKE_NON_EVACUATED_ENERGY_RESULT_JSON);
-                } else if (path.matches("/v1/non-evacuated-energy/results/" + NON_EVACUATED_ENERGY_RESULT_UUID) && request.getMethod().equals("DELETE")) {
+                } else if (path.matches("/v1/non-evacuated-energy/results.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NON_EVACUATED_ENERGY_STATUS_JSON);
                 } else if (path.matches("/v1/non-evacuated-energy/results/invalidate-status?resultUuid=" + NON_EVACUATED_ENERGY_RESULT_UUID)
                            || path.matches("/v1/non-evacuated-energy/results/invalidate-status?resultUuid=" + NON_EVACUATED_ENERGY_OTHER_NODE_RESULT_UUID)) {
@@ -362,7 +362,7 @@ class NonEvacuatedEnergyTest {
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.contains("/v1/non-evacuated-energy/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/non-evacuated-energy/results\\?resultsUuids")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull().size());
 
