@@ -1,0 +1,18 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="lecuyerfra (generated)" id="1742378466280-14">
+        <createTable tableName="study_entity_node_aliases">
+            <column name="study_entity_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)"/>
+            <column name="node_id" type="UUID"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1742378466280-18">
+        <addForeignKeyConstraint baseColumnNames="study_entity_id" baseTableName="study_entity_node_aliases" constraintName="study_node_aliases_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="study" validate="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1742378466280-19">
+        <dropColumn columnName="ALIAS" tableName="NODE"/>
+    </changeSet>
+</databaseChangeLog>

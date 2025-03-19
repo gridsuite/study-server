@@ -76,7 +76,7 @@ public class NetworkModificationTreeService {
     }
 
     private NodeEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
-        NodeEntity newNode = nodesRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null, null));
+        NodeEntity newNode = nodesRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
         }
@@ -351,7 +351,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public NodeEntity createRoot(StudyEntity study) {
-        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null, null));
+        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null));
         rootNodeInfoRepository.save(
             RootNodeInfoEntity.builder()
                 .idNode(node.getIdNode())
@@ -519,26 +519,6 @@ public class NetworkModificationTreeService {
 
     public NetworkModificationNodeInfoEntity getNetworkModificationNodeInfoEntity(UUID nodeId) {
         return networkModificationNodeInfoRepository.findById(nodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
-    }
-
-    public List<NetworkModificationNodeInfoEntity> getNetworkModificationNodeInfoEntities(List<UUID> nodeUuids) {
-        return networkModificationNodeInfoRepository.findAllById(nodeUuids);
-    }
-
-    public List<RootNodeInfoEntity> getRootNodeInfoEntities(List<UUID> nodeUuids) {
-        return rootNodeInfoRepository.findAllById(nodeUuids);
-    }
-
-    public List<NodeEntity> getNodeEntities(List<UUID> nodeUuids) {
-        return nodesRepository.findAllById(nodeUuids);
-    }
-
-    public List<NodeEntity> getStudyNodeAliasEntities(UUID studyUuid) {
-        return nodesRepository.findAllByStudyIdAndAliasNotNull(studyUuid);
-    }
-
-    public void resetNodeAliases(UUID studyUuid) {
-        nodesRepository.findAllByStudyIdAndAliasNotNull(studyUuid).forEach(nodeEntity -> nodeEntity.setAlias(null));
     }
 
     private AbstractNodeInfoEntity getNodeInfoEntity(UUID nodeUuid) {
@@ -951,5 +931,13 @@ public class NetworkModificationTreeService {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
         // perform N queries, but it's fast: 25 ms for 400 nodes
         return nodes.stream().filter(n -> self.getNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, AbstractNode> getAllStudyNodesByUuid(UUID studyId) {
+        List<AbstractNode> allNodeInfos = new ArrayList<>();
+        allNodeInfos.addAll(rootNodeInfoRepository.findAllByNodeStudyId(studyId).stream().map(RootNodeInfoEntity::toDto).toList());
+        allNodeInfos.addAll(networkModificationNodeInfoRepository.findAllByNodeStudyId(studyId).stream().map(NetworkModificationNodeInfoEntity::toDto).toList());
+        return allNodeInfos.stream().collect(Collectors.toMap(AbstractNode::getId, node -> node));
     }
 }

@@ -11,8 +11,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
+import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
+import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
@@ -33,7 +35,6 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParamete
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
@@ -1795,7 +1796,14 @@ public class StudyService {
 
     @Transactional
     public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId) {
-
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        if (!CollectionUtils.isEmpty(studyEntity.getNodeAliases())) {
+            studyEntity.getNodeAliases().forEach(nodeAliasEmbeddable -> {
+                if (nodeAliasEmbeddable.getNodeId() != null && nodeIds.contains(nodeAliasEmbeddable.getNodeId())) {
+                    nodeAliasEmbeddable.setNodeId(null);
+                }
+            });
+        }
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
         for (UUID nodeId : nodeIds) {
             AtomicReference<Long> startTime = new AtomicReference<>(null);
@@ -2871,35 +2879,36 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public List<NodeAlias> getNodeAliases(UUID studyUuid) {
-        List<NodeEntity> aliasedNodes = networkModificationTreeService.getStudyNodeAliasEntities(studyUuid);
-        Map<NodeType, List<UUID>> nodeUuidsByType = aliasedNodes.stream()
-            .collect(Collectors.groupingBy(NodeEntity::getType, Collectors.mapping(NodeEntity::getIdNode, Collectors.toList())));
-
-        Map<UUID, String> nodeNames = new HashMap<>();
-        if (nodeUuidsByType.get(NodeType.NETWORK_MODIFICATION) != null) {
-            nodeNames.putAll(networkModificationTreeService.getNetworkModificationNodeInfoEntities(nodeUuidsByType.get(NodeType.NETWORK_MODIFICATION))
-                .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName)));
-        }
-        if (nodeUuidsByType.get(NodeType.ROOT) != null) {
-            nodeNames.putAll(networkModificationTreeService.getRootNodeInfoEntities(nodeUuidsByType.get(NodeType.ROOT))
-                .stream().collect(Collectors.toMap(AbstractNodeInfoEntity::getIdNode, AbstractNodeInfoEntity::getName)));
-        }
-
-        return aliasedNodes.stream().map(node ->
-            new NodeAlias(node.getIdNode(), node.getAlias(), nodeNames.get(node.getIdNode()))).toList();
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        List<NodeAlias> nodeAliases = new ArrayList<>();
+        Map<UUID, AbstractNode> nodesByUuid = networkModificationTreeService.getAllStudyNodesByUuid(studyUuid);
+        studyEntity.getNodeAliases().forEach(nodeAliasEmbeddable -> {
+            if (nodeAliasEmbeddable.getNodeId() != null) {
+                AbstractNode node = nodesByUuid.get(nodeAliasEmbeddable.getNodeId());
+                nodeAliases.add(new NodeAlias(node.getId(), nodeAliasEmbeddable.getName(), node.getName()));
+            } else {
+                nodeAliases.add(new NodeAlias(null, nodeAliasEmbeddable.getName(), null));
+            }
+        });
+        return nodeAliases;
     }
 
     @Transactional
     public void updateNodeAliases(UUID studyUuid, List<NodeAlias> nodeAliases) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         //Reset alias values for given study to keep data in sync
-        networkModificationTreeService.resetNodeAliases(studyUuid);
-        networkModificationTreeService.getNodeEntities(nodeAliases.stream().map(NodeAlias::id).toList())
-            .forEach(nodeEntity -> nodeAliases.stream()
-                .filter(alias -> alias.id().equals(nodeEntity.getIdNode()))
-                .findFirst()
-                .ifPresentOrElse(alias -> nodeEntity.setAlias(alias.alias()),
-                    () -> {
-                        throw new StudyException(NODE_NOT_FOUND);
-                    }));
+        studyEntity.setNodeAliases(null);
+        if (!CollectionUtils.isEmpty(nodeAliases)) {
+            List<NodeAliasEmbeddable> newNodeAliases = new ArrayList<>();
+            nodeAliases.forEach(nodeAlias -> {
+                String aliasName = nodeAlias.alias();
+                if (!StringUtils.isEmpty(nodeAlias.name())) {
+                    newNodeAliases.add(new NodeAliasEmbeddable(aliasName, nodeAlias.id()));
+                } else {
+                    newNodeAliases.add(new NodeAliasEmbeddable(aliasName, null));
+                }
+            });
+            studyEntity.setNodeAliases(newNodeAliases);
+        }
     }
 }
