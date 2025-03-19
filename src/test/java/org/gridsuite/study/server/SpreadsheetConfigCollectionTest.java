@@ -46,8 +46,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -263,7 +262,7 @@ class SpreadsheetConfigCollectionTest {
         UUID studyUuid = studyEntity.getId();
 
         // Test setting a new spreadsheet config collection with body
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
                         .content(NEW_SPREADSHEET_CONFIG_COLLECTION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .header(StudyConstants.HEADER_USER_ID, NO_PROFILE_USER_ID))
@@ -286,7 +285,7 @@ class SpreadsheetConfigCollectionTest {
         UUID studyUuid = studyEntity.getId();
 
         // Test setting a new spreadsheet config collection with body
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
                         .content(NEW_SPREADSHEET_CONFIG_COLLECTION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .header(StudyConstants.HEADER_USER_ID, NO_PROFILE_USER_ID))
@@ -308,7 +307,7 @@ class SpreadsheetConfigCollectionTest {
         UUID studyUuid = studyEntity.getId();
 
         // Test resetting to default (empty body)
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
                         .contentType(MediaType.APPLICATION_JSON)
                         .header(StudyConstants.HEADER_USER_ID, VALID_PROFILE_USER_ID))
                 .andExpect(status().isOk());
@@ -332,7 +331,7 @@ class SpreadsheetConfigCollectionTest {
         UUID studyUuid = studyEntity.getId();
 
         // Test resetting to default when user profile attempt fails (empty body)
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
                         .contentType(MediaType.APPLICATION_JSON)
                         .header(StudyConstants.HEADER_USER_ID, NO_PROFILE_USER_ID))
                 .andExpect(status().isOk());
