@@ -155,6 +155,10 @@ public class RootNetworkNodeInfoService {
         }
     }
 
+    public List<RootNetworkNodeInfoEntity> getAllWithRootNetworkByNodeInfoId(UUID nodeUuid) {
+        return rootNetworkNodeInfoRepository.findAllWithRootNetworkByNodeInfoId(nodeUuid);
+    }
+
     public void fillDeleteNodeInfo(UUID nodeUuid, DeleteNodeInfos deleteNodeInfos) {
         //get all rootnetworknodeinfo info linked to node
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllWithRootNetworkByNodeInfoId(nodeUuid);
@@ -353,13 +357,6 @@ public class RootNetworkNodeInfoService {
         rootNetworkNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
         rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())));
         changedNodes.add(nodeUuid);
-    }
-
-    public Set<UUID> getModificationsToExclude(UUID nodeUuid, UUID rootNetworkUuid) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository
-                .findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
-                .orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-        return rootNetworkNodeInfoEntity.getModificationsUuidsToExclude();
     }
 
     public void updateModificationsToExclude(UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationUuids, boolean activated) {

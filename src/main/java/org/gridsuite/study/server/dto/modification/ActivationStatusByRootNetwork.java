@@ -12,9 +12,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import org.gridsuite.modification.dto.ModificationInfos;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * @author Maissa Souissi <maissa.souissi at rte-france.com>
@@ -23,12 +20,11 @@ import java.util.UUID;
 @NoArgsConstructor
 @Getter
 @Setter
-@Schema(description = "network modification Infos with activation status by root network ")
-public class NetworkModificationInfos {
+@Schema(description = "network modification activation status related to a specific root network tag")
+public class ActivationStatusByRootNetwork {
+    @Schema(description = "activation status")
+    boolean activationStatus;
 
-    @Schema(description = "activation status By rootNetwork uuid")
-    Map<UUID, ActivationStatusByRootNetwork> activationStatusByRootNetwork;
-
-    @Schema(description = "Modification Infos")
-    private ModificationInfos modificationInfos;
+    @Schema(description = "Root Network Tag")
+    private String rootNetworkTag;
 }

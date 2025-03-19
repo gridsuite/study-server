@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.modification.dto.ModificationInfos;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ActivationStatusByRootNetwork;
 import org.gridsuite.study.server.dto.modification.NetworkModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
@@ -634,11 +635,8 @@ public class NetworkModificationTreeService {
         }
 
         List<NetworkModificationInfos> networkModificationInfosList = new ArrayList<>();
-        // build NetworkModificationInfos for each modification
         for (ModificationInfos modification : modificationInfos) {
-            // Get the activation status map for each root network
-            Map<UUID, Boolean> rootNetworkActivationMap = getRootNetworkActivationStatus(nodeUuid, modification.getUuid(), studyUuid);
-
+            Map<UUID, ActivationStatusByRootNetwork> rootNetworkActivationMap = getRootNetworkActivationStatus(nodeUuid, modification.getUuid());
             NetworkModificationInfos networkModificationInfos = NetworkModificationInfos.builder()
                     .activationStatusByRootNetwork(rootNetworkActivationMap)
                     .modificationInfos(modification)
@@ -652,17 +650,15 @@ public class NetworkModificationTreeService {
     /**
      * get modification activation status by root network
      */
-    private Map<UUID, Boolean> getRootNetworkActivationStatus(UUID nodeUuid, UUID modificationUuid, UUID studyUuid) {
-        List<RootNetworkInfos> rootNetworkInfos = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
-
-        Map<UUID, Boolean> rootNetworkActivationMap = new HashMap<>();
-
+    private Map<UUID, ActivationStatusByRootNetwork> getRootNetworkActivationStatus(UUID nodeUuid, UUID modificationUuid) {
+        List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos = rootNetworkNodeInfoService.getAllWithRootNetworkByNodeInfoId(nodeUuid);
+        Map<UUID, ActivationStatusByRootNetwork> rootNetworkActivationMap = new HashMap<>();
         // Get activation status for each root network
-        for (RootNetworkInfos rootNetworkInfo : rootNetworkInfos) {
-            UUID rootNetworkUuid = rootNetworkInfo.getId();
-            Set<UUID> modificationsToExclude = rootNetworkNodeInfoService.getModificationsToExclude(nodeUuid, rootNetworkUuid);
+        for (RootNetworkNodeInfoEntity rootNetworkNodeInfo : rootNetworkByNodeInfos) {
+            UUID rootNetworkUuid = rootNetworkNodeInfo.getRootNetwork().getId();
+            Set<UUID> modificationsToExclude = rootNetworkNodeInfo.getModificationsUuidsToExclude();
             boolean isStatusActivated = !modificationsToExclude.contains(modificationUuid);
-            rootNetworkActivationMap.put(rootNetworkUuid, isStatusActivated);
+            rootNetworkActivationMap.put(rootNetworkUuid, ActivationStatusByRootNetwork.builder().activationStatus(isStatusActivated).rootNetworkTag(rootNetworkNodeInfo.getRootNetwork().getTag()).build());
         }
         return rootNetworkActivationMap;
     }
