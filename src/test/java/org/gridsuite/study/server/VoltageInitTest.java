@@ -22,6 +22,7 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
+import org.gridsuite.modification.dto.VoltageInitModificationInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
@@ -65,6 +66,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.IntStream;
 
@@ -138,13 +140,24 @@ class VoltageInitTest {
                     .build()))
         .build();
 
+    private static final VoltageInitModificationInfos VOLTAGE_INIT_MODIFICATION_INFOS = VoltageInitModificationInfos.builder()
+            .uuid(UUID.fromString("254a3b85-14ad-4436-bf62-3e60af831dd1"))
+            .date(Instant.parse("2025-03-17T12:00:00Z"))
+            .stashed(false)
+            .messageType("VoltageInitialization")
+            .messageValues("Initial voltage setup completed.")
+            .generators(List.of())
+            .staticVarCompensators(List.of())
+            .vscConverterStations(List.of())
+            .shuntCompensators(List.of())
+            .transformers(List.of())
+            .build();
+
     private static final String VOLTAGE_INIT_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
 
     private static final String WRONG_VOLTAGE_INIT_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-1111-83d3-9e530245c7f4";
 
     private static final String VOLTAGE_INIT_RESULT_JSON = "{\"version\":\"1.0\"}";
-
-    private static final String VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST = "[{\"type\": \"VOLTAGE_INIT_MODIFICATION\",\"uuid\": \"254a3b85-14ad-4436-bf62-3e60af831dd1\",\"date\": \"2023-09-18T10:58:32.582239Z\",\"stashed\": false,\"generators\": [],\"transformers\": [],\"staticVarCompensators\": [],\"vscConverterStations\": [],\"shuntCompensators\": []}]";
 
     private static final String VOLTAGE_INIT_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
@@ -166,6 +179,7 @@ class VoltageInitTest {
     private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_VOLTAGE_INIT_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
     private String voltageInitDefaultParametersJson;
     private String voltageInitUpdatedParametersJson;
+    private String voltageInitModificationInfosList;
 
     private static final long TIMEOUT = 1000;
 
@@ -262,6 +276,7 @@ class VoltageInitTest {
 
         voltageInitDefaultParametersJson = objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS_INFOS);
         voltageInitUpdatedParametersJson = objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS_INFOS_2);
+        voltageInitModificationInfosList = objectMapper.writeValueAsString(Arrays.asList(VOLTAGE_INIT_MODIFICATION_INFOS));
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
@@ -306,7 +321,7 @@ class VoltageInitTest {
                                     IdentifiableType.GENERATOR, "genId", Set.of("s1"));
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(new NetworkModificationsResult(List.of(), List.of(networkModificationResult))));
                 } else if (path.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitModificationInfosList);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + VOLTAGE_INIT_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? VOLTAGE_INIT_OTHER_NODE_RESULT_UUID : VOLTAGE_INIT_RESULT_UUID;
