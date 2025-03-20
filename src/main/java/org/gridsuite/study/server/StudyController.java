@@ -866,6 +866,20 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.updateStudySpreadsheetConfigCollection(studyUuid, collectionUuid));
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
+    @Operation(summary = "Set spreadsheet config collection on study, reset to default one if empty body")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The spreadsheet config collection is set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")
+    })
+    public ResponseEntity<Void> setSpreadsheetConfigCollection(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) String configCollection,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return studyService.setSpreadsheetConfigCollection(studyUuid, configCollection, userId) ?
+                ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/export-network-formats")
     @Operation(summary = "get the available export format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The available export format")})
@@ -1227,9 +1241,9 @@ public class StudyController {
     @Operation(summary = "Get network modifications from a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<List<NetworkModificationInfos>> getNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                  @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                                  @RequestParam(name = "onlyStashed", required = false, defaultValue = "false") Boolean onlyStashed,
-                                                                                  @Parameter(description = "Only metadata") @RequestParam(name = "onlyMetadata", required = false, defaultValue = "false") Boolean onlyMetadata) {
+                                                         @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                          @RequestParam(name = "onlyStashed", required = false, defaultValue = "false") Boolean onlyStashed,
+                                                          @Parameter(description = "Only metadata") @RequestParam(name = "onlyMetadata", required = false, defaultValue = "false") Boolean onlyMetadata) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.getNetworkModifications(studyUuid, nodeUuid, onlyStashed, onlyMetadata));
     }
 

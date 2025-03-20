@@ -13,7 +13,7 @@
     <parent>
         <groupId>com.powsybl</groupId>
         <artifactId>powsybl-parent-ws</artifactId>
-        <version>21</version>
+        <version>22</version>
         <relativePath/>
     </parent>
 
@@ -168,7 +168,11 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
-
+        <dependency><!-- TODO : To remove when integrate in next release of gridsuite-dependencies -->
+            <groupId>org.gridsuite</groupId>
+            <artifactId>gridsuite-network-modification</artifactId>
+            <version>${network-modification.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.jayway.jsonpath</groupId>
             <artifactId>json-path-assert</artifactId>
