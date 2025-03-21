@@ -317,7 +317,7 @@ class DynamicSimulationServiceTest {
 
     @Test
     void testDeleteResult() {
-        assertDoesNotThrow(() -> dynamicSimulationService.deleteResult(RESULT_UUID));
+        assertDoesNotThrow(() -> dynamicSimulationService.deleteResults(List.of(RESULT_UUID)));
     }
 
     @Test
