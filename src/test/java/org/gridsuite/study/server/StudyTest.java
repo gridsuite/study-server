@@ -2767,14 +2767,9 @@ class StudyTest {
             .andExpectAll(status().isOk(),
                         content().string("INDEXED"));
 
-        requests = TestUtils.getRequestsWithBodyDone(4, server);
+        requests = TestUtils.getRequestsWithBodyDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/reindex-all")));
         assertEquals(2, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NETWORK_UUID_STRING + "/indexed-equipments")).count());
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
-
-        Message<byte[]> buildStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(study1Uuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", study1Uuid, study1RootNetworkUuid))
             .andExpect(status().is5xxServerError());

@@ -17,17 +17,17 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import org.elasticsearch.client.RestClient;
+import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
+import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.NetworkConversionService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NetworkService;
-import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,9 +48,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -89,6 +88,9 @@ class SupervisionControllerTest {
     @SpyBean
     private RootNetworkService rootNetworkService;
 
+    @SpyBean
+    private StudyService studyService;
+
     @Autowired
     private RestClient restClient;
 
@@ -97,6 +99,9 @@ class SupervisionControllerTest {
 
     @MockBean
     private NetworkService networkService;
+
+    @Autowired
+    private StudyInfosService studyInfosService;
 
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
@@ -178,6 +183,13 @@ class SupervisionControllerTest {
         assertEquals(restClient.getNodes().get(0).getHost().getHostName() + ":" + restClient.getNodes().get(0).getHost().getPort(), mvcResult.getResponse().getContentAsString());
 
         // Test get indexed equipments index name
+        mvcResult = mockMvc.perform(get("/v1/supervision/studies/index-name"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertEquals("studies", mvcResult.getResponse().getContentAsString());
+
+        // Test get indexed equipments index name
         mvcResult = mockMvc.perform(get("/v1/supervision/equipments/index-name"))
             .andExpect(status().isOk())
             .andReturn();
@@ -247,5 +259,47 @@ class SupervisionControllerTest {
         // test delete orphan indexed equipments
         mockMvc.perform(delete("/v1/supervision/studies/{networkUuid}/indexed-equipments-by-network-uuid", NETWORK_UUID))
             .andExpect(status().isOk());
+    }
+
+    @Test
+    void testRecreateIndices() throws Exception {
+        initStudy();
+        CreatedStudyBasicInfos studyInfos = CreatedStudyBasicInfos.builder().id(STUDY_UUID).userId("userId1").build();
+        studyInfosService.add(studyInfos);
+
+        assertIndexationCount(74, 0);
+        MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies/indexation-count"))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertEquals(1, Integer.parseInt(mvcResult.getResponse().getContentAsString()));
+
+        mockMvc.perform(post("/v1/supervision/studies/indices/recreate"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        assertIndexationCount(0, 0);
+        mvcResult = mockMvc.perform(get("/v1/supervision/studies/indexation-count"))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertEquals(0, Integer.parseInt(mvcResult.getResponse().getContentAsString()));
+        assertIndexationStatus(STUDY_UUID, StudyIndexationStatus.NOT_INDEXED.name());
+    }
+
+    @Test
+    void testReindexStudy() throws Exception {
+        UUID studyToReindexUuid = UUID.randomUUID();
+        BasicRootNetworkInfos network1 = new BasicRootNetworkInfos(UUID.randomUUID(), "name1", "tag1", false);
+        BasicRootNetworkInfos network2 = new BasicRootNetworkInfos(UUID.randomUUID(), "name2", "tag2", false);
+        doReturn(List.of(network1, network2))
+                .when(studyService).getExistingBasicRootNetworkInfos(studyToReindexUuid);
+        doNothing().when(studyService).reindexStudy(eq(studyToReindexUuid), eq(network1.rootNetworkUuid()));
+        doNothing().when(studyService).reindexStudy(eq(studyToReindexUuid), eq(network2.rootNetworkUuid()));
+
+        mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/reindex", studyToReindexUuid))
+                .andExpect(status().isOk());
+
+        verify(studyService).getExistingBasicRootNetworkInfos(studyToReindexUuid);
+        verify(studyService).reindexStudy(studyToReindexUuid, network1.rootNetworkUuid());
+        verify(studyService).reindexStudy(studyToReindexUuid, network2.rootNetworkUuid());
     }
 }

@@ -8,8 +8,12 @@ package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
+import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
@@ -17,8 +21,11 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationSer
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,9 +71,12 @@ public class SupervisionService {
 
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
+    private final ElasticsearchOperations elasticsearchOperations;
+
     private final RootNetworkService rootNetworkService;
 
     private final StateEstimationService stateEstimationService;
+    private final StudyInfosService studyInfosService;
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
@@ -81,8 +91,8 @@ public class SupervisionService {
                               NonEvacuatedEnergyService nonEvacuatedEnergyService,
                               ShortCircuitService shortCircuitService,
                               VoltageInitService voltageInitService,
-                              EquipmentInfosService equipmentInfosService,
-                              StateEstimationService stateEstimationService) {
+                              EquipmentInfosService equipmentInfosService, ElasticsearchOperations elasticsearchOperations,
+                              StateEstimationService stateEstimationService, StudyInfosService studyInfosService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
@@ -97,7 +107,9 @@ public class SupervisionService {
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
+        this.elasticsearchOperations = elasticsearchOperations;
         this.stateEstimationService = stateEstimationService;
+        this.studyInfosService = studyInfosService;
     }
 
     @Transactional
@@ -130,6 +142,10 @@ public class SupervisionService {
 
     public long getStudyIndexedTombstonedEquipmentsCount(UUID networkUUID) {
         return equipmentInfosService.getTombstonedEquipmentInfosCount(networkUUID);
+    }
+
+    public long getIndexedStudiesCount() {
+        return studyInfosService.getStudyInfosCount();
     }
 
     public long getIndexedEquipmentsCount() {
@@ -327,6 +343,30 @@ public class SupervisionService {
         );
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+    }
+
+    @Transactional
+    public void recreateStudyIndices() {
+        recreateIndex(CreatedStudyBasicInfos.class);
+        recreateIndex(EquipmentInfos.class);
+        recreateIndex(TombstonedEquipmentInfos.class);
+
+        studyService.getStudies().forEach(study ->
+                studyService.updateStudyIndexationStatus(study.getId(), StudyIndexationStatus.NOT_INDEXED));
+    }
+
+    private void recreateIndex(Class<?> indexClass) {
+        boolean deleted = elasticsearchOperations.indexOps(indexClass).delete();
+        if (!deleted) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to delete Elasticsearch index for: " + indexClass.getSimpleName());
+        }
+
+        boolean created = elasticsearchOperations.indexOps(indexClass).createWithMapping();
+        if (!created) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to create Elasticsearch index for: " + indexClass.getSimpleName());
+        }
     }
 }
 
