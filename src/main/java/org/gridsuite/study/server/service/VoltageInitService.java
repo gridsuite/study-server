@@ -15,6 +15,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
@@ -38,7 +39,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
 @Service
-public class VoltageInitService {
+public class VoltageInitService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
     static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
@@ -232,22 +233,12 @@ public class VoltageInitService {
         this.voltageInitServerBaseUri = voltageInitServerBaseUri;
     }
 
-    public void deleteVoltageInitResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}")
-                .buildAndExpand(uuid)
-                .toUriString();
-
-        restTemplate.delete(voltageInitServerBaseUri + path);
+    public void deleteVoltageInitResults(List<UUID> resultsUuids) {
+        deleteCalculationResults(resultsUuids, DELIMITER + VOLTAGE_INIT_API_VERSION + "/results", restTemplate, voltageInitServerBaseUri);
     }
 
-    public void deleteVoltageInitResults() {
-        try {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results")
-                .toUriString();
-            restTemplate.delete(voltageInitServerBaseUri + path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
+    public void deleteAllVoltageInitResults() {
+        deleteVoltageInitResults(null);
     }
 
     public Integer getVoltageInitResultsCount() {
@@ -300,5 +291,10 @@ public class VoltageInitService {
             .buildAndExpand(resultUuid).toUriString();
 
         restTemplate.put(voltageInitServerBaseUri + path, Void.class);
+    }
+
+    @Override
+    public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
+        return List.of();
     }
 }
