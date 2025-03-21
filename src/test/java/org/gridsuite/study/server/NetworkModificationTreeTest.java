@@ -438,15 +438,15 @@ class NetworkModificationTreeTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, UUID.randomUUID(), CASE_NAME, CASE_FORMAT, UUID.randomUUID());
         createDummyRootNetwork(studyEntity, "secondRootNetwork", UUID.fromString(ROOT_NETWORK_UUID));
         studyRepository.save(studyEntity);
+
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(UUID.fromString(ROOT_NETWORK_UUID)).orElse(null);
-        // create root node and a network modification node - it will create a RootNetworkNodeInfoEntity for each root network
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), NetworkModificationNode.builder()
                 .name("NODE_1_NAME")
                 .description("")
                 .modificationGroupUuid(UUID.fromString(MODIFICATION1_UUID_STRING_OK))
                 .children(Collections.emptyList()).build(), InsertMode.AFTER, null);
-        NetworkModificationNodeInfoEntity cc = networkModificationNodeInfoRepository.findById(firstNode.getId()).orElse(null);
 
         RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
         networkModificationTreeService.getNetworkModificationNodeInfoEntity(firstNode.getId()).setModificationGroupUuid(UUID.fromString(MODIFICATION1_UUID_STRING_OK));
