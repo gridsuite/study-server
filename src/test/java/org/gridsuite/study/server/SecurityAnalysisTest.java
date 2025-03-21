@@ -272,7 +272,7 @@ class SecurityAnalysisTest {
                     input.send(MessageBuilder.withPayload("")
                         .build(), saFailedDestination);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID + "\"");
-                } else if ("/v1/results".equals(path)) {
+                } else if (path.matches("/v1/results\\?resultsUuids.*")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/reports")) {
                     return new MockResponse(200);
@@ -387,7 +387,7 @@ class SecurityAnalysisTest {
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertEquals(0, rootNetworkNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
     }

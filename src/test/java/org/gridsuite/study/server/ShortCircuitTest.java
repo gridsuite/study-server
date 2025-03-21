@@ -243,7 +243,7 @@ class ShortCircuitTest implements WithAssertions {
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), shortCircuitAnalysisStoppedDestination);
                     return new MockResponse(200);
-                } else if (path.matches("/v1/results")) {
+                } else if (path.matches("/v1/results\\?resultsUuids.*")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/reports")) {
                     return new MockResponse(200);
@@ -416,7 +416,7 @@ class ShortCircuitTest implements WithAssertions {
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
     }
@@ -614,7 +614,7 @@ class ShortCircuitTest implements WithAssertions {
                 .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
     }

@@ -189,23 +189,23 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
 
     @Test
     void testDeleteResult() {
-        // configure mock server response for test delete result: "results/{resultUuid}"
-        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_UUID))
+        // configure mock server response for test delete result.
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + "?resultsUuids=" + RESULT_UUID))
                 .willReturn(WireMock.ok()
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // test service
-        assertDoesNotThrow(() -> dynamicSimulationClient.deleteResult(RESULT_UUID));
+        assertDoesNotThrow(() -> dynamicSimulationClient.deleteResults(List.of(RESULT_UUID)));
     }
 
     @Test
     void testDeleteResults() throws Exception {
         // configure mock server response for test delete all results - results/
-        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL))
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + "?resultsUuids"))
             .willReturn(WireMock.ok()
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             ));
-        dynamicSimulationClient.deleteResults();
+        dynamicSimulationClient.deleteAllResults();
 
         // configure mock server response for test result count - supervision/results-count
         String resultCountEndPointUrl = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT);
