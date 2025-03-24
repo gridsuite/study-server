@@ -52,6 +52,7 @@ public final class StudyConstants {
     public static final String QUERY_FORMAT_OPTIONAL_PARAMS = QUERY_PARAM_OPTIONAL_PARAMS + "[%s]";
     public static final String QUERY_PARAM_SUBSTATIONS_IDS = "substationsIds";
     public static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
+    public static final String QUERY_PARAM_RESULTS_UUIDS = "resultsUuids";
 
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";
@@ -67,6 +68,7 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_REPORTER_ID = "reporterId";
     public static final String QUERY_PARAM_REPORT_TYPE = "reportType";
     public static final String HEADER_RECEIVER = "receiver";
+    public static final String HEADER_ERROR = "error";
     public static final String HEADER_BUS_ID = "busId";
     public static final String HEADER_IMPORT_PARAMETERS = "importParameters";
     public static final String HEADER_MESSAGE = "message";

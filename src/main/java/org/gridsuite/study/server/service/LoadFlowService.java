@@ -84,23 +84,12 @@ public class LoadFlowService extends AbstractComputationService {
         return restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
-    public void deleteLoadFlowResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}")
-                .buildAndExpand(uuid)
-                .toUriString();
-
-        restTemplate.delete(loadFlowServerBaseUri + path);
+    public void deleteLoadFlowResults(List<UUID> resultsUuids) {
+        deleteCalculationResults(resultsUuids, DELIMITER + LOADFLOW_API_VERSION + "/results", restTemplate, loadFlowServerBaseUri);
     }
 
-    public void deleteLoadFlowResults() {
-        try {
-            String path = UriComponentsBuilder
-                    .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results").toUriString();
-            restTemplate.delete(loadFlowServerBaseUri + path, Void.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
-
+    public void deleteAllLoadFlowResults() {
+        deleteLoadFlowResults(null);
     }
 
     public Integer getLoadFlowResultsCount() {

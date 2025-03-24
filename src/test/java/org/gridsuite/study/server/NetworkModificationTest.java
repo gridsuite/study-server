@@ -325,7 +325,7 @@ class NetworkModificationTest {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
-                } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
+                } else if (("/v1/results?resultsUuids=" + SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
                     }
@@ -334,7 +334,7 @@ class NetworkModificationTest {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + DYNAMIC_SIMULATION_RESULT_UUID + "/status").equals(path)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED));
-                } else if (("/v1/results/" + DYNAMIC_SIMULATION_RESULT_UUID).equals(path)) {
+                } else if (("/v1/results?resultsUuids=" + DYNAMIC_SIMULATION_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED));
                     }
@@ -343,7 +343,7 @@ class NetworkModificationTest {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED));
-                } else if (("/v1/results/" + DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
+                } else if (("/v1/results?resultsUuids=" + DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED));
                     }
@@ -352,7 +352,7 @@ class NetworkModificationTest {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
-                } else if (("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID).equals(path)) {
+                } else if (("/v1/results?resultsUuids=" + SENSITIVITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
                     }
@@ -361,7 +361,7 @@ class NetworkModificationTest {
                     return new MockResponse(200);
                 } else if (("/v1/non-evacuated-energy/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID + "/status").equals(path)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON);
-                } else if (("/v1/non-evacuated-energy/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID).equals(path)) {
+                } else if (("/v1/non-evacuated-energy/results?resultsUuids=" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON);
                     }
@@ -374,12 +374,12 @@ class NetworkModificationTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
                 } else if (("/v1/results/" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
-                } else if (("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
+                } else if (("/v1/results?resultsUuids=" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
                     }
                     return new MockResponse(500);
-                } else if (("/v1/results/" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
+                } else if (("/v1/results?resultsUuids=" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
                     }
@@ -388,7 +388,7 @@ class NetworkModificationTest {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status").equals(path)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_STATUS_JSON);
-                } else if (("/v1/results/" + VOLTAGE_INIT_RESULT_UUID).equals(path)) {
+                } else if (("/v1/results?resultsUuids=" + VOLTAGE_INIT_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_STATUS_JSON);
                     }
@@ -397,7 +397,7 @@ class NetworkModificationTest {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + LOADFLOW_RESULT_UUID + "/status").equals(path)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LOADFLOW_STATUS_JSON);
-                } else if (("/v1/results/" + LOADFLOW_RESULT_UUID).equals(path)) {
+                } else if (("/v1/results?resultsUuids=" + LOADFLOW_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), LOADFLOW_STATUS_JSON);
                     }
@@ -406,7 +406,7 @@ class NetworkModificationTest {
                     return new MockResponse(200);
                 } else if (("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/status").equals(path)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), STATE_ESTIMATION_STATUS_JSON);
-                } else if (("/v1/results/" + STATE_ESTIMATION_RESULT_UUID).equals(path)) {
+                } else if (("/v1/results?resultsUuids=" + STATE_ESTIMATION_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), STATE_ESTIMATION_STATUS_JSON);
                     }
@@ -2443,13 +2443,13 @@ class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPut(stubUuid, MODIFICATION_UUID, generatorAttributesUpdated);
         var requests = TestUtils.getRequestsWithBodyDone(15, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/non-evacuated-energy/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + SECURITY_ANALYSIS_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + SENSITIVITY_ANALYSIS_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/non-evacuated-energy/results\\?resultsUuids=" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + VOLTAGE_INIT_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + STATE_ESTIMATION_RESULT_UUID)));
 
         // Mark the node 3 status as built
         RootNetworkNodeInfoEntity rootNetworkNodeInfo3Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode3Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
@@ -2550,7 +2550,7 @@ class NetworkModificationTest {
                 VOLTAGE_INIT_RESULT_UUID,
                 STATE_ESTIMATION_RESULT_UUID
         ).forEach(uuid -> {
-            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid)));
+            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results?resultsUuids=" + uuid)));
             assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid + "/status")));
         });
         // requests for computation sub-report deletion

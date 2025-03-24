@@ -230,13 +230,13 @@ public class ConsumerService {
                         case NETWORK_RECREATION ->
                             studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                         case ROOT_NETWORK_MODIFICATION ->
-                            studyService.updateNetwork(studyUuid, rootNetworkUuid, RootNetworkInfos.builder()
+                            studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
                                 .id(rootNetworkUuid)
                                 .networkInfos(networkInfos)
                                 .caseInfos(caseInfos)
                                 .importParameters(importParameters)
                                 .reportUuid(importReportUuid)
-                                .build());
+                                .build(), true);
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
@@ -466,11 +466,15 @@ public class ConsumerService {
                         CaseImportReceiver.class);
                     UUID studyUuid = receiver.getStudyUuid();
                     String userId = receiver.getUserId();
+                    UUID rootNetworkUuid = receiver.getRootNetworkUuid();
 
                     if (receiver.getCaseImportAction() == CaseImportAction.STUDY_CREATION) {
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
                         notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
                     } else {
+                        if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_CREATION) {
+                            studyService.deleteRootNetworkRequest(rootNetworkUuid);
+                        }
                         notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
                     }
                 } catch (Exception e) {

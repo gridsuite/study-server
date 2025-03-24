@@ -13,11 +13,12 @@ import lombok.NonNull;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
+import org.gridsuite.study.server.dto.RootNetworkAction;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkCreationRequestRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.springframework.stereotype.Service;
@@ -44,13 +45,13 @@ public class RootNetworkService {
     private final CaseService caseService;
     private final ReportService reportService;
 
-    private final RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository;
+    private final RootNetworkRequestRepository rootNetworkRequestRepository;
     private final StudyServerExecutionService studyServerExecutionService;
     private final EquipmentInfosService equipmentInfosService;
     private final NetworkStoreService networkStoreService;
 
     public RootNetworkService(RootNetworkRepository rootNetworkRepository,
-                              RootNetworkCreationRequestRepository rootNetworkCreationRequestRepository,
+                              RootNetworkRequestRepository rootNetworkRequestRepository,
                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
                               NetworkService networkService,
                               CaseService caseService,
@@ -63,7 +64,7 @@ public class RootNetworkService {
         this.networkService = networkService;
         this.caseService = caseService;
         this.reportService = reportService;
-        this.rootNetworkCreationRequestRepository = rootNetworkCreationRequestRepository;
+        this.rootNetworkRequestRepository = rootNetworkRequestRepository;
         this.studyServerExecutionService = studyServerExecutionService;
         this.equipmentInfosService = equipmentInfosService;
         this.networkStoreService = networkStoreService;
@@ -85,21 +86,38 @@ public class RootNetworkService {
         updateNetworkInfos(rootNetworkEntity, networkInfos);
     }
 
-    public void updateNetwork(@NonNull RootNetworkInfos rootNetworkInfos) {
-        RootNetworkEntity rootNetworkEntity = getRootNetwork(rootNetworkInfos.getId()).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-        UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
-        updateNetwork(rootNetworkEntity, rootNetworkInfos);
+    public void updateRootNetwork(@NonNull RootNetworkInfos rootNetworkInfos, boolean updateCase) {
+        RootNetworkEntity rootNetworkEntity = getRootNetwork(rootNetworkInfos.getId())
+                .orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
 
-        //delete old case
-        caseService.deleteCase(oldCaseUuid);
+        UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
+        updateRootNetworkInfos(rootNetworkEntity, rootNetworkInfos, updateCase);
+
+        if (updateCase && oldCaseUuid != null) {
+            //delete old case
+            caseService.deleteCase(oldCaseUuid);
+        }
     }
 
-    private void updateNetwork(RootNetworkEntity rootNetworkEntity, RootNetworkInfos rootNetworkInfos) {
-        updateCaseInfos(rootNetworkEntity, rootNetworkInfos.getCaseInfos());
-        updateNetworkInfos(rootNetworkEntity, rootNetworkInfos.getNetworkInfos());
+    private void updateRootNetworkInfos(RootNetworkEntity rootNetworkEntity, RootNetworkInfos rootNetworkInfos, boolean updateCase) {
+        if (updateCase) {
+            getRootNetworkRequest(rootNetworkInfos.getId()).ifPresent(request -> {
+                rootNetworkInfos.setName(request.getName());
+                rootNetworkInfos.setTag(request.getTag());
+            });
 
-        rootNetworkEntity.setImportParameters(rootNetworkInfos.getImportParameters());
-        rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
+            updateCaseInfos(rootNetworkEntity, rootNetworkInfos.getCaseInfos());
+            updateNetworkInfos(rootNetworkEntity, rootNetworkInfos.getNetworkInfos());
+            rootNetworkEntity.setImportParameters(rootNetworkInfos.getImportParameters());
+            rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
+        }
+
+        if (rootNetworkInfos.getName() != null) {
+            rootNetworkEntity.setName(rootNetworkInfos.getName());
+        }
+        if (rootNetworkInfos.getTag() != null) {
+            rootNetworkEntity.setTag(rootNetworkInfos.getTag());
+        }
     }
 
     private void updateCaseInfos(@NonNull RootNetworkEntity rootNetworkEntity, @NonNull CaseInfos caseInfos) {
@@ -172,8 +190,16 @@ public class RootNetworkService {
         );
     }
 
-    public RootNetworkCreationRequestEntity insertCreationRequest(UUID rootNetworkInCreationUuid, StudyEntity studyEntity, String rootNetworkName, String rootNetworkTag, String userId) {
-        return rootNetworkCreationRequestRepository.save(RootNetworkCreationRequestEntity.builder().id(rootNetworkInCreationUuid).name(rootNetworkName).tag(rootNetworkTag).studyUuid(studyEntity.getId()).userId(userId).build());
+    private RootNetworkRequestEntity insertRootNetworkRequest(UUID rootNetworkUuid, UUID studyUuid, String rootNetworkName, String rootNetworkTag, String userId, RootNetworkAction action) {
+        return rootNetworkRequestRepository.save(RootNetworkRequestEntity.builder().id(rootNetworkUuid).name(rootNetworkName).tag(rootNetworkTag).studyUuid(studyUuid).userId(userId).actionRequest(action).build());
+    }
+
+    public RootNetworkRequestEntity insertCreationRequest(UUID rootNetworkUuid, UUID studyUuid, String rootNetworkName, String rootNetworkTag, String userId) {
+        return insertRootNetworkRequest(rootNetworkUuid, studyUuid, rootNetworkName, rootNetworkTag, userId, RootNetworkAction.ROOT_NETWORK_CREATION);
+    }
+
+    public RootNetworkRequestEntity insertModificationRequest(UUID rootNetworkUuid, UUID studyUuid, String rootNetworkName, String rootNetworkTag, String userId) {
+        return insertRootNetworkRequest(rootNetworkUuid, studyUuid, rootNetworkName, rootNetworkTag, userId, RootNetworkAction.ROOT_NETWORK_MODIFICATION);
     }
 
     public void assertIsRootNetworkInStudy(UUID studyUuid, UUID rootNetworkUuid) {
@@ -228,16 +254,16 @@ public class RootNetworkService {
             );
     }
 
-    public Optional<RootNetworkCreationRequestEntity> getCreationRequest(UUID rootNetworkInCreationUuid) {
-        return rootNetworkCreationRequestRepository.findById(rootNetworkInCreationUuid);
+    public Optional<RootNetworkRequestEntity> getRootNetworkRequest(UUID rootNetworkUuid) {
+        return rootNetworkRequestRepository.findById(rootNetworkUuid);
     }
 
-    public List<RootNetworkCreationRequestEntity> getCreationRequests(UUID studyUuid) {
-        return rootNetworkCreationRequestRepository.findAllByStudyUuid(studyUuid);
+    public List<RootNetworkRequestEntity> geRootNetworkRequests(UUID studyUuid) {
+        return rootNetworkRequestRepository.findAllByStudyUuid(studyUuid);
     }
 
-    public void deleteCreationRequest(RootNetworkCreationRequestEntity rootNetworkCreationRequestEntity) {
-        rootNetworkCreationRequestRepository.delete(rootNetworkCreationRequestEntity);
+    public void deleteRootNetworkRequest(RootNetworkRequestEntity rootNetworkRequestEntity) {
+        rootNetworkRequestRepository.delete(rootNetworkRequestEntity);
     }
 
     public void assertCanCreateRootNetwork(UUID studyUuid, String rootNetworkName, String rootNetworkTag) {
@@ -247,8 +273,34 @@ public class RootNetworkService {
         assertTagNotExistInStudy(studyUuid, rootNetworkTag);
     }
 
+    public void assertCanModifyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String rootNetworkName, String rootNetworkTag) {
+        assertNameNotExistInStudyExceptCurrent(studyUuid, rootNetworkUuid, rootNetworkName);
+        assertTagSize(rootNetworkTag);
+        assertTagNotExistInStudyExceptCurrent(studyUuid, rootNetworkUuid, rootNetworkTag);
+    }
+
+    private void assertTagNotExistInStudyExceptCurrent(UUID studyUuid, UUID rootNetworkUuid, String tag) {
+        if (tag != null && isRootNetworkTagExistsInStudy(studyUuid, tag) && !isTagForCurrentRootNetwork(rootNetworkUuid, tag)) {
+            throw new StudyException(NOT_ALLOWED, "Tag already exists in study and is not for current root network");
+        }
+    }
+
+    private void assertNameNotExistInStudyExceptCurrent(UUID studyUuid, UUID rootNetworkUuid, String rootNetworkName) {
+        if (rootNetworkName != null && isRootNetworkNameExistsInStudy(studyUuid, rootNetworkName) && !isNameForCurrentRootNetwork(rootNetworkUuid, rootNetworkName)) {
+            throw new StudyException(NOT_ALLOWED, "Name already exists in study and is not for current root network");
+        }
+    }
+
+    private boolean isTagForCurrentRootNetwork(UUID rootNetworkUuid, String tag) {
+        return rootNetworkRepository.existsByIdAndTag(rootNetworkUuid, tag);
+    }
+
+    private boolean isNameForCurrentRootNetwork(UUID rootNetworkUuid, String name) {
+        return rootNetworkRepository.existsByIdAndName(rootNetworkUuid, name);
+    }
+
     private void assertMaximumByStudyIsNotReached(UUID studyUuid) {
-        if (rootNetworkRepository.countAllByStudyId(studyUuid) + rootNetworkCreationRequestRepository.countAllByStudyUuid(studyUuid) >= MAXIMUM_ROOT_NETWORK_BY_STUDY) {
+        if (rootNetworkRepository.countAllByStudyId(studyUuid) + rootNetworkRequestRepository.countAllByStudyUuid(studyUuid) >= MAXIMUM_ROOT_NETWORK_BY_STUDY) {
             throw new StudyException(MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED);
         }
     }
@@ -261,11 +313,11 @@ public class RootNetworkService {
 
     public boolean isRootNetworkNameExistsInStudy(UUID studyUuid, String rootNetworkName) {
         return rootNetworkRepository.findByNameAndStudyId(rootNetworkName, studyUuid).isPresent() ||
-            rootNetworkCreationRequestRepository.findByNameAndStudyUuid(rootNetworkName, studyUuid).isPresent();
+                rootNetworkRequestRepository.findByNameAndStudyUuid(rootNetworkName, studyUuid).isPresent();
     }
 
     private void assertTagSize(String tag) {
-        if (tag.length() > MAXIMUM_TAG_LENGTH) {
+        if (tag != null && tag.length() > MAXIMUM_TAG_LENGTH) {
             throw new StudyException(MAXIMUM_TAG_LENGTH_EXCEEDED, "Tag maximum length exceeded. Should be <= " + MAXIMUM_TAG_LENGTH);
         }
     }
@@ -278,6 +330,6 @@ public class RootNetworkService {
 
     public boolean isRootNetworkTagExistsInStudy(UUID studyUuid, String rootNetworkTag) {
         return rootNetworkRepository.findByTagAndStudyId(rootNetworkTag, studyUuid).isPresent() ||
-            rootNetworkCreationRequestRepository.findByTagAndStudyUuid(rootNetworkTag, studyUuid).isPresent();
+                rootNetworkRequestRepository.findByTagAndStudyUuid(rootNetworkTag, studyUuid).isPresent();
     }
 }

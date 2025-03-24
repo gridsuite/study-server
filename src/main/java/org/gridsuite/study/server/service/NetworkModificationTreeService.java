@@ -10,6 +10,7 @@ import com.powsybl.commons.report.ReportNode;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.modification.dto.ModificationInfos;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.elasticsearch.BasicModificationInfosService;
@@ -80,7 +81,7 @@ public class NetworkModificationTreeService {
     }
 
     private NodeEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
-        NodeEntity newNode = nodesRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
+        NodeEntity newNode = nodesRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null, null));
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
         }
@@ -355,7 +356,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public NodeEntity createRoot(StudyEntity study) {
-        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null));
+        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null, null));
         rootNodeInfoRepository.save(
             RootNodeInfoEntity.builder()
                 .idNode(node.getIdNode())
@@ -525,6 +526,26 @@ public class NetworkModificationTreeService {
         return networkModificationNodeInfoRepository.findById(nodeId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
     }
 
+    public List<NetworkModificationNodeInfoEntity> getNetworkModificationNodeInfoEntities(List<UUID> nodeUuids) {
+        return networkModificationNodeInfoRepository.findAllById(nodeUuids);
+    }
+
+    public List<RootNodeInfoEntity> getRootNodeInfoEntities(List<UUID> nodeUuids) {
+        return rootNodeInfoRepository.findAllById(nodeUuids);
+    }
+
+    public List<NodeEntity> getNodeEntities(List<UUID> nodeUuids) {
+        return nodesRepository.findAllById(nodeUuids);
+    }
+
+    public List<NodeEntity> getStudyNodeAliasEntities(UUID studyUuid) {
+        return nodesRepository.findAllByStudyIdAndAliasNotNull(studyUuid);
+    }
+
+    public void resetNodeAliases(UUID studyUuid) {
+        nodesRepository.findAllByStudyIdAndAliasNotNull(studyUuid).forEach(nodeEntity -> nodeEntity.setAlias(null));
+    }
+
     private AbstractNodeInfoEntity getNodeInfoEntity(UUID nodeUuid) {
         return getNodeEntity(nodeUuid).getType() == NodeType.ROOT ? getRootNodeInfoEntity(nodeUuid) : getNetworkModificationNodeInfoEntity(nodeUuid);
     }
@@ -610,7 +631,7 @@ public class NetworkModificationTreeService {
 
     // Return json string because modification dtos are not available here
     @Transactional(readOnly = true)
-    public String getNetworkModifications(@NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata) {
+    public List<ModificationInfos> getNetworkModifications(@NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata) {
         return networkModificationService.getModifications(self.getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
     }
 

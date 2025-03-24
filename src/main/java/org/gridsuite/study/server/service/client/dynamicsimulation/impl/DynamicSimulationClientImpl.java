@@ -160,23 +160,19 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public void deleteResult(UUID resultUuid) {
-        Objects.requireNonNull(resultUuid);
+    public void deleteResults(List<UUID> resultsUuids) {
+        if (resultsUuids != null && resultsUuids.isEmpty()) {
+            return;
+        }
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-
-        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{resultUuid}")
-                .buildAndExpand(resultUuid);
-
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
         // call dynamic-simulation REST API
-        getRestTemplate().delete(uriComponents.toUriString());
+        getRestTemplate().delete(uriComponents.build().toUriString());
     }
 
     @Override
-    public void deleteResults() {
-        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl);
-        // call dynamic-simulation REST API
-        getRestTemplate().delete(uriComponents.toUriString());
+    public void deleteAllResults() {
+        deleteResults(null);
     }
 
     @Override

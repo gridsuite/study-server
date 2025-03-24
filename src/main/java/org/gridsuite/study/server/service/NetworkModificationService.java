@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
+import org.gridsuite.modification.dto.ModificationInfos;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
@@ -80,7 +81,7 @@ public class NetworkModificationService {
     }
 
     // Return json string because modification dtos are not available here
-    public String getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata) {
+    public List<ModificationInfos> getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH)
             .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
@@ -90,7 +91,8 @@ public class NetworkModificationService {
             .toUriString();
 
         try {
-            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
+            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<ModificationInfos>>() {
+            }).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, GET_MODIFICATIONS_FAILED);
         }
