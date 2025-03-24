@@ -28,12 +28,13 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
-import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.modification.ModificationInfos;
-import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -72,6 +73,7 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.web.servlet.MockMvc;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -186,7 +188,6 @@ class NetworkModificationTreeTest {
     private static final UUID MODIFICATION_GROUP_UUID_2 = UUID.randomUUID();
     private static final UUID MODIFICATION_GROUP_UUID_3 = UUID.randomUUID();
     private static final String MODIFICATION1_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final String MODIFICATION_UUID_STRING_WITH_ACTIVATION = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String MODIFICATION_GROUP_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef222";
     private static final String USER_ID_HEADER = "userId";
 
@@ -283,8 +284,6 @@ class NetworkModificationTreeTest {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(0));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of()));
-                } else if (path.matches("/v1/groups/" + MODIFICATION_UUID_STRING_WITH_ACTIVATION + "/.*") && request.getMethod().equals("GET")) {
-                    return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of(ModificationInfos.builder().uuid(UUID.fromString(MODIFICATION_GROUP_UUID_STRING)).type(ModificationType.LINE_CREATION).build())));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_2 + "/.*") && request.getMethod().equals("GET")) {
                     return new MockResponse(HttpStatus.OK.value(), Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of("S1", "S2")));
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID_3 + "/.*") && request.getMethod().equals("GET")) {
@@ -417,46 +416,7 @@ class NetworkModificationTreeTest {
         deleteNode(root.getStudyId(), children, false, Set.of(children.get(0)), userId);
     }
 
-    public static final String CASE_NAME = "caseName";
     private static final String ROOT_NETWORK_UUID = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
-    public static final String CASE_FORMAT = "caseFormat";
-
-    private void createDummyRootNetwork(StudyEntity studyEntity, String name, UUID rootNetworkUuid) {
-        RootNetworkEntity rootNetworkEntity = RootNetworkInfos.builder()
-                .id(rootNetworkUuid)
-                .name(name)
-                .tag(UUID.randomUUID().toString().substring(0, 4))
-                .caseInfos(new CaseInfos(UUID.randomUUID(), "caseName", "caseFormat"))
-                .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
-                .reportUuid(UUID.randomUUID())
-                .build().toEntity();
-        studyEntity.addRootNetwork(rootNetworkEntity);
-    }
-
-    @Test
-    void testGetNetworkModificationsMetadataWithActivationStatus() throws Exception {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, UUID.randomUUID(), CASE_NAME, CASE_FORMAT, UUID.randomUUID());
-        createDummyRootNetwork(studyEntity, "secondRootNetwork", UUID.fromString(ROOT_NETWORK_UUID));
-        studyRepository.save(studyEntity);
-
-        RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(UUID.fromString(ROOT_NETWORK_UUID)).orElse(null);
-        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
-
-        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), NetworkModificationNode.builder()
-                .name("NODE_1_NAME")
-                .description("")
-                .modificationGroupUuid(UUID.fromString(MODIFICATION_UUID_STRING_WITH_ACTIVATION))
-                .children(Collections.emptyList()).build(), InsertMode.AFTER, null);
-
-        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
-        networkModificationTreeService.getNetworkModificationNodeInfoEntity(firstNode.getId()).setModificationGroupUuid(UUID.fromString(MODIFICATION_UUID_STRING_WITH_ACTIVATION));
-        rootNetwork0NodeInfo1Entity.setModificationsUuidsToExclude(Set.of(UUID.fromString(MODIFICATION_UUID_STRING_WITH_ACTIVATION)));
-        rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=false", studyEntity.getId(), firstNode.getId()))
-                .andExpect(status().isOk())
-                .andReturn().getResponse();
-    }
 
     @Test
     void testNodeStashAndRestore() throws Exception {
