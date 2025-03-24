@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
@@ -40,7 +41,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class SensitivityAnalysisService {
+public class SensitivityAnalysisService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
     private static final String RESULTS = "results";
@@ -233,22 +234,12 @@ public class SensitivityAnalysisService {
         }
     }
 
-    public void deleteSensitivityAnalysisResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
+    public void deleteSensitivityAnalysisResults(List<UUID> resultsUuids) {
+        deleteCalculationResults(resultsUuids, DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results", restTemplate, sensitivityAnalysisServerBaseUri);
     }
 
-    public void deleteSensitivityAnalysisResults() {
-        try {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results")
-                .toUriString();
-            restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
+    public void deleteAllSensitivityAnalysisResults() {
+        deleteSensitivityAnalysisResults(null);
     }
 
     public Integer getSensitivityAnalysisResultsCount() {
@@ -401,5 +392,10 @@ public class SensitivityAnalysisService {
         var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
 
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.GET, null, Long.class).getBody();
+    }
+
+    @Override
+    public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
+        return List.of();
     }
 }

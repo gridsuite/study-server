@@ -13,6 +13,9 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RESULTS_UUIDS;
+import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 public abstract class AbstractComputationService {
 
@@ -32,5 +35,20 @@ public abstract class AbstractComputationService {
             throw e;
         }
         return result;
+    }
+
+    public static void deleteCalculationResults(List<UUID> resultsUuids,
+                                                String path,
+                                                RestTemplate restTemplate,
+                                                String serverBaseUri) {
+        if (resultsUuids != null && resultsUuids.isEmpty()) {
+            return;
+        }
+        try {
+            UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(path).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
+            restTemplate.delete(serverBaseUri + uriComponentsBuilder.build().toUriString());
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
+        }
     }
 }

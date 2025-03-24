@@ -29,6 +29,7 @@ import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEner
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyStageDefinitionEntity;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyStagesSelectionEntity;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -49,12 +50,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyConstants.SENSITIVITY_ANALYSIS_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.NON_EVACUATED_ENERGY_ERROR;
 import static org.gridsuite.study.server.StudyException.Type.NON_EVACUATED_ENERGY_NOT_FOUND;
 import static org.gridsuite.study.server.StudyException.Type.NON_EVACUATED_ENERGY_RUNNING;
@@ -64,7 +60,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class NonEvacuatedEnergyService {
+public class NonEvacuatedEnergyService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -211,22 +207,12 @@ public class NonEvacuatedEnergyService {
         }
     }
 
-    public void deleteNonEvacuatedEnergyResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results/{resultUuid}")
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
+    public void deleteNonEvacuatedEnergyResults(List<UUID> resultsUuids) {
+        deleteCalculationResults(resultsUuids, DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results", restTemplate, sensitivityAnalysisServerBaseUri);
     }
 
-    public void deleteNonEvacuatedEnergyResults() {
-        try {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/non-evacuated-energy/results")
-                .toUriString();
-            restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
+    public void deleteAllNonEvacuatedEnergyResults() {
+        deleteNonEvacuatedEnergyResults(null);
     }
 
     public Integer getNonEvacuatedEnergyAnalysisResultsCount() {
@@ -345,5 +331,10 @@ public class NonEvacuatedEnergyService {
                 .monitoredBranches(List.of())
                 .contingencies(List.of())
                 .build();
+    }
+
+    @Override
+    public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
+        return List.of();
     }
 }

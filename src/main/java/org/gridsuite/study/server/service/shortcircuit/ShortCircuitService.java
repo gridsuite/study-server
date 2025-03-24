@@ -38,8 +38,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.utils.StudyUtils.addPageableToQueryParams;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
+import static org.gridsuite.study.server.utils.StudyUtils.*;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -239,22 +238,12 @@ public class ShortCircuitService extends AbstractComputationService {
         restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
-    public void deleteShortCircuitAnalysisResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}")
-                .buildAndExpand(uuid)
-                .toUriString();
-
-        restTemplate.delete(shortCircuitServerBaseUri + path);
+    public void deleteShortCircuitAnalysisResults(List<UUID> resultsUuids) {
+        deleteCalculationResults(resultsUuids, DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results", restTemplate, shortCircuitServerBaseUri);
     }
 
-    public void deleteShortCircuitAnalysisResults() {
-        try {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results")
-                .toUriString();
-            restTemplate.delete(shortCircuitServerBaseUri + path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
+    public void deleteAllShortCircuitAnalysisResults() {
+        deleteShortCircuitAnalysisResults(null);
     }
 
     public Integer getShortCircuitResultsCount() {

@@ -342,7 +342,7 @@ class VoltageInitTest {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/parameters/" + WRONG_VOLTAGE_INIT_PARAMETERS_UUID_STRING)) {
                     return new MockResponse(404);
-                } else if (path.matches("/v1/results")) {
+                } else if (path.matches("/v1/results\\?resultsUuids.*")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/supervision/results-count")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
@@ -825,7 +825,7 @@ class VoltageInitTest {
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByVoltageInitResultUuidNotNull().size());
     }

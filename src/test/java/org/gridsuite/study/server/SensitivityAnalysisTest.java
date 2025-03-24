@@ -263,7 +263,7 @@ class SensitivityAnalysisTest {
                 } else if (path.matches("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_RESULT_UUID)
                            || path.matches("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID)) {
                     return new MockResponse(200);
-                } else if (path.matches("/v1/results")) {
+                } else if (path.matches("/v1/results\\?resultsUuids.*")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/reports")) {
                     return new MockResponse(200);
@@ -456,7 +456,7 @@ class SensitivityAnalysisTest {
             .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.contains("/v1/results"));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertEquals(0, rootNetworkNodeInfoRepository.findAllBySensitivityAnalysisResultUuidNotNull().size());
 
