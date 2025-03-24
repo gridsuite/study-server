@@ -662,4 +662,8 @@ public class RootNetworkNodeInfoService {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
         stateEstimationService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
     }
+
+    public List<RootNetworkNodeInfoEntity> getRootNetworkNodeInfos(List<UUID> nodeUuids, UUID rootNetworkUuid) {
+        return rootNetworkNodeInfoRepository.findByRootNetworkIdAndNodeInfoIdIn(rootNetworkUuid, nodeUuids);
+    }
 }
