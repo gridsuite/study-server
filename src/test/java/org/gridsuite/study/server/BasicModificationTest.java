@@ -1,8 +1,6 @@
 package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
-import org.gridsuite.study.server.elasticsearch.BasicModificationInfos;
-import org.gridsuite.study.server.elasticsearch.BasicModificationInfosRepository;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -14,7 +12,6 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

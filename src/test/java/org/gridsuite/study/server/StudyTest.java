@@ -2177,7 +2177,6 @@ class StudyTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
 
-
         UUID deleteModificationIndexStub = wireMockUtils.stubNetworkModificationDeleteIndex();
         mockMvc.perform(post(STUDIES_URL +
                                 "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
@@ -2562,6 +2561,7 @@ class StudyTest {
     private void cutAndPasteNode(UUID studyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, int childCount, String userId) throws Exception {
         UUID stubUuid = wireMockUtils.stubNetworkModificationCountGet(nodeToCopy.getModificationGroupUuid().toString(),
             EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
+        boolean wasBuilt = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeToCopy.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid)).get().getNodeBuildStatus().toDto().isBuilt();
         UUID deleteModificationIndexStub = wireMockUtils.stubNetworkModificationDeleteIndex();
         mockMvc.perform(post(STUDIES_URL +
                 "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
@@ -2572,11 +2572,8 @@ class StudyTest {
         wireMockUtils.verifyNetworkModificationCountsGet(stubUuid, nodeToCopy.getModificationGroupUuid().toString());
 
         boolean nodeHasModifications = networkModificationTreeService.hasModifications(nodeToCopy.getId(), false);
+
         wireMockUtils.verifyNetworkModificationCountsGet(stubUuid, nodeToCopy.getModificationGroupUuid().toString());
-        if (nodeHasModifications) {
-            // 1 request for cut node and its children, 1 request for paste node and its children
-            wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub, 2);
-        }
 
         /*
          * moving node
@@ -2642,6 +2639,11 @@ class StudyTest {
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //stateEstimation_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+
+            if (wasBuilt) {
+                // 1 request for cut node and its children, 1 request for paste node and its children
+                wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub, 2);
+            }
         } else {
             /*
              * Invalidating moved node
