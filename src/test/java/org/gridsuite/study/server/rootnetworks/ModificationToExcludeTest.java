@@ -438,8 +438,8 @@ class ModificationToExcludeTest {
 
         // if modification deletion fails, they should not be removed from excluded ones
         Mockito.doThrow(new RuntimeException()).when(networkModificationService).deleteModifications(any(), any());
-        List<UUID> modificationToRemoves = List.of(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().findFirst().orElseThrow());
-        assertThrows(RuntimeException.class, () -> studyService.deleteNetworkModifications(studyUuid, firstNodeUuid, modificationToRemoves, USER_ID));
+        List<UUID> modificationsToRemove = List.of(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().findFirst().orElseThrow());
+        assertThrows(RuntimeException.class, () -> studyService.deleteNetworkModifications(studyUuid, firstNodeUuid, modificationsToRemove, USER_ID));
 
         Set<UUID> excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid, rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND)).getModificationsUuidsToExclude();
         Set<UUID> expectedExcludedModifications = MODIFICATIONS_TO_EXCLUDE_RN_1;
@@ -447,10 +447,10 @@ class ModificationToExcludeTest {
 
         // if it returned OK, then they should be removed
         Mockito.doNothing().when(networkModificationService).deleteModifications(any(), any());
-        studyService.deleteNetworkModifications(studyUuid, firstNodeUuid, modificationToRemoves, USER_ID);
+        studyService.deleteNetworkModifications(studyUuid, firstNodeUuid, modificationsToRemove, USER_ID);
 
         excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid, rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND)).getModificationsUuidsToExclude();
-        expectedExcludedModifications = MODIFICATIONS_TO_EXCLUDE_RN_1.stream().filter(uuid -> uuid != modificationToRemoves.getFirst()).collect(Collectors.toSet());
+        expectedExcludedModifications = MODIFICATIONS_TO_EXCLUDE_RN_1.stream().filter(uuid -> uuid != modificationsToRemove.getFirst()).collect(Collectors.toSet());
         assertThat(expectedExcludedModifications).usingRecursiveComparison().isEqualTo(excludedModifications);
     }
 
