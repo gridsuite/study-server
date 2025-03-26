@@ -316,7 +316,7 @@ class NetworkModificationTreeTest {
             .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
         studyEntity.addRootNetwork(RootNetworkEntity.builder()
-            .id(UUID.randomUUID())
+            .id(UUID.fromString(ROOT_NETWORK_UUID))
             .name("rootNetworkName")
             .tag("dum")
             .caseFormat("").caseUuid(UUID.randomUUID())
@@ -415,6 +415,8 @@ class NetworkModificationTreeTest {
         assertEquals("built node", networkModificationNode.getDescription());
         deleteNode(root.getStudyId(), children, false, Set.of(children.get(0)), userId);
     }
+
+    private static final String ROOT_NETWORK_UUID = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
 
     @Test
     void testNodeStashAndRestore() throws Exception {
