@@ -24,7 +24,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @Schema(description = "network modification Infos with activation status by root network ")
-public class NetworkModificationInfos {
+public class ModificationInfosWithActivationStatus {
 
     @Schema(description = "activation status By rootNetwork uuid")
     Map<UUID, Boolean> activationStatusByRootNetwork;

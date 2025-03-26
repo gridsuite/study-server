@@ -14,7 +14,7 @@ import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.modification.NetworkModificationInfos;
+import org.gridsuite.study.server.dto.modification.ModificationInfosWithActivationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -165,7 +165,7 @@ class ModificationToExcludeTest {
         MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=true", studyEntity.getId(), firstNode.getId()))
             .andExpect(status().isOk())
             .andReturn();
-        List<NetworkModificationInfos> networkModifications = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
+        List<ModificationInfosWithActivationStatus> networkModifications = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
         assertEquals(1, networkModifications.size());
         Map<UUID, Boolean> activationStatuses = networkModifications.getFirst().getActivationStatusByRootNetwork();
         assertFalse(activationStatuses.get(rootNetworkBasicInfos.getFirst().rootNetworkUuid()));

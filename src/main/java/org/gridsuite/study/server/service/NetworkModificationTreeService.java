@@ -13,7 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.modification.dto.ModificationInfos;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.modification.NetworkModificationInfos;
+import org.gridsuite.study.server.dto.modification.ModificationInfosWithActivationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -627,7 +627,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public List<NetworkModificationInfos> getNetworkModifications(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata) {
+    public List<ModificationInfosWithActivationStatus> getNetworkModifications(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata) {
         List<ModificationInfos> modificationInfos = networkModificationService.getModifications(self.getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
         if (!self.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
             throw new StudyException(NOT_ALLOWED);
@@ -636,7 +636,7 @@ public class NetworkModificationTreeService {
         List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos = rootNetworkNodeInfoService.getAllWithRootNetworkByNodeInfoId(nodeUuid);
         return modificationInfos.stream()
                 .map(modification ->
-                        (NetworkModificationInfos) NetworkModificationInfos.builder()
+                        (ModificationInfosWithActivationStatus) ModificationInfosWithActivationStatus.builder()
                                 .activationStatusByRootNetwork(getActivationStatusByRootNetwork(rootNetworkByNodeInfos, modification.getUuid()))
                                 .modificationInfos(modification)
                                 .build())
