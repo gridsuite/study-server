@@ -74,7 +74,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.StudyException.Type.ROOT_NETWORK_MODIFICATION_FAILED;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
@@ -285,19 +284,19 @@ public class StudyService {
     }
 
     @Transactional
-    public void deleteRootNetworks(UUID studyUuid, List<UUID> rootNetworkUuids, String userId) {
+    public void deleteRootNetworks(UUID studyUuid, List<UUID> rootNetworksUuids, String userId) {
         assertIsStudyExist(studyUuid);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         List<RootNetworkEntity> allRootNetworkEntities = getStudyRootNetworks(studyUuid);
-        if (rootNetworkUuids.size() >= allRootNetworkEntities.size()) {
+        if (rootNetworksUuids.size() >= allRootNetworkEntities.size()) {
             throw new StudyException(ROOT_NETWORK_DELETE_FORBIDDEN);
         }
-        if (!allRootNetworkEntities.stream().map(RootNetworkEntity::getId).collect(Collectors.toSet()).containsAll(rootNetworkUuids)) {
+        if (!allRootNetworkEntities.stream().map(RootNetworkEntity::getId).collect(Collectors.toSet()).containsAll(rootNetworksUuids)) {
             throw new StudyException(ROOT_NETWORK_NOT_FOUND);
         }
-        notificationService.emitRootNetworksDeletionStarted(studyUuid, rootNetworkUuids);
+        notificationService.emitRootNetworksDeletionStarted(studyUuid, rootNetworksUuids);
 
-        rootNetworkService.deleteRootNetworks(studyEntity, rootNetworkUuids.stream());
+        rootNetworkService.deleteRootNetworks(studyEntity, rootNetworksUuids.stream());
 
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
@@ -387,7 +386,7 @@ public class StudyService {
             }
             UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
             invalidateBuild(studyUuid, rootNodeUuid, rootNetworkUuid, false, false, true);
-            notificationService.emitRootNetworkCaseModified(studyUuid, rootNetworkUuid);
+            notificationService.emitRootNetworkUpdated(studyUuid, rootNetworkUuid);
         } else {
             notificationService.emitRootNetworksUpdated(studyUuid);
         }

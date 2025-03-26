@@ -211,10 +211,10 @@ public class RootNetworkService {
     /**
      * Delete entities from uuids
      * will also delete all remote resources linked to the entity
-     * @param rootNetworkUuids
+     * @param rootNetworksUuids
      */
-    public void deleteRootNetworks(StudyEntity studyEntity, Stream<UUID> rootNetworkUuids) {
-        List<RootNetworkInfos> rootNetworksInfos = rootNetworkUuids.map(rootNetworkRepository::findWithRootNetworkNodeInfosById)
+    public void deleteRootNetworks(StudyEntity studyEntity, Stream<UUID> rootNetworksUuids) {
+        List<RootNetworkInfos> rootNetworksInfos = rootNetworksUuids.map(rootNetworkRepository::findWithRootNetworkNodeInfosById)
             .map(o -> o.orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)))
             .map(RootNetworkEntity::toDto)
             .toList();
