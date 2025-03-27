@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.StateEstimationStatus;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -35,14 +36,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.StudyConstants.PATH_PARAM_PARAMETERS;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyConstants.STATE_ESTIMATION_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.CREATE_STATE_ESTIMATION_PARAMETERS_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DELETE_STATE_ESTIMATION_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.GET_STATE_ESTIMATION_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.STATE_ESTIMATION_NOT_FOUND;
@@ -55,7 +50,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class StateEstimationService {
+public class StateEstimationService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -163,21 +158,12 @@ public class StateEstimationService {
         return status;
     }
 
-    public void deleteStateEstimationResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}")
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(stateEstimationServerServerBaseUri + path);
+    public void deleteStateEstimationResults(List<UUID> resultsUuids) {
+        deleteCalculationResults(resultsUuids, DELIMITER + STATE_ESTIMATION_API_VERSION + "/results", restTemplate, stateEstimationServerServerBaseUri);
     }
 
-    public void deleteStateEstimationResults() {
-        try {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results").toUriString();
-            restTemplate.delete(stateEstimationServerServerBaseUri + path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
+    public void deleteAllStateEstimationResults() {
+        deleteStateEstimationResults(null);
     }
 
     public Integer getStateEstimationResultsCount() {
@@ -312,5 +298,10 @@ public class StateEstimationService {
 
             restTemplate.put(stateEstimationServerServerBaseUri + path, Void.class);
         }
+    }
+
+    @Override
+    public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
+        return List.of();
     }
 }

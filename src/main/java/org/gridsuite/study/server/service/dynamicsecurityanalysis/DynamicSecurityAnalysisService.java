@@ -92,12 +92,12 @@ public class DynamicSecurityAnalysisService {
         }
     }
 
-    public void deleteResult(UUID resultUuid) {
-        dynamicSecurityAnalysisClient.deleteResult(resultUuid);
+    public void deleteResults(List<UUID> resultsUuids) {
+        dynamicSecurityAnalysisClient.deleteResults(resultsUuids);
     }
 
-    public void deleteResults() {
-        dynamicSecurityAnalysisClient.deleteResults();
+    public void deleteAllResults() {
+        deleteResults(null);
     }
 
     public Integer getResultsCount() {

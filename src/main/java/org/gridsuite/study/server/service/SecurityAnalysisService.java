@@ -218,21 +218,12 @@ public class SecurityAnalysisService extends AbstractComputationService {
         return status;
     }
 
-    public void deleteSaResult(UUID uuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}")
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(securityAnalysisServerBaseUri + path);
+    public void deleteSecurityAnalysisResults(List<UUID> resultsUuids) {
+        deleteCalculationResults(resultsUuids, DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results", restTemplate, securityAnalysisServerBaseUri);
     }
 
-    public void deleteSecurityAnalysisResults() {
-        try {
-            String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results").toUriString();
-            restTemplate.delete(securityAnalysisServerBaseUri + path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
+    public void deleteAllSecurityAnalysisResults() {
+        deleteSecurityAnalysisResults(null);
     }
 
     public Integer getSecurityAnalysisResultsCount() {
