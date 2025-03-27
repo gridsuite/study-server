@@ -125,8 +125,11 @@ public class SupervisionController {
     }
 
     @PostMapping(value = "/studies/indices/recreate")
-    @Operation(summary = "Recreate all Elasticsearch studies index")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Elasticsearch studies index recreated successfully")})
+    @Operation(summary = "Recreate all Elasticsearch study indices")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Elasticsearch study indices recreated successfully"),
+        @ApiResponse(responseCode = "500", description = "Failed to recreate Elasticsearch indices")
+    })
     public ResponseEntity<Void> recreateStudyIndices() {
         supervisionService.recreateStudyIndices();
         return ResponseEntity.ok().build();

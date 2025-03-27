@@ -72,9 +72,10 @@ public class SupervisionService {
 
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
+    private final StateEstimationService stateEstimationService;
+
     private final ElasticsearchOperations elasticsearchOperations;
 
-    private final StateEstimationService stateEstimationService;
     private final StudyInfosService studyInfosService;
 
     public SupervisionService(StudyService studyService,
@@ -89,8 +90,10 @@ public class SupervisionService {
                               NonEvacuatedEnergyService nonEvacuatedEnergyService,
                               ShortCircuitService shortCircuitService,
                               VoltageInitService voltageInitService,
-                              EquipmentInfosService equipmentInfosService, ElasticsearchOperations elasticsearchOperations,
-                              StateEstimationService stateEstimationService, StudyInfosService studyInfosService) {
+                              EquipmentInfosService equipmentInfosService,
+                              StateEstimationService stateEstimationService,
+                              ElasticsearchOperations elasticsearchOperations,
+                              StudyInfosService studyInfosService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
@@ -104,8 +107,8 @@ public class SupervisionService {
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
-        this.elasticsearchOperations = elasticsearchOperations;
         this.stateEstimationService = stateEstimationService;
+        this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
     }
 
