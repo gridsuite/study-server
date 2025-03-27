@@ -446,11 +446,9 @@ public class StudyService {
 
             StudyEntity duplicatedStudy = duplicateStudy(basicStudyInfos, sourceStudyUuid, userId);
 
-            getStudyRootNetworks(duplicatedStudy.getId()).forEach(rootNetworkEntity -> {
-                reindexStudy(duplicatedStudy, rootNetworkEntity.getId());
-                invalidateBuild(duplicatedStudy.getId(), networkModificationTreeService.getStudyRootNodeUuid(duplicatedStudy.getId()), rootNetworkEntity.getId(), false, false, true);
-            });
-
+            getStudyRootNetworks(duplicatedStudy.getId()).forEach(rootNetworkEntity ->
+                reindexStudy(duplicatedStudy, rootNetworkEntity.getId())
+            );
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
