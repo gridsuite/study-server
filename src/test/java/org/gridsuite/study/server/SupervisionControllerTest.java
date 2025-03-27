@@ -22,6 +22,7 @@ import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
+import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -236,11 +237,13 @@ class SupervisionControllerTest {
 
     @Test
     void testRecreateIndices() throws Exception {
+        // Fill studies, equipments and tombstoned_equipments indices
         initStudy();
         CreatedStudyBasicInfos studyInfos = CreatedStudyBasicInfos.builder().id(STUDY_UUID).userId("userId1").build();
         studyInfosService.add(studyInfos);
+        equipmentInfosService.addTombstonedEquipmentInfos(TombstonedEquipmentInfos.builder().id("id1").build());
 
-        assertIndexationCount(74, 0);
+        assertIndexationCount(74, 1);
         MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies/indexation-count"))
                 .andExpect(status().isOk())
                 .andReturn();
