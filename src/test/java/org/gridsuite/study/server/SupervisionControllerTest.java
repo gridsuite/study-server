@@ -22,7 +22,6 @@ import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.StudyIndexationStatus;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
-import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -68,7 +67,6 @@ class SupervisionControllerTest {
     private static final UUID CASE_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID STUDY_UUID = UUID.randomUUID();
-    private static final UUID NODE_UUID = UUID.randomUUID();
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
@@ -202,31 +200,6 @@ class SupervisionControllerTest {
             .andReturn();
 
         assertEquals("tombstoned-equipments", mvcResult.getResponse().getContentAsString());
-    }
-
-    @Test
-    void testDeleteIndexation() throws Exception {
-        initStudy();
-
-        assertIndexationCount(74, 0);
-        EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).variantId(NODE_UUID.toString()).id("id").name("name").type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl").name("vl").build())).build();
-        equipmentInfosService.addEquipmentInfos(loadInfos);
-
-        TombstonedEquipmentInfos tombLoadInfos = TombstonedEquipmentInfos.builder().networkUuid(NETWORK_UUID).variantId(NODE_UUID.toString()).id("idTomb").build();
-        equipmentInfosService.addTombstonedEquipmentInfos(tombLoadInfos);
-
-        assertIndexationCount(75, 1);
-
-        MvcResult mvcResult;
-
-        // Test indexed equipments deletion
-        mvcResult = mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/equipments/indexation", STUDY_UUID))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        assertEquals(76, Long.parseLong(mvcResult.getResponse().getContentAsString()));
-        assertIndexationCount(0, 0);
-        assertIndexationStatus(STUDY_UUID, StudyIndexationStatus.NOT_INDEXED.name());
     }
 
     @Test

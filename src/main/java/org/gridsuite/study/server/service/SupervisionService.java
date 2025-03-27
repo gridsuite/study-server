@@ -157,25 +157,6 @@ public class SupervisionService {
         return equipmentInfosService.getTombstonedEquipmentInfosCount();
     }
 
-    @Transactional
-    public Long deleteStudyIndexedEquipmentsAndTombstoned(UUID studyUuid) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
-
-        AtomicReference<Long> nbIndexesToDelete = new AtomicReference<>(0L);
-
-        studyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(rootNetwork -> {
-            UUID networkUUID = rootNetworkService.getNetworkUuid(rootNetwork.rootNetworkUuid());
-            nbIndexesToDelete.updateAndGet(v -> v + getStudyIndexedEquipmentsCount(networkUUID) + getStudyIndexedTombstonedEquipmentsCount(networkUUID));
-            equipmentInfosService.deleteAllByNetworkUuid(networkUUID);
-        });
-
-        studyService.updateStudyIndexationStatus(studyUuid, StudyIndexationStatus.NOT_INDEXED);
-
-        LOGGER.trace("Indexed equipments deletion for study \"{}\": {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        return nbIndexesToDelete.get();
-    }
-
     private Integer deleteLoadflowResults() {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
