@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.modification.dto.ModificationInfos;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.modification.ModificationInfosWithActivationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -605,10 +606,30 @@ public class NetworkModificationTreeService {
         return getNetworkModificationNodeInfoEntity(nodeUuid).getModificationGroupUuid();
     }
 
-    // Return json string because modification dtos are not available here
     @Transactional(readOnly = true)
-    public List<ModificationInfos> getNetworkModifications(@NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata) {
-        return networkModificationService.getModifications(self.getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
+    public List<ModificationInfosWithActivationStatus> getNetworkModifications(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata) {
+        List<ModificationInfos> modificationInfos = networkModificationService.getModifications(self.getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
+        if (!self.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+
+        List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos = rootNetworkNodeInfoService.getAllWithRootNetworkByNodeInfoId(nodeUuid);
+        return modificationInfos.stream()
+                .map(modification ->
+                        (ModificationInfosWithActivationStatus) ModificationInfosWithActivationStatus.builder()
+                                .activationStatusByRootNetwork(getActivationStatusByRootNetwork(rootNetworkByNodeInfos, modification.getUuid()))
+                                .modificationInfos(modification)
+                                .build())
+                .toList();
+    }
+
+    /**
+     * Get modification activation status by root network
+     */
+    private Map<UUID, Boolean> getActivationStatusByRootNetwork(List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos, UUID modificationUuid) {
+        return rootNetworkByNodeInfos.stream().collect(Collectors.toMap(
+                r -> r.getRootNetwork().getId(),
+                r -> !r.getModificationsUuidsToExclude().contains(modificationUuid)));
     }
 
     private Integer getNetworkModificationsCount(@NonNull UUID nodeUuid, boolean stashed) {
