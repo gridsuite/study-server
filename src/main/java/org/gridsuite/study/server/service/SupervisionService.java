@@ -74,15 +74,12 @@ public class SupervisionService {
 
     private final ElasticsearchOperations elasticsearchOperations;
 
-    private final RootNetworkService rootNetworkService;
-
     private final StateEstimationService stateEstimationService;
     private final StudyInfosService studyInfosService;
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
-                              RootNetworkService rootNetworkService,
                               ReportService reportService,
                               LoadFlowService loadFlowService,
                               DynamicSimulationService dynamicSimulationService,
@@ -97,7 +94,6 @@ public class SupervisionService {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
-        this.rootNetworkService = rootNetworkService;
         this.reportService = reportService;
         this.loadFlowService = loadFlowService;
         this.dynamicSimulationService = dynamicSimulationService;
