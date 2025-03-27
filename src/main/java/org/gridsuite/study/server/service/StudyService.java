@@ -610,6 +610,27 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
+    private void duplicateStudyNodeAliases(StudyEntity newStudyEntity, StudyEntity sourceStudyEntity) {
+        if (!CollectionUtils.isEmpty(sourceStudyEntity.getNodeAliases())) {
+            Map<UUID, AbstractNode> newStudyNodes = networkModificationTreeService.getAllStudyNodesByUuid(newStudyEntity.getId());
+            Map<UUID, AbstractNode> sourceStudyNodes = networkModificationTreeService.getAllStudyNodesByUuid(sourceStudyEntity.getId());
+
+            List<NodeAliasEmbeddable> newStudyNodeAliases = new ArrayList<>();
+            sourceStudyEntity.getNodeAliases().forEach(nodeAliasEmbeddable -> {
+                String aliasName = nodeAliasEmbeddable.getName();
+                UUID nodeUuid = nodeAliasEmbeddable.getNodeId();
+                UUID newNodeId = null;
+                if (nodeUuid != null && sourceStudyNodes.containsKey(nodeUuid)) {
+                    String nodeName = sourceStudyNodes.get(nodeUuid).getName();
+                    newNodeId = newStudyNodes.entrySet().stream().filter(entry -> nodeName.equals(entry.getValue().getName()))
+                        .map(Map.Entry::getKey).findFirst().orElse(null);
+                }
+                newStudyNodeAliases.add(new NodeAliasEmbeddable(aliasName, newNodeId));
+            });
+            newStudyEntity.setNodeAliases(newStudyNodeAliases);
+        }
+    }
+
     private StudyEntity duplicateStudy(BasicStudyInfos studyInfos, UUID sourceStudyUuid, String userId) {
         Objects.requireNonNull(studyInfos.getId());
         Objects.requireNonNull(userId);
@@ -619,6 +640,7 @@ public class StudyService {
         StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId());
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudy);
         networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudy);
+        duplicateStudyNodeAliases(newStudyEntity, sourceStudy);
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(newStudyEntity);
         studyInfosService.add(createdStudyBasicInfos);

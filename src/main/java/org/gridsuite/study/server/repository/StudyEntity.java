@@ -128,7 +128,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private StudyVoltageInitParametersEntity voltageInitParameters;
 
     @ElementCollection
-    @CollectionTable(foreignKey = @ForeignKey(
+    @CollectionTable(name = "StudyNodeAliases", foreignKey = @ForeignKey(
             name = "study_node_aliases_fk"
         ))
     private List<NodeAliasEmbeddable> nodeAliases;
