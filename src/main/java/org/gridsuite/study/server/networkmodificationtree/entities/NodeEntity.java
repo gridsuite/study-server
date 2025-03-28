@@ -66,8 +66,4 @@ public class NodeEntity {
 
     @Column(name = "stash_date", columnDefinition = "timestamptz")
     private Instant stashDate;
-
-    @Column(name = "alias")
-    private String alias;
-
 }
