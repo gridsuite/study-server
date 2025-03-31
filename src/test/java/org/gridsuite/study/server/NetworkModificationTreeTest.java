@@ -1501,6 +1501,10 @@ class NetworkModificationTreeTest {
             UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
             UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), node1, node2, userId);
+        NetworkModificationNode node3 = buildNetworkModificationNode("modification node 3", "", UUID.randomUUID(), VARIANT_ID,
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, node3, userId);
 
         List<NodeAlias> nodeAliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
             .getResponse()
@@ -1508,9 +1512,8 @@ class NetworkModificationTreeTest {
             });
         assertEquals(0, nodeAliases.size());
 
-        // add alias not associated to a node
-        NodeAlias alias = new NodeAlias(null, "alias1", null);
-        List<NodeAlias> aliases = List.of(alias);
+        // Add alias not associated to a node
+        List<NodeAlias> aliases = List.of(new NodeAlias(null, "alias1", null));
         mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectWriter.writeValueAsString(aliases))
@@ -1524,9 +1527,9 @@ class NetworkModificationTreeTest {
         assertNull(nodeAliases.getFirst().id());
         assertEquals("alias1", nodeAliases.getFirst().alias());
 
-        // add alias associated to node2
-        alias = new NodeAlias(node2.getId(), "test", "modification node 2");
-        aliases = List.of(alias);
+        // Add aliases associated to node2 and node3
+        aliases = List.of(new NodeAlias(node2.getId(), "alias2", "modification node 2"),
+                          new NodeAlias(node3.getId(), "alias3", "modification node 3"));
         mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectWriter.writeValueAsString(aliases))
@@ -1535,21 +1538,39 @@ class NetworkModificationTreeTest {
             .getResponse()
             .getContentAsString(), new TypeReference<>() {
             });
-        assertEquals(1, nodeAliases.size());
-        assertEquals("modification node 2", nodeAliases.getFirst().name());
-        assertEquals("test", nodeAliases.getFirst().alias());
+        assertEquals(2, nodeAliases.size());
+        assertEquals("modification node 2", nodeAliases.get(0).name());
+        assertEquals("alias2", nodeAliases.get(0).alias());
+        assertEquals("modification node 3", nodeAliases.get(1).name());
+        assertEquals("alias3", nodeAliases.get(1).alias());
 
-        //Removing the referenced node should result in alias no more associated to the node
-        List<AbstractNode> children = List.of(node2);
-        deleteNode(root.getStudyId(), children, true, null, userId);
+        // Deleting node2 should result in alias no more associated to this node
+        deleteNode(root.getStudyId(), List.of(node2), true, null, userId);
         nodeAliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
             .getResponse()
             .getContentAsString(), new TypeReference<>() {
             });
-        assertEquals(1, nodeAliases.size());
-        assertEquals("test", nodeAliases.getFirst().alias());
-        assertNull(nodeAliases.getFirst().id());
-        assertNull(nodeAliases.getFirst().name());
+        assertEquals(2, nodeAliases.size());
+        assertEquals("alias2", nodeAliases.get(0).alias());
+        assertNull(nodeAliases.get(0).id());
+        assertNull(nodeAliases.get(0).name());
+        assertEquals("alias3", nodeAliases.get(1).alias());
+        assertEquals("modification node 3", nodeAliases.get(1).name());
+        assertEquals("alias3", nodeAliases.get(1).alias());
+
+        // Stashing node3 should result in alias no more associated to this node
+        deleteNode(root.getStudyId(), List.of(node3), true, null, userId);
+        nodeAliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+            });
+        assertEquals(2, nodeAliases.size());
+        assertEquals("alias2", nodeAliases.get(0).alias());
+        assertNull(nodeAliases.get(0).id());
+        assertNull(nodeAliases.get(0).name());
+        assertEquals("alias3", nodeAliases.get(1).alias());
+        assertNull(nodeAliases.get(1).id());
+        assertNull(nodeAliases.get(1).name());
     }
 
     /**

@@ -1830,8 +1830,7 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
-    public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId) {
+    private void removeNodesFromAliases(UUID studyUuid, List<UUID> nodeIds) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         if (!CollectionUtils.isEmpty(studyEntity.getNodeAliases())) {
             studyEntity.getNodeAliases().forEach(nodeAliasEmbeddable -> {
@@ -1840,6 +1839,12 @@ public class StudyService {
                 }
             });
         }
+    }
+
+    @Transactional
+    public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId) {
+        removeNodesFromAliases(studyUuid, nodeIds);
+
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
         for (UUID nodeId : nodeIds) {
             AtomicReference<Long> startTime = new AtomicReference<>(null);
@@ -1892,6 +1897,8 @@ public class StudyService {
 
     @Transactional
     public void stashNode(UUID studyUuid, UUID nodeId, boolean stashChildren, String userId) {
+        removeNodesFromAliases(studyUuid, List.of(nodeId));
+
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         boolean invalidateChildrenBuild = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
