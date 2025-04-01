@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.integration.support.MessageBuilder;
+import org.springframework.lang.NonNull;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
@@ -34,9 +35,9 @@ public class NotificationService {
 
     public static final String HEADER_ERROR = "error";
     public static final String HEADER_NODE = "node";
-    public static final String HEADER_ROOT_NETWORK = "rootNetwork";
+    public static final String HEADER_ROOT_NETWORK_UUID = "rootNetworkUuid";
     public static final String HEADER_NODES = "nodes";
-    public static final String HEADER_ROOT_NETWORKS = "rootNetworks";
+    public static final String HEADER_ROOT_NETWORKS_UUIDS = "rootNetworksUuids";
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String HEADER_COMPUTATION_TYPE = "computationType";
@@ -122,8 +123,7 @@ public class NotificationService {
     public static final String DEFAULT_ERROR_MESSAGE = "Unknown error";
 
     public static final String ROOT_NETWORKS_UPDATED = "rootNetworksUpdated";
-    public static final String ROOT_NETWORK_MODIFIED = "rootNetworkModified";
-    public static final String ROOT_NETWORKS_DELETION_STARTED = "rootNetworkDeletionStarted";
+    public static final String ROOT_NETWORKS_DELETION_STARTED = "rootNetworksDeletionStarted";
     public static final String ROOT_NETWORKS_UPDATE_FAILED = "rootNetworksUpdateFailed";
 
     public static final String STUDY_ALERT = "STUDY_ALERT";
@@ -142,104 +142,85 @@ public class NotificationService {
         this.objectMapper = objectMapper;
     }
 
-    private void sendUpdateMessage(Message<?> message) {
+    // For publishStudyUpdate-out-0 queue
+    private void sendStudyUpdateMessage(@NonNull UUID studyUuid, @NonNull String type, @NonNull MessageBuilder<String> builder) {
+        // Always give the concerned studyUuid and define a notification type
+        Message<?> message = builder.setHeader(HEADER_STUDY_UUID, studyUuid).setHeader(HEADER_UPDATE_TYPE, type).build();
         MESSAGE_OUTPUT_LOGGER.debug(MESSAGE_LOG, message);
         updatePublisher.send("publishStudyUpdate-out-0", message);
     }
 
-    private void sendElementUpdateMessage(Message<String> message) {
-        MESSAGE_OUTPUT_LOGGER.debug(MESSAGE_LOG, message);
-        updatePublisher.send("publishElementUpdate-out-0", message);
-    }
-
     @PostCompletion
     public void emitStudiesChanged(UUID studyUuid, String userId) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
+        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_STUDIES, MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES)
-                .build());
+        );
     }
 
     @PostCompletion
     public void emitStudyNetworkRecreationDone(UUID studyUuid, String userId) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
+        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE, MessageBuilder.withPayload("")
             .setHeader(HEADER_USER_ID, userId)
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE)
-            .build());
+        );
     }
 
     @PostCompletion
     public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String updateType) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
+        sendStudyUpdateMessage(studyUuid, updateType, MessageBuilder.withPayload("")
                 .setHeader(HEADER_NODE, nodeUuid)
-                .setHeader(HEADER_ROOT_NETWORK, rootNetworkUuid)
-                .setHeader(HEADER_UPDATE_TYPE, updateType)
-                .build());
+                .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
+        );
     }
 
     @PostCompletion
     public void emitComputationParamsChanged(UUID studyUuid, ComputationType computationType) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-               .setHeader(HEADER_STUDY_UUID, studyUuid)
-               .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_COMPUTATION_PARAMETERS)
+        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_COMPUTATION_PARAMETERS, MessageBuilder.withPayload("")
                .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
-               .build());
+        );
     }
 
     @PostCompletion
     public void emitNetworkVisualizationParamsChanged(UUID studyUuid) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, UPDATE_NETWORK_VISUALIZATION_PARAMETERS)
-                .build());
+        sendStudyUpdateMessage(studyUuid, UPDATE_NETWORK_VISUALIZATION_PARAMETERS, MessageBuilder.withPayload("")
+        );
     }
 
     public void emitStudyCreationError(UUID studyUuid, String userId, String errorMessage) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
+        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_STUDIES, MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
-                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDIES)
                 // an error message is needed in order for this message to be interpreted later as an error notification
                 .setHeader(HEADER_ERROR, (errorMessage == null || errorMessage.isEmpty()) ?
                         DEFAULT_ERROR_MESSAGE :
                         errorMessage)
-                .build());
+        );
     }
 
     @PostCompletion
     public void emitStudyError(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String updateType, String errorMessage, String userId) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
+        sendStudyUpdateMessage(studyUuid, updateType, MessageBuilder.withPayload("")
                 .setHeader(HEADER_NODE, nodeUuid)
-                .setHeader(HEADER_ROOT_NETWORK, rootNetworkUuid)
-                .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
                 .setHeader(HEADER_ERROR, errorMessage)
                 .setHeader(HEADER_USER_ID, userId)
-                .build());
+        );
     }
 
     @PostCompletion
     public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String updateType, Set<String> substationsIds) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
+        sendStudyUpdateMessage(studyUuid, updateType, MessageBuilder.withPayload("")
                 .setHeader(HEADER_NODE, nodeUuid)
-                .setHeader(HEADER_ROOT_NETWORK, rootNetworkUuid)
-                .setHeader(HEADER_UPDATE_TYPE, updateType)
+                .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
                 .setHeader(HEADER_UPDATE_TYPE_SUBSTATIONS_IDS, substationsIds)
-                .build());
+        );
     }
 
     @PostCompletion
     public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String updateType, NetworkImpactsInfos networkImpactsInfos) {
         try {
-            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(networkImpactsInfos)).setHeader(HEADER_STUDY_UUID, studyUuid)
+            sendStudyUpdateMessage(studyUuid, updateType, MessageBuilder.withPayload(objectMapper.writeValueAsString(networkImpactsInfos))
                 .setHeader(HEADER_NODE, nodeUuid)
-                .setHeader(HEADER_ROOT_NETWORK, rootNetworkUuid)
-                .setHeader(HEADER_UPDATE_TYPE, updateType)
-                .build());
+                .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
+            );
         } catch (JsonProcessingException e) {
             LOGGER.error("Unable to notify on study update", e);
         }
@@ -247,44 +228,34 @@ public class NotificationService {
 
     @PostCompletion
     public void emitStudyIndexationStatusChanged(UUID studyUuid, StudyIndexationStatus status) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_INDEXATION_STATUS)
+        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_INDEXATION_STATUS, MessageBuilder.withPayload("")
                 .setHeader(HEADER_INDEXATION_STATUS, status.name())
-                .build());
+        );
     }
 
     @PostCompletion
     public void emitStudyMetadataChanged(UUID studyUuid) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_STUDY_METADATA_UPDATED)
-                .build());
+        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_STUDY_METADATA_UPDATED, MessageBuilder.withPayload("")
+        );
     }
 
     @PostCompletion
     public void emitNodeInserted(UUID studyUuid, UUID parentNode, UUID nodeCreated, InsertMode insertMode, UUID referenceNodeUuid) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, NODE_CREATED)
+        sendStudyUpdateMessage(studyUuid, NODE_CREATED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_PARENT_NODE, parentNode)
                 .setHeader(HEADER_NEW_NODE, nodeCreated)
                 .setHeader(HEADER_INSERT_MODE, insertMode.name())
                 .setHeader(HEADER_REFERENCE_NODE_UUID, referenceNodeUuid)
-                .build()
         );
     }
 
     @PostCompletion
     public void emitNodeMoved(UUID studyUuid, UUID parentNode, UUID nodeMoved, InsertMode insertMode, UUID referenceNodeUuid) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, NODE_MOVED)
+        sendStudyUpdateMessage(studyUuid, NODE_MOVED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_PARENT_NODE, parentNode)
                 .setHeader(HEADER_MOVED_NODE, nodeMoved)
                 .setHeader(HEADER_INSERT_MODE, insertMode.name())
                 .setHeader(HEADER_REFERENCE_NODE_UUID, referenceNodeUuid)
-                .build()
         );
     }
 
@@ -293,44 +264,33 @@ public class NotificationService {
         if (nodes.isEmpty()) {
             return;
         }
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, NODE_UPDATED)
+        sendStudyUpdateMessage(studyUuid, NODE_UPDATED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_NODES, nodes)
-                .build()
         );
     }
 
     @PostCompletion
     public void emitNodeBuildFailed(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String errorMessage) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
+        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_BUILD_FAILED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_NODE, nodeUuid)
-                .setHeader(HEADER_ROOT_NETWORK, rootNetworkUuid)
-                .setHeader(HEADER_UPDATE_TYPE, UPDATE_TYPE_BUILD_FAILED)
+                .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
                 .setHeader(HEADER_ERROR, errorMessage)
-                .build());
+        );
     }
 
     @PostCompletion
     public void emitSubtreeMoved(UUID studyUuid, UUID parentNodeSubtreeMoved, UUID referenceNodeUuid) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, SUBTREE_MOVED)
+        sendStudyUpdateMessage(studyUuid, SUBTREE_MOVED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_MOVED_NODE, parentNodeSubtreeMoved)
                 .setHeader(HEADER_PARENT_NODE, referenceNodeUuid)
-                .build()
         );
     }
 
     @PostCompletion
     public void emitColumnsChanged(UUID studyUuid, UUID parentNodeUuid, List<UUID> orderedUuids) {
         try {
-            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(orderedUuids))
-                    .setHeader(HEADER_STUDY_UUID, studyUuid)
-                    .setHeader(HEADER_UPDATE_TYPE, NODES_COLUMN_POSITIONS_CHANGED)
+            sendStudyUpdateMessage(studyUuid, NODES_COLUMN_POSITIONS_CHANGED, MessageBuilder.withPayload(objectMapper.writeValueAsString(orderedUuids))
                     .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
-                    .build()
             );
         } catch (JsonProcessingException e) {
             LOGGER.error("Unable to notify on column positions update", e);
@@ -339,44 +299,32 @@ public class NotificationService {
 
     @PostCompletion
     public void emitSubtreeInserted(UUID studyUuid, UUID parentNodeSubtreeInserted, UUID referenceNodeUuid) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, SUBTREE_CREATED)
+        sendStudyUpdateMessage(studyUuid, SUBTREE_CREATED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_NEW_NODE, parentNodeSubtreeInserted)
                 .setHeader(HEADER_PARENT_NODE, referenceNodeUuid)
-                .build()
         );
     }
 
     @PostCompletion
     public void emitNodeBuildStatusUpdated(UUID studyUuid, Collection<UUID> nodes, UUID rootNetworkUuid) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, NODE_BUILD_STATUS_UPDATED)
+        sendStudyUpdateMessage(studyUuid, NODE_BUILD_STATUS_UPDATED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_NODES, nodes)
-                .setHeader(HEADER_ROOT_NETWORK, rootNetworkUuid)
-                .build()
+                .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
         );
     }
 
     @PostCompletion
     public void emitNodeRenamed(UUID studyUuid, UUID nodeUuid) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, NODE_RENAMED)
+        sendStudyUpdateMessage(studyUuid, NODE_RENAMED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_NODE, nodeUuid)
-                .build()
         );
     }
 
     @PostCompletion
     public void emitNodesDeleted(UUID studyUuid, Collection<UUID> nodes, boolean deleteChildren) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_UPDATE_TYPE, NODE_DELETED)
+        sendStudyUpdateMessage(studyUuid, NODE_DELETED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_NODES, nodes)
                 .setHeader(HEADER_REMOVE_CHILDREN, deleteChildren)
-                .build()
         );
     }
 
@@ -386,13 +334,11 @@ public class NotificationService {
 
     public void emitStartModificationEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Optional<UUID> rootNetworkUuid, Collection<UUID> childrenUuids, String modificationType) {
         MessageBuilder<String> builder = MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
             .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
-            .setHeader(HEADER_NODES, childrenUuids)
-            .setHeader(HEADER_UPDATE_TYPE, modificationType);
-        rootNetworkUuid.ifPresent(uuid -> builder.setHeader(HEADER_ROOT_NETWORK, uuid));
+            .setHeader(HEADER_NODES, childrenUuids);
+        rootNetworkUuid.ifPresent(uuid -> builder.setHeader(HEADER_ROOT_NETWORK_UUID, uuid));
 
-        sendUpdateMessage(builder.build());
+        sendStudyUpdateMessage(studyUuid, modificationType, builder);
     }
 
     @PostCompletion
@@ -403,45 +349,84 @@ public class NotificationService {
     @PostCompletion
     public void emitEndModificationEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Optional<UUID> rootNetworkUuid, Collection<UUID> childrenUuids) {
         MessageBuilder<String> builder = MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
             .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
-            .setHeader(HEADER_NODES, childrenUuids)
-            .setHeader(HEADER_UPDATE_TYPE, MODIFICATIONS_UPDATING_FINISHED);
-        rootNetworkUuid.ifPresent(uuid -> builder.setHeader(HEADER_ROOT_NETWORK, uuid));
+            .setHeader(HEADER_NODES, childrenUuids);
+        rootNetworkUuid.ifPresent(uuid -> builder.setHeader(HEADER_ROOT_NETWORK_UUID, uuid));
 
-        sendUpdateMessage(builder.build());
+        sendStudyUpdateMessage(studyUuid, MODIFICATIONS_UPDATING_FINISHED, builder);
     }
 
     @PostCompletion
     public void emitEndDeletionEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
+        sendStudyUpdateMessage(studyUuid, MODIFICATIONS_DELETING_FINISHED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
                 .setHeader(HEADER_NODES, childrenUuids)
-                .setHeader(HEADER_UPDATE_TYPE, MODIFICATIONS_DELETING_FINISHED)
-                .build()
         );
     }
 
     public void emitStartEventCrudNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids, String crudType) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
+        sendStudyUpdateMessage(studyUuid, crudType, MessageBuilder.withPayload("")
                 .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
                 .setHeader(HEADER_NODES, childrenUuids)
-                .setHeader(HEADER_UPDATE_TYPE, crudType)
-                .build()
         );
     }
 
     @PostCompletion
     public void emitEndEventCrudNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
+        sendStudyUpdateMessage(studyUuid, EVENTS_CRUD_FINISHED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
                 .setHeader(HEADER_NODES, childrenUuids)
-                .setHeader(HEADER_UPDATE_TYPE, EVENTS_CRUD_FINISHED)
-                .build()
         );
+    }
+
+    @PostCompletion
+    public void emitStudyAlert(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, StudyAlert studyAlert) {
+        try {
+            sendStudyUpdateMessage(studyUuid, STUDY_ALERT, MessageBuilder.withPayload(objectMapper.writeValueAsString(studyAlert))
+                .setHeader(HEADER_USER_ID, userId)
+                .setHeader(HEADER_NODE, nodeUuid)
+                .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
+            );
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Unable to notify on study alert", e);
+        }
+    }
+
+    private void emitRootNetworksUpdated(UUID studyUuid, List<UUID> rootNetworksUuids) {
+        MessageBuilder<String> builder = MessageBuilder.withPayload("");
+        if (!rootNetworksUuids.isEmpty()) {
+            builder.setHeader(HEADER_ROOT_NETWORKS_UUIDS, rootNetworksUuids);
+        }
+        sendStudyUpdateMessage(studyUuid, ROOT_NETWORKS_UPDATED, builder);
+    }
+
+    @PostCompletion
+    public void emitRootNetworksUpdated(UUID studyUuid) {
+        emitRootNetworksUpdated(studyUuid, Collections.emptyList());
+    }
+
+    @PostCompletion
+    public void emitRootNetworkUpdated(UUID studyUuid, UUID rootNetworkUuid) {
+        emitRootNetworksUpdated(studyUuid, List.of(rootNetworkUuid));
+    }
+
+    public void emitRootNetworksDeletionStarted(UUID studyUuid, List<UUID> rootNetworksUuids) {
+        sendStudyUpdateMessage(studyUuid, ROOT_NETWORKS_DELETION_STARTED, MessageBuilder.withPayload("")
+            .setHeader(HEADER_ROOT_NETWORKS_UUIDS, rootNetworksUuids)
+        );
+    }
+
+    @PostCompletion
+    public void emitRootNetworksUpdateFailed(UUID studyUuid, String errorMessage) {
+        sendStudyUpdateMessage(studyUuid, ROOT_NETWORKS_UPDATE_FAILED, MessageBuilder.withPayload("")
+            .setHeader(HEADER_ERROR, errorMessage)
+        );
+    }
+
+    // For publishElementUpdate-out-0 queue
+    private void sendElementUpdateMessage(Message<String> message) {
+        MESSAGE_OUTPUT_LOGGER.debug(MESSAGE_LOG, message);
+        updatePublisher.send("publishElementUpdate-out-0", message);
     }
 
     @PostCompletion
@@ -452,56 +437,5 @@ public class NotificationService {
                 .setHeader(HEADER_MODIFICATION_DATE, Instant.now())
                 .build()
         );
-    }
-
-    @PostCompletion
-    public void emitStudyAlert(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, StudyAlert studyAlert) {
-        try {
-            sendUpdateMessage(MessageBuilder.withPayload(objectMapper.writeValueAsString(studyAlert))
-                .setHeader(HEADER_USER_ID, userId)
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_NODE, nodeUuid)
-                .setHeader(HEADER_ROOT_NETWORK, rootNetworkUuid)
-                .setHeader(HEADER_UPDATE_TYPE, STUDY_ALERT)
-                .build()
-            );
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Unable to notify on study alert", e);
-        }
-    }
-
-    @PostCompletion
-    public void emitRootNetworksUpdated(UUID studyUuid) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, ROOT_NETWORKS_UPDATED)
-            .build());
-    }
-
-    @PostCompletion
-    public void emitRootNetworkCaseModified(UUID studyUuid, UUID rootNetworkUuid) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-                .setHeader(HEADER_STUDY_UUID, studyUuid)
-                .setHeader(HEADER_ROOT_NETWORK, rootNetworkUuid)
-                .setHeader(HEADER_UPDATE_TYPE, ROOT_NETWORK_MODIFIED)
-                .build());
-    }
-
-    public void emitRootNetworksDeletionStarted(UUID studyUuid, List<UUID> rootNetworkUuids) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, ROOT_NETWORKS_DELETION_STARTED)
-            .setHeader(HEADER_ROOT_NETWORKS, rootNetworkUuids)
-            .build());
-
-    }
-
-    @PostCompletion
-    public void emitRootNetworksUpdateFailed(UUID studyUuid, String errorMessage) {
-        sendUpdateMessage(MessageBuilder.withPayload("")
-            .setHeader(HEADER_STUDY_UUID, studyUuid)
-            .setHeader(HEADER_UPDATE_TYPE, ROOT_NETWORKS_UPDATE_FAILED)
-            .setHeader(HEADER_ERROR, errorMessage)
-            .build());
     }
 }
