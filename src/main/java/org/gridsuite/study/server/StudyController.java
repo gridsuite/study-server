@@ -251,9 +251,8 @@ public class StudyController {
     @Operation(summary = "Delete root networks for study")
     @ApiResponse(responseCode = "200", description = "Root network deleted")
     public ResponseEntity<Void> deleteRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
-                                                    @RequestBody List<UUID> rootNetworksUuids,
-                                                    @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.deleteRootNetworks(studyUuid, rootNetworksUuids, userId);
+                                                    @RequestBody List<UUID> rootNetworksUuids) {
+        studyService.deleteRootNetworks(studyUuid, rootNetworksUuids);
         return ResponseEntity.ok().build();
     }
 

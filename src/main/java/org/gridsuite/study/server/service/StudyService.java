@@ -285,7 +285,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void deleteRootNetworks(UUID studyUuid, List<UUID> rootNetworksUuids, String userId) {
+    public void deleteRootNetworks(UUID studyUuid, List<UUID> rootNetworksUuids) {
         assertIsStudyExist(studyUuid);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         List<RootNetworkEntity> allRootNetworkEntities = getStudyRootNetworks(studyUuid);
