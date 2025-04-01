@@ -143,11 +143,7 @@ public class NotificationService {
     }
 
     // For publishStudyUpdate-out-0 queue
-    private void sendStudyUpdateMessage(UUID studyUuid, String type, @NonNull MessageBuilder<String> builder) {
-        if (studyUuid == null || type == null) {
-            MESSAGE_OUTPUT_LOGGER.error("Unable to notify on study update: studyUuid or type is null");
-            return;
-        }
+    private void sendStudyUpdateMessage(@NonNull UUID studyUuid, @NonNull String type, @NonNull MessageBuilder<String> builder) {
         // Always give the concerned studyUuid and define a notification type
         Message<?> message = builder.setHeader(HEADER_STUDY_UUID, studyUuid).setHeader(HEADER_UPDATE_TYPE, type).build();
         MESSAGE_OUTPUT_LOGGER.debug(MESSAGE_LOG, message);
