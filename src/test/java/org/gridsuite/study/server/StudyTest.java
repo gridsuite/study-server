@@ -1671,9 +1671,32 @@ class StudyTest {
                 .build()
         );
 
+        // add node aliases to study
+        List<NodeAlias> aliases = List.of(new NodeAlias(null, "alias1", null),
+            new NodeAlias(node1.getId(), "alias2", "node1"),
+            new NodeAlias(node2.getId(), "alias3", "node2"));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", study1Uuid)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectWriter.writeValueAsString(aliases))
+        ).andExpect(status().isOk());
+
         // duplicate the study
         StudyEntity duplicatedStudy = duplicateStudy(mockWebServer, study1Uuid);
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
+
+        // Verify node aliases on the duplicated study
+        aliases = mapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", duplicatedStudy.getId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+            });
+        assertEquals(3, aliases.size());
+        assertEquals("alias1", aliases.get(0).alias());
+        assertNull(aliases.get(0).id());
+        assertNull(aliases.get(0).name());
+        assertEquals("alias2", aliases.get(1).alias());
+        assertEquals("node1", aliases.get(1).name());
+        assertEquals("alias3", aliases.get(2).alias());
+        assertEquals("node2", aliases.get(2).name());
 
         // Verify that the network was cloned with only one variant
         List<VariantInfos> networkVariants = networkService.getNetworkVariants(CLONED_NETWORK_UUID);
