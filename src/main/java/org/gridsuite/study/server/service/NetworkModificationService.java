@@ -80,7 +80,6 @@ public class NetworkModificationService {
                 .toUriString();
     }
 
-    // Return json string because modification dtos are not available here
     public List<ModificationInfos> getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH)

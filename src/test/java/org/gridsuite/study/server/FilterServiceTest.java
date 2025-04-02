@@ -272,7 +272,7 @@ class FilterServiceTest {
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyUuid = studyEntity.getId();
-        UUID studyFirstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        UUID studyFirstRootNetworkUuid = studyTestUtils.getOneRootNetwork(studyUuid).getNetworkUuid();
         String responseBody = """
                 [
                     {"id":"MANDA7COND.41","type":"SHUNT_COMPENSATOR","distributionKey":null},
