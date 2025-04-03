@@ -1829,16 +1829,25 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
-    public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId) {
+    private void removeNodesFromAliases(UUID studyUuid, List<UUID> nodeIds, boolean removeChildren) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         if (!CollectionUtils.isEmpty(studyEntity.getNodeAliases())) {
+            Set<UUID> allNodeIds = new HashSet<>(nodeIds);
+            if (removeChildren) {
+                nodeIds.forEach(n -> allNodeIds.addAll(networkModificationTreeService.getAllChildrenFromParentUuid(n).stream().map(UUID::fromString).toList()));
+            }
             studyEntity.getNodeAliases().forEach(nodeAliasEmbeddable -> {
-                if (nodeAliasEmbeddable.getNodeId() != null && nodeIds.contains(nodeAliasEmbeddable.getNodeId())) {
+                if (nodeAliasEmbeddable.getNodeId() != null && allNodeIds.contains(nodeAliasEmbeddable.getNodeId())) {
                     nodeAliasEmbeddable.setNodeId(null);
                 }
             });
         }
+    }
+
+    @Transactional
+    public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId) {
+        removeNodesFromAliases(studyUuid, nodeIds, deleteChildren);
+
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
         for (UUID nodeId : nodeIds) {
             AtomicReference<Long> startTime = new AtomicReference<>(null);
@@ -1891,6 +1900,8 @@ public class StudyService {
 
     @Transactional
     public void stashNode(UUID studyUuid, UUID nodeId, boolean stashChildren, String userId) {
+        removeNodesFromAliases(studyUuid, List.of(nodeId), stashChildren);
+
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         boolean invalidateChildrenBuild = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
