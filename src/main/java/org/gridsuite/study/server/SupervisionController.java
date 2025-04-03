@@ -67,6 +67,13 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(host);
     }
 
+    @GetMapping(value = "/studies/index-name")
+    @Operation(summary = "get the indexed studies index name")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed studies index name")})
+    public ResponseEntity<String> getIndexedStudiesIndexName() {
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(equipmentInfosService.getStudyIndexName());
+    }
+
     @GetMapping(value = "/equipments/index-name")
     @Operation(summary = "get the indexed equipments index name")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed equipments index name")})
@@ -79,6 +86,13 @@ public class SupervisionController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed tombstoned equipments index name")})
     public ResponseEntity<String> getIndexedTombstonedEquipmentsIndexName() {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(equipmentInfosService.getTombstonedEquipmentsIndexName());
+    }
+
+    @GetMapping(value = "/studies/indexation-count")
+    @Operation(summary = "get indexed studies count")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Indexed studies count")})
+    public ResponseEntity<String> getIndexedStudiesCount() {
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.getIndexedStudiesCount()));
     }
 
     @GetMapping(value = "/equipments/indexation-count")
@@ -95,13 +109,6 @@ public class SupervisionController {
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.getIndexedTombstonedEquipmentsCount()));
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/equipments/indexation")
-    @Operation(summary = "delete indexed equipments and tombstoned equipments for the given study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments and tombstoned equipments for the given study for the given root network have been deleted")})
-    public ResponseEntity<String> deleteStudyIndexedEquipmentsAndTombstoned(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(Long.toString(supervisionService.deleteStudyIndexedEquipmentsAndTombstoned(studyUuid)));
-    }
-
     @GetMapping(value = "/orphan_indexed_network_uuids")
     @Operation(summary = "Get all orphan indexed equipments network uuids")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of orphan indexed equipments network uuids")})
@@ -114,6 +121,27 @@ public class SupervisionController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all indexed equipments and tombstoned equipments for the given networkUuid have been deleted")})
     public ResponseEntity<Long> deleteNetworkUuidIndexedEquipmentsAndTombstoned(@PathVariable("networkUuid") UUID networkUuid) {
         equipmentInfosService.deleteEquipmentIndexes(networkUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/indices")
+    @Operation(summary = "Recreate all Elasticsearch study indices")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Elasticsearch study indices recreated successfully"),
+        @ApiResponse(responseCode = "500", description = "Failed to recreate Elasticsearch indices")
+    })
+    public ResponseEntity<Void> recreateStudyIndices() {
+        supervisionService.recreateStudyIndices();
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/reindex")
+    @Operation(summary = "reindex the study")
+    @ApiResponse(responseCode = "200", description = "Study reindexed")
+    public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(
+                rootNetwork -> studyService.reindexStudy(studyUuid, rootNetwork.rootNetworkUuid())
+        );
         return ResponseEntity.ok().build();
     }
 
