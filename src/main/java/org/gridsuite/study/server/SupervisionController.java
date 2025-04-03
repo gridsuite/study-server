@@ -124,7 +124,7 @@ public class SupervisionController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/indices/recreate")
+    @PostMapping(value = "/studies/indices")
     @Operation(summary = "Recreate all Elasticsearch study indices")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Elasticsearch study indices recreated successfully"),

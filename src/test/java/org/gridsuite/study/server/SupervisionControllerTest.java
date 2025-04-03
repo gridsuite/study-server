@@ -249,7 +249,7 @@ class SupervisionControllerTest {
                 .andReturn();
         assertEquals(1, Integer.parseInt(mvcResult.getResponse().getContentAsString()));
 
-        mockMvc.perform(post("/v1/supervision/studies/indices/recreate"))
+        mockMvc.perform(post("/v1/supervision/studies/indices"))
                 .andExpect(status().isOk())
                 .andReturn();
 
