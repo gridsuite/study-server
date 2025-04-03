@@ -1832,7 +1832,7 @@ public class StudyService {
     private void removeNodesFromAliases(UUID studyUuid, List<UUID> nodeIds, boolean removeChildren) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         if (!CollectionUtils.isEmpty(studyEntity.getNodeAliases())) {
-            List<UUID> allNodeIds = new ArrayList<>();
+            Set<UUID> allNodeIds = new HashSet<>(nodeIds);
             if (removeChildren) {
                 nodeIds.forEach(n -> allNodeIds.addAll(networkModificationTreeService.getAllChildrenFromParentUuid(n).stream().map(UUID::fromString).toList()));
             }
