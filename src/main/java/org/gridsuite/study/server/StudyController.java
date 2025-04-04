@@ -853,15 +853,16 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
-    @Operation(summary = "Update study's spreadsheet config collection")
+    @Operation(summary = "Update study's spreadsheet config collection, with replace or append mode")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The updated spreadsheet config collection"),
         @ApiResponse(responseCode = "404", description = "The study or the collection doesn't exist")
     })
     public ResponseEntity<String> updateStudySpreadsheetConfigCollection(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestParam("collectionUuid") UUID collectionUuid) {
-        return ResponseEntity.ok().body(studyService.updateStudySpreadsheetConfigCollection(studyUuid, collectionUuid));
+            @RequestParam("collectionUuid") UUID collectionUuid,
+            @RequestParam(value = "append", required = false, defaultValue = "false") Boolean appendMode) {
+        return ResponseEntity.ok().body(studyService.updateStudySpreadsheetConfigCollection(studyUuid, collectionUuid, appendMode));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
