@@ -2355,7 +2355,7 @@ public class StudyService {
     @Transactional
     public String updateStudySpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid, boolean appendMode) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        // 2 modes: append the new collection to the existing one, or replace the whole existing collection
+        // 2 modes: append the source collection to the existing one, or replace the whole existing collection
         return appendMode ? appendSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid) :
                 replaceSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid);
     }
