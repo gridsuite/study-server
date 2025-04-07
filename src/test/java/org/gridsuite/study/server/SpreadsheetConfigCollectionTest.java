@@ -69,6 +69,8 @@ class SpreadsheetConfigCollectionTest {
     private static final String NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING = "6329cd37-2287-5bd6-b971-e8453fa9cdb8";
     private static final String NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON = "\"" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "\"";
     private static final UUID NEW_SPREADSHEET_CONFIG_COLLECTION_UUID = UUID.fromString(NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING);
+    private static final String APPENDED_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING = "882e7f07-0b02-4f34-990d-54fa0831deda";
+    private static final UUID APPENDED_SPREADSHEET_CONFIG_COLLECTION_UUID = UUID.fromString(APPENDED_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING);
 
     private static final String NO_PROFILE_USER_ID = "noProfileUser";
     private static final String VALID_PROFILE_USER_ID = "validProfileUser";
@@ -141,6 +143,8 @@ class SpreadsheetConfigCollectionTest {
                         return new MockResponse(404);
                     }
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
+                } else if (path.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "/append\\?sourceCollection=.*")) {
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/spreadsheet-config-collections/.*") && "DELETE".equals(method)) {
                     // Return an error for the specific UUID that should trigger a delete error
                     if (path.contains(ERROR_DELETE_COLLECTION_UUID_STRING)) {
@@ -195,6 +199,58 @@ class SpreadsheetConfigCollectionTest {
         var requests = TestUtils.getRequestsDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + SPREADSHEET_CONFIG_COLLECTION_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING)));
+    }
+
+    @Test
+    void testAppendSpreadsheetConfigCollection(final MockWebServer server) throws Exception {
+        // Create a study with an existing spreadsheet config collection
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, SPREADSHEET_CONFIG_COLLECTION_UUID);
+        UUID studyUuid = studyEntity.getId();
+
+        // Test successful update in append mode
+        MvcResult mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
+                        .param("collectionUuid", APPENDED_SPREADSHEET_CONFIG_COLLECTION_UUID.toString())
+                        .param("append", "true")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JSONAssert.assertEquals(SPREADSHEET_CONFIG_COLLECTION_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+
+        // Test that the collectionId has not changed (updated only)
+        StudyEntity updatedStudy = studyRepository.findById(studyUuid).orElseThrow();
+        assertEquals(SPREADSHEET_CONFIG_COLLECTION_UUID, updatedStudy.getSpreadsheetConfigCollectionUuid());
+
+        // Verify the HTTP requests made to the server
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID + "/append\\?sourceCollection=" + APPENDED_SPREADSHEET_CONFIG_COLLECTION_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID)));
+    }
+
+    @Test
+    void testAppendSpreadsheetConfigCollectionEmptyCase(final MockWebServer server) throws Exception {
+        // Create a study with no collection
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
+        UUID studyUuid = studyEntity.getId();
+
+        // Test successful update in append mode
+        MvcResult mvcResult = mockMvc.perform(put("/v1/studies/{studyUuid}/spreadsheet-config-collection", studyUuid)
+                        .param("collectionUuid", APPENDED_SPREADSHEET_CONFIG_COLLECTION_UUID.toString())
+                        .param("append", "true")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JSONAssert.assertEquals(NEW_SPREADSHEET_CONFIG_COLLECTION_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
+
+        // Test that the collectionId has been set
+        StudyEntity updatedStudy = studyRepository.findById(studyUuid).orElseThrow();
+        assertEquals(NEW_SPREADSHEET_CONFIG_COLLECTION_UUID, updatedStudy.getSpreadsheetConfigCollectionUuid());
+
+        // Verify the HTTP requests made to the server
+        var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + APPENDED_SPREADSHEET_CONFIG_COLLECTION_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING)));
     }
 

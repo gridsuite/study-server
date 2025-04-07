@@ -2353,18 +2353,32 @@ public class StudyService {
     }
 
     @Transactional
-    public String updateStudySpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid) {
+    public String updateStudySpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid, boolean appendMode) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        // 2 modes: append the source collection to the existing one, or replace the whole existing collection
+        return appendMode ? appendSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid) :
+                replaceSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid);
+    }
 
-        // Duplicate the source collection
+    private String appendSpreadsheetConfigCollection(StudyEntity studyEntity, UUID sourceCollectionUuid) {
+        final UUID existingStudyCollection = studyEntity.getSpreadsheetConfigCollectionUuid();
+        if (existingStudyCollection == null) {
+            return replaceSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid);
+        }
+        studyConfigService.appendSpreadsheetConfigCollection(existingStudyCollection, sourceCollectionUuid);
+        return studyConfigService.getSpreadsheetConfigCollection(existingStudyCollection);
+    }
+
+    private String replaceSpreadsheetConfigCollection(StudyEntity studyEntity, UUID sourceCollectionUuid) {
+        // Duplicate the source collection to get a new one
         UUID newCollectionUuid = studyConfigService.duplicateSpreadsheetConfigCollection(sourceCollectionUuid);
-
-        // Delete the old collection if it exists
-        if (studyEntity.getSpreadsheetConfigCollectionUuid() != null) {
+        final UUID existingStudyCollection = studyEntity.getSpreadsheetConfigCollectionUuid();
+        if (existingStudyCollection != null) {
+            // delete the old collection if it exists
             try {
-                studyConfigService.deleteSpreadsheetConfigCollection(studyEntity.getSpreadsheetConfigCollectionUuid());
+                studyConfigService.deleteSpreadsheetConfigCollection(existingStudyCollection);
             } catch (Exception e) {
-                LOGGER.error("Could not remove spreadsheet config collection with uuid:" + studyEntity.getSpreadsheetConfigCollectionUuid(), e);
+                LOGGER.error("Could not remove spreadsheet config collection with uuid:" + existingStudyCollection, e);
                 // Continue with the new collection even if deletion failed
             }
         }
