@@ -59,4 +59,8 @@ public class StudyInfosService {
         studyInfosRepository.deleteById(studyInfos.getId());
         studyInfosRepository.save(studyInfos);
     }
+
+    public long getStudyInfosCount() {
+        return studyInfosRepository.count();
+    }
 }

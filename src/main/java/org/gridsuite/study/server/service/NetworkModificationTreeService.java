@@ -333,6 +333,10 @@ public class NetworkModificationTreeService {
         return nodesRepository.findAllByParentNodeIdNode(parentUuid);
     }
 
+    public List<String> getAllChildrenFromParentUuid(UUID parentUuid) {
+        return nodesRepository.findAllDescendants(parentUuid);
+    }
+
     @Transactional
     public void doDeleteTree(UUID studyId) {
         try {

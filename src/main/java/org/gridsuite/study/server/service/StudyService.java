@@ -1830,16 +1830,25 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
-    public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId) {
+    private void removeNodesFromAliases(UUID studyUuid, List<UUID> nodeIds, boolean removeChildren) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         if (!CollectionUtils.isEmpty(studyEntity.getNodeAliases())) {
+            Set<UUID> allNodeIds = new HashSet<>(nodeIds);
+            if (removeChildren) {
+                nodeIds.forEach(n -> allNodeIds.addAll(networkModificationTreeService.getAllChildrenFromParentUuid(n).stream().map(UUID::fromString).toList()));
+            }
             studyEntity.getNodeAliases().forEach(nodeAliasEmbeddable -> {
-                if (nodeAliasEmbeddable.getNodeId() != null && nodeIds.contains(nodeAliasEmbeddable.getNodeId())) {
+                if (nodeAliasEmbeddable.getNodeId() != null && allNodeIds.contains(nodeAliasEmbeddable.getNodeId())) {
                     nodeAliasEmbeddable.setNodeId(null);
                 }
             });
         }
+    }
+
+    @Transactional
+    public void deleteNodes(UUID studyUuid, List<UUID> nodeIds, boolean deleteChildren, String userId) {
+        removeNodesFromAliases(studyUuid, nodeIds, deleteChildren);
+
         DeleteNodeInfos deleteNodeInfos = new DeleteNodeInfos();
         for (UUID nodeId : nodeIds) {
             AtomicReference<Long> startTime = new AtomicReference<>(null);
@@ -1892,6 +1901,8 @@ public class StudyService {
 
     @Transactional
     public void stashNode(UUID studyUuid, UUID nodeId, boolean stashChildren, String userId) {
+        removeNodesFromAliases(studyUuid, List.of(nodeId), stashChildren);
+
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         boolean invalidateChildrenBuild = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
@@ -1931,7 +1942,6 @@ public class StudyService {
             updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
             throw e;
         }
-        invalidateBuild(study.getId(), networkModificationTreeService.getStudyRootNodeUuid(study.getId()), rootNetworkUuid, false, false, true);
         LOGGER.info("Study with id = '{}' has been reindexed", study.getId());
     }
 
@@ -2344,18 +2354,32 @@ public class StudyService {
     }
 
     @Transactional
-    public String updateStudySpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid) {
+    public String updateStudySpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid, boolean appendMode) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        // 2 modes: append the source collection to the existing one, or replace the whole existing collection
+        return appendMode ? appendSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid) :
+                replaceSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid);
+    }
 
-        // Duplicate the source collection
+    private String appendSpreadsheetConfigCollection(StudyEntity studyEntity, UUID sourceCollectionUuid) {
+        final UUID existingStudyCollection = studyEntity.getSpreadsheetConfigCollectionUuid();
+        if (existingStudyCollection == null) {
+            return replaceSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid);
+        }
+        studyConfigService.appendSpreadsheetConfigCollection(existingStudyCollection, sourceCollectionUuid);
+        return studyConfigService.getSpreadsheetConfigCollection(existingStudyCollection);
+    }
+
+    private String replaceSpreadsheetConfigCollection(StudyEntity studyEntity, UUID sourceCollectionUuid) {
+        // Duplicate the source collection to get a new one
         UUID newCollectionUuid = studyConfigService.duplicateSpreadsheetConfigCollection(sourceCollectionUuid);
-
-        // Delete the old collection if it exists
-        if (studyEntity.getSpreadsheetConfigCollectionUuid() != null) {
+        final UUID existingStudyCollection = studyEntity.getSpreadsheetConfigCollectionUuid();
+        if (existingStudyCollection != null) {
+            // delete the old collection if it exists
             try {
-                studyConfigService.deleteSpreadsheetConfigCollection(studyEntity.getSpreadsheetConfigCollectionUuid());
+                studyConfigService.deleteSpreadsheetConfigCollection(existingStudyCollection);
             } catch (Exception e) {
-                LOGGER.error("Could not remove spreadsheet config collection with uuid:" + studyEntity.getSpreadsheetConfigCollectionUuid(), e);
+                LOGGER.error("Could not remove spreadsheet config collection with uuid:" + existingStudyCollection, e);
                 // Continue with the new collection even if deletion failed
             }
         }
