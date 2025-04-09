@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.utils.elasticsearch;
 
 import org.elasticsearch.client.RestClient;
-import org.gridsuite.study.server.elasticsearch.BasicModificationInfosRepository;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosRepository;
 import org.gridsuite.study.server.elasticsearch.StudyInfosRepository;
 import org.gridsuite.study.server.elasticsearch.TombstonedEquipmentInfosRepository;
@@ -25,7 +24,6 @@ import java.lang.annotation.*;
 @Inherited
 @MockBean(EmbeddedElasticsearch.class)
 @MockBean(EquipmentInfosRepository.class)
-@MockBean(BasicModificationInfosRepository.class)
 @MockBean(StudyInfosRepository.class)
 @MockBean(TombstonedEquipmentInfosRepository.class)
 @MockBean(RestClient.class)
