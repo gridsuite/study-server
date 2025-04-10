@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import com.vladmihalcea.sql.SQLStatementCountValidator;
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -34,7 +35,7 @@ import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeI
  */
 @DisableElasticsearch
 @SpringBootTest
-public class ModificationIndexationTest {
+class ModificationIndexationTest {
 
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID CASE_UUID = UUID.randomUUID();
@@ -79,6 +80,7 @@ public class ModificationIndexationTest {
          * () means the node is built
          */
         createStudyAndNodesWithIndexedModification();
+        SQLStatementCountValidator.reset();
     }
 
     @Test
@@ -90,6 +92,8 @@ public class ModificationIndexationTest {
             node2.getModificationGroupUuid(),
             node3.getModificationGroupUuid()
         ));
+
+        SQLStatementCountValidator.assertSelectCount(23);
     }
 
     @Test
@@ -101,6 +105,8 @@ public class ModificationIndexationTest {
             node4.getModificationGroupUuid(),
             node5.getModificationGroupUuid()
         ));
+
+        SQLStatementCountValidator.assertSelectCount(23);
     }
 
     @Test
@@ -111,6 +117,8 @@ public class ModificationIndexationTest {
         assertThat(invalidateNodeInfos.getGroupUuids()).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(List.of(
             node5.getModificationGroupUuid()
         ));
+
+        SQLStatementCountValidator.assertSelectCount(15);
     }
 
     @Test
@@ -122,6 +130,8 @@ public class ModificationIndexationTest {
             node2.getModificationGroupUuid(),
             node3.getModificationGroupUuid()
         ));
+
+        SQLStatementCountValidator.assertSelectCount(23);
     }
 
     @Test
@@ -130,6 +140,8 @@ public class ModificationIndexationTest {
         networkModificationTreeService.invalidateBuildOfNodeOnly(node4.getId(), rootNetworkEntity.getId(), false, invalidateNodeInfos, false);
 
         assertThat(invalidateNodeInfos.getGroupUuids()).isEmpty();
+
+        SQLStatementCountValidator.assertSelectCount(9);
     }
 
     @Test
@@ -141,6 +153,8 @@ public class ModificationIndexationTest {
             node2.getModificationGroupUuid(),
             node3.getModificationGroupUuid()
         ));
+
+        SQLStatementCountValidator.assertSelectCount(22);
     }
 
     private void createStudyAndNodesWithIndexedModification() {
