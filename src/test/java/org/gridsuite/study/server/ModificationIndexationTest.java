@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2025, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
@@ -23,9 +29,12 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
 @DisableElasticsearch
 @SpringBootTest
-public class BasicModificationTest {
+public class ModificationIndexationTest {
 
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID CASE_UUID = UUID.randomUUID();
