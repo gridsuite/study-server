@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server;
 
-import org.gridsuite.study.server.dto.StudyIndexationStatus;
+import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
@@ -118,6 +118,7 @@ class NetworkModificationUnitTest {
             .caseUuid(CASE_LOADFLOW_UUID)
             .caseFormat("caseFormat")
             .caseName("caseName")
+            .indexationStatus(RootNetworkIndexationStatus.INDEXED)
             .build();
 
         study.addRootNetwork(firstRootNetworkEntity);
@@ -247,7 +248,7 @@ class NetworkModificationUnitTest {
     private StudyEntity insertStudy() {
         return StudyEntity.builder()
             .id(UUID.randomUUID())
-            .indexationStatus(StudyIndexationStatus.INDEXED)
+       //     .indexationStatus(StudyIndexationStatus.INDEXED)
             .voltageInitParameters(new StudyVoltageInitParametersEntity())
             .build();
     }
