@@ -116,7 +116,6 @@ class SupervisionControllerTest {
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, String caseName) {
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, caseName, "", UUID.randomUUID());
         studyEntity.setId(STUDY_UUID);
-        //studyEntity.setIndexationStatus(StudyIndexationStatus.INDEXED);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;

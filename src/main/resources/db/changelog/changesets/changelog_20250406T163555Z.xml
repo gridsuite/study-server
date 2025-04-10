@@ -2,8 +2,7 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet author="souissimai (generated)" id="1743957372376-14">
         <addColumn tableName="root_network">
-            <column name="indexation_status" type="varchar(255)"/>
-        </addColumn>
+            <column name="indexation_status" type="varchar(255)" defaultValue="INDEXED"/>        </addColumn>
     </changeSet>
     <changeSet author="souissimai (generated)" id="1743957372376-18">
         <dropColumn columnName="INDEXATION_STATUS" tableName="STUDY"/>
