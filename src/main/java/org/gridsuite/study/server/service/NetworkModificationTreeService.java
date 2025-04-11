@@ -804,13 +804,15 @@ public class NetworkModificationTreeService {
         // when invalidating node
         // we need to invalidate indexed modifications up to it's last built parent, not included
         boolean isNodeBuilt = self.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt();
-        if (isNodeBuilt || hasAnyBuiltChildren(getNodeEntity(nodeUuid), rootNetworkUuid)) {
-            if (isNodeBuilt && invalidateOnlyChildrenBuildStatus) {
-                fillIndexedModificationsInfosToInvalidate(nodeUuid, false, invalidateNodeInfos);
-            } else {
-                NodeEntity closestNodeWithParentHavingBuiltDescendent = getSubTreeToInvalidateIndexedModifications(nodeUuid, rootNetworkUuid);
-                fillIndexedModificationsInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true, invalidateNodeInfos);
-            }
+        if (!isNodeBuilt && !hasAnyBuiltChildren(getNodeEntity(nodeUuid), rootNetworkUuid)) {
+            return;
+        }
+
+        if (isNodeBuilt && invalidateOnlyChildrenBuildStatus) {
+            fillIndexedModificationsInfosToInvalidate(nodeUuid, false, invalidateNodeInfos);
+        } else {
+            NodeEntity closestNodeWithParentHavingBuiltDescendent = getSubTreeToInvalidateIndexedModifications(nodeUuid, rootNetworkUuid);
+            fillIndexedModificationsInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true, invalidateNodeInfos);
         }
     }
 

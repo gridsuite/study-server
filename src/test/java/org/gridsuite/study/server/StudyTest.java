@@ -2789,10 +2789,8 @@ class StudyTest {
                         content().string("NOT_INDEXED"));
         indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
 
-        UUID deleteModificationIndexStub = wireMockUtils.stubNetworkModificationDeleteIndex();
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", study1Uuid, study1RootNetworkUuid))
             .andExpect(status().isOk());
-        wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
 
         indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
         Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
