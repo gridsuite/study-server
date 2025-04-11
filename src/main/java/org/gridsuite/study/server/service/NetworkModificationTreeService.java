@@ -455,7 +455,10 @@ public class NetworkModificationTreeService {
             .build();
 
         NetworkModificationNode networkModificationNode = createNode(studyEntity, rootNodeEntity.getIdNode(), modificationNode, InsertMode.AFTER, null);
-        ReportNode reportNode = ReportNode.newRootReportNode().withMessageTemplate(modificationNode.getId().toString(), modificationNode.getId().toString()).build();
+        ReportNode reportNode = ReportNode.newRootReportNode()
+                    .withAllResourceBundlesFromClasspath()
+                    .withMessageTemplate("study.server.modificationNodeId")
+                    .withUntypedValue("modificationNodeId", modificationNode.getId().toString()).build();
         reportService.sendReport(getModificationReportUuid(networkModificationNode.getId(), firstRootNetworkUuid, networkModificationNode.getId()), reportNode);
 
         BuildInfos buildInfos = getBuildInfos(modificationNode.getId(), firstRootNetworkUuid);
