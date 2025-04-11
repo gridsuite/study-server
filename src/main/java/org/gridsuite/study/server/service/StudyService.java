@@ -267,8 +267,8 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase, String caseFormat) {
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase, String caseFormat, String caseName) {
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid, caseName));
         UUID importReportUuid = UUID.randomUUID();
         UUID caseUuidToUse = caseUuid;
         try {
@@ -714,6 +714,14 @@ public class StudyService {
 
     private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid) {
         StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(studyUuid);
+        notificationService.emitStudiesChanged(newStudy.getId(), userId);
+        return newStudy;
+    }
+
+    private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid, String caseName) {
+        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
+                studyUuid == null ? UUID.randomUUID() : studyUuid, caseName);
+        StudyCreationRequestEntity newStudy = studyCreationRequestRepository.save(studyCreationRequestEntity);
         notificationService.emitStudiesChanged(newStudy.getId(), userId);
         return newStudy;
     }

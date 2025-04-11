@@ -146,10 +146,11 @@ public class StudyController {
                                                        @RequestParam(value = CASE_FORMAT) String caseFormat,
                                                        @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                        @RequestParam(required = false, value = "duplicateCase", defaultValue = "false") Boolean duplicateCase,
+                                                       @RequestParam(required = false, value = "caseName", defaultValue = "false") String caseName,
                                                        @RequestBody(required = false) Map<String, Object> importParameters,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(caseUuid);
-        BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParameters, duplicateCase, caseFormat);
+        BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParameters, duplicateCase, caseFormat, caseName);
         return ResponseEntity.ok().body(createStudy);
     }
 
