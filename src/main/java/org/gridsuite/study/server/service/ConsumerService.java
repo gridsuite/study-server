@@ -20,6 +20,8 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
+import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -73,6 +75,7 @@ public class ConsumerService {
     private final VoltageInitService voltageInitService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
+    private final StudyCreationRequestRepository studyCreationRequestRepository;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -89,7 +92,8 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService) {
+                           StateEstimationService stateEstimationService,
+                           StudyCreationRequestRepository studyCreationRequestRepository) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -105,6 +109,7 @@ public class ConsumerService {
         this.voltageInitService = voltageInitService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
+        this.studyCreationRequestRepository = studyCreationRequestRepository;
     }
 
     @Bean
@@ -267,7 +272,10 @@ public class ConsumerService {
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
-
+        // in case of the first root network, the case name should reflect the user's choice, not the name of the file used to creat the case
+        // so we set the name of the case based on the StudyCreationRequestEntity.
+        Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
+        studyCreationRequestEntity.ifPresent(creationRequestEntity -> caseInfos.setCaseName(creationRequestEntity.getCaseName()));
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,

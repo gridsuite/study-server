@@ -27,4 +27,11 @@ public class StudyCreationRequestEntity implements BasicStudyEntity {
     @Id
     @Column(name = "id")
     private UUID id;
+
+    @Column(name = "caseName")
+    private String caseName;
+
+    public StudyCreationRequestEntity(UUID id) {
+        this.id = id;
+    }
 }
