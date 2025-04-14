@@ -8,10 +8,8 @@ on:
 
 jobs:
   build:
-    uses: powsybl/github-ci/.github/workflows/build-backend-app-generic.yml@5e13dcb03778dc9a47bd0adbd84c48392b32cd46
+    uses: powsybl/github-ci/.github/workflows/build-backend-app-generic.yml@39565de6fd7d394ed76fa09e5197ffb1350ff1e6
     with:
-      sonarOrganization: gridsuite
-      sonarProjectKey: org.gridsuite:study-server
       dockerImage: docker.io/gridsuite/study-server
       dockerUsername: gridsuiteci
       eventType: study_server_updated
