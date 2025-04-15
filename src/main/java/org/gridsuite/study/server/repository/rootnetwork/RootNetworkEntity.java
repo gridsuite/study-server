@@ -8,10 +8,7 @@ package org.gridsuite.study.server.repository.rootnetwork;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
-import org.gridsuite.study.server.dto.CaseInfos;
-import org.gridsuite.study.server.dto.NetworkInfos;
-import org.gridsuite.study.server.dto.RootNetworkInfos;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 
@@ -43,6 +40,10 @@ public class RootNetworkEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "studyUuid", foreignKey = @ForeignKey(name = "rootNetwork_study_id_fk_constraint"))
     private StudyEntity study;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private RootNetworkIndexationStatus indexationStatus = RootNetworkIndexationStatus.NOT_INDEXED;
 
     @OneToMany(orphanRemoval = true, mappedBy = "rootNetwork", cascade = CascadeType.ALL)
     @Builder.Default

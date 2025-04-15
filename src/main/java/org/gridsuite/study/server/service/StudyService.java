@@ -1289,14 +1289,14 @@ public class StudyService {
         stateEstimationService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
     }
 
-    private StudyEntity updateStudyIndexationStatus(StudyEntity studyEntity, StudyIndexationStatus indexationStatus) {
-        studyEntity.setIndexationStatus(indexationStatus);
-        notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), indexationStatus);
+    private StudyEntity updateStudyIndexationStatus(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, RootNetworkIndexationStatus indexationStatus) {
+        rootNetworkEntity.setIndexationStatus(indexationStatus);
+        notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), rootNetworkEntity.getId(), indexationStatus);
         return studyEntity;
     }
 
-    public StudyEntity updateStudyIndexationStatus(UUID studyUuid, StudyIndexationStatus indexationStatus) {
-        return updateStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), indexationStatus);
+    public StudyEntity updateStudyIndexationStatus(UUID studyUuid, UUID rootNetworkUuid, RootNetworkIndexationStatus indexationStatus) {
+        return updateStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)), indexationStatus);
     }
 
     private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
@@ -1316,7 +1316,7 @@ public class StudyService {
                 .voltageInitParametersUuid(voltageInitParametersUuid)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
                 .sensitivityAnalysisParametersUuid(sensitivityAnalysisParametersUuid)
-                .indexationStatus(StudyIndexationStatus.INDEXED)
+                //.indexationStatus(StudyIndexationStatus.INDEXED)
                 .voltageInitParameters(new StudyVoltageInitParametersEntity())
                 .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
                 .dynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisParametersUuid)
@@ -1930,15 +1930,16 @@ public class StudyService {
         CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study);
         // reindex study in elasticsearch
         studyInfosService.recreateStudyInfos(studyInfos);
+        RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
 
         // Reset indexation status
-        updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXING_ONGOING);
+        updateStudyIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXING_ONGOING);
         try {
             networkConversionService.reindexStudyNetworkEquipments(rootNetworkService.getNetworkUuid(rootNetworkUuid));
-            updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXED);
+            updateStudyIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXED);
         } catch (Exception e) {
             // Allow to retry indexation
-            updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
+            updateStudyIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
             throw e;
         }
         LOGGER.info("Study with id = '{}' has been reindexed", study.getId());
@@ -1950,13 +1951,14 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyIndexationStatus getStudyIndexationStatus(UUID studyUuid, UUID rootNetworkUuid) {
+    public RootNetworkIndexationStatus getStudyIndexationStatus(UUID studyUuid, UUID rootNetworkUuid) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        if (study.getIndexationStatus() == StudyIndexationStatus.INDEXED
+        RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        if (rootNetwork.getIndexationStatus() == RootNetworkIndexationStatus.INDEXED
                 && !networkConversionService.checkStudyIndexationStatus(rootNetworkService.getNetworkUuid(rootNetworkUuid))) {
-            updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
+            updateStudyIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
         }
-        return study.getIndexationStatus();
+        return rootNetwork.getIndexationStatus();
     }
 
     @Transactional
