@@ -3040,5 +3040,6 @@ public class StudyService {
             });
             studyEntity.setNodeAliases(newNodeAliases);
         }
+        notificationService.emitSpreadsheetNodeAliasesChanged(studyUuid);
     }
 }
