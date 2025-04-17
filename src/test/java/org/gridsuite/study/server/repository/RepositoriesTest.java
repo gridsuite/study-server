@@ -121,7 +121,7 @@ class RepositoriesTest {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(studyUuid, caseName);
         studyCreationRequestRepository.save(studyCreationRequestEntity);
         assertThat(studyCreationRequestRepository.findAll()).singleElement().extracting(StudyCreationRequestEntity::getId).isEqualTo(studyUuid);
-        assertThat(studyCreationRequestRepository.findAll()).singleElement().extracting(StudyCreationRequestEntity::getCaseName).isEqualTo(caseName);
+        assertThat(studyCreationRequestRepository.findAll()).singleElement().extracting(StudyCreationRequestEntity::getFirstRootNetworkName).isEqualTo(caseName);
     }
 
     @Test

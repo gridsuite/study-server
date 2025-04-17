@@ -28,6 +28,6 @@ public class StudyCreationRequestEntity implements BasicStudyEntity {
     @Column(name = "id")
     private UUID id;
 
-    @Column(name = "caseName")
-    private String caseName;
+    @Column(name = "firstRootNetworkName")
+    private String firstRootNetworkName;
 }
