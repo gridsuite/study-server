@@ -272,10 +272,14 @@ public class ConsumerService {
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
-        // in case of the first root network, the case name should reflect the user's choice, not the name of the file used to creat the case
-        // so we set the name of the case based on the StudyCreationRequestEntity.
+        // if the StudyCreationRequestEntity has no caseName then the first root network's name is the case file name with the extension.
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
-        studyCreationRequestEntity.ifPresent(creationRequestEntity -> caseInfos.setCaseName(creationRequestEntity.getCaseName()));
+        studyCreationRequestEntity.ifPresent(creationRequestEntity -> {
+            if (!StringUtils.isBlank(creationRequestEntity.getCaseName())) {
+                //In this case, the first root network's name is the name the user entered when selecting the case.
+                caseInfos.setCaseName(creationRequestEntity.getCaseName());
+            }
+        });
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,

@@ -30,8 +30,4 @@ public class StudyCreationRequestEntity implements BasicStudyEntity {
 
     @Column(name = "caseName")
     private String caseName;
-
-    public StudyCreationRequestEntity(UUID id) {
-        this.id = id;
-    }
 }

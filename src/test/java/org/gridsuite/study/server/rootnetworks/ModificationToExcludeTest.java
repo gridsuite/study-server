@@ -399,7 +399,7 @@ class ModificationToExcludeTest {
 
         // RUN study tree duplication
         UUID newStudyUuid = UUID.randomUUID();
-        studyCreationRequestRepository.save(new StudyCreationRequestEntity(newStudyUuid));
+        studyCreationRequestRepository.save(new StudyCreationRequestEntity(newStudyUuid, "caseName"));
         studyService.duplicateStudyAsync(BasicStudyInfos.builder().id(newStudyUuid).build(), studyEntity.getId(), USER_ID);
 
         List<BasicRootNetworkInfos> newStudyRootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(newStudyUuid);
