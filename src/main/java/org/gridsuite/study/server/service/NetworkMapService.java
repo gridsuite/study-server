@@ -17,7 +17,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.InfoTypeParameters;
-import org.gridsuite.study.server.dto.SwitchInfos;
+import org.gridsuite.study.server.dto.SwitchStatusInfos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -239,9 +239,9 @@ public class NetworkMapService {
                 }, networkUuid, voltageLevelId).getBody();
     }
 
-    public List<SwitchInfos> getVoltageLevelSwitches(UUID networkUuid, String variantId,
-                                                                        String voltageLevelId,
-                                                                        String switchesPath) {
+    public List<SwitchStatusInfos> getVoltageLevelSwitches(UUID networkUuid, String variantId,
+                                                           String voltageLevelId,
+                                                           String switchesPath) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION
                 + "/networks/{networkUuid}/voltage-levels/{voltageLevelId}/" + switchesPath);
         if (!StringUtils.isBlank(variantId)) {
@@ -249,7 +249,7 @@ public class NetworkMapService {
         }
 
         return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
-                new ParameterizedTypeReference<List<SwitchInfos>>() {
+                new ParameterizedTypeReference<List<SwitchStatusInfos>>() {
                 }, networkUuid, voltageLevelId).getBody();
     }
 

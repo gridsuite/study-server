@@ -1552,8 +1552,8 @@ public class StudyService {
         return networkMapService.getVoltageLevelBusesOrBusbarSections(networkUuid, variantId, voltageLevelId, busPath);
     }
 
-    public List<SwitchInfos> getVoltageLevelSwitches(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId,
-                                                                        String switchesPath) {
+    public List<SwitchStatusInfos> getVoltageLevelSwitches(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId,
+                                                           String switchesPath) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
 
@@ -1570,7 +1570,7 @@ public class StudyService {
         return getVoltageLevelBusesOrBusbarSections(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, "buses-or-busbar-sections");
     }
 
-    public List<SwitchInfos> getVoltageLevelSwitches(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
+    public List<SwitchStatusInfos> getVoltageLevelSwitches(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         return getVoltageLevelSwitches(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, "switches");
     }

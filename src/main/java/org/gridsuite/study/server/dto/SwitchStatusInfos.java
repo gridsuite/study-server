@@ -15,7 +15,7 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 /**
- * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author REHILI Ghazwa <ghazwa.rehili@rte-france.com>
  */
 @SuperBuilder
 @NoArgsConstructor
@@ -23,21 +23,12 @@ import lombok.experimental.SuperBuilder;
 @ToString
 @EqualsAndHashCode
 @Schema(description = "Switch attributes")
-public class SwitchInfos {
+public class SwitchStatusInfos {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @Schema(description = "Switch ID")
     private String id;
 
-    @Schema(description = "Switch name")
-    private String name;
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    @Schema(description = "Switch Kind")
-    private String switchKind;
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    @Schema(description = "Switch status")
-    private Boolean isOpen;
-
+    @Schema(description = "Switch Status")
+    private boolean isOpen;
 }
