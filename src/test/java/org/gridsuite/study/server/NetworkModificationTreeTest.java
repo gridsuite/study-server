@@ -559,7 +559,6 @@ class NetworkModificationTreeTest {
          */
         String userId = "userId";
         RootNode root = createRoot();
-        UUID rootId = root.getId();
         final NetworkModificationNode node1 = buildNetworkModificationNode("n1", "zzz", MODIFICATION_GROUP_UUID, VARIANT_ID,
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
@@ -572,8 +571,6 @@ class NetworkModificationTreeTest {
         root = getRootNode(root.getStudyId());
         List<AbstractNode> children = root.getChildren();
         assertEquals(2, children.size());
-        UUID n1Id = children.get(0).getId();
-        UUID n2Id = children.get(1).getId();
         // add 2 children to n2
         node2.setName("n3");
         node1.setName("n4");
@@ -585,8 +582,6 @@ class NetworkModificationTreeTest {
         assertEquals(2, children.size());
         List<AbstractNode> n2Children = children.get(1).getChildren();
         assertEquals(2, n2Children.size());
-        UUID n3Id = n2Children.get(0).getId();
-        UUID n4Id = n2Children.get(1).getId();
         return root.getStudyId();
     }
 
@@ -1526,6 +1521,8 @@ class NetworkModificationTreeTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectWriter.writeValueAsString(aliases))
         ).andExpect(status().isOk());
+        checkNodeAliasUpdateMessageReceived(root.getStudyId());
+
         nodeAliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
             .getResponse()
             .getContentAsString(), new TypeReference<>() {
@@ -1542,6 +1539,8 @@ class NetworkModificationTreeTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectWriter.writeValueAsString(aliases))
         ).andExpect(status().isOk());
+        checkNodeAliasUpdateMessageReceived(root.getStudyId());
+
         nodeAliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
             .getResponse()
             .getContentAsString(), new TypeReference<>() {
@@ -1574,6 +1573,7 @@ class NetworkModificationTreeTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectWriter.writeValueAsString(aliases))
         ).andExpect(status().isOk());
+        checkNodeAliasUpdateMessageReceived(root.getStudyId());
 
         // Stashing node3 (with stashChildren=true) should result in aliases no more associated to nodes node3, node4 and node5
         stashNode(root.getStudyId(), node3, true, Set.of(node3, node4, node5), userId);
@@ -1640,5 +1640,13 @@ class NetworkModificationTreeTest {
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodesUuids, headersStatus.get(NotificationService.HEADER_NODES));
         assertEquals(NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
+    }
+
+    private void checkNodeAliasUpdateMessageReceived(UUID studyUuid) {
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals("", new String(messageStudyUpdate.getPayload()));
+        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
+        assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_SPREADSHEET_NODE_ALIASES, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 }
