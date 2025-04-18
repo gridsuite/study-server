@@ -1328,7 +1328,7 @@ public class StudyService {
         // if the StudyCreationRequestEntity has no firstRootNetworkName then the first root network's name is the case file name with the extension.
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         var firstRootNetworkName = caseInfos.getCaseName();
-        if (studyCreationRequestEntity.isPresent() && StringUtils.isBlank(studyCreationRequestEntity.get().getFirstRootNetworkName())) {
+        if (studyCreationRequestEntity.isPresent() && !StringUtils.isBlank(studyCreationRequestEntity.get().getFirstRootNetworkName())) {
             // in this case, the first root network's name is the name the user entered when selecting the case.
             firstRootNetworkName = studyCreationRequestEntity.get().getFirstRootNetworkName();
         }
