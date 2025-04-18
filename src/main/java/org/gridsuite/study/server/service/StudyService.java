@@ -1707,7 +1707,8 @@ public class StudyService {
                 studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(invalidateNodeInfos.getDynamicSimulationResultUuids())),
                 studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids())),
                 studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(invalidateNodeInfos.getStateEstimationResultUuids())),
-                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
+                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())),
+                studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid()))
         );
         try {
             executeInParallel.get();
