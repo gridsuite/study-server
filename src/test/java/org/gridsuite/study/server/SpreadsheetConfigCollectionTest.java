@@ -14,6 +14,7 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -37,6 +38,8 @@ import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -94,6 +97,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    private static final long TIMEOUT = 1000;
 
     @Autowired
     private MockMvc mockMvc;
@@ -188,6 +192,7 @@ class SpreadsheetConfigCollectionTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn();
+        checkSpreadsheetCollectionUpdateMessageReceived(studyUuid);
 
         JSONAssert.assertEquals(NEW_SPREADSHEET_CONFIG_COLLECTION_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
@@ -215,6 +220,7 @@ class SpreadsheetConfigCollectionTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn();
+        checkSpreadsheetCollectionUpdateMessageReceived(studyUuid);
 
         JSONAssert.assertEquals(SPREADSHEET_CONFIG_COLLECTION_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
@@ -241,6 +247,7 @@ class SpreadsheetConfigCollectionTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andReturn();
+        checkSpreadsheetCollectionUpdateMessageReceived(studyUuid);
 
         JSONAssert.assertEquals(NEW_SPREADSHEET_CONFIG_COLLECTION_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
@@ -267,6 +274,7 @@ class SpreadsheetConfigCollectionTest {
                         .contentType(MediaType.APPLICATION_JSON))
                         .andExpect(status().isOk())
                         .andReturn();
+        checkSpreadsheetCollectionUpdateMessageReceived(studyUuid);
 
         // Verify the response contains the new collection
         JSONAssert.assertEquals(NEW_SPREADSHEET_CONFIG_COLLECTION_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
@@ -323,6 +331,7 @@ class SpreadsheetConfigCollectionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .header(StudyConstants.HEADER_USER_ID, NO_PROFILE_USER_ID))
                 .andExpect(status().isOk());
+        checkSpreadsheetCollectionUpdateMessageReceived(studyUuid);
 
         // Check that the study still has the same collection UUID
         StudyEntity updatedStudy = studyRepository.findById(studyUuid).orElseThrow();
@@ -346,6 +355,7 @@ class SpreadsheetConfigCollectionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .header(StudyConstants.HEADER_USER_ID, NO_PROFILE_USER_ID))
                 .andExpect(status().isOk());
+        checkSpreadsheetCollectionUpdateMessageReceived(studyUuid);
 
         // Check that the study have the new created collection
         StudyEntity updatedStudy = studyRepository.findById(studyUuid).orElseThrow();
@@ -367,6 +377,7 @@ class SpreadsheetConfigCollectionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .header(StudyConstants.HEADER_USER_ID, VALID_PROFILE_USER_ID))
                 .andExpect(status().isOk());
+        checkSpreadsheetCollectionUpdateMessageReceived(studyUuid);
 
         // Check that the study has been updated with the new collection from user profile
         StudyEntity updatedStudy = studyRepository.findById(studyUuid).orElseThrow();
@@ -391,6 +402,7 @@ class SpreadsheetConfigCollectionTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .header(StudyConstants.HEADER_USER_ID, NO_PROFILE_USER_ID))
                 .andExpect(status().isOk());
+        checkSpreadsheetCollectionUpdateMessageReceived(studyUuid);
 
         // Check that the study has been updated with the system default collection
         StudyEntity updatedStudy = studyRepository.findById(studyUuid).orElseThrow();
@@ -421,5 +433,12 @@ class SpreadsheetConfigCollectionTest {
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;
+    }
+
+    public void checkSpreadsheetCollectionUpdateMessageReceived(UUID studyUuid) {
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
+        assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_SPREADSHEET_COLLECTION, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 }
