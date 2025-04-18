@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.iidm.network.ThreeSides;
@@ -18,6 +18,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.modification.dto.ModificationInfos;
+import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -385,7 +387,7 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") StudyConstants.SldDisplayMode sldDisplayMode,
+            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
             @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
@@ -419,7 +421,7 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") StudyConstants.SldDisplayMode sldDisplayMode,
+            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
             @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
@@ -625,7 +627,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated.")})
     public ResponseEntity<Void> moveOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestParam("action") StudyConstants.ModificationsActionType action,
+                                                         @RequestParam("action") ModificationsActionType action,
                                                          @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
@@ -842,41 +844,6 @@ public class StudyController {
     public ResponseEntity<StudyVoltageInitParameters> getVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
-    @Operation(summary = "Get study spreadsheet config collection")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The spreadsheet config collection")})
-    public ResponseEntity<String> getSpreadsheetConfigCollection(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSpreadsheetConfigCollection(studyUuid));
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
-    @Operation(summary = "Update study's spreadsheet config collection, with replace or append mode")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The updated spreadsheet config collection"),
-        @ApiResponse(responseCode = "404", description = "The study or the collection doesn't exist")
-    })
-    public ResponseEntity<String> updateStudySpreadsheetConfigCollection(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestParam("collectionUuid") UUID collectionUuid,
-            @RequestParam(value = "append", required = false, defaultValue = "false") Boolean appendMode) {
-        return ResponseEntity.ok().body(studyService.updateStudySpreadsheetConfigCollection(studyUuid, collectionUuid, appendMode));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
-    @Operation(summary = "Set spreadsheet config collection on study, reset to default one if empty body")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The spreadsheet config collection is set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")
-    })
-    public ResponseEntity<Void> setSpreadsheetConfigCollection(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String configCollection,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return studyService.setSpreadsheetConfigCollection(studyUuid, configCollection, userId) ?
-                ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/export-network-formats")
