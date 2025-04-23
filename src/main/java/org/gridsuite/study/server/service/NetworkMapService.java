@@ -17,7 +17,6 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.InfoTypeParameters;
-import org.gridsuite.study.server.dto.SwitchStatusInfos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -249,7 +248,8 @@ public class NetworkMapService {
         }
 
         return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
-                new ParameterizedTypeReference<String>() {}, networkUuid, voltageLevelId).getBody();
+                new ParameterizedTypeReference<String>() {
+                }, networkUuid, voltageLevelId).getBody();
     }
 
     public void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
