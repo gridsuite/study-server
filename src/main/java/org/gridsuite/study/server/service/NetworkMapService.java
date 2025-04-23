@@ -239,7 +239,7 @@ public class NetworkMapService {
                 }, networkUuid, voltageLevelId).getBody();
     }
 
-    public List<SwitchStatusInfos> getVoltageLevelSwitches(UUID networkUuid, String variantId,
+    public String getVoltageLevelSwitches(UUID networkUuid, String variantId,
                                                            String voltageLevelId,
                                                            String switchesPath) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION
@@ -249,8 +249,7 @@ public class NetworkMapService {
         }
 
         return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
-                new ParameterizedTypeReference<List<SwitchStatusInfos>>() {
-                }, networkUuid, voltageLevelId).getBody();
+                new ParameterizedTypeReference<String>() {}, networkUuid, voltageLevelId).getBody();
     }
 
     public void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {

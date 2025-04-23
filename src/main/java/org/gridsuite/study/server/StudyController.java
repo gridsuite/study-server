@@ -452,7 +452,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/switches")
     @Operation(summary = "get switches the for a given network and a given voltage level")
     @ApiResponse(responseCode = "200", description = "The switches list of the network for given voltage level")
-    public ResponseEntity<List<SwitchStatusInfos>> getVoltageLevelSwitches(
+    public ResponseEntity<String> getVoltageLevelSwitches(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
