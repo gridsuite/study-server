@@ -248,7 +248,6 @@ class NetworkModificationUnitTest {
     private StudyEntity insertStudy() {
         return StudyEntity.builder()
             .id(UUID.randomUUID())
-       //     .indexationStatus(StudyIndexationStatus.INDEXED)
             .voltageInitParameters(new StudyVoltageInitParametersEntity())
             .build();
     }
