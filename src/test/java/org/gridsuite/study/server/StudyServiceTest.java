@@ -14,6 +14,7 @@ import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.network.store.client.NetworkStoreService;
 import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.CaseService;
 import org.gridsuite.study.server.service.LoadFlowService;
@@ -95,6 +96,7 @@ class StudyServiceTest {
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final String CASE_FORMAT_PARAM = "caseFormat";
+    private static final String FIRST_ROOT_NETWORK_NAME = "firstRootNetworkName";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final String USER_ID_HEADER = "userId";
@@ -105,6 +107,9 @@ class StudyServiceTest {
 
     @Autowired
     private StudyRepository studyRepository;
+
+    @Autowired
+    private StudyCreationRequestRepository studyCreationRequestRepository;
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
@@ -286,7 +291,8 @@ class StudyServiceTest {
 
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                 .header("userId", userId)
-                .param(CASE_FORMAT_PARAM, "UCTE"))
+                .param(CASE_FORMAT_PARAM, "UCTE")
+                .param(FIRST_ROOT_NETWORK_NAME, "firstRootNetworkName"))
             .andExpect(status().isOk())
             .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
