@@ -37,7 +37,6 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -268,8 +267,8 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase, String caseFormat) {
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase, String caseFormat, String firstRootNetworkName) {
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid, firstRootNetworkName));
         UUID importReportUuid = UUID.randomUUID();
         UUID caseUuidToUse = caseUuid;
         try {
@@ -432,7 +431,7 @@ public class StudyService {
         if (sourceStudy == null) {
             return null;
         }
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, null));
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, null, null));
 
         studyServerExecutionService.runAsync(() -> self.duplicateStudyAsync(basicStudyInfos, sourceStudyUuid, userId));
 
@@ -713,8 +712,8 @@ public class StudyService {
             .build());
     }
 
-    private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid) {
-        StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(studyUuid);
+    private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid, String firstRootNetworkName) {
+        StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(studyUuid, firstRootNetworkName);
         notificationService.emitStudiesChanged(newStudy.getId(), userId);
         return newStudy;
     }
@@ -1326,7 +1325,14 @@ public class StudyService {
                 .build();
 
         var study = studyRepository.save(studyEntity);
-        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().id(UUID.randomUUID()).name(caseInfos.getCaseName()).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).tag("1").build());
+        // if the StudyCreationRequestEntity has no firstRootNetworkName then the first root network's name is the case file name with the extension.
+        Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
+        var firstRootNetworkName = caseInfos.getCaseName();
+        if (studyCreationRequestEntity.isPresent() && !StringUtils.isBlank(studyCreationRequestEntity.get().getFirstRootNetworkName())) {
+            // in this case, the first root network's name is the name the user entered when selecting the case.
+            firstRootNetworkName = studyCreationRequestEntity.get().getFirstRootNetworkName();
+        }
+        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().id(UUID.randomUUID()).name(firstRootNetworkName).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).tag("1").build());
         networkModificationTreeService.createBasicTree(study);
 
         return study;
@@ -1352,9 +1358,9 @@ public class StudyService {
         }
     }
 
-    private StudyCreationRequestEntity insertStudyCreationRequestEntity(UUID studyUuid) {
+    private StudyCreationRequestEntity insertStudyCreationRequestEntity(UUID studyUuid, String firstRootNetworkName) {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
-                studyUuid == null ? UUID.randomUUID() : studyUuid);
+                studyUuid == null ? UUID.randomUUID() : studyUuid, firstRootNetworkName);
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 

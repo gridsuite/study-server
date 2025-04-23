@@ -27,4 +27,7 @@ public class StudyCreationRequestEntity implements BasicStudyEntity {
     @Id
     @Column(name = "id")
     private UUID id;
+
+    @Column(name = "firstRootNetworkName")
+    private String firstRootNetworkName;
 }
