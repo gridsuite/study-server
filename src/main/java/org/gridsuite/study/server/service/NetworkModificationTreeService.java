@@ -82,13 +82,16 @@ public class NetworkModificationTreeService {
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
         }
-
+        if (networkModificationNode.getNetworkModificationNodeType() == null) {
+            networkModificationNode.setNetworkModificationNodeType(NetworkModificationNodeType.CONSTRUCTION);
+        }
         networkModificationNodeInfoRepository.save(
             NetworkModificationNodeInfoEntity.builder()
                 .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
                 .idNode(newNode.getIdNode())
                 .name(networkModificationNode.getName())
-                .description(networkModificationNode.getDescription())
+                    .description(networkModificationNode.getDescription())
+                    .networkModificationNodeType(networkModificationNode.getNetworkModificationNodeType())
                 .build()
         );
         return newNode;
@@ -183,6 +186,7 @@ public class NetworkModificationTreeService {
                 .modificationGroupUuid(newGroupUuid)
                 .name(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()))
                 .description(networkModificationNodeInfoEntity.getDescription())
+                .networkModificationNodeType(networkModificationNodeInfoEntity.getNetworkModificationNodeType())
                 .build(),
                 nodeToCopyUuid,
                 insertMode,
@@ -451,6 +455,7 @@ public class NetworkModificationTreeService {
         UUID firstRootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         NetworkModificationNode modificationNode = NetworkModificationNode
             .builder()
+            .networkModificationNodeType(NetworkModificationNodeType.CONSTRUCTION)
             .name("N1")
             .build();
 

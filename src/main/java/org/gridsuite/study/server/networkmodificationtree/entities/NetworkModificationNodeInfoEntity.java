@@ -31,6 +31,10 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column
     private UUID modificationGroupUuid;
 
+    @Column
+    @Enumerated(EnumType.STRING)
+    private NetworkModificationNodeType networkModificationNodeType;
+
     @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo", cascade = CascadeType.ALL)
     @Builder.Default
     protected List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos = new ArrayList<>();
@@ -45,6 +49,7 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
             .modificationGroupUuid(modificationGroupUuid)
             .id(this.getId())
             .name(this.getName())
+            .networkModificationNodeType(networkModificationNodeType)
             .description(this.getDescription())
             .columnPosition(this.getColumnPosition())
             .readOnly(this.getReadOnly())
