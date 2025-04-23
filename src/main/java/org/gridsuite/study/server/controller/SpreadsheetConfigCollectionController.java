@@ -71,7 +71,7 @@ public class SpreadsheetConfigCollectionController {
     @PostMapping("/{id}/spreadsheet-configs")
     @Operation(summary = "Add a spreadsheet configuration to a collection",
             description = "Adds a new spreadsheet configuration to a collection")
-    @ApiResponse(responseCode = "204", description = "Configuration added")
+    @ApiResponse(responseCode = "201", description = "Configuration added")
     @ApiResponse(responseCode = "404", description = "Configuration collection not found")
     public ResponseEntity<UUID> addSpreadsheetConfigToCollection(
             @PathVariable("studyUuid") UUID studyUuid,
