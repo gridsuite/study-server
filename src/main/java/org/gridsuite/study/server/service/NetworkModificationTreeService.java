@@ -904,7 +904,18 @@ public class NetworkModificationTreeService {
         }
         );
 
+        handleElasticsearchNodeModifications(nodeUuid, rootNetworkUuid, invalidateNodeInfos);
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().toList(), rootNetworkUuid);
+    }
+
+    private void handleElasticsearchNodeModifications(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos) {
+        // when manually invalidating a single node, if this node does not have any built children
+        // we need to invalidate indexed modifications up to it's last built parent, not included
+        if (!hasAnyBuiltChildren(getNodeEntity(nodeUuid), rootNetworkUuid)) {
+            // when invalidating nodes, we need to get last built parent to invalidate all its children modifications in elasticsearch
+            NodeEntity closestNodeWithParentHavingBuiltDescendent = getSubTreeToInvalidateIndexedModifications(nodeUuid, rootNetworkUuid);
+            fillIndexedModificationsInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true, invalidateNodeInfos);
+        }
     }
 
     private void invalidateChildrenBuildStatus(UUID nodeUuid, UUID rootNetworkUuid, List<UUID> changedNodes, InvalidateNodeInfos invalidateNodeInfos,
