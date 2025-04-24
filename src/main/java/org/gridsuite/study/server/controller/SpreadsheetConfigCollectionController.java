@@ -25,7 +25,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/spreadsheet-config-collection")
-@Tag(name = "Study server - Supervision")
+@Tag(name = "Study server - Spreadsheet collections")
 public class SpreadsheetConfigCollectionController {
     private final StudyService studyService;
 
@@ -34,7 +34,7 @@ public class SpreadsheetConfigCollectionController {
     }
 
     @GetMapping()
-    @Operation(summary = "Get study spreadsheet config collection")
+    @Operation(summary = "Get study's spreadsheet config collection")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The spreadsheet config collection")})
     public ResponseEntity<String> getSpreadsheetConfigCollection(
             @PathVariable("studyUuid") UUID studyUuid) {
@@ -47,11 +47,11 @@ public class SpreadsheetConfigCollectionController {
         @ApiResponse(responseCode = "200", description = "The updated spreadsheet config collection"),
         @ApiResponse(responseCode = "404", description = "The study or the collection doesn't exist")
     })
-    public ResponseEntity<String> updateStudySpreadsheetConfigCollection(
+    public ResponseEntity<String> updateSpreadsheetConfigCollection(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestParam("collectionUuid") UUID collectionUuid,
             @RequestParam(value = "append", required = false, defaultValue = "false") Boolean appendMode) {
-        return ResponseEntity.ok().body(studyService.updateStudySpreadsheetConfigCollection(studyUuid, collectionUuid, appendMode));
+        return ResponseEntity.ok().body(studyService.updateSpreadsheetConfigCollection(studyUuid, collectionUuid, appendMode));
     }
 
     @PostMapping()

@@ -29,7 +29,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/spreadsheet-config")
-@Tag(name = "Study server - Supervision")
+@Tag(name = "Study server - Spreadsheet configurations")
 public class SpreadsheetConfigController {
     private final StudyService studyService;
 
