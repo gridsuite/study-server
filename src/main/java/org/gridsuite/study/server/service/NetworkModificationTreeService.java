@@ -816,6 +816,23 @@ public class NetworkModificationTreeService {
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()), rootNetworkUuid);
     }
 
+    @Transactional
+    // old name: invalidateBuildOfNodeOnly
+    public void unbuild(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos) {
+        final List<UUID> changedNodes = new ArrayList<>();
+        changedNodes.add(nodeUuid);
+        UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
+
+        nodesRepository.findById(nodeUuid).ifPresent(nodeEntity -> {
+            if (nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION) && rootNetworkService.exists(rootNetworkUuid)) {
+                rootNetworkNodeInfoService.unbuildRootNetworkNode(nodeUuid, rootNetworkUuid, invalidateNodeInfos, changedNodes);
+            }
+        }
+        );
+
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().toList(), rootNetworkUuid);
+    }
+
     private void invalidateChildrenBuildStatus(UUID nodeUuid, UUID rootNetworkUuid, List<UUID> changedNodes, InvalidateNodeInfos invalidateNodeInfos,
                                                boolean deleteVoltageInitResults) {
         nodesRepository.findAllByParentNodeIdNode(nodeUuid)
