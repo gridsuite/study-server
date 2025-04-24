@@ -1769,6 +1769,24 @@ public class StudyService {
 
     }
 
+    //OldName: invalidateBuild part 2
+    // this is used to unbuild the node and its children
+    public void unbuildNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>(null);
+        startTime.set(System.nanoTime());
+        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+        invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
+
+        //TODO: change invalidateBuild methode later
+        networkModificationTreeService.invalidateBuild(nodeUuid, rootNetworkUuid, false, invalidateNodeInfos, true);
+        deleteNodeResults(invalidateNodeInfos);
+
+        if (startTime.get() != null) {
+            LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
+                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        }
+    }
+
     private void updateStatuses(UUID studyUuid, UUID nodeUuid) {
         updateStatuses(studyUuid, nodeUuid, true);
     }
@@ -1957,9 +1975,7 @@ public class StudyService {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
         boolean invalidateChildrenBuild = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
-        getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
-            invalidateBuild(studyUuid, nodeId, rootNetworkEntity.getId(), false, !invalidateChildrenBuild, true)
-        );
+        unbuildStashedNode(studyUuid, nodeId, invalidateChildrenBuild);
         networkModificationTreeService.doStashNode(nodeId, stashChildren);
 
         if (startTime.get() != null) {
@@ -1968,6 +1984,23 @@ public class StudyService {
         }
 
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    public void unbuildStashedNode(UUID studyUuid, UUID nodeId, boolean stashChildren) {
+        //two case scenario:
+        // one node stashed -> unbuild the node
+        // a node and its children are stashed -> unbuild all of them
+        boolean invalidateChildrenBuild = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
+        List<RootNetworkEntity> studyRootNetworks = getStudyRootNetworks(studyUuid);
+        if (invalidateChildrenBuild) {
+            studyRootNetworks.forEach(rootNetworkEntity -> {
+                unbuildNodeTree(studyUuid, nodeId, rootNetworkEntity.getId());
+            });
+        } else {
+            studyRootNetworks.forEach(rootNetworkEntity -> {
+                unbuildStudyNode(studyUuid, nodeId, rootNetworkEntity.getId());
+            });
+        }
     }
 
     public List<Pair<AbstractNode, Integer>> getStashedNodes(UUID studyId) {
