@@ -145,6 +145,10 @@ public class NetworkConversionService {
         }
     }
 
+    public void setNetworkConversionServerBaseUri(String networkConversionServerBaseUri) {
+        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
+    }
+
     public void reindexStudyNetworkEquipments(UUID networkUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/reindex-all")
             .buildAndExpand(networkUuid)
@@ -158,10 +162,6 @@ public class NetworkConversionService {
                 throw handleHttpError(e, STUDY_INDEXATION_FAILED);
             }
         }
-    }
-
-    public void setNetworkConversionServerBaseUri(String networkConversionServerBaseUri) {
-        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
     }
 
     public boolean checkStudyIndexationStatus(UUID networkUuid) {
