@@ -117,9 +117,11 @@ class RepositoriesTest {
     @Test
     void testStudyCreationRequest() {
         UUID studyUuid = UUID.randomUUID();
-        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(studyUuid);
+        String firstRootNetworkName = "firstRootNetworkName";
+        StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(studyUuid, firstRootNetworkName);
         studyCreationRequestRepository.save(studyCreationRequestEntity);
         assertThat(studyCreationRequestRepository.findAll()).singleElement().extracting(StudyCreationRequestEntity::getId).isEqualTo(studyUuid);
+        assertThat(studyCreationRequestRepository.findAll()).singleElement().extracting(StudyCreationRequestEntity::getFirstRootNetworkName).isEqualTo(firstRootNetworkName);
     }
 
     @Test
