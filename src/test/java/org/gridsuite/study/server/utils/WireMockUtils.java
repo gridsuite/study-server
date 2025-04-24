@@ -204,6 +204,12 @@ public class WireMockUtils {
         ).getId();
     }
 
+    public UUID stubNetworkModificationDeleteIndex() {
+        return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION + DELIMITER + "index.*"))
+            .willReturn(WireMock.ok())
+        ).getId();
+    }
+
     public void verifyNetworkModificationCountsGet(UUID stubId, String groupUuid) {
         verifyGetRequest(stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count", Map.of(QUERY_PARAM_STASHED, WireMock.equalTo("false")));
     }
@@ -228,12 +234,20 @@ public class WireMockUtils {
         verifyPostRequest(stubId, URI_NETWORK_MODIFICATION_GROUPS, Map.of("duplicateFrom", WireMock.matching(".*"), "groupUuid", WireMock.matching(".*")), nbRequests);
     }
 
+    public void verifyPostRequest(UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams) {
+        verifyPostRequest(stubId, urlPath, queryParams, 1);
+    }
+
     public void verifyNetworkModificationDeleteGroup(UUID stubId) {
         verifyDeleteRequest(stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*", true, Map.of());
     }
 
-    public void verifyPostRequest(UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams) {
-        verifyPostRequest(stubId, urlPath, queryParams, 1);
+    public void verifyNetworkModificationDeleteIndex(UUID stubId) {
+        verifyNetworkModificationDeleteIndex(stubId, 1);
+    }
+
+    public void verifyNetworkModificationDeleteIndex(UUID stubId, int nbRequests) {
+        verifyDeleteRequest(stubId, URI_NETWORK_MODIFICATION + DELIMITER + "index.*", true, Map.of(), nbRequests);
     }
 
     public void verifyPostRequest(UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams, int nbRequests) {
@@ -268,8 +282,12 @@ public class WireMockUtils {
     }
 
     public void verifyDeleteRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams) {
+        verifyDeleteRequest(stubId, urlPath, regexMatching, queryParams, 1);
+    }
+
+    public void verifyDeleteRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, int nbRequests) {
         RequestPatternBuilder requestBuilder = regexMatching ? WireMock.deleteRequestedFor(WireMock.urlPathMatching(urlPath)) : WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(urlPath));
-        verifyRequest(stubId, requestBuilder, queryParams, null, 1);
+        verifyRequest(stubId, requestBuilder, queryParams, null, nbRequests);
     }
 
     public void verifyGetRequest(UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams) {
