@@ -267,14 +267,14 @@ class SupervisionControllerTest {
         BasicRootNetworkInfos network2 = new BasicRootNetworkInfos(UUID.randomUUID(), "name2", "tag2", false);
         doReturn(List.of(network1, network2))
                 .when(studyService).getExistingBasicRootNetworkInfos(studyToReindexUuid);
-        doNothing().when(studyService).reindexStudy(studyToReindexUuid, network1.rootNetworkUuid());
-        doNothing().when(studyService).reindexStudy(studyToReindexUuid, network2.rootNetworkUuid());
+        doNothing().when(studyService).reindexRootNetwork(studyToReindexUuid, network1.rootNetworkUuid());
+        doNothing().when(studyService).reindexRootNetwork(studyToReindexUuid, network2.rootNetworkUuid());
 
         mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/reindex", studyToReindexUuid))
                 .andExpect(status().isOk());
 
         verify(studyService).getExistingBasicRootNetworkInfos(studyToReindexUuid);
-        verify(studyService).reindexStudy(studyToReindexUuid, network1.rootNetworkUuid());
-        verify(studyService).reindexStudy(studyToReindexUuid, network2.rootNetworkUuid());
+        verify(studyService).reindexRootNetwork(studyToReindexUuid, network1.rootNetworkUuid());
+        verify(studyService).reindexRootNetwork(studyToReindexUuid, network2.rootNetworkUuid());
     }
 }

@@ -338,7 +338,7 @@ public class SupervisionService {
         studyService.getStudies().forEach(study -> {
             List<RootNetworkInfos> rootNetworkInfos = rootNetworkService.getRootNetworkInfosWithLinksInfos(study.getId());
             for (RootNetworkInfos rootNetworkInfo : rootNetworkInfos) {
-                studyService.updateStudyIndexationStatus(study.getId(), rootNetworkInfo.getId(), RootNetworkIndexationStatus.NOT_INDEXED);
+                studyService.updateRootNetworkIndexationStatus(study.getId(), rootNetworkInfo.getId(), RootNetworkIndexationStatus.NOT_INDEXED);
             }
         });
     }

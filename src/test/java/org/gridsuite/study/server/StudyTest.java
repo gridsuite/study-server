@@ -2757,7 +2757,7 @@ class StudyTest {
     }
 
     @Test
-    void reindexStudyTest(final MockWebServer server) throws Exception {
+    void reindexRootNetworkTest(final MockWebServer server) throws Exception {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", UUID.randomUUID(), UUID.randomUUID()))
             .andExpect(status().isNotFound());
 

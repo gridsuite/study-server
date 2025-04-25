@@ -447,7 +447,7 @@ public class StudyService {
             StudyEntity duplicatedStudy = duplicateStudy(basicStudyInfos, sourceStudyUuid, userId);
 
             getStudyRootNetworks(duplicatedStudy.getId()).forEach(rootNetworkEntity ->
-                reindexStudy(duplicatedStudy, rootNetworkEntity.getId())
+                    reindexRootNetwork(duplicatedStudy, rootNetworkEntity.getId())
             );
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -1289,14 +1289,14 @@ public class StudyService {
         stateEstimationService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
     }
 
-    private StudyEntity updateStudyIndexationStatus(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, RootNetworkIndexationStatus indexationStatus) {
+    private StudyEntity updateRootNetworkIndexationStatus(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, RootNetworkIndexationStatus indexationStatus) {
         rootNetworkEntity.setIndexationStatus(indexationStatus);
-        notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), rootNetworkEntity.getId(), indexationStatus);
+        notificationService.emitRootNetworkIndexationStatusChanged(studyEntity.getId(), rootNetworkEntity.getId(), indexationStatus);
         return studyEntity;
     }
 
-    public StudyEntity updateStudyIndexationStatus(UUID studyUuid, UUID rootNetworkUuid, RootNetworkIndexationStatus indexationStatus) {
-        return updateStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)), indexationStatus);
+    public StudyEntity updateRootNetworkIndexationStatus(UUID studyUuid, UUID rootNetworkUuid, RootNetworkIndexationStatus indexationStatus) {
+        return updateRootNetworkIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)), indexationStatus);
     }
 
     private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
@@ -1933,37 +1933,37 @@ public class StudyService {
         networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId);
     }
 
-    private void reindexStudy(StudyEntity study, UUID rootNetworkUuid) {
+    private void reindexRootNetwork(StudyEntity study, UUID rootNetworkUuid) {
         CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study);
-        // reindex study in elasticsearch
+        // reindex root network for study in elasticsearch
         studyInfosService.recreateStudyInfos(studyInfos);
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
 
         // Reset indexation status
-        updateStudyIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXING_ONGOING);
+        updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXING_ONGOING);
         try {
             networkConversionService.reindexStudyNetworkEquipments(rootNetworkService.getNetworkUuid(rootNetworkUuid));
-            updateStudyIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXED);
+            updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXED);
         } catch (Exception e) {
             // Allow to retry indexation
-            updateStudyIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
+            updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
             throw e;
         }
         LOGGER.info("Study with id = '{}' has been reindexed", study.getId());
     }
 
     @Transactional
-    public void reindexStudy(UUID studyUuid, UUID rootNetworkUuid) {
-        reindexStudy(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), rootNetworkUuid);
+    public void reindexRootNetwork(UUID studyUuid, UUID rootNetworkUuid) {
+        reindexRootNetwork(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), rootNetworkUuid);
     }
 
     @Transactional
-    public RootNetworkIndexationStatus getStudyIndexationStatus(UUID studyUuid, UUID rootNetworkUuid) {
+    public RootNetworkIndexationStatus getRootNetworkIndexationStatus(UUID studyUuid, UUID rootNetworkUuid) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         if (rootNetwork.getIndexationStatus() == RootNetworkIndexationStatus.INDEXED
                 && !networkConversionService.checkStudyIndexationStatus(rootNetworkService.getNetworkUuid(rootNetworkUuid))) {
-            updateStudyIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
+            updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
         }
         return rootNetwork.getIndexationStatus();
     }

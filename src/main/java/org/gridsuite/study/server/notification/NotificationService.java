@@ -227,7 +227,7 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyIndexationStatusChanged(UUID studyUuid, UUID rootNetworkUuid, RootNetworkIndexationStatus status) {
+    public void emitRootNetworkIndexationStatusChanged(UUID studyUuid, UUID rootNetworkUuid, RootNetworkIndexationStatus status) {
         sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_INDEXATION_STATUS, MessageBuilder.withPayload("")
                 .setHeader(HEADER_INDEXATION_STATUS, status.name())
                 .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
