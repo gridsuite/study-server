@@ -9,7 +9,8 @@ package org.gridsuite.study.server.service;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.gridsuite.study.server.dto.StudyIndexationStatus;
+import org.gridsuite.study.server.dto.RootNetworkInfos;
+import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -77,6 +78,7 @@ public class SupervisionService {
     private final ElasticsearchOperations elasticsearchOperations;
 
     private final StudyInfosService studyInfosService;
+    private final RootNetworkService rootNetworkService;
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
@@ -93,7 +95,7 @@ public class SupervisionService {
                               EquipmentInfosService equipmentInfosService,
                               StateEstimationService stateEstimationService,
                               ElasticsearchOperations elasticsearchOperations,
-                              StudyInfosService studyInfosService) {
+                              StudyInfosService studyInfosService, RootNetworkService rootNetworkService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
@@ -110,6 +112,7 @@ public class SupervisionService {
         this.stateEstimationService = stateEstimationService;
         this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
+        this.rootNetworkService = rootNetworkService;
     }
 
     @Transactional
@@ -332,8 +335,12 @@ public class SupervisionService {
         recreateIndex(EquipmentInfos.class);
         recreateIndex(TombstonedEquipmentInfos.class);
 
-        studyService.getStudies().forEach(study ->
-                studyService.updateStudyIndexationStatus(study.getId(), StudyIndexationStatus.NOT_INDEXED));
+        studyService.getStudies().forEach(study -> {
+            List<RootNetworkInfos> rootNetworkInfos = rootNetworkService.getRootNetworkInfosWithLinksInfos(study.getId());
+            for (RootNetworkInfos rootNetworkInfo : rootNetworkInfos) {
+                studyService.updateRootNetworkIndexationStatus(study.getId(), rootNetworkInfo.getId(), RootNetworkIndexationStatus.NOT_INDEXED);
+            }
+        });
     }
 
     private void recreateIndex(Class<?> indexClass) {
