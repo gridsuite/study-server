@@ -267,7 +267,7 @@ class StudyControllerDynamicSimulationTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any());
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any());
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
@@ -335,7 +335,7 @@ class StudyControllerDynamicSimulationTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any());
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any());
 
         MvcResult result;
         // --- call endpoint to be tested --- //
@@ -411,7 +411,7 @@ class StudyControllerDynamicSimulationTest {
 
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED.name());
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any());
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any());
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run

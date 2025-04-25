@@ -17,14 +17,20 @@ import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.Resource;
+import org.springframework.data.util.Pair;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -45,7 +51,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public UUID run(String provider, String receiver, UUID networkUuid, String variantId, ReportInfos reportInfos, DynamicSimulationParametersInfos parameters, String userId) {
+    public UUID run(String provider, String receiver, UUID networkUuid, String variantId, ReportInfos reportInfos, DynamicSimulationParametersInfos parameters, String userId, Boolean debug) {
         Objects.requireNonNull(networkUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
 
@@ -56,6 +62,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         if (provider != null && !provider.isBlank()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
+        Optional.ofNullable(debug).ifPresent(debugValue -> uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, debugValue));
         uriComponentsBuilder
                 .queryParam("mappingName", parameters.getMapping())
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
@@ -181,5 +188,35 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl);
         // call dynamic-simulation REST API
         return getRestTemplate().getForObject(uriComponents.toUriString(), Integer.class);
+    }
+
+    @Override
+    public Pair<InputStream, String> getDebugFileStream(UUID resultUuid) {
+        Objects.requireNonNull(resultUuid);
+        String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{resultUuid}/debug-file")
+                .buildAndExpand(resultUuid);
+
+        // call dynamic-simulation REST API
+        ResponseEntity<Resource> response;
+        try {
+            response = getRestTemplate().exchange(
+                    uriComponents.toUriString(),
+                    HttpMethod.GET,
+                    null,
+                    Resource.class
+            );
+            String filename = response.getHeaders().getFirst("filename");
+            InputStream inputStream = response.getBody().getInputStream();
+            return Pair.of(inputStream, filename);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(DYNAMIC_SIMULATION_NOT_FOUND);
+            }
+            throw e;
+        } catch (IOException e) {
+            throw new UncheckedIOException("Error occurs while downloading debug file", e);
+        }
     }
 }

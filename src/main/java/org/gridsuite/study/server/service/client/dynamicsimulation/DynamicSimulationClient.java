@@ -11,7 +11,9 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.client.RestClient;
+import org.springframework.data.util.Pair;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,7 +29,7 @@ public interface DynamicSimulationClient extends RestClient {
     String DYNAMIC_SIMULATION_END_POINT_RESULT = "results";
     String DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT = "supervision/results-count";
 
-    UUID run(String provider, String receiver, UUID networkUuid, String variantId, ReportInfos reportInfos, DynamicSimulationParametersInfos parameters, String userId);
+    UUID run(String provider, String receiver, UUID networkUuid, String variantId, ReportInfos reportInfos, DynamicSimulationParametersInfos parameters, String userId, Boolean debug);
 
     UUID getTimeSeriesResult(UUID resultUuid);
 
@@ -42,4 +44,6 @@ public interface DynamicSimulationClient extends RestClient {
     void deleteAllResults();
 
     Integer getResultsCount();
+
+    Pair<InputStream, String> getDebugFileStream(UUID resultUuid);
 }

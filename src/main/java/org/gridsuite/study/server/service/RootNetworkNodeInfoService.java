@@ -33,9 +33,11 @@ import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -665,5 +667,22 @@ public class RootNetworkNodeInfoService {
     public void stopStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
         stateEstimationService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
+    }
+
+    public Pair<InputStream, String> getDebugFileStream(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, computationType);
+
+        return switch (computationType) {
+            case LOAD_FLOW,
+                 SECURITY_ANALYSIS,
+                 SENSITIVITY_ANALYSIS,
+                 NON_EVACUATED_ENERGY_ANALYSIS,
+                 SHORT_CIRCUIT,
+                 VOLTAGE_INITIALIZATION,
+                 DYNAMIC_SECURITY_ANALYSIS,
+                 SHORT_CIRCUIT_ONE_BUS,
+                 STATE_ESTIMATION -> null;
+            case DYNAMIC_SIMULATION -> dynamicSimulationService.getDebugFileStream(resultUuid);
+        };
     }
 }

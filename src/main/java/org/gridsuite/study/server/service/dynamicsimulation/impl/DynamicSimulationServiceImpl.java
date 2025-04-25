@@ -27,9 +27,11 @@ import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingCl
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -68,7 +70,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public UUID runDynamicSimulation(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId) {
+    public UUID runDynamicSimulation(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId, Boolean debug) {
 
         // create receiver for getting back the notification in rabbitmq
         String receiver;
@@ -79,7 +81,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             throw new UncheckedIOException(e);
         }
 
-        return dynamicSimulationClient.run(provider, receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), parameters, userId);
+        return dynamicSimulationClient.run(provider, receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), parameters, userId, debug);
     }
 
     @Override
@@ -209,5 +211,10 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     @Override
     public List<ModelInfos> getModels(String mapping) {
         return dynamicMappingClient.getModels(mapping);
+    }
+
+    @Override
+    public Pair<InputStream, String> getDebugFileStream(UUID resultUuid) {
+        return dynamicSimulationClient.getDebugFileStream(resultUuid);
     }
 }

@@ -46,6 +46,7 @@ public class NotificationService {
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
+    public static final String HEADER_DEBUG = "debug";
 
     public static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
     public static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
@@ -169,10 +170,16 @@ public class NotificationService {
 
     @PostCompletion
     public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String updateType) {
-        sendStudyUpdateMessage(studyUuid, updateType, MessageBuilder.withPayload("")
+        emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, updateType, Map.of());
+    }
+
+    @PostCompletion
+    public void emitStudyChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String updateType, Map<String, Object> additionalHeaders) {
+        MessageBuilder<String> builder = MessageBuilder.withPayload("")
                 .setHeader(HEADER_NODE, nodeUuid)
                 .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
-        );
+                .copyHeaders(additionalHeaders);
+        sendStudyUpdateMessage(studyUuid, updateType, builder);
     }
 
     @PostCompletion
