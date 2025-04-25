@@ -88,6 +88,9 @@ public class NotificationService {
     public static final String UPDATE_TYPE_STATE_ESTIMATION_STATUS = "stateEstimation_status";
     public static final String UPDATE_TYPE_COMPUTATION_PARAMETERS = "computationParametersUpdated";
     public static final String UPDATE_NETWORK_VISUALIZATION_PARAMETERS = "networkVisualizationParametersUpdated";
+    public static final String UPDATE_SPREADSHEET_NODE_ALIASES = "nodeAliasesUpdated";
+    public static final String UPDATE_SPREADSHEET_TAB = "spreadsheetTabUpdated";
+    public static final String UPDATE_SPREADSHEET_COLLECTION = "spreadsheetCollectionUpdated";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
@@ -177,6 +180,22 @@ public class NotificationService {
         sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_COMPUTATION_PARAMETERS, MessageBuilder.withPayload("")
                .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
         );
+    }
+
+    @PostCompletion
+    public void emitSpreadsheetNodeAliasesChanged(UUID studyUuid) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_SPREADSHEET_NODE_ALIASES, MessageBuilder.withPayload("")
+        );
+    }
+
+    @PostCompletion
+    public void emitSpreadsheetConfigChanged(UUID studyUuid, UUID configUuid) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_SPREADSHEET_TAB, MessageBuilder.withPayload(configUuid.toString()));
+    }
+
+    @PostCompletion
+    public void emitSpreadsheetCollectionChanged(UUID studyUuid, UUID collectionUuid) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_SPREADSHEET_COLLECTION, MessageBuilder.withPayload(collectionUuid.toString()));
     }
 
     @PostCompletion

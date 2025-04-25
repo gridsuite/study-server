@@ -1890,11 +1890,9 @@ public class StudyService {
                 throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
             }
 
-            if (startTime.get() != null) {
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
-                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-                }
+            if (startTime.get() != null && LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
+                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
             }
 
             if (invalidateChildrenBuild) {
@@ -2302,7 +2300,9 @@ public class StudyService {
     @Transactional
     public boolean setSpreadsheetConfigCollection(UUID studyUuid, String configCollection, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        return createOrUpdateSpreadsheetConfigCollection(studyEntity, configCollection, userId);
+        boolean status = createOrUpdateSpreadsheetConfigCollection(studyEntity, configCollection, userId);
+        notificationService.emitSpreadsheetCollectionChanged(studyUuid, studyEntity.getSpreadsheetConfigCollectionUuid());
+        return status;
     }
 
     /**
@@ -2362,11 +2362,13 @@ public class StudyService {
     }
 
     @Transactional
-    public String updateStudySpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid, boolean appendMode) {
+    public String updateSpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid, boolean appendMode) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         // 2 modes: append the source collection to the existing one, or replace the whole existing collection
-        return appendMode ? appendSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid) :
+        String collectionDto = appendMode ? appendSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid) :
                 replaceSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid);
+        notificationService.emitSpreadsheetCollectionChanged(studyUuid, studyEntity.getSpreadsheetConfigCollectionUuid());
+        return collectionDto;
     }
 
     private String appendSpreadsheetConfigCollection(StudyEntity studyEntity, UUID sourceCollectionUuid) {
@@ -3049,5 +3051,48 @@ public class StudyService {
             });
             studyEntity.setNodeAliases(newNodeAliases);
         }
+        notificationService.emitSpreadsheetNodeAliasesChanged(studyUuid);
+    }
+
+    public UUID createColumn(UUID studyUuid, UUID configUuid, String columnInfos) {
+        UUID newColId = studyConfigService.createColumn(configUuid, columnInfos);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+        return newColId;
+    }
+
+    public void updateColumn(UUID studyUuid, UUID configUuid, UUID columnUuid, String columnInfos) {
+        studyConfigService.updateColumn(configUuid, columnUuid, columnInfos);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public void deleteColumn(UUID studyUuid, UUID configUuid, UUID columnUuid) {
+        studyConfigService.deleteColumn(configUuid, columnUuid);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public void reorderColumns(UUID studyUuid, UUID configUuid, List<UUID> columnOrder) {
+        studyConfigService.reorderColumns(configUuid, columnOrder);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public void renameSpreadsheetConfig(UUID studyUuid, UUID configUuid, String newName) {
+        studyConfigService.renameSpreadsheetConfig(configUuid, newName);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public UUID addSpreadsheetConfigToCollection(UUID studyUuid, UUID collectionUuid, String configurationDto) {
+        UUID newConfigId = studyConfigService.addSpreadsheetConfigToCollection(collectionUuid, configurationDto);
+        notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
+        return newConfigId;
+    }
+
+    public void removeSpreadsheetConfigFromCollection(UUID studyUuid, UUID collectionUuid, UUID configUuid) {
+        studyConfigService.removeSpreadsheetConfigFromCollection(collectionUuid, configUuid);
+        notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
+    }
+
+    public void reorderSpreadsheetConfigs(UUID studyUuid, UUID collectionUuid, List<UUID> newOrder) {
+        studyConfigService.reorderSpreadsheetConfigs(collectionUuid, newOrder);
+        notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
     }
 }

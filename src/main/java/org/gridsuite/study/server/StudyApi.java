@@ -10,10 +10,10 @@ package org.gridsuite.study.server;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 
-final class StudyApi {
+public final class StudyApi {
 
     private StudyApi() {
     }
 
-    static final String API_VERSION = "v1";
+    public static final String API_VERSION = "v1";
 }
