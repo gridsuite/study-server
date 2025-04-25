@@ -439,7 +439,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/buses-or-busbar-sections")
-    @Operation(summary = "get buses the for a given network and a given voltage level")
+    @Operation(summary = "get the buses for a given network and a given voltage level")
     @ApiResponse(responseCode = "200", description = "The buses list of the network for given voltage level")
     public ResponseEntity<List<IdentifiableInfos>> getVoltageLevelBusesOrBusbarSections(
             @PathVariable("studyUuid") UUID studyUuid,
@@ -451,7 +451,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/switches")
-    @Operation(summary = "get switches the for a given network and a given voltage level")
+    @Operation(summary = "get the switches for a given network and a given voltage level")
     @ApiResponse(responseCode = "200", description = "The switches list of the network for given voltage level")
     public ResponseEntity<String> getVoltageLevelSwitches(
             @PathVariable("studyUuid") UUID studyUuid,
