@@ -41,7 +41,6 @@ public class RootNetworkInfos {
             .caseFormat(caseInfos.getCaseFormat())
             .reportUuid(reportUuid)
             .importParameters(importParameters)
-            .indexationStatus(RootNetworkIndexationStatus.INDEXED)
             .tag(tag);
 
         if (rootNetworkNodeInfos != null) {
