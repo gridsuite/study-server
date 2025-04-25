@@ -9,6 +9,7 @@ package org.gridsuite.study.server.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.timeseries.DoubleTimeSeries;
+import com.powsybl.ws.commons.StreamUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -55,9 +56,11 @@ import org.springframework.http.*;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
+import java.io.InputStream;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -1778,10 +1781,11 @@ public class StudyController {
     public ResponseEntity<Void> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false) Boolean debug,
                                                      @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId);
+        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 
@@ -2288,5 +2292,32 @@ public class StudyController {
         studyService.assertIsStudyExist(studyUuid);
         studyService.updateNodeAliases(studyUuid, nodeAliases);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/debug-file")
+    @Operation(summary = "Get the debug file stream of a computation")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The debug file stream of a computation"),
+        @ApiResponse(responseCode = "204", description = "No debug file stream"),
+        @ApiResponse(responseCode = "404", description = "The computation result has not been found")})
+    public ResponseEntity<StreamingResponseBody> downloadDebugFile(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                   @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                   @Parameter(description = "computingType") @RequestParam("computingType") ComputationType computationType) {
+        Pair<InputStream, String> debugFileStream = rootNetworkNodeInfoService.getDebugFileStream(studyUuid, nodeUuid, rootNetworkUuid, computationType);
+        if (debugFileStream == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        InputStream is = debugFileStream.getFirst();
+        StreamingResponseBody streamer = StreamUtils.getStreamer(is, 8192)::accept;
+        String fileName = debugFileStream.getSecond();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(streamer);
     }
 }
