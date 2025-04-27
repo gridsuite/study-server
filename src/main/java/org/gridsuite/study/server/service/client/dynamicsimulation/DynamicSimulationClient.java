@@ -11,9 +11,7 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.service.client.RestClient;
-import org.springframework.data.util.Pair;
 
-import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,6 +42,4 @@ public interface DynamicSimulationClient extends RestClient {
     void deleteAllResults();
 
     Integer getResultsCount();
-
-    Pair<InputStream, String> getDebugFileStream(UUID resultUuid);
 }

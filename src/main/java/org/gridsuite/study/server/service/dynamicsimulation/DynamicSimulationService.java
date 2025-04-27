@@ -23,9 +23,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverTypeInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.repository.DynamicSimulationParametersEntity;
-import org.springframework.data.util.Pair;
 
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -307,6 +305,4 @@ public interface DynamicSimulationService {
      * @return a list of rich models (i.e. including parameter set with parameters)
      */
     List<ModelInfos> getModels(String mapping);
-
-    Pair<InputStream, String> getDebugFileStream(UUID resultUuid);
 }

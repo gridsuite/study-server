@@ -27,11 +27,9 @@ import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingCl
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 
-import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -211,10 +209,5 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     @Override
     public List<ModelInfos> getModels(String mapping) {
         return dynamicMappingClient.getModels(mapping);
-    }
-
-    @Override
-    public Pair<InputStream, String> getDebugFileStream(UUID resultUuid) {
-        return dynamicSimulationClient.getDebugFileStream(resultUuid);
     }
 }

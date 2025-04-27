@@ -9,14 +9,12 @@ package org.gridsuite.study.server.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.timeseries.DoubleTimeSeries;
-import com.powsybl.ws.commons.StreamUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.modification.dto.ModificationInfos;
 import org.gridsuite.study.server.StudyApi;
@@ -30,8 +28,8 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
-import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.ModificationInfosWithActivationStatus;
+import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
@@ -40,11 +38,7 @@ import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.exception.PartialResultException;
-import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeAlias;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
@@ -52,15 +46,16 @@ import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
-import java.io.InputStream;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -2294,30 +2289,16 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/debug-file")
-    @Operation(summary = "Get the debug file stream of a computation")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The debug file stream of a computation"),
-        @ApiResponse(responseCode = "204", description = "No debug file stream"),
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/result-uuid")
+    @Operation(summary = "Get the result uuid of a computation")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The result uuid of a computation"),
+        @ApiResponse(responseCode = "204", description = "No result uuid"),
         @ApiResponse(responseCode = "404", description = "The computation result has not been found")})
-    public ResponseEntity<StreamingResponseBody> downloadDebugFile(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<UUID> downloadDebugFile(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                    @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                    @Parameter(description = "computingType") @RequestParam("computingType") ComputationType computationType) {
-        Pair<InputStream, String> debugFileStream = rootNetworkNodeInfoService.getDebugFileStream(studyUuid, nodeUuid, rootNetworkUuid, computationType);
-        if (debugFileStream == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        InputStream is = debugFileStream.getFirst();
-        StreamingResponseBody streamer = StreamUtils.getStreamer(is, 8192)::accept;
-        String fileName = debugFileStream.getSecond();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(streamer);
+        UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, computationType);
+        return resultUuid == null ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(resultUuid);
     }
 }
