@@ -332,13 +332,13 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status")
-    @Operation(summary = "check study indexation")
+    @Operation(summary = "check root network indexation")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The study indexation status"),
-        @ApiResponse(responseCode = "204", description = "The study indexation status doesn't exist"),
-        @ApiResponse(responseCode = "404", description = "The study or network doesn't exist")})
-    public ResponseEntity<String> checkStudyIndexationStatus(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
-        String result = studyService.getStudyIndexationStatus(studyUuid, rootNetworkUuid).name();
+        @ApiResponse(responseCode = "200", description = "The root network indexation status for a study"),
+        @ApiResponse(responseCode = "204", description = "The root network indexation status doesn't exist"),
+        @ApiResponse(responseCode = "404", description = "The root network or network doesn't exist")})
+    public ResponseEntity<String> checkRootNetworkIndexationStatus(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        String result = studyService.getRootNetworkIndexationStatus(studyUuid, rootNetworkUuid).name();
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1554,11 +1554,11 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all")
-    @Operation(summary = "reindex the study")
-    @ApiResponse(responseCode = "200", description = "Study reindexed")
-    public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    @Operation(summary = "reindex root network")
+    @ApiResponse(responseCode = "200", description = "Root network reindexed")
+    public ResponseEntity<Void> reindexRootNetwork(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                              @Parameter(description = "root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
-        studyService.reindexStudy(studyUuid, rootNetworkUuid);
+        studyService.reindexRootNetwork(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
 

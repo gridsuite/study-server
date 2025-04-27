@@ -9,7 +9,7 @@ package org.gridsuite.study.server.notification;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.StudyIndexationStatus;
+import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.notification.dto.StudyAlert;
@@ -253,9 +253,10 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyIndexationStatusChanged(UUID studyUuid, StudyIndexationStatus status) {
+    public void emitRootNetworkIndexationStatusChanged(UUID studyUuid, UUID rootNetworkUuid, RootNetworkIndexationStatus status) {
         sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_INDEXATION_STATUS, MessageBuilder.withPayload("")
                 .setHeader(HEADER_INDEXATION_STATUS, status.name())
+                .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
         );
     }
 

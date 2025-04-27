@@ -19,7 +19,7 @@ import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.gridsuite.study.server.dto.StudyIndexationStatus;
+import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
@@ -116,7 +116,6 @@ class SupervisionControllerTest {
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, String caseName) {
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, caseUuid, caseName, "", UUID.randomUUID());
         studyEntity.setId(STUDY_UUID);
-        studyEntity.setIndexationStatus(StudyIndexationStatus.INDEXED);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;
@@ -143,7 +142,7 @@ class SupervisionControllerTest {
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(STUDY_UUID);
 
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(NETWORK_UUID);
-        assertIndexationStatus(STUDY_UUID, StudyIndexationStatus.INDEXED.name());
+        assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.INDEXED.name());
         return study;
     }
 
@@ -213,7 +212,7 @@ class SupervisionControllerTest {
             .andExpect(status().isOk());
 
         assertIndexationCount(74, 0);
-        assertIndexationStatus(STUDY_UUID, StudyIndexationStatus.INDEXED.name());
+        assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.INDEXED.name());
         Mockito.verify(networkService, Mockito.times(1)).deleteVariants(eq(NETWORK_UUID), any());
     }
 
@@ -258,7 +257,7 @@ class SupervisionControllerTest {
                 .andExpect(status().isOk())
                 .andReturn();
         assertEquals(0, Integer.parseInt(mvcResult.getResponse().getContentAsString()));
-        assertIndexationStatus(STUDY_UUID, StudyIndexationStatus.NOT_INDEXED.name());
+        assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.NOT_INDEXED.name());
     }
 
     @Test
@@ -268,14 +267,14 @@ class SupervisionControllerTest {
         BasicRootNetworkInfos network2 = new BasicRootNetworkInfos(UUID.randomUUID(), "name2", "tag2", false);
         doReturn(List.of(network1, network2))
                 .when(studyService).getExistingBasicRootNetworkInfos(studyToReindexUuid);
-        doNothing().when(studyService).reindexStudy(studyToReindexUuid, network1.rootNetworkUuid());
-        doNothing().when(studyService).reindexStudy(studyToReindexUuid, network2.rootNetworkUuid());
+        doNothing().when(studyService).reindexRootNetwork(studyToReindexUuid, network1.rootNetworkUuid());
+        doNothing().when(studyService).reindexRootNetwork(studyToReindexUuid, network2.rootNetworkUuid());
 
         mockMvc.perform(post("/v1/supervision/studies/{studyUuid}/reindex", studyToReindexUuid))
                 .andExpect(status().isOk());
 
         verify(studyService).getExistingBasicRootNetworkInfos(studyToReindexUuid);
-        verify(studyService).reindexStudy(studyToReindexUuid, network1.rootNetworkUuid());
-        verify(studyService).reindexStudy(studyToReindexUuid, network2.rootNetworkUuid());
+        verify(studyService).reindexRootNetwork(studyToReindexUuid, network1.rootNetworkUuid());
+        verify(studyService).reindexRootNetwork(studyToReindexUuid, network2.rootNetworkUuid());
     }
 }
