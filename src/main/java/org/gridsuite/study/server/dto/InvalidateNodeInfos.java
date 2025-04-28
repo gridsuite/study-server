@@ -45,6 +45,8 @@ public class InvalidateNodeInfos {
 
     private List<UUID> stateEstimationResultUuids = new ArrayList<>();
 
+    private List<UUID> groupUuids = new ArrayList<>();
+
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
     }
@@ -91,5 +93,9 @@ public class InvalidateNodeInfos {
 
     public void addStateEstimationResultUuid(UUID stateEstimationResultUuid) {
         stateEstimationResultUuids.add(stateEstimationResultUuid);
+    }
+
+    public void addGroupUuid(List<UUID> groupUuids) {
+        this.groupUuids.addAll(groupUuids);
     }
 }
