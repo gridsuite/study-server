@@ -1724,12 +1724,31 @@ public class StudyService {
         }
     }
 
-    //OldName: invalidateBuild
+    // OldName: invalidateBuild part 1
+    // Only one node
     private void unbuildNode(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
 
         InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.unbuildNode(nodeUuid, rootNetworkUuid);
+        invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
+
+        deleteInvalidationInfos(invalidateNodeInfos);
+
+        if (startTime.get() != null) {
+            LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
+                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        }
+    }
+
+    // OldName: invalidateBuild part 2
+    // This is used to unbuild the node and its children
+    @Transactional
+    public void unbuildNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>(null);
+        startTime.set(System.nanoTime());
+
+        InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.unbuildNodeTree(nodeUuid, rootNetworkUuid);
         invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
 
         deleteInvalidationInfos(invalidateNodeInfos);
@@ -1765,24 +1784,6 @@ public class StudyService {
             throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
         }
 
-    }
-
-    //OldName: invalidateBuild part 2
-    // this is used to unbuild the node and its children
-    public void unbuildNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
-        AtomicReference<Long> startTime = new AtomicReference<>(null);
-        startTime.set(System.nanoTime());
-        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
-        invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
-
-        //TODO: change invalidateBuild methode later
-        networkModificationTreeService.invalidateBuild(nodeUuid, rootNetworkUuid, false, invalidateNodeInfos, true);
-        deleteInvalidationInfos(invalidateNodeInfos);
-
-        if (startTime.get() != null) {
-            LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
-                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-        }
     }
 
     private void updateStatuses(UUID studyUuid, UUID nodeUuid) {

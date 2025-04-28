@@ -24,28 +24,23 @@ import java.util.UUID;
 public class InvalidateNodeInfos {
     private UUID networkUuid;
 
-    private List<UUID> reportUuids = new ArrayList<>();
+    private List<UUID> nodeUuids = new ArrayList<>();
+    private List<UUID> groupUuids = new ArrayList<>();
 
+    private List<UUID> reportUuids = new ArrayList<>();
     private List<String> variantIds = new ArrayList<>();
 
     private List<UUID> loadFlowResultUuids = new ArrayList<>();
-
     private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
-
     private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
     private List<UUID> nonEvacuatedEnergyResultUuids = new ArrayList<>();
-
     private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
     private List<UUID> oneBusShortCircuitAnalysisResultUuids = new ArrayList<>();
-
     private List<UUID> voltageInitResultUuids = new ArrayList<>();
+    private List<UUID> stateEstimationResultUuids = new ArrayList<>();
 
     private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
     private List<UUID> dynamicSecurityAnalysisResultUuids = new ArrayList<>();
-
-    private List<UUID> stateEstimationResultUuids = new ArrayList<>();
-
-    private List<UUID> groupUuids = new ArrayList<>();
 
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
@@ -97,5 +92,29 @@ public class InvalidateNodeInfos {
 
     public void addGroupUuid(List<UUID> groupUuids) {
         this.groupUuids.addAll(groupUuids);
+    }
+
+    public void addNodeUuid(UUID nodeUuid) {
+        this.groupUuids.add(nodeUuid);
+    }
+
+    public void add(InvalidateNodeInfos invalidateNodeInfos) {
+        nodeUuids.addAll(invalidateNodeInfos.getNodeUuids());
+        groupUuids.addAll(invalidateNodeInfos.getGroupUuids());
+
+        reportUuids.addAll(invalidateNodeInfos.getReportUuids());
+        variantIds.addAll(invalidateNodeInfos.getVariantIds());
+
+        loadFlowResultUuids.addAll(invalidateNodeInfos.getLoadFlowResultUuids());
+        securityAnalysisResultUuids.addAll(invalidateNodeInfos.getSecurityAnalysisResultUuids());
+        sensitivityAnalysisResultUuids.addAll(invalidateNodeInfos.getSensitivityAnalysisResultUuids());
+        nonEvacuatedEnergyResultUuids.addAll(invalidateNodeInfos.getNonEvacuatedEnergyResultUuids());
+        shortCircuitAnalysisResultUuids.addAll(invalidateNodeInfos.getShortCircuitAnalysisResultUuids());
+        oneBusShortCircuitAnalysisResultUuids.addAll(invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids());
+        voltageInitResultUuids.addAll(invalidateNodeInfos.getVoltageInitResultUuids());
+        stateEstimationResultUuids.addAll(invalidateNodeInfos.getStateEstimationResultUuids());
+
+        dynamicSimulationResultUuids.addAll(invalidateNodeInfos.getDynamicSimulationResultUuids());
+        dynamicSecurityAnalysisResultUuids.addAll(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids());
     }
 }
