@@ -2,7 +2,13 @@
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet author="souissimai (generated)" id="1745830501443-14">
         <addColumn tableName="study">
-            <column defaultValueBoolean="true" name="mono_root" type="boolean"/>
+            <column  name="mono_root" type="boolean"/>
         </addColumn>
+    </changeSet>
+    <changeSet author="souissimai (generated)" id="1745830501443-15">
+        <update tableName="study">
+            <column name="mono_root"
+                    valueComputed="(SELECT COUNT(*) = 1 FROM root_network rn WHERE rn.study_uuid = study.id AND study.mono_root IS NULL )"/>
+        </update>
     </changeSet>
 </databaseChangeLog>
