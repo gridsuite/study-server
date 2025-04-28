@@ -105,7 +105,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getSensitivityAnalysisResult(UUID resultUuid, String selector) {
+    public String getSensitivityAnalysisResult(UUID resultUuid, String selector, String filters) {
         String result;
 
         if (resultUuid == null) {
@@ -113,9 +113,15 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         }
 
         // initializing from uri string (not from path string) allows build() to escape selector content
-        URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
             .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuid.toString())
-            .queryParam("selector", selector).build().encode().toUri();
+            .queryParam("selector", selector);
+
+        if (filters != null && !filters.isEmpty()) {
+            pathBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+        }
+        URI uri = pathBuilder.build().encode().toUri();
+
         try {
             result = restTemplate.getForObject(uri, String.class);
         } catch (HttpStatusCodeException e) {
