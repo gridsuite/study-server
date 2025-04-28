@@ -263,6 +263,15 @@ public class WireMockUtils {
         verifyRequest(stubId, requestBuilder, queryParams, body, nbRequests);
     }
 
+    public void verifyPatchRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body) {
+        verifyPatchRequest(stubId, urlPath, regexMatching, queryParams, body, 1);
+    }
+
+    public void verifyPatchRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body, int nbRequests) {
+        RequestPatternBuilder requestBuilder = regexMatching ? WireMock.patchRequestedFor(WireMock.urlPathMatching(urlPath)) : WireMock.patchRequestedFor(WireMock.urlPathEqualTo(urlPath));
+        verifyRequest(stubId, requestBuilder, queryParams, body, nbRequests);
+    }
+
     public void verifyPutRequestWithUrlMatching(UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams, String body) {
         verifyPutRequest(stubId, urlPath, true, queryParams, body);
     }
@@ -389,10 +398,8 @@ public class WireMockUtils {
     }
 
     public UUID stubDisableCaseExpiration(String caseUuid) {
-        UUID disableCaseExpirationStubId = wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/disableExpiration"))
-            .willReturn(WireMock.ok())).getId();
-
-        return disableCaseExpirationStubId;
+        return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/disableExpiration"))
+                .willReturn(WireMock.ok())).getId();
     }
 
     public void verifyDisableCaseExpiration(UUID stubUuid, String caseUuid) {

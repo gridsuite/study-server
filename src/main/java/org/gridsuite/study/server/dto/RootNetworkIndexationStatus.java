@@ -9,7 +9,7 @@ package org.gridsuite.study.server.dto;
 /**
  * @author Sylvain Bouzols <sylvain.bouzols at rte-france.com>
  */
-public enum StudyIndexationStatus {
+public enum RootNetworkIndexationStatus {
     NOT_INDEXED,
     INDEXING_ONGOING,
     INDEXED
