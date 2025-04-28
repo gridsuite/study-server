@@ -9,6 +9,7 @@ package org.gridsuite.study.server.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.timeseries.DoubleTimeSeries;
+import com.powsybl.ws.commons.computation.dto.DebugInfos;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -1777,10 +1778,12 @@ public class StudyController {
                                                      @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false) Boolean debug,
+                                                     @Parameter(description = "browserTabUuid") @RequestParam(name = "browserTabUuid", required = false) UUID browserTabUuid,
                                                      @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
+        DebugInfos debugInfos = debug != null && debug ? DebugInfos.builder().debug(debug).browserTabUuid(browserTabUuid).build() : null;
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debug);
+        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debugInfos);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 

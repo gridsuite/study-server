@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
+import com.powsybl.ws.commons.computation.dto.DebugInfos;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
@@ -43,8 +44,8 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
@@ -2497,7 +2498,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, DynamicSimulationParametersInfos parameters, String userId, Boolean debug) {
+    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, DynamicSimulationParametersInfos parameters, String userId, DebugInfos debugInfos) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -2538,7 +2539,7 @@ public class StudyService {
         // launch dynamic simulation
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID dynamicSimulationResultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyEntity), nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, mergeParameters, userId, debug);
+        UUID dynamicSimulationResultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyEntity), nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, mergeParameters, userId, debugInfos);
 
         // update result uuid and notification
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSimulationResultUuid, DYNAMIC_SIMULATION);

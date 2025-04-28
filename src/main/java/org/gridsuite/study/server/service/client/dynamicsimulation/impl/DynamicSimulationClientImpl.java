@@ -7,6 +7,7 @@
 
 package org.gridsuite.study.server.service.client.dynamicsimulation.impl;
 
+import com.powsybl.ws.commons.computation.dto.DebugInfos;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ReportInfos;
@@ -46,7 +47,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public UUID run(String provider, String receiver, UUID networkUuid, String variantId, ReportInfos reportInfos, DynamicSimulationParametersInfos parameters, String userId, Boolean debug) {
+    public UUID run(String provider, String receiver, UUID networkUuid, String variantId, ReportInfos reportInfos, DynamicSimulationParametersInfos parameters, String userId, DebugInfos debugInfos) {
         Objects.requireNonNull(networkUuid);
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
 
@@ -57,7 +58,11 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         if (provider != null && !provider.isBlank()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
-        Optional.ofNullable(debug).ifPresent(debugValue -> uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, debugValue));
+        Optional.ofNullable(debugInfos).ifPresent(debugInfosValue -> {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, debugInfosValue.debug());
+            uriComponentsBuilder.queryParam(QUERY_PARAM_BROWSER_TAB_UUID, debugInfosValue.browserTabUuid());
+
+        });
         uriComponentsBuilder
                 .queryParam("mappingName", parameters.getMapping())
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)

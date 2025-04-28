@@ -47,6 +47,7 @@ public class NotificationService {
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
     public static final String HEADER_DEBUG = "debug";
+    public static final String HEADER_BROWSER_TAB_UUID = "browserTabUuid";
 
     public static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
     public static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";

@@ -41,6 +41,7 @@ import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_BROWSER_TAB_UUID;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_DEBUG;
 
 /**
@@ -584,9 +585,12 @@ public class ConsumerService {
                 rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
 
                 Boolean debug = msg.getHeaders().get(HEADER_DEBUG, Boolean.class);
+                UUID browserTabUuid = Optional.ofNullable(msg.getHeaders().get(HEADER_BROWSER_TAB_UUID, String.class)).map(UUID::fromString).orElse(null);
+
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notifications
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType(), debug != null ? Map.of(HEADER_DEBUG, debug) : Map.of());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType(),
+                        debug != null ? Map.of(HEADER_DEBUG, debug, HEADER_BROWSER_TAB_UUID, browserTabUuid) : Map.of());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateResultType());
             }));
     }
