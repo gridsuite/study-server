@@ -1369,7 +1369,7 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<Void> stashNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                  @Parameter(description = "id of child to delete (move to trash)") @PathVariable("id") UUID nodeId,
-                                                 @Parameter(description = "stashChildren") @RequestParam(value = "stashChildren", defaultValue = "false") boolean stashChildren,
+                                                 @Parameter(description = "to stash a node with its children") @RequestParam(value = "stashChildren", defaultValue = "false") boolean stashChildren,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.stashNode(studyUuid, nodeId, stashChildren, userId);
         return ResponseEntity.ok().build();
