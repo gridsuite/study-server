@@ -382,11 +382,10 @@ public class StudyService {
     private void postRootNetworkUpdate(UUID studyUuid, UUID rootNetworkUuid, boolean updateCase) {
         if (updateCase) {
             Optional<RootNetworkRequestEntity> rootNetworkModificationRequestEntityOpt = rootNetworkService.getRootNetworkRequest(rootNetworkUuid);
-            if (rootNetworkModificationRequestEntityOpt.isPresent()) {
-                rootNetworkService.deleteRootNetworkRequest(rootNetworkModificationRequestEntityOpt.get());
-            }
+            rootNetworkModificationRequestEntityOpt.ifPresent(rootNetworkService::deleteRootNetworkRequest);
             UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-            invalidateBuild(studyUuid, rootNodeUuid, rootNetworkUuid, false, false, true);
+
+            unbuildNodeTree(studyUuid, rootNodeUuid, rootNetworkUuid);
             notificationService.emitRootNetworkUpdated(studyUuid, rootNetworkUuid);
         } else {
             notificationService.emitRootNetworksUpdated(studyUuid);
