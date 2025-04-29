@@ -175,6 +175,30 @@ class SpreadsheetConfigTest {
         wireMockUtils.verifyPostRequest(stubId, configServerUrl, false, Map.of(), columnDto);
     }
 
+    @Test
+    void testSetGlobalFilters() throws Exception {
+        StudyEntity studyEntity = insertStudy();
+        String configServerUrl = "/v1/spreadsheet-configs/" + SPREADSHEET_CONFIG_UUID + "/global-filters";
+
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.noContent())).getId();
+
+        String globalFilters = "[{" +
+                "\"uuid\":\"" + UUID.randomUUID() + "\"," +
+                "\"filterId\":\"" + UUID.randomUUID() + "\"," +
+                "\"name\":\"Voltage Level Filter\"" +
+                "}]";
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/spreadsheet-config/{configUuid}/global-filters", studyEntity.getId(), SPREADSHEET_CONFIG_UUID)
+                        .header("content-type", "application/json")
+                        .content(globalFilters))
+                .andExpect(status().isNoContent())
+                .andReturn();
+
+        checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
+        wireMockUtils.verifyPostRequest(stubId, configServerUrl, false, Map.of(), globalFilters);
+    }
+
     private StudyEntity insertStudy() {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, "netId", CASE_UUID, "", "", SPREADSHEET_CONFIG_UUID);
         var study = studyRepository.save(studyEntity);
