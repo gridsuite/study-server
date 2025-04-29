@@ -1975,7 +1975,7 @@ public class StudyService {
                 .map(RootNetworkEntity::getId)
                 .toList();
 
-        if (!unbuildChildren) {
+        if (unbuildChildren) {
             rootNetworkUuids.forEach(rootNetworkId ->
                 unbuildNodeTree(studyUuid, nodeId, rootNetworkId));
         } else {
