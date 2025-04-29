@@ -977,7 +977,6 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void updateNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid, NodeBuildStatus nodeBuildStatus) {
-        List<UUID> changedNodes = new ArrayList<>();
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
@@ -1003,8 +1002,7 @@ public class NetworkModificationTreeService {
         }
 
         rootNetworkNodeInfoEntity.setNodeBuildStatus(newNodeStatus);
-        changedNodes.add(nodeUuid);
-        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes, rootNetworkUuid);
+        notificationService.emitNodeBuildStatusUpdated(studyId, List.of(nodeUuid), rootNetworkUuid);
     }
 
     @Transactional(readOnly = true)
@@ -1111,7 +1109,7 @@ public class NetworkModificationTreeService {
             nodesToInvalidate.add(parentNodeUuid);
         }
         nodesToInvalidate.addAll(getChildren(parentNodeUuid));
-        invalidateNodeInfos.addGroupUuid(
+        invalidateNodeInfos.addGroupUuids(
             networkModificationNodeInfoRepository.findAllById(nodesToInvalidate).stream()
                 .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid).toList()
         );

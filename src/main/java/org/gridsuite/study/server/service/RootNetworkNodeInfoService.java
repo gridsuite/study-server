@@ -235,7 +235,7 @@ public class RootNetworkNodeInfoService {
 
         InvalidateNodeInfos invalidateNodeInfos = getInvalidationInfos(rootNetworkNodeInfoEntity);
 
-        invalidateBuildStatus(rootNetworkNodeInfoEntity);
+        invalidateBuildStatus(rootNetworkNodeInfoEntity, invalidateNodeInfos);
 
         invalidateComputationResults(rootNetworkNodeInfoEntity);
 
@@ -427,10 +427,12 @@ public class RootNetworkNodeInfoService {
     }
 
     //oldName: invalidateRootNetworkNodeInfoBuildStatus
-    private static void invalidateBuildStatus(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
+    private static void invalidateBuildStatus(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos) {
         rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
         rootNetworkNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
         rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(rootNetworkNodeInfoEntity.getNodeInfo().getId(), UUID.randomUUID())));
+
+        invalidateNodeInfos.addNodeUuid(rootNetworkNodeInfoEntity.getNodeInfo().getIdNode());
     }
 
     private static void invalidateRootNetworkNodeInfoBuildStatus(UUID nodeUuid, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, List<UUID> changedNodes) {

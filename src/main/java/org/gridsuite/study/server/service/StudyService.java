@@ -1743,8 +1743,7 @@ public class StudyService {
 
     // OldName: invalidateBuild part 2
     // This is used to unbuild the node and its children
-    @Transactional
-    public void unbuildNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+    public void unbuildStudyTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
 
@@ -1996,7 +1995,7 @@ public class StudyService {
 
         studyRootNetworks.forEach(rootNetworkId -> {
             if (unbuildChildren) {
-                unbuildNodeTree(studyUuid, nodeId, rootNetworkId);
+                unbuilStudyTree(studyUuid, nodeId, rootNetworkId);
             } else {
                 unbuildNode(studyUuid, nodeId, rootNetworkId);
             }
