@@ -1622,22 +1622,22 @@ public class StudyService {
         List<NodeEntity> oldChildren = null;
         checkStudyContainsNode(studyUuid, nodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
-        boolean shouldInvalidateChildren = networkModificationTreeService.hasModifications(nodeToMoveUuid, false);
+        boolean shouldUnbuildChildren = networkModificationTreeService.hasModifications(nodeToMoveUuid, false);
 
-        //Invalidating previous children if necessary
-        if (shouldInvalidateChildren) {
+        //Unbuild previous children if necessary
+        if (shouldUnbuildChildren) {
             oldChildren = networkModificationTreeService.getChildrenByParentUuid(nodeToMoveUuid);
         }
 
         networkModificationTreeService.moveStudyNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
 
-        //Invalidating moved node or new children if necessary
-        if (shouldInvalidateChildren) {
+        //Unbuilding moved node or new children if necessary
+        if (shouldUnbuildChildren) {
             updateStatuses(studyUuid, nodeToMoveUuid, false, true, true);
             oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), false, true, true));
         } else {
             getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
-                invalidateBuild(studyUuid, nodeToMoveUuid, rootNetworkEntity.getId(), false, true, true)
+                unbuildNode(studyUuid, nodeToMoveUuid, rootNetworkEntity.getId())
             );
         }
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -1743,7 +1743,7 @@ public class StudyService {
 
     // OldName: invalidateBuild part 2
     // This is used to unbuild the node and its children
-    public void unbuildStudyTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+    public void unbuildNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
 
@@ -1971,9 +1971,20 @@ public class StudyService {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
 
-        //boolean invalidateChildrenBuild = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
-        // invalidateBuild(studyUuid, nodeId, rootNetworkEntity.getId(), false, !invalidateChildrenBuild, true)
-        unbuildStashedNode(studyUuid, nodeId, stashChildren);
+        boolean unbuildChildren = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
+        List<UUID> rootNetworkUuids = getStudyRootNetworks(studyUuid).stream()
+                .map(RootNetworkEntity::getId)
+                .toList();
+
+        if (!unbuildChildren) {
+            rootNetworkUuids.forEach(rootNetworkId ->
+                unbuildNodeTree(studyUuid, nodeId, rootNetworkId));
+        } else {
+            rootNetworkUuids.forEach(rootNetworkId ->
+                unbuildNode(studyUuid, nodeId, rootNetworkId)
+            );
+        }
+
         networkModificationTreeService.doStashNode(nodeId, stashChildren);
 
         if (startTime.get() != null) {
@@ -1982,24 +1993,6 @@ public class StudyService {
         }
 
         notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    public void unbuildStashedNode(UUID studyUuid, UUID nodeId, boolean stashChildren) {
-        //two case scenario:
-        // one node stashed -> unbuild the node
-        // a node and its children are stashed -> unbuild all of them
-        boolean unbuildChildren = stashChildren || networkModificationTreeService.hasModifications(nodeId, false);
-        List<UUID> studyRootNetworks = getStudyRootNetworks(studyUuid).stream()
-                .map(RootNetworkEntity::getId)
-                .toList();
-
-        studyRootNetworks.forEach(rootNetworkId -> {
-            if (unbuildChildren) {
-                unbuilStudyTree(studyUuid, nodeId, rootNetworkId);
-            } else {
-                unbuildNode(studyUuid, nodeId, rootNetworkId);
-            }
-        });
     }
 
     public List<Pair<AbstractNode, Integer>> getStashedNodes(UUID studyId) {
