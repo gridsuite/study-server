@@ -1622,22 +1622,22 @@ public class StudyService {
         List<NodeEntity> oldChildren = null;
         checkStudyContainsNode(studyUuid, nodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
-        boolean shouldInvalidateChildren = networkModificationTreeService.hasModifications(nodeToMoveUuid, false);
+        boolean shouldUnbuildChildren = networkModificationTreeService.hasModifications(nodeToMoveUuid, false);
 
-        //Invalidating previous children if necessary
-        if (shouldInvalidateChildren) {
+        //Unbuild previous children if necessary
+        if (shouldUnbuildChildren) {
             oldChildren = networkModificationTreeService.getChildrenByParentUuid(nodeToMoveUuid);
         }
 
         networkModificationTreeService.moveStudyNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
 
-        //Invalidating moved node or new children if necessary
-        if (shouldInvalidateChildren) {
+        //Unbuilding moved node or new children if necessary
+        if (shouldUnbuildChildren) {
             updateStatuses(studyUuid, nodeToMoveUuid, false, true, true);
             oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), false, true, true));
         } else {
             getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
-                invalidateBuild(studyUuid, nodeToMoveUuid, rootNetworkEntity.getId(), false, true, true)
+                unbuildNode(studyUuid, nodeToMoveUuid, rootNetworkEntity.getId())
             );
         }
         notificationService.emitElementUpdated(studyUuid, userId);
