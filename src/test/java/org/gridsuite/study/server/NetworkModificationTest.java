@@ -2943,7 +2943,7 @@ class NetworkModificationTest {
             UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus, String userId) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
-                .networkModificationNodeType(NetworkModificationNodeType.CONSTRUCTION)
+                .nodeType(NetworkModificationNodeType.CONSTRUCTION)
                 .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 

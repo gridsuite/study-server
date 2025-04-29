@@ -82,16 +82,16 @@ public class NetworkModificationTreeService {
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
         }
-        if (networkModificationNode.getNetworkModificationNodeType() == null) {
-            networkModificationNode.setNetworkModificationNodeType(NetworkModificationNodeType.CONSTRUCTION);
+        if (networkModificationNode.getNodeType() == null) {
+            networkModificationNode.setNodeType(NetworkModificationNodeType.CONSTRUCTION);
         }
         networkModificationNodeInfoRepository.save(
             NetworkModificationNodeInfoEntity.builder()
                 .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
                 .idNode(newNode.getIdNode())
                 .name(networkModificationNode.getName())
-                    .description(networkModificationNode.getDescription())
-                    .networkModificationNodeType(networkModificationNode.getNetworkModificationNodeType())
+                .description(networkModificationNode.getDescription())
+                .nodeType(networkModificationNode.getNodeType())
                 .build()
         );
         return newNode;
@@ -186,7 +186,7 @@ public class NetworkModificationTreeService {
                 .modificationGroupUuid(newGroupUuid)
                 .name(getSuffixedNodeName(studyUuid, networkModificationNodeInfoEntity.getName()))
                 .description(networkModificationNodeInfoEntity.getDescription())
-                .networkModificationNodeType(networkModificationNodeInfoEntity.getNetworkModificationNodeType())
+                .nodeType(networkModificationNodeInfoEntity.getNodeType())
                 .build(),
                 nodeToCopyUuid,
                 insertMode,
@@ -455,7 +455,7 @@ public class NetworkModificationTreeService {
         UUID firstRootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         NetworkModificationNode modificationNode = NetworkModificationNode
             .builder()
-            .networkModificationNodeType(NetworkModificationNodeType.CONSTRUCTION)
+            .nodeType(NetworkModificationNodeType.CONSTRUCTION)
             .name("N1")
             .build();
 

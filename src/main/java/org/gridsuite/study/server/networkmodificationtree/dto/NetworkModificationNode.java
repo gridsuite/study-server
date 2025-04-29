@@ -56,7 +56,7 @@ public class NetworkModificationNode extends AbstractNode {
 
     private NodeBuildStatus nodeBuildStatus;
 
-    private NetworkModificationNodeType networkModificationNodeType;
+    private NetworkModificationNodeType nodeType;
 
     //TODO: temporary, used to keep nodeDTO identical since we don't export rootNetworks in APIs yet, once rootNetworks are exported, result uuid won't be stored in nodeDto
     public void completeDtoFromRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {

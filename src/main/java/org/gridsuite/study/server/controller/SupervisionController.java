@@ -141,7 +141,7 @@ public class SupervisionController {
     @ApiResponse(responseCode = "200", description = "Study reindexed")
     public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
         studyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(
-                rootNetwork -> studyService.reindexStudy(studyUuid, rootNetwork.rootNetworkUuid())
+                rootNetwork -> studyService.reindexRootNetwork(studyUuid, rootNetwork.rootNetworkUuid())
         );
         return ResponseEntity.ok().build();
     }

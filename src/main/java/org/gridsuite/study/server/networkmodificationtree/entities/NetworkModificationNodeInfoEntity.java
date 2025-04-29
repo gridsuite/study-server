@@ -33,7 +33,7 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
     @Column
     @Enumerated(EnumType.STRING)
-    private NetworkModificationNodeType networkModificationNodeType;
+    private NetworkModificationNodeType nodeType;
 
     @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo", cascade = CascadeType.ALL)
     @Builder.Default
@@ -49,7 +49,7 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
             .modificationGroupUuid(modificationGroupUuid)
             .id(this.getId())
             .name(this.getName())
-            .networkModificationNodeType(networkModificationNodeType)
+            .nodeType(nodeType)
             .description(this.getDescription())
             .columnPosition(this.getColumnPosition())
             .readOnly(this.getReadOnly())
