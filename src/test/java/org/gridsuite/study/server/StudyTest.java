@@ -2681,6 +2681,8 @@ class StudyTest {
              */
             //nodeUpdated
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
+
         }
     }
 
