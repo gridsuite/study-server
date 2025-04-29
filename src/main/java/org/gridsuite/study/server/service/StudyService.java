@@ -3082,6 +3082,11 @@ public class StudyService {
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
+    public void setGlobalFilters(UUID studyUuid, UUID configUuid, String globalFilters) {
+        studyConfigService.setGlobalFilters(configUuid, globalFilters);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
     public void renameSpreadsheetConfig(UUID studyUuid, UUID configUuid, String newName) {
         studyConfigService.renameSpreadsheetConfig(configUuid, newName);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
