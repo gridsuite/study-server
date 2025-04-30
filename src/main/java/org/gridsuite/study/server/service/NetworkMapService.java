@@ -32,7 +32,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.dto.InfoTypeParameters.*;
+import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
@@ -235,6 +235,20 @@ public class NetworkMapService {
 
         return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
                 new ParameterizedTypeReference<List<IdentifiableInfos>>() {
+                }, networkUuid, voltageLevelId).getBody();
+    }
+
+    public String getVoltageLevelSwitches(UUID networkUuid, String variantId,
+                                                           String voltageLevelId,
+                                                           String switchesPath) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION
+                + "/networks/{networkUuid}/voltage-levels/{voltageLevelId}/" + switchesPath);
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+
+        return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
+                new ParameterizedTypeReference<String>() {
                 }, networkUuid, voltageLevelId).getBody();
     }
 

@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.modification.dto.ModificationInfos;
 import org.gridsuite.study.server.StudyApi;
@@ -29,8 +28,8 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
-import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.ModificationInfosWithActivationStatus;
+import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
@@ -39,11 +38,7 @@ import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.exception.PartialResultException;
-import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeAlias;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
@@ -51,7 +46,10 @@ import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
@@ -443,7 +441,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/buses-or-busbar-sections")
-    @Operation(summary = "get buses the for a given network and a given voltage level")
+    @Operation(summary = "get the buses for a given network and a given voltage level")
     @ApiResponse(responseCode = "200", description = "The buses list of the network for given voltage level")
     public ResponseEntity<List<IdentifiableInfos>> getVoltageLevelBusesOrBusbarSections(
             @PathVariable("studyUuid") UUID studyUuid,
@@ -452,6 +450,18 @@ public class StudyController {
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusesOrBusbarSections(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/switches")
+    @Operation(summary = "get the switches for a given network and a given voltage level")
+    @ApiResponse(responseCode = "200", description = "The switches list of the network for given voltage level")
+    public ResponseEntity<String> getVoltageLevelSwitches(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @PathVariable("voltageLevelId") String voltageLevelId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelSwitches(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/substation-id")
