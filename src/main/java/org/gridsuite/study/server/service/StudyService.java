@@ -342,7 +342,7 @@ public class StudyService {
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntityOpt.get());
             //update study entity to multi root
-            if (studyEntity.isMonoRoot() && studyEntity.getRootNetworks().size() > 1) {
+            if (studyEntity.getRootNetworks().size() > 1) {
                 studyEntity.setMonoRoot(false);
             }
         } else {
