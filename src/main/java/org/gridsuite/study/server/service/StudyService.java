@@ -227,8 +227,10 @@ public class StudyService {
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return CreatedStudyBasicInfos.builder()
                 .id(studyUuid)
+                .monoRoot(studyEntity.isMonoRoot())
                 .build();
     }
 
@@ -339,6 +341,10 @@ public class StudyService {
             rootNetworkInfos.setTag(rootNetworkCreationRequestEntityOpt.get().getTag());
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntityOpt.get());
+            //update study entity to multi root
+            if (studyEntity.getRootNetworks().size() > 1) {
+                studyEntity.setMonoRoot(false);
+            }
         } else {
             rootNetworkService.deleteRootNetworks(studyEntity, List.of(rootNetworkInfos));
         }
@@ -1320,6 +1326,7 @@ public class StudyService {
                 .dynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisParametersUuid)
                 .stateEstimationParametersUuid(stateEstimationParametersUuid)
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
+                .monoRoot(true)
                 .build();
 
         var study = studyRepository.save(studyEntity);

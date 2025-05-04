@@ -34,4 +34,6 @@ public class BasicStudyInfos {
     UUID id;
 
     String userId;
+
+    boolean monoRoot;
 }
