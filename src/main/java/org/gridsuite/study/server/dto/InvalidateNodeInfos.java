@@ -151,7 +151,7 @@ public class InvalidateNodeInfos {
     }
 
     public void addNodeUuid(UUID nodeUuid) {
-        this.groupUuids.add(nodeUuid);
+        this.nodeUuids.add(nodeUuid);
     }
 
     public void add(InvalidateNodeInfos invalidateNodeInfos) {

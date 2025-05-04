@@ -802,7 +802,7 @@ public class NetworkModificationTreeService {
             }
         });
 
-        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()), rootNetworkUuid);
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().toList(), rootNetworkUuid);
     }
 
     private void fillIndexedNodeInfosToInvalidate(InvalidateNodeInfos invalidateNodeInfos, UUID nodeUuid, UUID rootNetworkUuid, boolean invalidateOnlyChildrenBuildStatus) {
@@ -826,7 +826,7 @@ public class NetworkModificationTreeService {
     public InvalidateNodeInfos unbuildNode(UUID nodeUuid, UUID rootNetworkUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
 
-        InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.unbuildRootNetworkNode(nodeUuid, rootNetworkUuid);
+        InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.unbuildRootNetworkNode(nodeUuid, rootNetworkUuid, true);
 
         fillIndexedNodeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos);
 
@@ -837,20 +837,22 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // old name: invalidateBuild
-    public InvalidateNodeInfos unbuildNodeTree(UUID nodeUuid, UUID rootNetworkUuid) {
+    public InvalidateNodeInfos unbuildNodeTree(UUID nodeUuid, UUID rootNetworkUuid, boolean invalidateOnlyChildrenBuildStatus) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
 
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
 
         // First node
         if (nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION)) {
-            invalidateNodeInfos = rootNetworkNodeInfoService.unbuildRootNetworkNode(nodeUuid, rootNetworkUuid);
+            invalidateNodeInfos = rootNetworkNodeInfoService.unbuildRootNetworkNode(nodeUuid, rootNetworkUuid, !invalidateOnlyChildrenBuildStatus);
             fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos);
         }
 
         invalidateNodeInfos.add(unbuildChildrenNodes(nodeUuid, rootNetworkUuid));
 
-        notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), invalidateNodeInfos.getNodeUuids().stream().distinct().collect(Collectors.toList()), rootNetworkUuid);
+        if (!invalidateNodeInfos.getNodeUuids().isEmpty()) {
+            notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), invalidateNodeInfos.getNodeUuids().stream().toList(), rootNetworkUuid);
+        }
 
         return invalidateNodeInfos;
     }
@@ -877,7 +879,7 @@ public class NetworkModificationTreeService {
             fillIndexedNodeInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true, invalidateNodeInfos);
         }
 
-        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().collect(Collectors.toList()), rootNetworkUuid);
+        notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().toList(), rootNetworkUuid);
     }
 
     /**
@@ -965,7 +967,7 @@ public class NetworkModificationTreeService {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         nodesRepository.findAllByParentNodeIdNode(nodeUuid)
             .forEach(child -> {
-                invalidateNodeInfos.add(rootNetworkNodeInfoService.unbuildRootNetworkNode(child.getIdNode(), rootNetworkUuid));
+                invalidateNodeInfos.add(rootNetworkNodeInfoService.unbuildRootNetworkNode(child.getIdNode(), rootNetworkUuid, true));
                 invalidateNodeInfos.add(unbuildChildrenNodes(child.getIdNode(), rootNetworkUuid));
             });
         return invalidateNodeInfos;

@@ -225,7 +225,7 @@ public class RootNetworkNodeInfoService {
     }
 
     //old name : invalidateRootNetworkNodeInfoProper
-    public InvalidateNodeInfos unbuildRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid) {
+    public InvalidateNodeInfos unbuildRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, boolean withInvalidationBuildStatus) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
 
         // No need to invalidate a node with a status different of "BUILT"
@@ -233,9 +233,13 @@ public class RootNetworkNodeInfoService {
             return new InvalidateNodeInfos();
         }
 
-        InvalidateNodeInfos invalidateNodeInfos = getInvalidationInfos(rootNetworkNodeInfoEntity);
+        InvalidateNodeInfos invalidateNodeInfos = getInvalidationComputationInfos(rootNetworkNodeInfoEntity);
 
-        invalidateBuildStatus(rootNetworkNodeInfoEntity, invalidateNodeInfos);
+        if (withInvalidationBuildStatus) {
+            rootNetworkNodeInfoEntity.getModificationReports().forEach((key, value) -> invalidateNodeInfos.addReportUuid(value));
+            invalidateNodeInfos.addVariantId(rootNetworkNodeInfoEntity.getVariantId());
+            invalidateBuildStatus(rootNetworkNodeInfoEntity, invalidateNodeInfos);
+        }
 
         invalidateComputationResults(rootNetworkNodeInfoEntity);
 
@@ -257,7 +261,7 @@ public class RootNetworkNodeInfoService {
 
         // Update the computation reports in the repository
         //TODO: add more checks for Voltage init
-        rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>());
+        rootNetworkNodeInfoEntity.setComputationReports(new HashMap<>());
     }
 
     public void invalidateRootNetworkNodeInfoProper(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
@@ -296,12 +300,8 @@ public class RootNetworkNodeInfoService {
     }
 
     //oldName: fillInvalidateNodeInfos
-    private InvalidateNodeInfos getInvalidationInfos(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
+    private InvalidateNodeInfos getInvalidationComputationInfos(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
-
-        rootNetworkNodeInfoEntity.getModificationReports().forEach((key, value) -> invalidateNodeInfos.addReportUuid(value));
-
-        invalidateNodeInfos.addVariantId(rootNetworkNodeInfoEntity.getVariantId());
 
         rootNetworkNodeInfoEntity.getComputationReports().forEach((key, value) ->
             invalidateNodeInfos.addReportUuid(value)

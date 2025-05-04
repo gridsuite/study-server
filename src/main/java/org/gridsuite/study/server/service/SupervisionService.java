@@ -317,7 +317,7 @@ public class SupervisionService {
     }
 
     @Transactional
-    public void invalidateAllNodesBuilds(UUID studyUuid) {
+    public void unbuildAllNodes(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
