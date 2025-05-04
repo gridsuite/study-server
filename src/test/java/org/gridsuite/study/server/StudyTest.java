@@ -1503,7 +1503,7 @@ class StudyTest {
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(nodesUuids, headersStatus.get(NotificationService.HEADER_NODES));
+        assertEquals(new TreeSet<>(nodesUuids), new TreeSet<>((List) headersStatus.get(NotificationService.HEADER_NODES)));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
@@ -2611,7 +2611,9 @@ class StudyTest {
          * invalidating moving node
          */
         //nodeUpdated
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        if (wasBuilt) {
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        }
         //loadflow_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //securityAnalysis_status
@@ -2642,7 +2644,9 @@ class StudyTest {
          */
         IntStream.rangeClosed(1, childCount).forEach(i -> {
             //nodeUpdated
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            if (wasBuilt) {
+                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            }
             //loadflow_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //securityAnalysis_status
@@ -2666,8 +2670,7 @@ class StudyTest {
         });
 
         if (wasBuilt) {
-            // 1 request for cut node and its children, 1 request for paste node and its children
-            wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub, 2);
+            wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub, 1);
         }
     }
 
@@ -2696,9 +2699,6 @@ class StudyTest {
         assertEquals(1, nodesAfterDuplication.size());
 
         output.receive(TIMEOUT, studyUpdateDestination); // nodeCreated
-        if (!EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid())) {
-            output.receive(TIMEOUT, studyUpdateDestination); // nodeUpdated
-        }
 
         if (checkMessagesForStatusModels) {
             checkUpdateModelsStatusMessagesReceived(targetStudyUuid, nodesAfterDuplication.get(0));

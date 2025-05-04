@@ -1543,7 +1543,7 @@ public class StudyService {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             networkModificationService.updateModification(updateModificationAttributes, modificationUuid);
-            updateStatuses(studyUuid, nodeUuid, false, true, true);
+            invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1632,7 +1632,7 @@ public class StudyService {
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
         if (invalidateBuild) {
-            updateStatuses(targetStudyUuid, duplicatedNodeUuid, true, true, true);
+            invalidateNodeTree(targetStudyUuid, duplicatedNodeUuid, true);
         }
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
@@ -1653,8 +1653,8 @@ public class StudyService {
 
         //Unbuilding moved node or new children if necessary
         if (shouldUnbuildChildren) {
-            updateStatuses(studyUuid, nodeToMoveUuid, false, true, true);
-            oldChildren.forEach(child -> updateStatuses(studyUuid, child.getIdNode(), false, true, true));
+            invalidateNodeTree(studyUuid, nodeToMoveUuid);
+            oldChildren.forEach(child -> invalidateNodeTree(studyUuid, child.getIdNode()));
         } else {
             invalidateNode(studyUuid, nodeToMoveUuid);
         }
@@ -1688,12 +1688,11 @@ public class StudyService {
         getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
             UUID rootNetworkUuid = rootNetworkEntity.getId();
             if (networkModificationTreeService.getNodeBuildStatus(parentNodeToMoveUuid, rootNetworkUuid).isBuilt()) {
-                updateStatuses(studyUuid, parentNodeToMoveUuid, false, true, true);
+                invalidateNodeTree(studyUuid, parentNodeToMoveUuid);
             }
             allChildren.stream()
                 .filter(childUuid -> networkModificationTreeService.getNodeBuildStatus(childUuid, rootNetworkUuid).isBuilt())
-                .forEach(childUuid -> updateStatuses(studyUuid, childUuid, false, true, true));
-
+                .forEach(childUuid -> invalidateNodeTree(studyUuid, childUuid));
         });
 
         notificationService.emitSubtreeMoved(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
@@ -1789,6 +1788,10 @@ public class StudyService {
         }
     }
 
+    private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid) {
+        invalidateNodeTree(studyUuid, nodeUuid, false);
+    }
+
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
         getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
             invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), invalidateOnlyChildrenBuildStatus));
@@ -1864,7 +1867,7 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.stashModifications(groupId, modificationsUuids);
-            updateStatuses(studyUuid, nodeUuid, false, true, true);
+            invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1881,7 +1884,7 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.updateModificationsActivation(groupId, modificationsUuids, activated);
-            updateStatuses(studyUuid, nodeUuid, false, true, true);
+            invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1898,7 +1901,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkUuid, modificationsUuids, activated);
-            updateStatuses(studyUuid, nodeUuid, rootNetworkUuid, false, true, true);
+            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, Optional.of(rootNetworkUuid), childrenUuids);
         }
@@ -1915,7 +1918,7 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.restoreModifications(groupId, modificationsUuids);
-            updateStatuses(studyUuid, nodeUuid, false, true, true);
+            invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1982,7 +1985,7 @@ public class StudyService {
             }
 
             if (invalidateChildrenBuild) {
-                childrenNodes.forEach(nodeEntity -> updateStatuses(studyUuid, nodeEntity.getIdNode(), false, true, true));
+                childrenNodes.forEach(nodeEntity -> invalidateNodeTree(studyUuid, nodeEntity.getIdNode()));
             }
         }
 
@@ -2124,7 +2127,7 @@ public class StudyService {
             index++;
 
         }
-        updateStatuses(studyEntity.getId(), impactedNode, invalidateOnlyChildrenBuildStatus, true, true);
+        invalidateNodeTree(studyEntity.getId(), impactedNode, invalidateOnlyChildrenBuildStatus);
     }
 
     @Transactional
@@ -2159,7 +2162,7 @@ public class StudyService {
                 }
             }
             // invalidate all nodeUuid children
-            updateStatuses(studyUuid, targetNodeUuid, true, true, true);
+            invalidateNodeTree(studyUuid, targetNodeUuid, true);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
         }
