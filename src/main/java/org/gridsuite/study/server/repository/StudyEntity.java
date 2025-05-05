@@ -8,7 +8,7 @@ package org.gridsuite.study.server.repository;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.gridsuite.study.server.dto.StudyIndexationStatus;
+import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
@@ -116,10 +116,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         ))
     private NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParameters;
 
-    @Enumerated(EnumType.STRING)
-    @Builder.Default
-    private StudyIndexationStatus indexationStatus = StudyIndexationStatus.NOT_INDEXED;
-
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "study_voltage_init_parameters_id",
         foreignKey = @ForeignKey(
@@ -133,12 +129,16 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         ))
     private List<NodeAliasEmbeddable> nodeAliases;
 
+    @Column(name = "mono_root", columnDefinition = "boolean default true")
+    private boolean monoRoot;
+
     public RootNetworkEntity getFirstRootNetwork() {
         return rootNetworks.get(0);
     }
 
     public void addRootNetwork(RootNetworkEntity rootNetworkEntity) {
         rootNetworkEntity.setStudy(this);
+        rootNetworkEntity.setIndexationStatus(RootNetworkIndexationStatus.INDEXED);
         rootNetworks.add(rootNetworkEntity);
     }
 

@@ -10,8 +10,6 @@ import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -23,6 +21,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -37,13 +36,16 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 @Service
 public class StudyConfigService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(StudyConfigService.class);
+    private static final String UUID_PARAM = "/{uuid}";
 
     private static final String NETWORK_VISU_PARAMETERS_URI = "/network-visualizations-params";
-    private static final String NETWORK_VISU_PARAMETERS_WITH_ID_URI = NETWORK_VISU_PARAMETERS_URI + "/{uuid}";
+    private static final String NETWORK_VISU_PARAMETERS_WITH_ID_URI = NETWORK_VISU_PARAMETERS_URI + UUID_PARAM;
 
     private static final String SPREADSHEET_CONFIG_COLLECTION_URI = "/spreadsheet-config-collections";
-    private static final String SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI = SPREADSHEET_CONFIG_COLLECTION_URI + "/{uuid}";
+    private static final String SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI = SPREADSHEET_CONFIG_COLLECTION_URI + UUID_PARAM;
+
+    private static final String SPREADSHEET_CONFIG_URI = "/spreadsheet-configs";
+    private static final String SPREADSHEET_CONFIG_WITH_ID_URI = SPREADSHEET_CONFIG_URI + UUID_PARAM;
 
     private final RestTemplate restTemplate;
 
@@ -234,6 +236,126 @@ public class StudyConfigService {
             restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_COLLECTION_FAILED);
+        }
+    }
+
+    public void appendSpreadsheetConfigCollection(UUID targetCollectionUuid, UUID sourceCollectionUuid) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI + "/append");
+        String path = uriBuilder.queryParam("sourceCollection", sourceCollectionUuid).buildAndExpand(targetCollectionUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
+        try {
+            restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_COLLECTION_FAILED);
+        }
+    }
+
+    public UUID addSpreadsheetConfigToCollection(UUID collectionUuid, String configurationDto) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI + SPREADSHEET_CONFIG_URI);
+        String path = uriBuilder.buildAndExpand(collectionUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(configurationDto, headers);
+        UUID newConfigUuid;
+        try {
+            newConfigUuid = restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_COLLECTION_FAILED);
+        }
+        return newConfigUuid;
+    }
+
+    public void removeSpreadsheetConfigFromCollection(UUID collectionUuid, UUID configUuid) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI + SPREADSHEET_CONFIG_URI + "/{configId}");
+        String path = uriBuilder.buildAndExpand(collectionUuid, configUuid).toUriString();
+        restTemplate.delete(studyConfigServerBaseUri + path);
+    }
+
+    public void reorderSpreadsheetConfigs(UUID collectionUuid, List<UUID> newOrder) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI + "/reorder");
+        String path = uriBuilder.buildAndExpand(collectionUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(newOrder, headers);
+        try {
+            restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
+        }
+    }
+
+    public void reorderColumns(UUID configUuid, List<UUID> columnOrder) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/reorder");
+        String path = uriBuilder.buildAndExpand(configUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(columnOrder, headers);
+        try {
+            restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
+        }
+    }
+
+    public UUID createColumn(UUID configUuid, String columnInfos) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns");
+        String path = uriBuilder.buildAndExpand(configUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(columnInfos, headers);
+        UUID uuid;
+        try {
+            uuid = restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_SPREADSHEET_CONFIG_COLLECTION_FAILED);
+        }
+        return uuid;
+    }
+
+    public void updateColumn(UUID configUuid, UUID columnUuid, String columnInfos) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/{colId}");
+        String path = uriBuilder.buildAndExpand(configUuid, columnUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(columnInfos, headers);
+        try {
+            restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
+        }
+    }
+
+    public void deleteColumn(UUID configUuid, UUID columnUuid) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/{colId}");
+        String path = uriBuilder.buildAndExpand(configUuid, columnUuid).toUriString();
+        restTemplate.delete(studyConfigServerBaseUri + path);
+    }
+
+    public void renameSpreadsheetConfig(UUID configUuid, String newName) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/name");
+        String path = uriBuilder.buildAndExpand(configUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(newName, headers);
+        try {
+            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PATCH, httpEntity, String.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
+        }
+    }
+
+    public void setGlobalFilters(UUID configUuid, String globalFilters) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/global-filters");
+        String path = uriBuilder.buildAndExpand(configUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(globalFilters, headers);
+        try {
+            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
         }
     }
 }

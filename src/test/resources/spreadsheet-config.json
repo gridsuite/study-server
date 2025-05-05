@@ -1,0 +1,22 @@
+{
+  "name": "newTAB",
+  "sheetType": "LINE",
+  "columns": [
+    {
+      "uuid": "3f9535b3-f8c8-4c60-b2e8-217cb2eedc70",
+      "name": "ID",
+      "type": "TEXT",
+      "precision": null,
+      "formula": "id",
+      "id": "id"
+    },
+    {
+      "uuid": "ddd0cde1-e38e-45d7-87a7-06ab45d9cfd3",
+      "name": "Name",
+      "type": "TEXT",
+      "precision": null,
+      "formula": "name",
+      "id": "name"
+    }
+  ]
+}

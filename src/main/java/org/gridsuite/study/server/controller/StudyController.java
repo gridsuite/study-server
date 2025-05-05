@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.iidm.network.ThreeSides;
@@ -15,9 +15,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.modification.dto.ModificationInfos;
+import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -27,8 +28,8 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParamet
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
-import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.ModificationInfosWithActivationStatus;
+import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
@@ -37,11 +38,7 @@ import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.exception.PartialResultException;
-import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeAlias;
-import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
@@ -49,7 +46,10 @@ import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
@@ -146,10 +146,11 @@ public class StudyController {
                                                        @RequestParam(value = CASE_FORMAT) String caseFormat,
                                                        @RequestParam(required = false, value = "studyUuid") UUID studyUuid,
                                                        @RequestParam(required = false, value = "duplicateCase", defaultValue = "false") Boolean duplicateCase,
+                                                       @RequestParam(required = false, value = "firstRootNetworkName", defaultValue = "") String firstRootNetworkName,
                                                        @RequestBody(required = false) Map<String, Object> importParameters,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         caseService.assertCaseExists(caseUuid);
-        BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParameters, duplicateCase, caseFormat);
+        BasicStudyInfos createStudy = studyService.createStudy(caseUuid, userId, studyUuid, importParameters, duplicateCase, caseFormat, firstRootNetworkName);
         return ResponseEntity.ok().body(createStudy);
     }
 
@@ -331,13 +332,13 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status")
-    @Operation(summary = "check study indexation")
+    @Operation(summary = "check root network indexation")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The study indexation status"),
-        @ApiResponse(responseCode = "204", description = "The study indexation status doesn't exist"),
-        @ApiResponse(responseCode = "404", description = "The study or network doesn't exist")})
-    public ResponseEntity<String> checkStudyIndexationStatus(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
-        String result = studyService.getStudyIndexationStatus(studyUuid, rootNetworkUuid).name();
+        @ApiResponse(responseCode = "200", description = "The root network indexation status for a study"),
+        @ApiResponse(responseCode = "204", description = "The root network indexation status doesn't exist"),
+        @ApiResponse(responseCode = "404", description = "The root network or network doesn't exist")})
+    public ResponseEntity<String> checkRootNetworkIndexationStatus(@PathVariable("studyUuid") UUID studyUuid, @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        String result = studyService.getRootNetworkIndexationStatus(studyUuid, rootNetworkUuid).name();
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -385,7 +386,7 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") StudyConstants.SldDisplayMode sldDisplayMode,
+            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
             @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
@@ -419,7 +420,7 @@ public class StudyController {
             @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") StudyConstants.SldDisplayMode sldDisplayMode,
+            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
             @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
@@ -440,7 +441,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/buses-or-busbar-sections")
-    @Operation(summary = "get buses the for a given network and a given voltage level")
+    @Operation(summary = "get the buses for a given network and a given voltage level")
     @ApiResponse(responseCode = "200", description = "The buses list of the network for given voltage level")
     public ResponseEntity<List<IdentifiableInfos>> getVoltageLevelBusesOrBusbarSections(
             @PathVariable("studyUuid") UUID studyUuid,
@@ -449,6 +450,18 @@ public class StudyController {
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelBusesOrBusbarSections(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/switches")
+    @Operation(summary = "get the switches for a given network and a given voltage level")
+    @ApiResponse(responseCode = "200", description = "The switches list of the network for given voltage level")
+    public ResponseEntity<String> getVoltageLevelSwitches(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @PathVariable("voltageLevelId") String voltageLevelId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelSwitches(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/substation-id")
@@ -625,7 +638,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated.")})
     public ResponseEntity<Void> moveOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestParam("action") StudyConstants.ModificationsActionType action,
+                                                         @RequestParam("action") ModificationsActionType action,
                                                          @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
@@ -842,40 +855,6 @@ public class StudyController {
     public ResponseEntity<StudyVoltageInitParameters> getVoltageInitParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
-    @Operation(summary = "Get study spreadsheet config collection")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The spreadsheet config collection")})
-    public ResponseEntity<String> getSpreadsheetConfigCollection(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSpreadsheetConfigCollection(studyUuid));
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
-    @Operation(summary = "Update study's spreadsheet config collection")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The updated spreadsheet config collection"),
-        @ApiResponse(responseCode = "404", description = "The study or the collection doesn't exist")
-    })
-    public ResponseEntity<String> updateStudySpreadsheetConfigCollection(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestParam("collectionUuid") UUID collectionUuid) {
-        return ResponseEntity.ok().body(studyService.updateStudySpreadsheetConfigCollection(studyUuid, collectionUuid));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/spreadsheet-config-collection")
-    @Operation(summary = "Set spreadsheet config collection on study, reset to default one if empty body")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The spreadsheet config collection is set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")
-    })
-    public ResponseEntity<Void> setSpreadsheetConfigCollection(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String configCollection,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return studyService.setSpreadsheetConfigCollection(studyUuid, configCollection, userId) ?
-                ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/export-network-formats")
@@ -1587,11 +1566,11 @@ public class StudyController {
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all")
-    @Operation(summary = "reindex the study")
-    @ApiResponse(responseCode = "200", description = "Study reindexed")
-    public ResponseEntity<Void> reindexStudy(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    @Operation(summary = "reindex root network")
+    @ApiResponse(responseCode = "200", description = "Root network reindexed")
+    public ResponseEntity<Void> reindexRootNetwork(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                              @Parameter(description = "root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
-        studyService.reindexStudy(studyUuid, rootNetworkUuid);
+        studyService.reindexRootNetwork(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
 

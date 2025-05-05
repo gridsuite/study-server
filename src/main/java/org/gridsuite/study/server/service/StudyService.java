@@ -227,8 +227,10 @@ public class StudyService {
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         return CreatedStudyBasicInfos.builder()
                 .id(studyUuid)
+                .monoRoot(studyEntity.isMonoRoot())
                 .build();
     }
 
@@ -267,8 +269,8 @@ public class StudyService {
                 .collect(Collectors.toList());
     }
 
-    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase, String caseFormat) {
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid));
+    public BasicStudyInfos createStudy(UUID caseUuid, String userId, UUID studyUuid, Map<String, Object> importParameters, boolean duplicateCase, String caseFormat, String firstRootNetworkName) {
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, studyUuid, firstRootNetworkName));
         UUID importReportUuid = UUID.randomUUID();
         UUID caseUuidToUse = caseUuid;
         try {
@@ -339,6 +341,10 @@ public class StudyService {
             rootNetworkInfos.setTag(rootNetworkCreationRequestEntityOpt.get().getTag());
             rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntityOpt.get());
+            //update study entity to multi root
+            if (studyEntity.getRootNetworks().size() > 1) {
+                studyEntity.setMonoRoot(false);
+            }
         } else {
             rootNetworkService.deleteRootNetworks(studyEntity, List.of(rootNetworkInfos));
         }
@@ -431,7 +437,7 @@ public class StudyService {
         if (sourceStudy == null) {
             return null;
         }
-        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, null));
+        BasicStudyInfos basicStudyInfos = StudyService.toBasicStudyInfos(insertStudyCreationRequest(userId, null, null));
 
         studyServerExecutionService.runAsync(() -> self.duplicateStudyAsync(basicStudyInfos, sourceStudyUuid, userId));
 
@@ -447,7 +453,7 @@ public class StudyService {
             StudyEntity duplicatedStudy = duplicateStudy(basicStudyInfos, sourceStudyUuid, userId);
 
             getStudyRootNetworks(duplicatedStudy.getId()).forEach(rootNetworkEntity ->
-                reindexStudy(duplicatedStudy, rootNetworkEntity.getId())
+                    reindexRootNetwork(duplicatedStudy, rootNetworkEntity.getId())
             );
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
@@ -712,8 +718,8 @@ public class StudyService {
             .build());
     }
 
-    private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid) {
-        StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(studyUuid);
+    private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid, String firstRootNetworkName) {
+        StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(studyUuid, firstRootNetworkName);
         notificationService.emitStudiesChanged(newStudy.getId(), userId);
         return newStudy;
     }
@@ -1289,14 +1295,14 @@ public class StudyService {
         stateEstimationService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
     }
 
-    private StudyEntity updateStudyIndexationStatus(StudyEntity studyEntity, StudyIndexationStatus indexationStatus) {
-        studyEntity.setIndexationStatus(indexationStatus);
-        notificationService.emitStudyIndexationStatusChanged(studyEntity.getId(), indexationStatus);
+    private StudyEntity updateRootNetworkIndexationStatus(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, RootNetworkIndexationStatus indexationStatus) {
+        rootNetworkEntity.setIndexationStatus(indexationStatus);
+        notificationService.emitRootNetworkIndexationStatusChanged(studyEntity.getId(), rootNetworkEntity.getId(), indexationStatus);
         return studyEntity;
     }
 
-    public StudyEntity updateStudyIndexationStatus(UUID studyUuid, StudyIndexationStatus indexationStatus) {
-        return updateStudyIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), indexationStatus);
+    public StudyEntity updateRootNetworkIndexationStatus(UUID studyUuid, UUID rootNetworkUuid, RootNetworkIndexationStatus indexationStatus) {
+        return updateRootNetworkIndexationStatus(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)), indexationStatus);
     }
 
     private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
@@ -1316,16 +1322,23 @@ public class StudyService {
                 .voltageInitParametersUuid(voltageInitParametersUuid)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
                 .sensitivityAnalysisParametersUuid(sensitivityAnalysisParametersUuid)
-                .indexationStatus(StudyIndexationStatus.INDEXED)
                 .voltageInitParameters(new StudyVoltageInitParametersEntity())
                 .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
                 .dynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisParametersUuid)
                 .stateEstimationParametersUuid(stateEstimationParametersUuid)
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
+                .monoRoot(true)
                 .build();
 
         var study = studyRepository.save(studyEntity);
-        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().id(UUID.randomUUID()).name(caseInfos.getCaseName()).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).tag("1").build());
+        // if the StudyCreationRequestEntity has no firstRootNetworkName then the first root network's name is the case file name with the extension.
+        Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
+        var firstRootNetworkName = caseInfos.getCaseName();
+        if (studyCreationRequestEntity.isPresent() && !StringUtils.isBlank(studyCreationRequestEntity.get().getFirstRootNetworkName())) {
+            // in this case, the first root network's name is the name the user entered when selecting the case.
+            firstRootNetworkName = studyCreationRequestEntity.get().getFirstRootNetworkName();
+        }
+        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().id(UUID.randomUUID()).name(firstRootNetworkName).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).tag("1").build());
         networkModificationTreeService.createBasicTree(study);
 
         return study;
@@ -1351,9 +1364,9 @@ public class StudyService {
         }
     }
 
-    private StudyCreationRequestEntity insertStudyCreationRequestEntity(UUID studyUuid) {
+    private StudyCreationRequestEntity insertStudyCreationRequestEntity(UUID studyUuid, String firstRootNetworkName) {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
-                studyUuid == null ? UUID.randomUUID() : studyUuid);
+                studyUuid == null ? UUID.randomUUID() : studyUuid, firstRootNetworkName);
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 
@@ -1552,6 +1565,14 @@ public class StudyService {
         return networkMapService.getVoltageLevelBusesOrBusbarSections(networkUuid, variantId, voltageLevelId, busPath);
     }
 
+    public String getVoltageLevelSwitches(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId,
+                                                           String switchesPath) {
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+
+        return networkMapService.getVoltageLevelSwitches(networkUuid, variantId, voltageLevelId, switchesPath);
+    }
+
     public String getVoltageLevelSubstationId(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         return getVoltageLevelSubstationId(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId);
@@ -1560,6 +1581,11 @@ public class StudyService {
     public List<IdentifiableInfos> getVoltageLevelBusesOrBusbarSections(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         return getVoltageLevelBusesOrBusbarSections(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, "buses-or-busbar-sections");
+    }
+
+    public String getVoltageLevelSwitches(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
+        return getVoltageLevelSwitches(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, "switches");
     }
 
     @Transactional(readOnly = true)
@@ -1700,7 +1726,8 @@ public class StudyService {
                 studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(invalidateNodeInfos.getDynamicSimulationResultUuids())),
                 studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids())),
                 studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(invalidateNodeInfos.getStateEstimationResultUuids())),
-                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds()))
+                studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())),
+                studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid()))
         );
         try {
             executeInParallel.get();
@@ -1883,11 +1910,9 @@ public class StudyService {
                 throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
             }
 
-            if (startTime.get() != null) {
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
-                            TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-                }
+            if (startTime.get() != null && LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
+                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
             }
 
             if (invalidateChildrenBuild) {
@@ -1926,37 +1951,39 @@ public class StudyService {
         networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId);
     }
 
-    private void reindexStudy(StudyEntity study, UUID rootNetworkUuid) {
+    private void reindexRootNetwork(StudyEntity study, UUID rootNetworkUuid) {
         CreatedStudyBasicInfos studyInfos = toCreatedStudyBasicInfos(study);
-        // reindex study in elasticsearch
+        // reindex root network for study in elasticsearch
         studyInfosService.recreateStudyInfos(studyInfos);
+        RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
 
         // Reset indexation status
-        updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXING_ONGOING);
+        updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXING_ONGOING);
         try {
             networkConversionService.reindexStudyNetworkEquipments(rootNetworkService.getNetworkUuid(rootNetworkUuid));
-            updateStudyIndexationStatus(study, StudyIndexationStatus.INDEXED);
+            updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.INDEXED);
         } catch (Exception e) {
             // Allow to retry indexation
-            updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
+            updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
             throw e;
         }
         LOGGER.info("Study with id = '{}' has been reindexed", study.getId());
     }
 
     @Transactional
-    public void reindexStudy(UUID studyUuid, UUID rootNetworkUuid) {
-        reindexStudy(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), rootNetworkUuid);
+    public void reindexRootNetwork(UUID studyUuid, UUID rootNetworkUuid) {
+        reindexRootNetwork(studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND)), rootNetworkUuid);
     }
 
     @Transactional
-    public StudyIndexationStatus getStudyIndexationStatus(UUID studyUuid, UUID rootNetworkUuid) {
+    public RootNetworkIndexationStatus getRootNetworkIndexationStatus(UUID studyUuid, UUID rootNetworkUuid) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        if (study.getIndexationStatus() == StudyIndexationStatus.INDEXED
+        RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        if (rootNetwork.getIndexationStatus() == RootNetworkIndexationStatus.INDEXED
                 && !networkConversionService.checkStudyIndexationStatus(rootNetworkService.getNetworkUuid(rootNetworkUuid))) {
-            updateStudyIndexationStatus(study, StudyIndexationStatus.NOT_INDEXED);
+            updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
         }
-        return study.getIndexationStatus();
+        return rootNetwork.getIndexationStatus();
     }
 
     @Transactional
@@ -2293,7 +2320,9 @@ public class StudyService {
     @Transactional
     public boolean setSpreadsheetConfigCollection(UUID studyUuid, String configCollection, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        return createOrUpdateSpreadsheetConfigCollection(studyEntity, configCollection, userId);
+        boolean status = createOrUpdateSpreadsheetConfigCollection(studyEntity, configCollection, userId);
+        notificationService.emitSpreadsheetCollectionChanged(studyUuid, studyEntity.getSpreadsheetConfigCollectionUuid());
+        return status;
     }
 
     /**
@@ -2353,18 +2382,34 @@ public class StudyService {
     }
 
     @Transactional
-    public String updateStudySpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid) {
+    public String updateSpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid, boolean appendMode) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        // 2 modes: append the source collection to the existing one, or replace the whole existing collection
+        String collectionDto = appendMode ? appendSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid) :
+                replaceSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid);
+        notificationService.emitSpreadsheetCollectionChanged(studyUuid, studyEntity.getSpreadsheetConfigCollectionUuid());
+        return collectionDto;
+    }
 
-        // Duplicate the source collection
+    private String appendSpreadsheetConfigCollection(StudyEntity studyEntity, UUID sourceCollectionUuid) {
+        final UUID existingStudyCollection = studyEntity.getSpreadsheetConfigCollectionUuid();
+        if (existingStudyCollection == null) {
+            return replaceSpreadsheetConfigCollection(studyEntity, sourceCollectionUuid);
+        }
+        studyConfigService.appendSpreadsheetConfigCollection(existingStudyCollection, sourceCollectionUuid);
+        return studyConfigService.getSpreadsheetConfigCollection(existingStudyCollection);
+    }
+
+    private String replaceSpreadsheetConfigCollection(StudyEntity studyEntity, UUID sourceCollectionUuid) {
+        // Duplicate the source collection to get a new one
         UUID newCollectionUuid = studyConfigService.duplicateSpreadsheetConfigCollection(sourceCollectionUuid);
-
-        // Delete the old collection if it exists
-        if (studyEntity.getSpreadsheetConfigCollectionUuid() != null) {
+        final UUID existingStudyCollection = studyEntity.getSpreadsheetConfigCollectionUuid();
+        if (existingStudyCollection != null) {
+            // delete the old collection if it exists
             try {
-                studyConfigService.deleteSpreadsheetConfigCollection(studyEntity.getSpreadsheetConfigCollectionUuid());
+                studyConfigService.deleteSpreadsheetConfigCollection(existingStudyCollection);
             } catch (Exception e) {
-                LOGGER.error("Could not remove spreadsheet config collection with uuid:" + studyEntity.getSpreadsheetConfigCollectionUuid(), e);
+                LOGGER.error("Could not remove spreadsheet config collection with uuid:" + existingStudyCollection, e);
                 // Continue with the new collection even if deletion failed
             }
         }
@@ -3026,5 +3071,53 @@ public class StudyService {
             });
             studyEntity.setNodeAliases(newNodeAliases);
         }
+        notificationService.emitSpreadsheetNodeAliasesChanged(studyUuid);
+    }
+
+    public UUID createColumn(UUID studyUuid, UUID configUuid, String columnInfos) {
+        UUID newColId = studyConfigService.createColumn(configUuid, columnInfos);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+        return newColId;
+    }
+
+    public void updateColumn(UUID studyUuid, UUID configUuid, UUID columnUuid, String columnInfos) {
+        studyConfigService.updateColumn(configUuid, columnUuid, columnInfos);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public void deleteColumn(UUID studyUuid, UUID configUuid, UUID columnUuid) {
+        studyConfigService.deleteColumn(configUuid, columnUuid);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public void reorderColumns(UUID studyUuid, UUID configUuid, List<UUID> columnOrder) {
+        studyConfigService.reorderColumns(configUuid, columnOrder);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public void setGlobalFilters(UUID studyUuid, UUID configUuid, String globalFilters) {
+        studyConfigService.setGlobalFilters(configUuid, globalFilters);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public void renameSpreadsheetConfig(UUID studyUuid, UUID configUuid, String newName) {
+        studyConfigService.renameSpreadsheetConfig(configUuid, newName);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public UUID addSpreadsheetConfigToCollection(UUID studyUuid, UUID collectionUuid, String configurationDto) {
+        UUID newConfigId = studyConfigService.addSpreadsheetConfigToCollection(collectionUuid, configurationDto);
+        notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
+        return newConfigId;
+    }
+
+    public void removeSpreadsheetConfigFromCollection(UUID studyUuid, UUID collectionUuid, UUID configUuid) {
+        studyConfigService.removeSpreadsheetConfigFromCollection(collectionUuid, configUuid);
+        notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
+    }
+
+    public void reorderSpreadsheetConfigs(UUID studyUuid, UUID collectionUuid, List<UUID> newOrder) {
+        studyConfigService.reorderSpreadsheetConfigs(collectionUuid, newOrder);
+        notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
     }
 }
