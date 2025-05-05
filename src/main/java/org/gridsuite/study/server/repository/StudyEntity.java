@@ -129,6 +129,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         ))
     private List<NodeAliasEmbeddable> nodeAliases;
 
+    @Column(name = "mono_root", columnDefinition = "boolean default true")
+    private boolean monoRoot;
+
     public RootNetworkEntity getFirstRootNetwork() {
         return rootNetworks.get(0);
     }
