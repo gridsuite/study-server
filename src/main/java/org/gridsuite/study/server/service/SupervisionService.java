@@ -317,13 +317,13 @@ public class SupervisionService {
     }
 
     @Transactional
-    public void invalidateAllNodesBuilds(UUID studyUuid) {
+    public void unbuildAllNodes(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         //TODO: to parallelize ?
         studyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(rootNetwork ->
-            studyService.invalidateBuild(studyUuid, rootNodeUuid, rootNetwork.rootNetworkUuid(), false, false, true)
+            studyService.invalidateNodeTree(studyUuid, rootNodeUuid, rootNetwork.rootNetworkUuid())
         );
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));

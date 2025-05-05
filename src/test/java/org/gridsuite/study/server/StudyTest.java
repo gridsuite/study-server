@@ -1503,7 +1503,7 @@ class StudyTest {
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(nodesUuids, headersStatus.get(NotificationService.HEADER_NODES));
+        assertEquals(new TreeSet<>(nodesUuids), new TreeSet<>((List) headersStatus.get(NotificationService.HEADER_NODES)));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
@@ -1642,7 +1642,6 @@ class StudyTest {
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
-        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node1.getId()));
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -1659,7 +1658,6 @@ class StudyTest {
             .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
-        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node2.getId()));
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -1948,7 +1946,6 @@ class StudyTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
-        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node1.getId()));
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -1964,7 +1961,6 @@ class StudyTest {
                 .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
-        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node2.getId()));
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2281,7 +2277,6 @@ class StudyTest {
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
-        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node1.getId()));
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2297,7 +2292,6 @@ class StudyTest {
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
-        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node2.getId()));
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2317,7 +2311,7 @@ class StudyTest {
         assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(node2.getId())).count());
 
         // duplicate the node1 after node2
-        UUID duplicatedNodeUuid = duplicateNode(study1Uuid, study1Uuid, node1, node2.getId(), InsertMode.AFTER, userId);
+        UUID duplicatedNodeUuid = duplicateNode(study1Uuid, study1Uuid, node1, node2.getId(), InsertMode.AFTER, true, userId);
 
         //node2 should now have 1 child
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
@@ -2328,7 +2322,7 @@ class StudyTest {
                 .count());
 
         // duplicate the node2 before node1
-        UUID duplicatedNodeUuid2 = duplicateNode(study1Uuid, study1Uuid, node2, node1.getId(), InsertMode.BEFORE, userId);
+        UUID duplicatedNodeUuid2 = duplicateNode(study1Uuid, study1Uuid, node2, node1.getId(), InsertMode.BEFORE, true, userId);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
         assertEquals(1, allNodes.stream()
                 .filter(nodeEntity -> nodeEntity.getParentNode() != null
@@ -2338,7 +2332,7 @@ class StudyTest {
 
         //now the tree looks like root -> modificationNode -> duplicatedNode2 -> node1 -> node2 -> duplicatedNode1
         //duplicate node1 in a new branch starting from duplicatedNode2
-        UUID duplicatedNodeUuid3 = duplicateNode(study1Uuid, study1Uuid, node1, duplicatedNodeUuid2, InsertMode.CHILD, userId);
+        UUID duplicatedNodeUuid3 = duplicateNode(study1Uuid, study1Uuid, node1, duplicatedNodeUuid2, InsertMode.CHILD, true, userId);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
         //expect to have modificationNode as a parent
         assertEquals(1, allNodes.stream()
@@ -2373,7 +2367,7 @@ class StudyTest {
         // Test Built status when duplicating an empty node
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), rootNetworkUuid).getGlobalBuildStatus());
-        duplicateNode(study1Uuid, study1Uuid, emptyNode, node3.getId(), InsertMode.BEFORE, userId);
+        duplicateNode(study1Uuid, study1Uuid, emptyNode, node3.getId(), InsertMode.BEFORE, false, userId);
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node3.getId(), rootNetworkUuid).getGlobalBuildStatus());
     }
 
@@ -2408,7 +2402,7 @@ class StudyTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
-        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node1.getId(), node3.getId()));
+        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node3.getId()));
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2430,7 +2424,6 @@ class StudyTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
-        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node2.getId()));
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2550,7 +2543,6 @@ class StudyTest {
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
-        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node1.getId()));
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2566,7 +2558,6 @@ class StudyTest {
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
-        checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node2.getId()));
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2578,7 +2569,7 @@ class StudyTest {
         assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(study2Node2.getId())).count());
 
         // duplicate the node1 from study 1 after node2 from study 2
-        UUID duplicatedNodeUuid = duplicateNode(study1Uuid, study2Uuid, node1, study2Node2.getId(), InsertMode.AFTER, userId);
+        UUID duplicatedNodeUuid = duplicateNode(study1Uuid, study2Uuid, node1, study2Node2.getId(), InsertMode.AFTER, true, userId);
 
         //node2 should now have 1 child
         allNodes = networkModificationTreeService.getAllNodes(study2Uuid);
@@ -2616,47 +2607,53 @@ class StudyTest {
         assertEquals(nodeToCopy.getId(), message.getHeaders().get(NotificationService.HEADER_MOVED_NODE));
         assertEquals(insertMode.name(), message.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        if (nodeHasModifications) {
-            /*
-             * invalidating old children
-             */
-            IntStream.rangeClosed(1, childCount).forEach(i -> {
-                //nodeUpdated
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-                //loadflow_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-                //securityAnalysis_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-                //sensitivityAnalysis_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-                //nonEvacuatedEnergy_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-                //shortCircuitAnalysis_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-                //oneBusShortCircuitAnalysis_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-                //dynamicSimulation_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-                //dynamicSecurityAnalysis_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-                //voltageInit_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-                //stateEstimation_status
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            });
-
-            /*
-             * invalidating new children
-             */
-            //nodeUpdated
+        /*
+         * invalidating moving node
+         */
+        //nodeUpdated
+        if (wasBuilt) {
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        }
+        //loadflow_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //securityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //sensitivityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //sensitivityAnalysisonEvacuated_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //shortCircuitAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //oneBusShortCircuitAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //dynamicSimulation_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //dynamicSecurityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //voltageInit_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //stateEstimation_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+
+        if (!nodeHasModifications) {
+            return;
+        }
+
+        /*
+         * invalidating old children
+         */
+        IntStream.rangeClosed(1, childCount).forEach(i -> {
+            //nodeUpdated
+            if (wasBuilt) {
+                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            }
             //loadflow_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //securityAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //sensitivityAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //sensitivityAnalysisonEvacuated_status
+            //nonEvacuatedEnergy_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //shortCircuitAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -2670,21 +2667,14 @@ class StudyTest {
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //stateEstimation_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        });
 
-            if (wasBuilt) {
-                // 1 request for cut node and its children, 1 request for paste node and its children
-                wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub, 2);
-            }
-        } else {
-            /*
-             * Invalidating moved node
-             */
-            //nodeUpdated
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        if (wasBuilt) {
+            wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub, 1);
         }
     }
 
-    private UUID duplicateNode(UUID sourceStudyUuid, UUID targetStudyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, String userId) throws Exception {
+    private UUID duplicateNode(UUID sourceStudyUuid, UUID targetStudyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, boolean checkMessagesForStatusModels, String userId) throws Exception {
         List<UUID> allNodesBeforeDuplication = networkModificationTreeService.getAllNodes(targetStudyUuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
         UUID stubGetCountUuid = wireMockUtils.stubNetworkModificationCountGet(nodeToCopy.getModificationGroupUuid().toString(),
             EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
@@ -2709,10 +2699,10 @@ class StudyTest {
         assertEquals(1, nodesAfterDuplication.size());
 
         output.receive(TIMEOUT, studyUpdateDestination); // nodeCreated
-        if (!EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid())) {
-            output.receive(TIMEOUT, studyUpdateDestination); // nodeUpdated
+
+        if (checkMessagesForStatusModels) {
+            checkUpdateModelsStatusMessagesReceived(targetStudyUuid, nodesAfterDuplication.get(0));
         }
-        checkUpdateModelsStatusMessagesReceived(targetStudyUuid, nodesAfterDuplication.get(0));
         checkElementUpdatedMessageSent(targetStudyUuid, userId);
 
         wireMockUtils.verifyNetworkModificationCountsGet(stubGetCountUuid, nodeToCopy.getModificationGroupUuid().toString());

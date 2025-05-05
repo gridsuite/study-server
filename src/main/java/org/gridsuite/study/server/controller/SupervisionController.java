@@ -150,7 +150,7 @@ public class SupervisionController {
     @Operation(summary = "Invalidate node builds for the given study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all built nodes for the given study have been invalidated")})
     public ResponseEntity<Void> invalidateAllNodesBuilds(@PathVariable("studyUuid") UUID studyUuid) {
-        supervisionService.invalidateAllNodesBuilds(studyUuid);
+        supervisionService.unbuildAllNodes(studyUuid);
         return ResponseEntity.ok().build();
     }
 
