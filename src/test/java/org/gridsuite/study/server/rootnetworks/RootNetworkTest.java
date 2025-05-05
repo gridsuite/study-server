@@ -713,9 +713,7 @@ class RootNetworkTest {
 
         // send message to consumer
         Mockito.doNothing().when(caseService).disableCaseExpiration(NEW_CASE_UUID);
-        Mockito.doNothing().when(studyService).invalidateBuild(studyUuid, rootNode.getIdNode(), rootNetworkUuid, false,
-            false,
-            true);
+        Mockito.doNothing().when(studyService).invalidateNodeTree(studyUuid, rootNode.getIdNode(), rootNetworkUuid);
         messageConsumer.accept(new GenericMessage<>("", headers));
 
         // get study from database and check new root network has been updated with new case
@@ -737,9 +735,7 @@ class RootNetworkTest {
         // check that old case has been deleted successfully
         assertFalse(caseService.caseExists(oldCaseUuid));
         //assert invalidate Build node has been called on root node
-        Mockito.verify(studyService, Mockito.times(1)).invalidateBuild(studyUuid, rootNode.getIdNode(), rootNetworkUuid, false,
-            false,
-            true);
+        Mockito.verify(studyService, Mockito.times(1)).invalidateNodeTree(studyUuid, rootNode.getIdNode(), rootNetworkUuid);
     }
 
     @Test
