@@ -822,7 +822,6 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    // old name: invalidateBuildOfNodeOnly
     public InvalidateNodeInfos invalidateNode(UUID nodeUuid, UUID rootNetworkUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
 
@@ -836,7 +835,6 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    // old name: invalidateBuild
     public InvalidateNodeInfos invalidateNodeTree(UUID nodeUuid, UUID rootNetworkUuid, boolean invalidateOnlyChildrenBuildStatus) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
 
@@ -943,7 +941,6 @@ public class NetworkModificationTreeService {
         fillIndexedNodeInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true, invalidateNodeInfos);
     }
 
-    // OldName: fillIndexedModificationsInfosToInvalidate
     // For subTree
     private void fillIndexedNodeTreeInfosToInvalidate(NodeEntity nodeEntity, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos) {
         // when invalidating node
@@ -962,7 +959,6 @@ public class NetworkModificationTreeService {
         }
     }
 
-    // OldName: invalidateChildrenBuildStatus
     private InvalidateNodeInfos invalidateChildrenNodes(UUID nodeUuid, UUID rootNetworkUuid) {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         nodesRepository.findAllByParentNodeIdNode(nodeUuid)

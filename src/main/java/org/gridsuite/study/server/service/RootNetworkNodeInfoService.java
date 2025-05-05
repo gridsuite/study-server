@@ -224,7 +224,6 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    //old name : invalidateRootNetworkNodeInfoProper
     public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, boolean withInvalidationBuildStatus) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
 
@@ -299,7 +298,6 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    //oldName: fillInvalidateNodeInfos
     private InvalidateNodeInfos getInvalidationComputationInfos(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
 
@@ -426,7 +424,6 @@ public class RootNetworkNodeInfoService {
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
     }
 
-    //oldName: invalidateRootNetworkNodeInfoBuildStatus
     private static void invalidateBuildStatus(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos) {
         rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
         rootNetworkNodeInfoEntity.setVariantId(UUID.randomUUID().toString());

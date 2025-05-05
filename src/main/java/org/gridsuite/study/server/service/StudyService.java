@@ -1741,8 +1741,7 @@ public class StudyService {
         }
     }
 
-    // OldName: invalidateBuild part 1
-    // Only one node
+    // Invalidate only one node
     private void invalidateNode(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
@@ -1765,8 +1764,16 @@ public class StudyService {
             invalidateNode(studyUuid, nodeUuid, rootNetworkEntity.getId()));
     }
 
-    // OldName: invalidateBuild part 2
-    // This is used to unbuild the node and its children
+    private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid) {
+        invalidateNodeTree(studyUuid, nodeUuid, false);
+    }
+
+    private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
+        getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), invalidateOnlyChildrenBuildStatus));
+    }
+
+    // Invalidate the node and its children
     public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, false);
     }
@@ -1786,15 +1793,6 @@ public class StudyService {
             LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
                 TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
-    }
-
-    private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid) {
-        invalidateNodeTree(studyUuid, nodeUuid, false);
-    }
-
-    private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
-        getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
-            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), invalidateOnlyChildrenBuildStatus));
     }
 
     public void deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {
