@@ -36,6 +36,7 @@ public class NotificationService {
     public static final String HEADER_ERROR = "error";
     public static final String HEADER_NODE = "node";
     public static final String HEADER_ROOT_NETWORK_UUID = "rootNetworkUuid";
+    public static final String HEADER_RESULT_UUID = "resultUuid";
     public static final String HEADER_NODES = "nodes";
     public static final String HEADER_ROOT_NETWORKS_UUIDS = "rootNetworksUuids";
     public static final String HEADER_STUDY_UUID = "studyUuid";
@@ -47,7 +48,6 @@ public class NotificationService {
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
     public static final String HEADER_DEBUG = "debug";
-    public static final String HEADER_BROWSER_TAB_UUID = "browserTabUuid";
 
     public static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
     public static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
@@ -132,6 +132,7 @@ public class NotificationService {
     public static final String ROOT_NETWORKS_UPDATE_FAILED = "rootNetworksUpdateFailed";
 
     public static final String STUDY_ALERT = "STUDY_ALERT";
+    public static final String STUDY_DEBUG = "STUDY_DEBUG";
 
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
 
@@ -418,6 +419,17 @@ public class NotificationService {
         } catch (JsonProcessingException e) {
             LOGGER.error("Unable to notify on study alert", e);
         }
+    }
+
+    @PostCompletion
+    public void emitStudyDebug(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, UUID resultUuid, ComputationType computationType) {
+        sendStudyUpdateMessage(studyUuid, STUDY_DEBUG, MessageBuilder.withPayload("")
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_NODE, nodeUuid)
+            .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
+            .setHeader(HEADER_RESULT_UUID, resultUuid)
+            .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
+        );
     }
 
     private void emitRootNetworksUpdated(UUID studyUuid, List<UUID> rootNetworksUuids) {

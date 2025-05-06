@@ -1774,17 +1774,16 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/run")
     @Operation(summary = "run dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation has started")})
-    public ResponseEntity<Void> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<UUID> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false) Boolean debug,
-                                                     @Parameter(description = "browserTabUuid") @RequestParam(name = "browserTabUuid", required = false) UUID browserTabUuid,
                                                      @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        DebugInfos debugInfos = debug != null && debug ? DebugInfos.builder().debug(debug).browserTabUuid(browserTabUuid).build() : null;
+        DebugInfos debugInfos = debug != null && debug ? DebugInfos.builder().debug(debug).build() : null;
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debugInfos);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
+        UUID resultUuid = studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debugInfos);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(resultUuid);
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries/metadata")

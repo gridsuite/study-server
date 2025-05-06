@@ -58,11 +58,9 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         if (provider != null && !provider.isBlank()) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
-        Optional.ofNullable(debugInfos).ifPresent(debugInfosValue -> {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, debugInfosValue.debug());
-            uriComponentsBuilder.queryParam(QUERY_PARAM_BROWSER_TAB_UUID, debugInfosValue.browserTabUuid());
-
-        });
+        Optional.ofNullable(debugInfos).ifPresent(debugInfosValue ->
+            uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, debugInfosValue.debug())
+        );
         uriComponentsBuilder
                 .queryParam("mappingName", parameters.getMapping())
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)

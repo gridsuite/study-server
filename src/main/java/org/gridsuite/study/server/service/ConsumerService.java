@@ -41,7 +41,6 @@ import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_BROWSER_TAB_UUID;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_DEBUG;
 
 /**
@@ -576,6 +575,22 @@ public class ConsumerService {
         Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
             .map(UUID::fromString)
             .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                // process debug notification which shares the same result chanel
+                // TODO whether need create a new debug channel
+                Object debugObj = msg.getHeaders().get(HEADER_DEBUG);
+                Boolean debug = debugObj != null ? (Boolean) debugObj : null;
+                if (debug != null && debug) {
+                    String useId = msg.getHeaders().get(HEADER_USER_ID, String.class);
+                    LOGGER.info("{} debug file of result '{}' available for node '{}'",
+                            computationType.getLabel(),
+                            resultUuid,
+                            receiverObj.getNodeUuid());
+                    notificationService.emitStudyDebug(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), useId, resultUuid, computationType);
+                    return;
+                }
+
                 LOGGER.info("{} result '{}' available for node '{}'",
                     computationType.getLabel(),
                     resultUuid,
@@ -584,13 +599,8 @@ public class ConsumerService {
                 // update DB
                 rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
 
-                Boolean debug = msg.getHeaders().get(HEADER_DEBUG, Boolean.class);
-                UUID browserTabUuid = Optional.ofNullable(msg.getHeaders().get(HEADER_BROWSER_TAB_UUID, String.class)).map(UUID::fromString).orElse(null);
-
-                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notifications
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType(),
-                        debug != null ? Map.of(HEADER_DEBUG, debug, HEADER_BROWSER_TAB_UUID, browserTabUuid) : Map.of());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateResultType());
             }));
     }
