@@ -48,6 +48,19 @@ public class SpreadsheetConfigController {
         return ResponseEntity.status(HttpStatus.CREATED).body(newColumnId);
     }
 
+    @PostMapping("/{id}/global-filters")
+    @Operation(summary = "Set global filters",
+            description = "Replaces all existing global filters with the provided list for a spreadsheet configuration")
+    @ApiResponse(responseCode = "204", description = "Global filters set successfully")
+    @ApiResponse(responseCode = "404", description = "Spreadsheet configuration not found")
+    public ResponseEntity<Void> setGlobalFiltersForSpreadsheetConfig(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "ID of the spreadsheet config") @PathVariable UUID id,
+            @RequestBody String filters) {
+        studyService.setGlobalFilters(studyUuid, id, filters);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}/columns/{columnUuid}")
     @Operation(summary = "Update a column", description = "Updates an existing column")
     @ApiResponse(responseCode = "204", description = "Column updated")

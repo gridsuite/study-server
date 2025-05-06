@@ -131,8 +131,12 @@ public class NetworkConversionService {
                 },
                 networkConversionServerResponse -> {
                     String fileNameFromResponse = networkConversionServerResponse.getHeaders().getContentDisposition().getFilename();
+                    long contentLength = networkConversionServerResponse.getHeaders().getContentLength();
                     exportNetworkResponse.setHeader(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.builder("attachment").filename(fileNameFromResponse, StandardCharsets.UTF_8).build().toString());
                     exportNetworkResponse.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM.toString());
+                    if (contentLength != -1) {
+                        exportNetworkResponse.setContentLengthLong(contentLength);
+                    }
                     exportNetworkResponse.setStatus(HttpStatus.OK.value());
                     StreamUtils.copy(networkConversionServerResponse.getBody(), outputStream);
                     return null;

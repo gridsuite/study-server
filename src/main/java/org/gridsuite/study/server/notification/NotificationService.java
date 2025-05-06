@@ -335,7 +335,7 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitNodeBuildStatusUpdated(UUID studyUuid, Collection<UUID> nodes, UUID rootNetworkUuid) {
+    public void emitNodeBuildStatusUpdated(UUID studyUuid, List<UUID> nodes, UUID rootNetworkUuid) {
         sendStudyUpdateMessage(studyUuid, NODE_BUILD_STATUS_UPDATED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_NODES, nodes)
                 .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
