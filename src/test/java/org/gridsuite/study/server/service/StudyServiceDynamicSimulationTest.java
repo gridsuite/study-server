@@ -116,7 +116,7 @@ class StudyServiceDynamicSimulationTest {
     @Test
     void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(any(), eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any(), isNull())).willReturn(RESULT_UUID);
+        given(dynamicSimulationService.runDynamicSimulation(any(), eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any(), eq(false))).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResults(anyList());
         given(rootNetworkNodeInfoService.getLoadFlowStatus(NODE_UUID, ROOTNETWORK_UUID)).willReturn(LoadFlowStatus.CONVERGED.name());
 
@@ -129,7 +129,7 @@ class StudyServiceDynamicSimulationTest {
         // call method to be tested
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, UUID.randomUUID(), "caseName", "", UUID.randomUUID());
         studyRepository.save(studyEntity);
-        UUID resultUuid = studyService.runDynamicSimulation(studyEntity.getId(), NODE_UUID, ROOTNETWORK_UUID, parameters, "testUserId", null);
+        UUID resultUuid = studyService.runDynamicSimulation(studyEntity.getId(), NODE_UUID, ROOTNETWORK_UUID, parameters, "testUserId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);

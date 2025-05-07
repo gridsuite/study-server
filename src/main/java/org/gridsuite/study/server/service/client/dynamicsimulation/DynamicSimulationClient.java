@@ -7,7 +7,6 @@
 
 package org.gridsuite.study.server.service.client.dynamicsimulation;
 
-import com.powsybl.ws.commons.computation.dto.DebugInfos;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
@@ -28,7 +27,7 @@ public interface DynamicSimulationClient extends RestClient {
     String DYNAMIC_SIMULATION_END_POINT_RESULT = "results";
     String DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT = "supervision/results-count";
 
-    UUID run(String provider, String receiver, UUID networkUuid, String variantId, ReportInfos reportInfos, DynamicSimulationParametersInfos parameters, String userId, DebugInfos debugInfos);
+    UUID run(String provider, String receiver, UUID networkUuid, String variantId, ReportInfos reportInfos, DynamicSimulationParametersInfos parameters, String userId, boolean debug);
 
     UUID getTimeSeriesResult(UUID resultUuid);
 

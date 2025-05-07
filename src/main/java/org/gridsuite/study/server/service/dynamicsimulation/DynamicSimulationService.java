@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.DoubleTimeSeries;
-import com.powsybl.ws.commons.computation.dto.DebugInfos;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
@@ -230,9 +229,10 @@ public interface DynamicSimulationService {
      * @param reportUuid report uuid
      * @param parameters parameters of dynamic simulation
      * @param userId id of user
+     * @param debug run in debug mode
      * @return the UUID of the dynamic simulation
      */
-    UUID runDynamicSimulation(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId, DebugInfos debugInfos);
+    UUID runDynamicSimulation(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId, boolean debug);
 
     /**
      * Get a list of curves from a given result UUID

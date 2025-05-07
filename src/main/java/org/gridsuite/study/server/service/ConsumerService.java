@@ -41,7 +41,6 @@ import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_DEBUG;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -57,6 +56,7 @@ public class ConsumerService {
     static final String HEADER_CASE_FORMAT = "caseFormat";
     static final String HEADER_CASE_NAME = "caseName";
     static final String HEADER_ERROR_MESSAGE = "errorMessage";
+    static final String HEADER_DEBUG = "debug";
 
     private final ObjectMapper objectMapper;
 
@@ -579,15 +579,13 @@ public class ConsumerService {
 
                 // process debug notification which shares the same result chanel
                 // TODO whether need create a new debug channel
-                Object debugObj = msg.getHeaders().get(HEADER_DEBUG);
-                Boolean debug = debugObj != null ? (Boolean) debugObj : null;
-                if (debug != null && debug) {
-                    String useId = msg.getHeaders().get(HEADER_USER_ID, String.class);
+                var debug = msg.getHeaders().get(HEADER_DEBUG);
+                if (Boolean.TRUE.equals(debug)) {
                     LOGGER.info("{} debug file of result '{}' available for node '{}'",
                             computationType.getLabel(),
                             resultUuid,
                             receiverObj.getNodeUuid());
-                    notificationService.emitStudyDebug(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), useId, resultUuid, computationType);
+                    notificationService.emitStudyDebug(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType);
                     return;
                 }
 

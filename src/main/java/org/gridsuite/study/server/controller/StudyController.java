@@ -9,7 +9,6 @@ package org.gridsuite.study.server.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.timeseries.DoubleTimeSeries;
-import com.powsybl.ws.commons.computation.dto.DebugInfos;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -1789,12 +1788,11 @@ public class StudyController {
     public ResponseEntity<UUID> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false) Boolean debug,
+                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        DebugInfos debugInfos = debug != null && debug ? DebugInfos.builder().debug(debug).build() : null;
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        UUID resultUuid = studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debugInfos);
+        UUID resultUuid = studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(resultUuid);
     }
 
@@ -2308,7 +2306,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The result uuid of a computation"),
         @ApiResponse(responseCode = "204", description = "No result uuid"),
         @ApiResponse(responseCode = "404", description = "The computation result has not been found")})
-    public ResponseEntity<UUID> downloadDebugFile(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<UUID> getResultUuid(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                    @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                    @Parameter(description = "computingType") @RequestParam("computingType") ComputationType computationType) {

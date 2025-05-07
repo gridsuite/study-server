@@ -65,7 +65,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     private RemoteServicesProperties remoteServicesProperties;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-simulation-server", initMockWebServer());
         dynamicSimulationClient = new DynamicSimulationClientImpl(remoteServicesProperties, restTemplate);
@@ -87,7 +87,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
 
-        UUID resultUuid = dynamicSimulationClient.run("", "", NETWORK_UUID, VARIANT_1_ID, new ReportInfos(REPORT_UUID, REPORTER_ID), parameters, "testUserId", null);
+        UUID resultUuid = dynamicSimulationClient.run("", "", NETWORK_UUID, VARIANT_1_ID, new ReportInfos(REPORT_UUID, REPORTER_ID), parameters, "testUserId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);
