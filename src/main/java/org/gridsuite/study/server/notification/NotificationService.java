@@ -130,6 +130,7 @@ public class NotificationService {
     public static final String ROOT_NETWORKS_UPDATE_FAILED = "rootNetworksUpdateFailed";
 
     public static final String STUDY_ALERT = "STUDY_ALERT";
+    public static final String STUDY_DEBUG = "STUDY_DEBUG";
 
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
 
@@ -410,6 +411,15 @@ public class NotificationService {
         } catch (JsonProcessingException e) {
             LOGGER.error("Unable to notify on study alert", e);
         }
+    }
+
+    @PostCompletion
+    public void emitStudyDebug(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType) {
+        sendStudyUpdateMessage(studyUuid, STUDY_DEBUG, MessageBuilder.withPayload("")
+            .setHeader(HEADER_NODE, nodeUuid)
+            .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
+            .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
+        );
     }
 
     private void emitRootNetworksUpdated(UUID studyUuid, List<UUID> rootNetworksUuids) {
