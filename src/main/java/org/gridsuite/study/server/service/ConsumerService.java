@@ -581,11 +581,8 @@ public class ConsumerService {
                 // TODO whether need create a new debug channel
                 var debug = msg.getHeaders().get(HEADER_DEBUG);
                 if (Boolean.TRUE.equals(debug)) {
-                    LOGGER.info("{} debug file of result '{}' available for node '{}'",
-                            computationType.getLabel(),
-                            resultUuid,
-                            receiverObj.getNodeUuid());
-                    notificationService.emitStudyDebug(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType);
+                    String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR_MESSAGE);
+                    notificationService.emitStudyDebug(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType, errorMessage);
                     return;
                 }
 

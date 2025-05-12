@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
@@ -414,11 +415,12 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyDebug(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType) {
+    public void emitStudyDebug(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType, @Nullable String error) {
         sendStudyUpdateMessage(studyUuid, STUDY_DEBUG, MessageBuilder.withPayload("")
             .setHeader(HEADER_NODE, nodeUuid)
             .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
             .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
+            .setHeader(HEADER_ERROR, error)
         );
     }
 
