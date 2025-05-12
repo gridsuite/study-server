@@ -10,42 +10,93 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
-
 @NoArgsConstructor
-@Getter
-@Setter
 public class InvalidateNodeInfos {
+    @Getter
+    @Setter
     private UUID networkUuid;
 
-    private List<UUID> reportUuids = new ArrayList<>();
+    private Set<UUID> nodeUuids = new HashSet<>();
+    private Set<UUID> groupUuids = new HashSet<>();
 
-    private List<String> variantIds = new ArrayList<>();
+    private Set<UUID> reportUuids = new HashSet<>();
+    private Set<String> variantIds = new HashSet<>();
 
-    private List<UUID> loadFlowResultUuids = new ArrayList<>();
+    private Set<UUID> loadFlowResultUuids = new HashSet<>();
+    private Set<UUID> securityAnalysisResultUuids = new HashSet<>();
+    private Set<UUID> sensitivityAnalysisResultUuids = new HashSet<>();
+    private Set<UUID> nonEvacuatedEnergyResultUuids = new HashSet<>();
+    private Set<UUID> shortCircuitAnalysisResultUuids = new HashSet<>();
+    private Set<UUID> oneBusShortCircuitAnalysisResultUuids = new HashSet<>();
+    private Set<UUID> voltageInitResultUuids = new HashSet<>();
+    private Set<UUID> stateEstimationResultUuids = new HashSet<>();
 
-    private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
+    private Set<UUID> dynamicSimulationResultUuids = new HashSet<>();
+    private Set<UUID> dynamicSecurityAnalysisResultUuids = new HashSet<>();
 
-    private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
-    private List<UUID> nonEvacuatedEnergyResultUuids = new ArrayList<>();
+    public List<UUID> getNodeUuids() {
+        return nodeUuids.stream().toList();
+    }
 
-    private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
-    private List<UUID> oneBusShortCircuitAnalysisResultUuids = new ArrayList<>();
+    public List<UUID> getGroupUuids() {
+        return groupUuids.stream().toList();
+    }
 
-    private List<UUID> voltageInitResultUuids = new ArrayList<>();
+    public List<UUID> getReportUuids() {
+        return reportUuids.stream().toList();
+    }
 
-    private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
-    private List<UUID> dynamicSecurityAnalysisResultUuids = new ArrayList<>();
+    public List<String> getVariantIds() {
+        return variantIds.stream().toList();
+    }
 
-    private List<UUID> stateEstimationResultUuids = new ArrayList<>();
+    public List<UUID> getLoadFlowResultUuids() {
+        return loadFlowResultUuids.stream().toList();
+    }
 
-    private List<UUID> groupUuids = new ArrayList<>();
+    public List<UUID> getSecurityAnalysisResultUuids() {
+        return securityAnalysisResultUuids.stream().toList();
+    }
+
+    public List<UUID> getSensitivityAnalysisResultUuids() {
+        return sensitivityAnalysisResultUuids.stream().toList();
+    }
+
+    public List<UUID> getNonEvacuatedEnergyResultUuids() {
+        return nonEvacuatedEnergyResultUuids.stream().toList();
+    }
+
+    public List<UUID> getShortCircuitAnalysisResultUuids() {
+        return shortCircuitAnalysisResultUuids.stream().toList();
+    }
+
+    public List<UUID> getOneBusShortCircuitAnalysisResultUuids() {
+        return oneBusShortCircuitAnalysisResultUuids.stream().toList();
+    }
+
+    public List<UUID> getVoltageInitResultUuids() {
+        return voltageInitResultUuids.stream().toList();
+    }
+
+    public List<UUID> getStateEstimationResultUuids() {
+        return stateEstimationResultUuids.stream().toList();
+    }
+
+    public List<UUID> getDynamicSimulationResultUuids() {
+        return dynamicSimulationResultUuids.stream().toList();
+    }
+
+    public List<UUID> getDynamicSecurityAnalysisResultUuids() {
+        return dynamicSecurityAnalysisResultUuids.stream().toList();
+    }
 
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
@@ -56,7 +107,7 @@ public class InvalidateNodeInfos {
     }
 
     public void addLoadFlowResultUuid(UUID loadFlowResultUuid) {
-        getLoadFlowResultUuids().add(loadFlowResultUuid);
+        loadFlowResultUuids.add(loadFlowResultUuid);
     }
 
     public void addSecurityAnalysisResultUuid(UUID securityAnalysisResultUuid) {
@@ -95,7 +146,31 @@ public class InvalidateNodeInfos {
         stateEstimationResultUuids.add(stateEstimationResultUuid);
     }
 
-    public void addGroupUuid(List<UUID> groupUuids) {
+    public void addGroupUuids(List<UUID> groupUuids) {
         this.groupUuids.addAll(groupUuids);
+    }
+
+    public void addNodeUuid(UUID nodeUuid) {
+        this.nodeUuids.add(nodeUuid);
+    }
+
+    public void add(InvalidateNodeInfos invalidateNodeInfos) {
+        nodeUuids.addAll(invalidateNodeInfos.getNodeUuids());
+        groupUuids.addAll(invalidateNodeInfos.getGroupUuids());
+
+        reportUuids.addAll(invalidateNodeInfos.getReportUuids());
+        variantIds.addAll(invalidateNodeInfos.getVariantIds());
+
+        loadFlowResultUuids.addAll(invalidateNodeInfos.getLoadFlowResultUuids());
+        securityAnalysisResultUuids.addAll(invalidateNodeInfos.getSecurityAnalysisResultUuids());
+        sensitivityAnalysisResultUuids.addAll(invalidateNodeInfos.getSensitivityAnalysisResultUuids());
+        nonEvacuatedEnergyResultUuids.addAll(invalidateNodeInfos.getNonEvacuatedEnergyResultUuids());
+        shortCircuitAnalysisResultUuids.addAll(invalidateNodeInfos.getShortCircuitAnalysisResultUuids());
+        oneBusShortCircuitAnalysisResultUuids.addAll(invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids());
+        voltageInitResultUuids.addAll(invalidateNodeInfos.getVoltageInitResultUuids());
+        stateEstimationResultUuids.addAll(invalidateNodeInfos.getStateEstimationResultUuids());
+
+        dynamicSimulationResultUuids.addAll(invalidateNodeInfos.getDynamicSimulationResultUuids());
+        dynamicSecurityAnalysisResultUuids.addAll(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids());
     }
 }

@@ -224,6 +224,45 @@ public class RootNetworkNodeInfoService {
         });
     }
 
+    public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, boolean withInvalidationBuildStatus) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+
+        // No need to invalidate a node with a status different of "BUILT"
+        if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
+            return new InvalidateNodeInfos();
+        }
+
+        InvalidateNodeInfos invalidateNodeInfos = getInvalidationComputationInfos(rootNetworkNodeInfoEntity);
+
+        if (withInvalidationBuildStatus) {
+            rootNetworkNodeInfoEntity.getModificationReports().forEach((key, value) -> invalidateNodeInfos.addReportUuid(value));
+            invalidateNodeInfos.addVariantId(rootNetworkNodeInfoEntity.getVariantId());
+            invalidateBuildStatus(rootNetworkNodeInfoEntity, invalidateNodeInfos);
+        }
+
+        invalidateComputationResults(rootNetworkNodeInfoEntity);
+
+        return invalidateNodeInfos;
+    }
+
+    private static void invalidateComputationResults(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
+        rootNetworkNodeInfoEntity.setLoadFlowResultUuid(null);
+        rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(null);
+        rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(null);
+        rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(null);
+        rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(null);
+        rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(null);
+        rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(null);
+        rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(null);
+        //TODO: add more checks for Voltage init
+        rootNetworkNodeInfoEntity.setVoltageInitResultUuid(null);
+        rootNetworkNodeInfoEntity.setStateEstimationResultUuid(null);
+
+        // Update the computation reports in the repository
+        //TODO: add more checks for Voltage init
+        rootNetworkNodeInfoEntity.setComputationReports(new HashMap<>());
+    }
+
     public void invalidateRootNetworkNodeInfoProper(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
                                                     List<UUID> changedNodes, boolean deleteVoltageInitResults) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
@@ -257,6 +296,18 @@ public class RootNetworkNodeInfoService {
             // Update the computation reports in the repository
             rootNetworkNodeInfoEntity.setComputationReports(computationReports);
         }
+    }
+
+    private InvalidateNodeInfos getInvalidationComputationInfos(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
+        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+
+        rootNetworkNodeInfoEntity.getComputationReports().forEach((key, value) ->
+            invalidateNodeInfos.addReportUuid(value)
+        );
+
+        fillComputationResultUuids(rootNetworkNodeInfoEntity, invalidateNodeInfos);
+
+        return invalidateNodeInfos;
     }
 
     private void fillInvalidateNodeInfos(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus,
@@ -298,6 +349,31 @@ public class RootNetworkNodeInfoService {
             .ifPresent(invalidateNodeInfos::addStateEstimationResultUuid);
     }
 
+    private void fillComputationResultUuids(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos) {
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, LOAD_FLOW))
+                .ifPresent(invalidateNodeInfos::addLoadFlowResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SECURITY_ANALYSIS))
+                .ifPresent(invalidateNodeInfos::addSecurityAnalysisResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SENSITIVITY_ANALYSIS))
+                .ifPresent(invalidateNodeInfos::addSensitivityAnalysisResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, NON_EVACUATED_ENERGY_ANALYSIS))
+                .ifPresent(invalidateNodeInfos::addNonEvacuatedEnergyResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SHORT_CIRCUIT))
+                .ifPresent(invalidateNodeInfos::addShortCircuitAnalysisResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SHORT_CIRCUIT_ONE_BUS))
+                .ifPresent(invalidateNodeInfos::addOneBusShortCircuitAnalysisResultUuid);
+        //TODO: add more checks later for voltage init
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, VOLTAGE_INITIALIZATION))
+                .ifPresent(invalidateNodeInfos::addVoltageInitResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_SIMULATION))
+                .ifPresent(invalidateNodeInfos::addDynamicSimulationResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_SECURITY_ANALYSIS))
+                .ifPresent(invalidateNodeInfos::addDynamicSecurityAnalysisResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, STATE_ESTIMATION))
+                .ifPresent(invalidateNodeInfos::addStateEstimationResultUuid);
+    }
+
+    // TODO : Remove optionnal and throws ROOT_NETWORK_NOT_FOUND exception
     public Optional<RootNetworkNodeInfoEntity> getRootNetworkNodeInfo(UUID nodeUuid, UUID rootNetworkUuid) {
         return rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid);
     }
@@ -346,6 +422,14 @@ public class RootNetworkNodeInfoService {
         nodeInfoEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
+    }
+
+    private static void invalidateBuildStatus(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos) {
+        rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
+        rootNetworkNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
+        rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(rootNetworkNodeInfoEntity.getNodeInfo().getId(), UUID.randomUUID())));
+
+        invalidateNodeInfos.addNodeUuid(rootNetworkNodeInfoEntity.getNodeInfo().getIdNode());
     }
 
     private static void invalidateRootNetworkNodeInfoBuildStatus(UUID nodeUuid, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, List<UUID> changedNodes) {
