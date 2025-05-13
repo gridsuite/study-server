@@ -30,6 +30,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfosWithActivationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
@@ -1344,6 +1345,22 @@ public class StudyController {
         @Parameter(description = "Equipment type") @RequestParam(value = "equipmentType", required = false) String equipmentType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
             .body(studyService.searchEquipments(nodeUuid, rootNetworkUuid, userInput, fieldSelector, equipmentType, inUpstreamBuiltParentNode));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/modifications/indexation-infos", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Search modifications in elasticsearch by equipment")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "List of modifications found"),
+        @ApiResponse(responseCode = "404", description = "The study not found"),
+    })
+    public ResponseEntity<List<ModificationsSearchResultByNode>> searchModifications(
+            @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput) {
+        studyService.assertIsStudyExist(studyUuid);
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(studyService.searchModifications(rootNetworkUuid, userInput));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
