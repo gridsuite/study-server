@@ -2889,7 +2889,7 @@ class StudyTest {
         }
     }
 
-    private void testSearchModifications(final MockWebServer mockWebServer, UUID study1Uuid, UUID rootNetworkUuid) throws Exception { //maissa
+    private void testSearchModifications(UUID study1Uuid, UUID rootNetworkUuid) throws Exception { //maissa
         String userId = "userId";
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
@@ -2916,7 +2916,6 @@ class StudyTest {
         );
 
         String jsonBody = mapper.writeValueAsString(List.of(modificationsSearchResultByGroup));
-        String jsonBodyModificationByNode = mapper.writeValueAsString(List.of(modificationsSearchResultByNode));
 
         // add modification on node "node1"
         String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
@@ -2936,14 +2935,12 @@ class StudyTest {
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
         UUID stubUuid = wireMockUtils.stubSearchModifications(rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B", jsonBody);
-
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/modifications/indexation-infos?userInput=B",
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/modifications/indexation-infos?userInput=B",
                         study1Uuid, rootNetworkUuid))
                 .andExpect(status().isOk())
                 .andReturn();
-        String resultAsString = mvcResult.getResponse().getContentAsString();
+
         wireMockUtils.verifySearchModifications(stubUuid, rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B");
-        //assertEquals(jsonBody, resultAsString);
     }
 
     @Test
@@ -2952,6 +2949,6 @@ class StudyTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
         studyRepository.save(studyEntity);
-        testSearchModifications(mockWebServer, study1Uuid, firstRootNetworkUuid);
+        testSearchModifications(study1Uuid, firstRootNetworkUuid);
     }
 }
