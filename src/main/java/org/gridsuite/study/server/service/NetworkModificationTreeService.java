@@ -14,6 +14,8 @@ import org.gridsuite.modification.dto.ModificationInfos;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationInfosWithActivationStatus;
+import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByGroup;
+import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -95,6 +97,24 @@ public class NetworkModificationTreeService {
                 .build()
         );
         return newNode;
+    }
+
+    public List<ModificationsSearchResultByNode> getNetworkModificationsAndNodeInfos(List<ModificationsSearchResultByGroup> modificationsByGroup) {
+        return modificationsByGroup.stream()
+                .map(modificationGroup -> {
+                    AbstractNodeInfoEntity nodeInfo = networkModificationNodeInfoRepository.findByModificationGroupUuid(modificationGroup.groupUuid());
+                    return Optional.ofNullable(nodeInfo)
+                            .map(info -> new ModificationsSearchResultByNode(
+                                    BasicNodeInfos.builder()
+                                            .nodeUuid(info.getId())
+                                            .name(info.getName())
+                                            .build(),
+                                    modificationGroup.modifications()
+                            ))
+                            .orElse(null);
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     // TODO test if studyUuid exist and have a node <nodeId>

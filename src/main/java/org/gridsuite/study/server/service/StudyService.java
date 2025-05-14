@@ -34,14 +34,12 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParamete
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
-import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -127,7 +125,6 @@ public class StudyService {
     private final StateEstimationService stateEstimationService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
     private final ObjectMapper objectMapper;
 
@@ -189,8 +186,7 @@ public class StudyService {
         StateEstimationService stateEstimationService,
         @Lazy StudyService studyService,
         RootNetworkService rootNetworkService,
-        RootNetworkNodeInfoService rootNetworkNodeInfoService,
-        NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository) {
+        RootNetworkNodeInfoService rootNetworkNodeInfoService) {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
@@ -226,7 +222,6 @@ public class StudyService {
         this.self = studyService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
-        this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -497,13 +492,7 @@ public class StudyService {
     public List<ModificationsSearchResultByNode> searchModifications(@NonNull UUID rootNetworkUuid, @NonNull String userInput) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         List<ModificationsSearchResultByGroup> modificationsByGroup = networkModificationService.searchModifications(networkUuid, userInput);
-
-        return modificationsByGroup.stream()
-                .map(modificationGroup -> {
-                    AbstractNodeInfoEntity networkModificationNodeInfoEntity = networkModificationNodeInfoRepository.findByModificationGroupUuid(modificationGroup.groupUuid());
-                    return new ModificationsSearchResultByNode(BasicNodeInfos.builder().nodeUuid(networkModificationNodeInfoEntity.getId()).name(networkModificationNodeInfoEntity.getName()).build(), modificationGroup.modifications());
-                })
-                .toList();
+        return networkModificationTreeService.getNetworkModificationsAndNodeInfos(modificationsByGroup);
     }
 
     private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {

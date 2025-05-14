@@ -35,10 +35,7 @@ import okhttp3.HttpUrl;
 import okio.Buffer;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
-import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
-import org.gridsuite.study.server.dto.modification.ModificationInfos;
-import org.gridsuite.study.server.dto.modification.ModificationType;
-import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
+import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -287,6 +284,9 @@ class StudyTest {
 
     @Autowired
     private StudyConfigService studyConfigService;
+
+    @Autowired
+    private RootNetworkService rootNetworkService;
 
     @MockBean
     private EquipmentInfosService equipmentInfosService;
@@ -2887,5 +2887,71 @@ class StudyTest {
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         }
+    }
+
+    private void testSearchModifications(final MockWebServer mockWebServer, UUID study1Uuid, UUID rootNetworkUuid) throws Exception { //maissa
+        String userId = "userId";
+        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
+        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
+
+        ModificationsSearchResultByGroup modificationsSearchResultByGroup = new ModificationsSearchResultByGroup(
+                networkModificationTreeService.getModificationGroupUuid(node1.getId()),
+                List.of(ModificationsSearchResult.builder()
+                        .modificationUuid(UUID.randomUUID())
+                        .messageType("TWO_WINDINGS_TRANSFORMER_CREATION")
+                        .messageValues("{\"equipmentId\":\"2wtId\"}")
+                        .type("TWO_WINDINGS_TRANSFORMER_CREATION")
+                        .build())
+        );
+
+        ModificationsSearchResultByNode modificationsSearchResultByNode = new ModificationsSearchResultByNode(
+                BasicNodeInfos.builder().nodeUuid(node1.getId()).name("node").build(),
+                List.of(ModificationsSearchResult.builder()
+                        .modificationUuid(UUID.fromString(MODIFICATION_UUID))
+                        .messageType("TWO_WINDINGS_TRANSFORMER_CREATION")
+                        .messageValues("{\"equipmentId\":\"2wtId\"}")
+                        .type("TWO_WINDINGS_TRANSFORMER_CREATION")
+                        .build())
+        );
+
+        String jsonBody = mapper.writeValueAsString(List.of(modificationsSearchResultByGroup));
+        String jsonBodyModificationByNode = mapper.writeValueAsString(List.of(modificationsSearchResultByNode));
+
+        // add modification on node "node1"
+        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+
+        UUID stubPostId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.fromString(MODIFICATION_UUID)), List.of(Optional.empty()))));
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), rootNetworkUuid)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createTwoWindingsTransformerAttributes)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
+        checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
+        checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
+        checkElementUpdatedMessageSent(study1Uuid, userId);
+        Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkUuid, node1.getId(), NETWORK_UUID)));
+        wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+
+        UUID stubUuid = wireMockUtils.stubSearchModifications(rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B", jsonBody);
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/modifications/indexation-infos?userInput=B",
+                        study1Uuid, rootNetworkUuid))
+                .andExpect(status().isOk())
+                .andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        wireMockUtils.verifySearchModifications(stubUuid, rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B");
+        //assertEquals(jsonBody, resultAsString);
+    }
+
+    @Test
+    void testSearchModifications(final MockWebServer mockWebServer) throws Exception {
+        UUID study1Uuid = createStudy(mockWebServer, "userId", CASE_UUID);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
+        StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
+        studyRepository.save(studyEntity);
+        testSearchModifications(mockWebServer, study1Uuid, firstRootNetworkUuid);
     }
 }
