@@ -16,14 +16,12 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
+import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByGroup;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.util.Pair;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -51,6 +49,8 @@ public class NetworkModificationService {
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String QUERY_PARAM_ACTION = "action";
+    private static final String PARAM_USER_INPUT = "userInput";
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final RootNetworkService rootNetworkService;
@@ -399,5 +399,15 @@ public class NetworkModificationService {
             .toUriString();
 
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, null, Void.class);
+    }
+
+    public List<ModificationsSearchResultByGroup> searchModifications(UUID networkUuid, String userInput) {
+        String path = UriComponentsBuilder
+                .fromPath(NETWORK_MODIFICATIONS_PATH + "/indexation-infos")
+                .queryParam("networkUuid", networkUuid)
+                .queryParam(PARAM_USER_INPUT, userInput)
+                .toUriString();
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<ModificationsSearchResultByGroup>>() {
+        }).getBody();
     }
 }
