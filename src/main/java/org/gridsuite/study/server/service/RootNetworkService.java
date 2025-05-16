@@ -21,6 +21,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntit
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +37,8 @@ import static org.gridsuite.study.server.StudyException.Type.*;
  */
 @Service
 public class RootNetworkService {
-    private static final int MAXIMUM_ROOT_NETWORK_BY_STUDY = 3;
+
+    // NOTE: tag is varchar(4) in the database
     private static final int MAXIMUM_TAG_LENGTH = 4;
 
     private final RootNetworkRepository rootNetworkRepository;
@@ -49,6 +51,9 @@ public class RootNetworkService {
     private final StudyServerExecutionService studyServerExecutionService;
     private final EquipmentInfosService equipmentInfosService;
     private final NetworkStoreService networkStoreService;
+
+    @Value("${study.max-root-network-by-study}")
+    private int maximumRootNetworkByStudy = 3;
 
     public RootNetworkService(RootNetworkRepository rootNetworkRepository,
                               RootNetworkRequestRepository rootNetworkRequestRepository,
@@ -300,7 +305,7 @@ public class RootNetworkService {
     }
 
     private void assertMaximumByStudyIsNotReached(UUID studyUuid) {
-        if (rootNetworkRepository.countAllByStudyId(studyUuid) + rootNetworkRequestRepository.countAllByStudyUuid(studyUuid) >= MAXIMUM_ROOT_NETWORK_BY_STUDY) {
+        if (rootNetworkRepository.countAllByStudyId(studyUuid) + rootNetworkRequestRepository.countAllByStudyUuid(studyUuid) >= maximumRootNetworkByStudy) {
             throw new StudyException(MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED);
         }
     }
