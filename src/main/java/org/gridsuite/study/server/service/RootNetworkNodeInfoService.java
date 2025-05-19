@@ -405,6 +405,10 @@ public class RootNetworkNodeInfoService {
             .toList();
     }
 
+    public List<RootNetworkNodeInfoEntity> getAllByStudyUuidWithLoadflowResultsNotNull(UUID studyUuid) {
+        return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyIdAndLoadFlowResultUuidNotNull(studyUuid);
+    }
+
     public void assertNoRootNetworkNodeIsBuilding(UUID studyUuid) {
         if (rootNetworkNodeInfoRepository.existsByStudyUuidAndBuildStatus(studyUuid, BuildStatus.BUILDING)) {
             throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
@@ -653,7 +657,7 @@ public class RootNetworkNodeInfoService {
      * GET COMPUTATION STATUS *
      **************************/
     @Transactional(readOnly = true)
-    public String getLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public LoadFlowStatus getLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         return loadFlowService.getLoadFlowStatus(resultUuid);
     }
