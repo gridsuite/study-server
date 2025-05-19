@@ -14,11 +14,11 @@ import lombok.NonNull;
 import org.apache.poi.util.StringUtil;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.Report;
-import org.gridsuite.study.server.dto.ReportLog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -97,8 +97,15 @@ public class ReportService {
         }
     }
 
-    public List<ReportLog> getReportLogs(@NonNull UUID id, String messageFilter, Set<String> severityLevels) {
+    public String getReportLogs(@NonNull UUID id, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}/logs");
+        if (paged) {
+            uriBuilder.path(DELIMITER + "paged");
+            if (pageable != null) {
+                uriBuilder.queryParam("page", pageable.getPageNumber());
+                uriBuilder.queryParam("size", pageable.getPageSize());
+            }
+        }
         if (severityLevels != null && !severityLevels.isEmpty()) {
             uriBuilder.queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
         }
@@ -108,8 +115,7 @@ public class ReportService {
         var path = uriBuilder.buildAndExpand(id).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReportLog>>() {
-        }).getBody();
+        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
     }
 
     public UUID duplicateReport(@NonNull UUID id) {
@@ -142,6 +148,39 @@ public class ReportService {
             restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.PUT, new HttpEntity<>(objectMapper.writeValueAsString(reportNode), headers), ReportNode.class);
         } catch (JsonProcessingException error) {
             throw new PowsyblException("error creating report", error);
+        }
+    }
+
+    public String getPagedReportLogsFromMultipleReports(List<UUID> reportIds, String messageFilter, Set<String> severityLevels, Pageable pageable) {
+        try {
+            var uriBuilder = UriComponentsBuilder.fromPath("logs");
+
+            uriBuilder.path(DELIMITER + "paged");
+            reportIds.forEach(reportId -> uriBuilder.queryParam("reportIds", reportId));
+            if (pageable != null) {
+                uriBuilder.queryParam("page", pageable.getPageNumber());
+                uriBuilder.queryParam("size", pageable.getPageSize());
+            }
+            if (severityLevels != null && !severityLevels.isEmpty()) {
+                uriBuilder.queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+            }
+            if (!StringUtil.isBlank(messageFilter)) {
+                uriBuilder.queryParam(QUERY_PARAM_MESSAGE_FILTER, URLEncoder.encode(messageFilter, StandardCharsets.UTF_8));
+            }
+
+            var path = uriBuilder.buildAndExpand().toUriString();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            return restTemplate.exchange(
+                this.getReportsServerURI() + path,
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class
+            ).getBody();
+        } catch (Exception e) {
+            LOGGER.error("Error fetching report logs: {}", e.getMessage(), e);
+            return "";
         }
     }
 }

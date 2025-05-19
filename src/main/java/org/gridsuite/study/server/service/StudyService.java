@@ -56,6 +56,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.Nullable;
@@ -2174,8 +2175,8 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReportLog> getReportLogs(String reportId, String messageFilter, Set<String> severityLevels) {
-        return reportService.getReportLogs(UUID.fromString(reportId), messageFilter, severityLevels);
+    public String getReportLogs(String reportId, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
+        return reportService.getReportLogs(UUID.fromString(reportId), messageFilter, severityLevels, paged, pageable);
     }
 
     public Set<String> getNodeReportAggregatedSeverities(UUID reportId) {
@@ -2196,16 +2197,29 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReportLog> getParentNodesReportLogs(UUID nodeUuid, UUID rootNetworkUuid, String messageFilter, Set<String> severityLevels) {
+    public List<String> getParentNodesReportLogs(UUID nodeUuid, UUID rootNetworkUuid, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
         List<UUID> nodeIds = nodesTree(nodeUuid);
-        List<ReportLog> reportLogs = new ArrayList<>();
+        List<String> reportLogs = new ArrayList<>();
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         for (UUID nodeId : nodeIds) {
             UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
-            reportLogs.addAll(reportService.getReportLogs(reportId, messageFilter, severityLevels));
+            reportLogs.add(reportService.getReportLogs(reportId, messageFilter, severityLevels, paged, pageable));
         }
         return reportLogs;
+    }
+
+    @Transactional(readOnly = true)
+    public String getParentNodesReportLogsPage(UUID nodeUuid, UUID rootNetworkUuid, String messageFilter, Set<String> severityLevels, Pageable pageable) {
+        List<UUID> nodeIds = nodesTree(nodeUuid);
+        Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
+        
+        List<UUID> reportIds = nodeIds.stream()
+            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+        
+        return reportService.getPagedReportLogsFromMultipleReports(reportIds, messageFilter, severityLevels, pageable);
     }
 
     @Transactional(readOnly = true)
