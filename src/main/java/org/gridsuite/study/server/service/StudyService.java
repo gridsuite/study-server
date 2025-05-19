@@ -1315,8 +1315,6 @@ public class StudyService {
         });
     }
 
-
-
     public void invalidateVoltageInitStatusOnAllNodes(UUID studyUuid) {
         voltageInitService.invalidateVoltageInitStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, VOLTAGE_INITIALIZATION));
     }
