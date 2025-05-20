@@ -14,7 +14,6 @@ import org.gridsuite.modification.dto.ModificationInfos;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationInfosWithActivationStatus;
-import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByGroup;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
@@ -99,17 +98,17 @@ public class NetworkModificationTreeService {
         return newNode;
     }
 
-    public List<ModificationsSearchResultByNode> getNetworkModificationsAndNodeInfos(List<ModificationsSearchResultByGroup> modificationsByGroup) {
-        return modificationsByGroup.stream()
+    public List<ModificationsSearchResultByNode> getNetworkModificationsAndNodeInfos(Map<UUID, Object> modificationsByGroup) {
+        return modificationsByGroup.entrySet().stream()
                 .map(modificationGroup -> {
-                    AbstractNodeInfoEntity nodeInfo = networkModificationNodeInfoRepository.findByModificationGroupUuid(modificationGroup.groupUuid());
+                    AbstractNodeInfoEntity nodeInfo = networkModificationNodeInfoRepository.findByModificationGroupUuid(modificationGroup.getKey());
                     return Optional.ofNullable(nodeInfo)
                             .map(info -> new ModificationsSearchResultByNode(
                                     BasicNodeInfos.builder()
                                             .nodeUuid(info.getId())
                                             .name(info.getName())
                                             .build(),
-                                    modificationGroup.modifications()
+                                    modificationGroup.getValue()
                             ))
                             .orElse(null);
                 })
