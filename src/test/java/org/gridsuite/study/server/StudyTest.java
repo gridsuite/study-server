@@ -2905,34 +2905,7 @@ class StudyTest {
                         .build())
         );
 
-        ModificationsSearchResultByNode modificationsSearchResultByNode = new ModificationsSearchResultByNode(
-                BasicNodeInfos.builder().nodeUuid(node1.getId()).name("node").build(),
-                List.of(ModificationsSearchResult.builder()
-                        .modificationUuid(UUID.fromString(MODIFICATION_UUID))
-                        .messageType("TWO_WINDINGS_TRANSFORMER_CREATION")
-                        .messageValues("{\"equipmentId\":\"2wtId\"}")
-                        .type("TWO_WINDINGS_TRANSFORMER_CREATION")
-                        .build())
-        );
-
         String jsonBody = mapper.writeValueAsString(List.of(modificationsSearchResultByGroup));
-
-        // add modification on node "node1"
-        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
-
-        UUID stubPostId = wireMockUtils.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.fromString(MODIFICATION_UUID)), List.of(Optional.empty()))));
-        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), rootNetworkUuid)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(createTwoWindingsTransformerAttributes)
-                        .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isOk());
-
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
-        checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
-        checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
-        checkElementUpdatedMessageSent(study1Uuid, userId);
-        Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkUuid, node1.getId(), NETWORK_UUID)));
-        wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
         UUID stubUuid = wireMockUtils.stubSearchModifications(rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B", jsonBody);
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/modifications/indexation-infos?userInput=B",
