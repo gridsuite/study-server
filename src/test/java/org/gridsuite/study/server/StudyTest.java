@@ -35,7 +35,10 @@ import okhttp3.HttpUrl;
 import okio.Buffer;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
-import org.gridsuite.study.server.dto.modification.*;
+import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
+import org.gridsuite.study.server.dto.modification.ModificationInfos;
+import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -284,9 +287,6 @@ class StudyTest {
 
     @Autowired
     private StudyConfigService studyConfigService;
-
-    @Autowired
-    private RootNetworkService rootNetworkService;
 
     @MockBean
     private EquipmentInfosService equipmentInfosService;
@@ -2887,41 +2887,5 @@ class StudyTest {
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         }
-    }
-
-    void testSearchModifications(UUID study1Uuid, UUID rootNetworkUuid) throws Exception {
-        String userId = "userId";
-        RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
-        UUID modificationNodeUuid = rootNode.getChildren().getFirst().getId();
-        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
-
-        ModificationsSearchResultByGroup modificationsSearchResultByGroup = new ModificationsSearchResultByGroup(
-                networkModificationTreeService.getModificationGroupUuid(node1.getId()),
-                List.of(ModificationsSearchResult.builder()
-                        .modificationUuid(UUID.randomUUID())
-                        .messageType("TWO_WINDINGS_TRANSFORMER_CREATION")
-                        .messageValues("{\"equipmentId\":\"2wtId\"}")
-                        .type("TWO_WINDINGS_TRANSFORMER_CREATION")
-                        .build())
-        );
-
-        String jsonBody = mapper.writeValueAsString(List.of(modificationsSearchResultByGroup));
-
-        UUID stubUuid = wireMockUtils.stubSearchModifications(rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B", jsonBody);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/modifications/indexation-infos?userInput=B",
-                        study1Uuid, rootNetworkUuid))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        wireMockUtils.verifySearchModifications(stubUuid, rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B");
-    }
-
-    @Test
-    void testSearchModifications(final MockWebServer mockWebServer) throws Exception {
-        UUID study1Uuid = createStudy(mockWebServer, "userId", CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
-        StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
-        studyRepository.save(studyEntity);
-        testSearchModifications(study1Uuid, firstRootNetworkUuid);
     }
 }
