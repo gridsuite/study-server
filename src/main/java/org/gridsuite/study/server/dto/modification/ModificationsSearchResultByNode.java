@@ -8,10 +8,8 @@ package org.gridsuite.study.server.dto.modification;
 
 import org.gridsuite.study.server.dto.BasicNodeInfos;
 
-import java.util.List;
-
 /**
  * @author Souissi Maissa <souissi.maissa at rte-france.com>
  */
-public record ModificationsSearchResultByNode(BasicNodeInfos nodeInfos, List<ModificationsSearchResult> modifications) {
+public record ModificationsSearchResultByNode(BasicNodeInfos nodeInfos, Object modifications) {
 }
