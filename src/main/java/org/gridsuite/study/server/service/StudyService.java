@@ -2175,11 +2175,15 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public String getReportLogs(String reportId, String messageFilter, Set<String> severityLevels, @Nullable Pageable pageable) {
-        if (pageable == null) {
-            return reportService.getReportLogs(UUID.fromString(reportId), messageFilter, severityLevels).toString();
-        } else {
+    public String getReportLogs(String reportId, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
+        if (paged) {
             return reportService.getPagedReportLogs(UUID.fromString(reportId), messageFilter, severityLevels, pageable);
+        } else {
+            try {
+                return objectMapper.writeValueAsString(reportService.getReportLogs(UUID.fromString(reportId), messageFilter, severityLevels));
+            } catch (JsonProcessingException e) {
+                throw new UncheckedIOException(e);
+            }
         }
     }
 

@@ -1178,10 +1178,11 @@ public class StudyController {
                                                              @Parameter(description = "reportId") @PathVariable("reportId") String reportId,
                                                              @Parameter(description = "The message filter") @RequestParam(name = "message", required = false) String messageFilter,
                                                              @Parameter(description = "Severity levels filter") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels,
+                                                             @Parameter(description = "Whether we want paged logs") @RequestParam(name = "paged", required = false, defaultValue = "false") boolean paged,
                                                              Pageable pageable) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(reportId, messageFilter, severityLevels, pageable));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(reportId, messageFilter, severityLevels, paged, pageable));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/logs/search-term-matches", produces = MediaType.APPLICATION_JSON_VALUE)
