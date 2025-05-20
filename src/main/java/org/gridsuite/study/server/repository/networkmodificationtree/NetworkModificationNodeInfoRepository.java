@@ -19,5 +19,5 @@ import java.util.UUID;
 public interface NetworkModificationNodeInfoRepository extends NodeInfoRepository<NetworkModificationNodeInfoEntity> {
     List<AbstractNodeInfoEntity> findAllByNodeStudyIdAndName(UUID studyUuid, String name);
 
-    AbstractNodeInfoEntity findByModificationGroupUuid(UUID modificationGroupUuid);
+    List<NetworkModificationNodeInfoEntity> findByModificationGroupUuidIn(List<UUID> modificationGroupUuid);
 }

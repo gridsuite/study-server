@@ -2889,10 +2889,10 @@ class StudyTest {
         }
     }
 
-    private void testSearchModifications(UUID study1Uuid, UUID rootNetworkUuid) throws Exception { //maissa
+    void testSearchModifications(UUID study1Uuid, UUID rootNetworkUuid) throws Exception {
         String userId = "userId";
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
-        UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        UUID modificationNodeUuid = rootNode.getChildren().getFirst().getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
 
         ModificationsSearchResultByGroup modificationsSearchResultByGroup = new ModificationsSearchResultByGroup(

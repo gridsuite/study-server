@@ -99,20 +99,32 @@ public class NetworkModificationTreeService {
         return newNode;
     }
 
-    public List<ModificationsSearchResultByNode> getNetworkModificationsAndNodeInfos(List<ModificationsSearchResultByGroup> modificationsByGroup) {
-        return modificationsByGroup.stream()
-                .map(modificationGroup -> {
-                    AbstractNodeInfoEntity nodeInfo = networkModificationNodeInfoRepository.findByModificationGroupUuid(modificationGroup.groupUuid());
-                    return Optional.ofNullable(nodeInfo)
-                            .map(info -> new ModificationsSearchResultByNode(
-                                    BasicNodeInfos.builder()
-                                            .nodeUuid(info.getId())
-                                            .name(info.getName())
-                                            .build(),
-                                    modificationGroup.modifications()
-                            ))
-                            .orElse(null);
+    private ModificationsSearchResultByNode mapToSearchResultByNode(
+            NetworkModificationNodeInfoEntity nodeInfo,
+            Map<UUID, ModificationsSearchResultByGroup> modificationsByGroupMap) {
+
+        return Optional.ofNullable(modificationsByGroupMap.get(nodeInfo.getModificationGroupUuid()))
+                .map(group -> {
+                    BasicNodeInfos basicNodeInfos = BasicNodeInfos.builder()
+                            .nodeUuid(nodeInfo.getId())
+                            .name(nodeInfo.getName())
+                            .build();
+                    return new ModificationsSearchResultByNode(basicNodeInfos, group.modifications());
                 })
+                .orElse(null);
+    }
+
+    public List<ModificationsSearchResultByNode> getNetworkModificationsByNodeInfos(List<ModificationsSearchResultByGroup> modificationsByGroup) {
+
+        Map<UUID, ModificationsSearchResultByGroup> modificationsByGroupMap = modificationsByGroup.stream()
+                .collect(Collectors.toMap(ModificationsSearchResultByGroup::groupUuid, Function.identity()));
+
+        List<UUID> groupUuids = new ArrayList<>(modificationsByGroupMap.keySet());
+
+        List<NetworkModificationNodeInfoEntity> nodeInfos = networkModificationNodeInfoRepository.findByModificationGroupUuidIn(groupUuids);
+
+        return nodeInfos.stream()
+                .map(nodeInfo -> mapToSearchResultByNode(nodeInfo, modificationsByGroupMap))
                 .filter(Objects::nonNull)
                 .toList();
     }

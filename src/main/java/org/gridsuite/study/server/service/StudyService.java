@@ -492,7 +492,7 @@ public class StudyService {
     public List<ModificationsSearchResultByNode> searchModifications(@NonNull UUID rootNetworkUuid, @NonNull String userInput) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         List<ModificationsSearchResultByGroup> modificationsByGroup = networkModificationService.searchModifications(networkUuid, userInput);
-        return networkModificationTreeService.getNetworkModificationsAndNodeInfos(modificationsByGroup);
+        return networkModificationTreeService.getNetworkModificationsByNodeInfos(modificationsByGroup);
     }
 
     private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
