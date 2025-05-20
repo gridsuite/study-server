@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.SupervisionService;
 
@@ -47,6 +48,13 @@ public class SupervisionController {
         this.studyService = studyService;
         this.equipmentInfosService = equipmentInfosService;
         this.restClient = restClient;
+    }
+
+    @GetMapping(value = "/studies")
+    @Operation(summary = "Get all studies")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of studies")})
+    public ResponseEntity<List<SupervisionStudyInfos>> getStudyList() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getStudies());
     }
 
     @DeleteMapping(value = "/computation/results")

@@ -13,9 +13,13 @@ import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
+import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -48,6 +52,8 @@ public class SupervisionService {
     private static final String DELETION_LOG_MESSAGE = "{} results deletion for all studies : {} seconds";
 
     private final StudyService studyService;
+
+    private final StudyRepository studyRepository;
 
     private final NetworkModificationTreeService networkModificationTreeService;
 
@@ -95,7 +101,10 @@ public class SupervisionService {
                               EquipmentInfosService equipmentInfosService,
                               StateEstimationService stateEstimationService,
                               ElasticsearchOperations elasticsearchOperations,
-                              StudyInfosService studyInfosService, RootNetworkService rootNetworkService) {
+                              StudyInfosService studyInfosService,
+                              RootNetworkService rootNetworkService,
+                              StudyRepository studyRepository
+                              ) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
@@ -113,6 +122,7 @@ public class SupervisionService {
         this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
+        this.studyRepository = studyRepository;
     }
 
     @Transactional
@@ -137,6 +147,21 @@ public class SupervisionService {
                 dryRun ? stateEstimationService.getStateEstimationResultsCount() : deleteStateEstimationResults();
             default -> throw new StudyException(ELEMENT_NOT_FOUND);
         };
+    }
+
+    @Transactional(readOnly = true)
+    public List<SupervisionStudyInfos> getStudies() {
+        return studyRepository.findAll().stream()
+                .map(SupervisionService::toSupervisionStudyInfosDto)
+                .toList();
+    }
+
+    private static SupervisionStudyInfos toSupervisionStudyInfosDto(StudyEntity entity) {
+        return SupervisionStudyInfos.builder()
+                .id(entity.getId())
+                .caseFormats(entity.getRootNetworks().stream().map(RootNetworkEntity::getCaseFormat).toList())
+                .rootNetworkUuids(entity.getRootNetworks().stream().map(RootNetworkEntity::getNetworkUuid).toList())
+                .build();
     }
 
     public long getStudyIndexedEquipmentsCount(UUID networkUUID) {
