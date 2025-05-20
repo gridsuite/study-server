@@ -56,6 +56,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.Nullable;
@@ -2174,8 +2175,17 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<ReportLog> getReportLogs(String reportId, String messageFilter, Set<String> severityLevels) {
-        return reportService.getReportLogs(UUID.fromString(reportId), messageFilter, severityLevels);
+    public String getReportLogs(String reportId, String messageFilter, Set<String> severityLevels, @Nullable Pageable pageable) {
+        if (pageable == null) {
+            return reportService.getReportLogs(UUID.fromString(reportId), messageFilter, severityLevels).toString();
+        } else {
+            return reportService.getPagedReportLogs(UUID.fromString(reportId), messageFilter, severityLevels, pageable);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public String getSearchTermMatchesInFilteredLogs(UUID reportId, Set<String> severityLevels, String messageFilter, String searchTerm, int pageSize) {
+        return reportService.getSearchTermMatchesInFilteredLogs(reportId, severityLevels, messageFilter, searchTerm, pageSize);
     }
 
     public Set<String> getNodeReportAggregatedSeverities(UUID reportId) {
