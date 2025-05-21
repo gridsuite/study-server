@@ -2174,7 +2174,6 @@ public class StudyService {
         }
     }
 
-    @Transactional(readOnly = true)
     public String getReportLogs(String reportId, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
         if (paged) {
             return reportService.getPagedReportLogs(UUID.fromString(reportId), messageFilter, severityLevels, pageable);
@@ -2187,7 +2186,6 @@ public class StudyService {
         }
     }
 
-    @Transactional(readOnly = true)
     public String getSearchTermMatchesInFilteredLogs(UUID reportId, Set<String> severityLevels, String messageFilter, String searchTerm, int pageSize) {
         return reportService.getSearchTermMatchesInFilteredLogs(reportId, severityLevels, messageFilter, searchTerm, pageSize);
     }
