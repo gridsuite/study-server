@@ -16,7 +16,6 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
-import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByGroup;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -401,13 +400,17 @@ public class NetworkModificationService {
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, null, Void.class);
     }
 
-    public List<ModificationsSearchResultByGroup> searchModifications(UUID networkUuid, String userInput) {
+    public Map<UUID, Object> searchModifications(UUID networkUuid, String userInput) {
         String path = UriComponentsBuilder
                 .fromPath(NETWORK_MODIFICATIONS_PATH + "/indexation-infos")
                 .queryParam("networkUuid", networkUuid)
                 .queryParam(PARAM_USER_INPUT, userInput)
                 .toUriString();
-        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<ModificationsSearchResultByGroup>>() {
-        }).getBody();
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<UUID, Object>>() {
+                }).getBody();
     }
 }

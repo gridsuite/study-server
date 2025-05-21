@@ -9,8 +9,6 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import org.gridsuite.study.server.dto.modification.ModificationsSearchResult;
-import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByGroup;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -32,7 +30,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
@@ -121,17 +121,10 @@ class ModificationSearchTest {
     void testSearchModifications() throws Exception {
         UUID rootNetworkUuid = rootNetworkEntity.getId();
 
-        ModificationsSearchResultByGroup modificationsSearchResultByGroup = new ModificationsSearchResultByGroup(
-                networkModificationTreeService.getModificationGroupUuid(node1.getId()),
-                List.of(ModificationsSearchResult.builder()
-                        .modificationUuid(UUID.randomUUID())
-                        .messageType("TWO_WINDINGS_TRANSFORMER_CREATION")
-                        .messageValues("{\"equipmentId\":\"2wtId\"}")
-                        .type("TWO_WINDINGS_TRANSFORMER_CREATION")
-                        .build())
-        );
+        Map<UUID, Object> modificationsSearchResultByGroup = new HashMap<>();
+        modificationsSearchResultByGroup.put(networkModificationTreeService.getModificationGroupUuid(node1.getId()), List.of());
 
-        String jsonBody = mapper.writeValueAsString(List.of(modificationsSearchResultByGroup));
+        String jsonBody = mapper.writeValueAsString(modificationsSearchResultByGroup);
 
         UUID stubUuid = wireMockUtils.stubSearchModifications(rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B", jsonBody);
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/modifications/indexation-infos?userInput=B",

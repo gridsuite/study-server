@@ -6,12 +6,10 @@
  */
 package org.gridsuite.study.server.dto.modification;
 
-import org.gridsuite.study.server.dto.BasicNodeInfos;
-
-import java.util.List;
+import java.util.UUID;
 
 /**
  * @author Souissi Maissa <souissi.maissa at rte-france.com>
  */
-public record ModificationsSearchResultByNode(BasicNodeInfos nodeInfos, List<ModificationsSearchResult> modifications) {
+public record ModificationsSearchResultByNode(UUID nodeUuid, Object modifications) {
 }
