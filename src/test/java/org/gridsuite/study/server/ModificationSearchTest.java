@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.HashMap;
 import java.util.List;
@@ -37,6 +38,7 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -127,10 +129,13 @@ class ModificationSearchTest {
         String jsonBody = mapper.writeValueAsString(modificationsSearchResultByGroup);
 
         UUID stubUuid = wireMockUtils.stubSearchModifications(rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B", jsonBody);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/modifications/indexation-infos?userInput=B",
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/modifications/indexation-infos?userInput=B",
                         studyEntity.getId(), rootNetworkUuid))
                 .andExpect(status().isOk())
                 .andReturn();
+
+        String responseContent = mvcResult.getResponse().getContentAsString();
+        assertTrue(responseContent.contains(node1.getId().toString()));
 
         wireMockUtils.verifySearchModifications(stubUuid, rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B");
     }
