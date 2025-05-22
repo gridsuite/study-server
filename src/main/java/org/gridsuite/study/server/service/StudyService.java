@@ -2174,16 +2174,8 @@ public class StudyService {
         }
     }
 
-    public String getReportLogs(String reportId, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
-        if (paged) {
-            return reportService.getPagedReportLogs(UUID.fromString(reportId), messageFilter, severityLevels, pageable);
-        } else {
-            try {
-                return objectMapper.writeValueAsString(reportService.getReportLogs(UUID.fromString(reportId), messageFilter, severityLevels));
-            } catch (JsonProcessingException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
+    public ReportPage getReportLogs(String reportId, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
+        return reportService.getPagedReportLogs(UUID.fromString(reportId), messageFilter, severityLevels, paged, pageable);
     }
 
     public String getSearchTermMatchesInFilteredLogs(UUID reportId, Set<String> severityLevels, String messageFilter, String searchTerm, int pageSize) {
@@ -2215,7 +2207,7 @@ public class StudyService {
 
         for (UUID nodeId : nodeIds) {
             UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
-            reportLogs.addAll(reportService.getReportLogs(reportId, messageFilter, severityLevels));
+            reportLogs.addAll(reportService.getPagedReportLogs(reportId, messageFilter, severityLevels, false, null).content());
         }
         return reportLogs;
     }
