@@ -658,6 +658,16 @@ public class RootNetworkNodeInfoService {
      **************************/
     @Transactional(readOnly = true)
     public LoadFlowStatus getLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        return getBasicLoadFlowStatus(nodeUuid, rootNetworkUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isLFDone(UUID nodeUuid, UUID rootNetworkUuid) {
+        LoadFlowStatus loadFlowStatus = getBasicLoadFlowStatus(nodeUuid, rootNetworkUuid);
+        return loadFlowStatus != null && !LoadFlowStatus.NOT_DONE.equals(loadFlowStatus);
+    }
+
+    private LoadFlowStatus getBasicLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         return loadFlowService.getLoadFlowStatus(resultUuid);
     }

@@ -1559,7 +1559,9 @@ public class StudyService {
                 }
             }
             // invalidate all nodeUuid children
-            invalidateNodeTree(studyUuid, nodeUuid, true);
+            getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+                invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), !rootNetworkNodeInfoService.isLFDone(nodeUuid, rootNetworkEntity.getId()));
+            });
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1649,8 +1651,7 @@ public class StudyService {
     public void unbuildStudyNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
         // if loadflow was run on this node, all children node might have been impacted with loadflow modifications
         // we need to invalidate them all
-        LoadFlowStatus loadFlowStatus = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
-        if (loadFlowStatus != null && !LoadFlowStatus.NOT_DONE.equals(loadFlowStatus)) {
+        if (rootNetworkNodeInfoService.isLFDone(nodeUuid, rootNetworkUuid)) {
             invalidateNodeTree(studyUuid, nodeUuid);
         } else {
             invalidateNode(studyUuid, nodeUuid, rootNetworkUuid);
