@@ -402,17 +402,17 @@ public class NetworkModificationService {
     }
 
     public Map<UUID, Object> searchModifications(UUID networkUuid, String userInput) {
-             URI uri = UriComponentsBuilder
-                    .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + "/indexation-infos")
-                    .queryParam("networkUuid", "{networkUuid}")
-                    .queryParam(PARAM_USER_INPUT, "{userInput}")
-                    .build(networkUuid, userInput);
+        URI uri = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + "/indexation-infos")
+                .queryParam("networkUuid", "{networkUuid}")
+                .queryParam(PARAM_USER_INPUT, "{userInput}")
+                .build(networkUuid, userInput);
 
-             return restTemplate
-                    .exchange(uri,   HttpMethod.GET,
-                            null,
-                            new ParameterizedTypeReference<Map<UUID, Object>>() {
-                            }).getBody();
+        return restTemplate
+                .exchange(uri, HttpMethod.GET,
+                        null,
+                        new ParameterizedTypeReference<Map<UUID, Object>>() {
+                        }).getBody();
 
     }
 }
