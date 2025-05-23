@@ -54,9 +54,6 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     List<RootNetworkNodeInfoEntity> findAllByRootNetworkStudyIdAndLoadFlowResultUuidNotNull(UUID studyUuid);
 
-    @EntityGraph(attributePaths = {"rootNetwork"}, type = EntityGraph.EntityGraphType.LOAD)
-    List<RootNetworkNodeInfoEntity> findAllWithRootNetworkByRootNetworkStudyId(UUID studyUuid);
-
     @Query("select count(rnni) > 0 from RootNetworkNodeInfoEntity rnni LEFT JOIN rnni.rootNetwork rn LEFT JOIN rn.study s " +
         "where s.id = :studyUuid and (rnni.nodeBuildStatus.globalBuildStatus = :buildStatus or rnni.nodeBuildStatus.localBuildStatus = :buildStatus)")
     boolean existsByStudyUuidAndBuildStatus(UUID studyUuid, BuildStatus buildStatus);

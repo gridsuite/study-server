@@ -405,7 +405,7 @@ public class RootNetworkNodeInfoService {
             .toList();
     }
 
-    public List<RootNetworkNodeInfoEntity> getAllByStudyUuidWithLoadflowResultsNotNull(UUID studyUuid) {
+    public List<RootNetworkNodeInfoEntity> getAllByStudyUuidWithLoadFlowResultsNotNull(UUID studyUuid) {
         return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyIdAndLoadFlowResultUuidNotNull(studyUuid);
     }
 

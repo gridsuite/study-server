@@ -1285,33 +1285,33 @@ public class StudyService {
         dynamicSecurityAnalysisService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SECURITY_ANALYSIS));
     }
 
-    public void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
+    private void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
         // when invalidating loadflow results for a study, all nodes with loadflow need to be invalidated, as well as their children
-        invalidateNodeTreeWithLoadflowResults(studyUuid);
+        invalidateNodeTreeWithLoadFlowResults(studyUuid);
         loadflowService.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
     }
 
-    private void invalidateNodeTreeWithLoadflowResults(UUID studyUuid) {
-        Map<UUID, List<RootNetworkNodeInfoEntity>> rootNetworkNodeInfosWithLFByRootNetworkMap = rootNetworkNodeInfoService.getAllByStudyUuidWithLoadflowResultsNotNull(studyUuid).stream()
+    private void invalidateNodeTreeWithLoadFlowResults(UUID studyUuid) {
+        Map<UUID, List<RootNetworkNodeInfoEntity>> rootNetworkNodeInfosWithLFByRootNetwork = rootNetworkNodeInfoService.getAllByStudyUuidWithLoadFlowResultsNotNull(studyUuid).stream()
             .collect(Collectors.groupingBy(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getRootNetwork().getId()));
 
-        rootNetworkNodeInfosWithLFByRootNetworkMap.forEach((rootNetworkUuid, rootNetworkNodeInfoEntities) -> {
+        rootNetworkNodeInfosWithLFByRootNetwork.forEach((rootNetworkUuid, rootNetworkNodeInfoEntities) -> {
             // since invalidateNodeTree is costly, optimise node tree invalidation by keeping only least deep parents from the set to invalidate them and all their children
             Set<NodeEntity> nodesToInvalidate = rootNetworkNodeInfoEntities.stream().map(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getNodeInfo().getNode()).collect(Collectors.toSet());
-            Set<NodeEntity> optimisedNodesToInvalidate = new HashSet<>(nodesToInvalidate);
+            Set<NodeEntity> nodeTreesToInvalidate = new HashSet<>(nodesToInvalidate);
 
             nodesToInvalidate.forEach(node -> {
                 NodeEntity currentNode = node.getParentNode();
                 while (currentNode != null) {
                     if (nodesToInvalidate.contains(currentNode)) {
-                        optimisedNodesToInvalidate.remove(node);
+                        nodeTreesToInvalidate.remove(node);
                         break;
                     }
                     currentNode = currentNode.getParentNode();
                 }
             });
 
-            optimisedNodesToInvalidate.forEach(node -> invalidateNodeTree(studyUuid, node.getIdNode(), rootNetworkUuid));
+            nodeTreesToInvalidate.forEach(node -> invalidateNodeTree(studyUuid, node.getIdNode(), rootNetworkUuid));
         });
     }
 
