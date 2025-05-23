@@ -1559,9 +1559,7 @@ public class StudyService {
                 }
             }
             // invalidate all nodeUuid children
-            getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
-                invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), !rootNetworkNodeInfoService.isLFDone(nodeUuid, rootNetworkEntity.getId()));
-            });
+            invalidateNodeTree(studyUuid, nodeUuid, true);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
