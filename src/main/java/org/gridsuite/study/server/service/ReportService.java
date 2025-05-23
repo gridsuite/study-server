@@ -147,7 +147,7 @@ public class ReportService {
         int pageSize
     ) {
         var uriBuilder = UriComponentsBuilder
-                .fromPath("{id}/logs/search-term-matches")
+                .fromPath("{id}/logs/search")
                 .queryParam("searchTerm", searchTerm)
                 .queryParam("pageSize", pageSize);
 

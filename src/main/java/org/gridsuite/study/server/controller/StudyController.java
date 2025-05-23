@@ -1185,7 +1185,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(reportId, messageFilter, severityLevels, paged, pageable));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/logs/search-term-matches", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/logs/search", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get search term matches in node report logs")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The search term matches in the node report logs"),
