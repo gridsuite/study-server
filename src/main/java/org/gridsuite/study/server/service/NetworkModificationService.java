@@ -27,6 +27,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -401,16 +402,17 @@ public class NetworkModificationService {
     }
 
     public Map<UUID, Object> searchModifications(UUID networkUuid, String userInput) {
-        String path = UriComponentsBuilder
-                .fromPath(NETWORK_MODIFICATIONS_PATH + "/indexation-infos")
-                .queryParam("networkUuid", networkUuid)
-                .queryParam(PARAM_USER_INPUT, userInput)
-                .toUriString();
-        return restTemplate.exchange(
-                getNetworkModificationServerURI(false) + path,
-                HttpMethod.GET,
-                null,
-                new ParameterizedTypeReference<Map<UUID, Object>>() {
-                }).getBody();
+             URI uri = UriComponentsBuilder
+                    .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + "/indexation-infos")
+                    .queryParam("networkUuid", "{networkUuid}")
+                    .queryParam(PARAM_USER_INPUT, "{userInput}")
+                    .build(networkUuid, userInput);
+
+             return restTemplate
+                    .exchange(uri,   HttpMethod.GET,
+                            null,
+                            new ParameterizedTypeReference<Map<UUID, Object>>() {
+                            }).getBody();
+
     }
 }
