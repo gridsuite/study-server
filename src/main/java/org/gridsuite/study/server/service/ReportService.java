@@ -14,11 +14,12 @@ import lombok.NonNull;
 import org.apache.poi.util.StringUtil;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.Report;
-import org.gridsuite.study.server.dto.ReportLog;
+import org.gridsuite.study.server.dto.ReportPage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -97,8 +98,15 @@ public class ReportService {
         }
     }
 
-    public List<ReportLog> getReportLogs(@NonNull UUID id, String messageFilter, Set<String> severityLevels) {
+    public ReportPage getPagedReportLogs(@NonNull UUID id, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
         var uriBuilder = UriComponentsBuilder.fromPath("{id}/logs");
+
+        if (paged) {
+            uriBuilder.queryParam("paged", paged);
+            uriBuilder.queryParam("page", pageable.getPageNumber());
+            uriBuilder.queryParam("size", pageable.getPageSize());
+        }
+
         if (severityLevels != null && !severityLevels.isEmpty()) {
             uriBuilder.queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
         }
@@ -108,8 +116,7 @@ public class ReportService {
         var path = uriBuilder.buildAndExpand(id).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReportLog>>() {
-        }).getBody();
+        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<ReportPage>() { }).getBody();
     }
 
     public UUID duplicateReport(@NonNull UUID id) {
@@ -130,6 +137,31 @@ public class ReportService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<Set<String>>() {
         }).getBody();
+    }
+
+    public String getSearchTermMatchesInFilteredLogs(
+        @NonNull UUID reportId,
+        Set<String> severityLevels,
+        String messageFilter,
+        @NonNull String searchTerm,
+        int pageSize
+    ) {
+        var uriBuilder = UriComponentsBuilder
+                .fromPath("{id}/logs/search")
+                .queryParam("searchTerm", searchTerm)
+                .queryParam("pageSize", pageSize);
+
+        if (severityLevels != null && !severityLevels.isEmpty()) {
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+        }
+        if (!StringUtil.isBlank(messageFilter)) {
+            uriBuilder.queryParam(QUERY_PARAM_MESSAGE_FILTER, URLEncoder.encode(messageFilter, StandardCharsets.UTF_8));
+        }
+
+        var path = uriBuilder.buildAndExpand(reportId).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
     }
 
     public void sendReport(UUID reportUuid, ReportNode reportNode) {
