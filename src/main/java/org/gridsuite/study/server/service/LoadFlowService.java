@@ -55,7 +55,7 @@ public class LoadFlowService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, String userId) {
+    public UUID runLoadFlow(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID parametersUuid, boolean withTapChanger, UUID reportUuid, String userId) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
@@ -65,6 +65,7 @@ public class LoadFlowService extends AbstractComputationService {
 
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run-and-save")
+                .queryParam(QUERY_WITH_TAP_CHANGER, withTapChanger)
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
                 .queryParam(QUERY_PARAM_REPORTER_ID, nodeUuid.toString())
