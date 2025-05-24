@@ -56,6 +56,7 @@ public class ConsumerService {
     static final String HEADER_CASE_FORMAT = "caseFormat";
     static final String HEADER_CASE_NAME = "caseName";
     static final String HEADER_ERROR_MESSAGE = "errorMessage";
+    static final String HEADER_DEBUG = "debug";
 
     private final ObjectMapper objectMapper;
 
@@ -574,6 +575,17 @@ public class ConsumerService {
         Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
             .map(UUID::fromString)
             .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                // process debug notification which shares the same result chanel
+                // TODO whether need create a new debug channel
+                var debug = msg.getHeaders().get(HEADER_DEBUG);
+                if (Boolean.TRUE.equals(debug)) {
+                    String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR_MESSAGE);
+                    notificationService.emitStudyDebug(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType, errorMessage);
+                    return;
+                }
+
                 LOGGER.info("{} result '{}' available for node '{}'",
                     computationType.getLabel(),
                     resultUuid,
@@ -582,7 +594,6 @@ public class ConsumerService {
                 // update DB
                 rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
 
-                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notifications
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateResultType());
