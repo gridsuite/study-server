@@ -796,7 +796,7 @@ public class NetworkModificationTreeService {
         changedNodes.add(nodeUuid);
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
         nodesRepository.findById(nodeUuid).ifPresent(nodeEntity -> {
-            fillIndexedNodeInfosToInvalidate(invalidateNodeInfos, nodeUuid, rootNetworkUuid, invalidateOnlyChildrenBuildStatus);
+            invalidateNodeInfos.addGroupUuids(fillIndexedNodeInfosToInvalidate(nodeUuid, rootNetworkUuid, invalidateOnlyChildrenBuildStatus));
             if (rootNetworkService.exists(rootNetworkUuid)) {
                 if (nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION)) {
                     rootNetworkNodeInfoService.invalidateRootNetworkNodeInfoProper(nodeUuid, rootNetworkUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus, changedNodes, deleteVoltageInitResults);
@@ -808,29 +808,29 @@ public class NetworkModificationTreeService {
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().toList(), rootNetworkUuid);
     }
 
-    private void fillIndexedNodeInfosToInvalidate(InvalidateNodeInfos invalidateNodeInfos, UUID nodeUuid, UUID rootNetworkUuid, boolean invalidateOnlyChildrenBuildStatus) {
+    private List<UUID> fillIndexedNodeInfosToInvalidate(UUID nodeUuid, UUID rootNetworkUuid, boolean invalidateOnlyChildrenBuildStatus) {
         // when invalidating node
         // we need to invalidate indexed modifications up to it's last built parent, not included
         boolean isNodeBuilt = self.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt();
         if (!isNodeBuilt && !hasAnyBuiltChildren(getNodeEntity(nodeUuid), rootNetworkUuid)) {
-            return;
+            return Collections.emptyList();
         }
 
         if (isNodeBuilt && invalidateOnlyChildrenBuildStatus) {
-            fillIndexedNodeInfosToInvalidate(nodeUuid, false, invalidateNodeInfos);
+            return fillIndexedNodeInfosToInvalidate(nodeUuid, false);
         } else {
             NodeEntity closestNodeWithParentHavingBuiltDescendent = getSubTreeToInvalidateIndexedModifications(nodeUuid, rootNetworkUuid);
-            fillIndexedNodeInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true, invalidateNodeInfos);
+            return fillIndexedNodeInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true);
         }
     }
 
     @Transactional
     public InvalidateNodeInfos invalidateNode(UUID nodeUuid, UUID rootNetworkUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
+        List<UUID> groupUuidsToInvalidate = fillIndexedNodeInfosToInvalidate(nodeEntity, rootNetworkUuid);
 
         InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, true);
-
-        fillIndexedNodeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos);
+        invalidateNodeInfos.addGroupUuids(groupUuidsToInvalidate);
 
         notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), List.of(nodeUuid), rootNetworkUuid);
 
@@ -845,8 +845,9 @@ public class NetworkModificationTreeService {
 
         // First node
         if (nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION)) {
+            List<UUID> groupUuidsToInvalidate = fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateOnlyChildrenBuildStatus);
             invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, !invalidateOnlyChildrenBuildStatus);
-            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos);
+            invalidateNodeInfos.addGroupUuids(groupUuidsToInvalidate);
         }
 
         invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid));
@@ -877,7 +878,7 @@ public class NetworkModificationTreeService {
         if (!hasAnyBuiltChildren(getNodeEntity(nodeUuid), rootNetworkUuid)) {
             // when invalidating nodes, we need to get last built parent to invalidate all its children modifications in elasticsearch
             NodeEntity closestNodeWithParentHavingBuiltDescendent = getSubTreeToInvalidateIndexedModifications(nodeUuid, rootNetworkUuid);
-            fillIndexedNodeInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true, invalidateNodeInfos);
+            invalidateNodeInfos.addGroupUuids(fillIndexedNodeInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true));
         }
 
         notificationService.emitNodeBuildStatusUpdated(studyId, changedNodes.stream().distinct().toList(), rootNetworkUuid);
@@ -932,33 +933,33 @@ public class NetworkModificationTreeService {
         return false;
     }
 
-    private void fillIndexedNodeInfosToInvalidate(NodeEntity nodeEntity, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos) {
+    // returns all group uuids to invalidate
+    private List<UUID> fillIndexedNodeInfosToInvalidate(NodeEntity nodeEntity, UUID rootNetworkUuid) {
         // when manually invalidating a single node, if this node does not have any built children
         // we need to invalidate indexed modifications up to it's last built parent, not included
         if (hasAnyBuiltChildren(nodeEntity, rootNetworkUuid)) {
-            return;
+            return Collections.emptyList();
         }
 
         // when invalidating nodes, we need to get last built parent to invalidate all its children modifications in elasticsearch
         NodeEntity closestNodeWithParentHavingBuiltDescendent = getSubTreeToInvalidateIndexedModifications(nodeEntity.getIdNode(), rootNetworkUuid);
-        fillIndexedNodeInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true, invalidateNodeInfos);
+        return fillIndexedNodeInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true);
     }
 
-    // For subTree
-    private void fillIndexedNodeTreeInfosToInvalidate(NodeEntity nodeEntity, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos) {
+    // For subTree - returns all group uuids to invalidate
+    private List<UUID> fillIndexedNodeTreeInfosToInvalidate(NodeEntity nodeEntity, UUID rootNetworkUuid, boolean invalidateOnlyChildrenBuildStatus) {
         // when invalidating node
         // we need to invalidate indexed modifications up to it's last built parent, not included
         boolean isNodeBuilt = self.getNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
         if (!isNodeBuilt && !hasAnyBuiltChildren(getNodeEntity(nodeEntity.getIdNode()), rootNetworkUuid)) {
-            return;
+            return Collections.emptyList();
         }
 
-        // TODO check invalidateOnlyChildrenBuildStatus
-        if (isNodeBuilt) {
-            fillIndexedNodeInfosToInvalidate(nodeEntity.getIdNode(), false, invalidateNodeInfos);
+        if (isNodeBuilt && invalidateOnlyChildrenBuildStatus) {
+            return fillIndexedNodeInfosToInvalidate(nodeEntity.getIdNode(), false);
         } else {
             NodeEntity closestNodeWithParentHavingBuiltDescendent = getSubTreeToInvalidateIndexedModifications(nodeEntity.getIdNode(), rootNetworkUuid);
-            fillIndexedNodeInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true, invalidateNodeInfos);
+            return fillIndexedNodeInfosToInvalidate(closestNodeWithParentHavingBuiltDescendent.getIdNode(), true);
         }
     }
 
@@ -1109,16 +1110,14 @@ public class NetworkModificationTreeService {
         return nodes.stream().filter(n -> self.getNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
     }
 
-    private void fillIndexedNodeInfosToInvalidate(UUID parentNodeUuid, boolean includeParentNode, InvalidateNodeInfos invalidateNodeInfos) {
+    private List<UUID> fillIndexedNodeInfosToInvalidate(UUID parentNodeUuid, boolean includeParentNode) {
         List<UUID> nodesToInvalidate = new ArrayList<>();
         if (includeParentNode) {
             nodesToInvalidate.add(parentNodeUuid);
         }
         nodesToInvalidate.addAll(getChildren(parentNodeUuid));
-        invalidateNodeInfos.addGroupUuids(
-            networkModificationNodeInfoRepository.findAllById(nodesToInvalidate).stream()
-                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid).toList()
-        );
+        return networkModificationNodeInfoRepository.findAllById(nodesToInvalidate).stream()
+                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid).toList();
     }
 
     @Transactional(readOnly = true)

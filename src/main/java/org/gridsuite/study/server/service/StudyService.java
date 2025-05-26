@@ -1796,13 +1796,13 @@ public class StudyService {
         }
     }
 
+    private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid) {
+        invalidateNodeTree(studyUuid, nodeUuid, false);
+    }
+
     private void invalidateNode(UUID studyUuid, UUID nodeUuid) {
         getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
             invalidateNode(studyUuid, nodeUuid, rootNetworkEntity.getId()));
-    }
-
-    private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid) {
-        invalidateNodeTree(studyUuid, nodeUuid, false);
     }
 
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, boolean invalidateOnlyChildrenBuildStatus) {
