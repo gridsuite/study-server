@@ -39,6 +39,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -839,6 +840,8 @@ public class StudyService {
         UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, networkUuid, variantId, lfParametersUuid, lfReportUuid, userId);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, LOAD_FLOW);
+        // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
+        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, true);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         return result;
     }
@@ -1282,8 +1285,34 @@ public class StudyService {
         dynamicSecurityAnalysisService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SECURITY_ANALYSIS));
     }
 
-    public void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
+    private void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
+        // when invalidating loadflow results for a study, all nodes with loadflow need to be invalidated, as well as their children
+        invalidateNodeTreeWithLoadFlowResults(studyUuid);
         loadflowService.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
+    }
+
+    private void invalidateNodeTreeWithLoadFlowResults(UUID studyUuid) {
+        Map<UUID, List<RootNetworkNodeInfoEntity>> rootNetworkNodeInfosWithLFByRootNetwork = rootNetworkNodeInfoService.getAllByStudyUuidWithLoadFlowResultsNotNull(studyUuid).stream()
+            .collect(Collectors.groupingBy(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getRootNetwork().getId()));
+
+        rootNetworkNodeInfosWithLFByRootNetwork.forEach((rootNetworkUuid, rootNetworkNodeInfoEntities) -> {
+            // since invalidateNodeTree is costly, optimise node tree invalidation by keeping only least deep parents from the set to invalidate them and all their children
+            Set<NodeEntity> nodesToInvalidate = rootNetworkNodeInfoEntities.stream().map(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getNodeInfo().getNode()).collect(Collectors.toSet());
+            Set<NodeEntity> nodeTreesToInvalidate = new HashSet<>(nodesToInvalidate);
+
+            nodesToInvalidate.forEach(node -> {
+                NodeEntity currentNode = node.getParentNode();
+                while (currentNode != null) {
+                    if (nodesToInvalidate.contains(currentNode)) {
+                        nodeTreesToInvalidate.remove(node);
+                        break;
+                    }
+                    currentNode = currentNode.getParentNode();
+                }
+            });
+
+            nodeTreesToInvalidate.forEach(node -> invalidateNodeTree(studyUuid, node.getIdNode(), rootNetworkUuid));
+        });
     }
 
     public void invalidateVoltageInitStatusOnAllNodes(UUID studyUuid) {
@@ -1530,7 +1559,9 @@ public class StudyService {
                 }
             }
             // invalidate all nodeUuid children
-            invalidateNodeTree(studyUuid, nodeUuid, true);
+            getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+                invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), !rootNetworkNodeInfoService.isLFDone(nodeUuid, rootNetworkEntity.getId()))
+            );
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1618,7 +1649,13 @@ public class StudyService {
 
     @Transactional
     public void unbuildStudyNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
-        invalidateNode(studyUuid, nodeUuid, rootNetworkUuid);
+        // if loadflow was run on this node, all children node might have been impacted with loadflow modifications
+        // we need to invalidate them all
+        if (rootNetworkNodeInfoService.isLFDone(nodeUuid, rootNetworkUuid)) {
+            invalidateNodeTree(studyUuid, nodeUuid);
+        } else {
+            invalidateNode(studyUuid, nodeUuid, rootNetworkUuid);
+        }
     }
 
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {
@@ -2602,8 +2639,8 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
         // pre-condition check
-        String lfStatus = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
-        if (!LoadFlowStatus.CONVERGED.name().equals(lfStatus)) {
+        LoadFlowStatus lfStatus = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
+        if (!LoadFlowStatus.CONVERGED.equals(lfStatus)) {
             throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic simulation");
         }
 
@@ -2718,8 +2755,8 @@ public class StudyService {
         Objects.requireNonNull(nodeUuid);
 
         // pre-condition check
-        String lfStatus = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
-        if (!LoadFlowStatus.CONVERGED.name().equals(lfStatus)) {
+        LoadFlowStatus lfStatus = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
+        if (!LoadFlowStatus.CONVERGED.equals(lfStatus)) {
             throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic security analysis");
         }
 
