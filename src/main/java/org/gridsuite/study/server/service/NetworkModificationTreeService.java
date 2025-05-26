@@ -845,8 +845,12 @@ public class NetworkModificationTreeService {
 
         // First node
         if (nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION)) {
+            boolean isNodeBuilt = self.getNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
+            boolean shouldInvalidateIndexedInfos = isNodeBuilt || hasAnyBuiltChildren(getNodeEntity(nodeEntity.getIdNode()), rootNetworkUuid);
             invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, !invalidateOnlyChildrenBuildStatus);
-            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos);
+            if (shouldInvalidateIndexedInfos) {
+                fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
+            }
         }
 
         invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid));
@@ -945,16 +949,10 @@ public class NetworkModificationTreeService {
     }
 
     // For subTree
-    private void fillIndexedNodeTreeInfosToInvalidate(NodeEntity nodeEntity, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos) {
+    private void fillIndexedNodeTreeInfosToInvalidate(NodeEntity nodeEntity, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus) {
         // when invalidating node
         // we need to invalidate indexed modifications up to it's last built parent, not included
-        boolean isNodeBuilt = self.getNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
-        if (!isNodeBuilt && !hasAnyBuiltChildren(getNodeEntity(nodeEntity.getIdNode()), rootNetworkUuid)) {
-            return;
-        }
-
-        // TODO check invalidateOnlyChildrenBuildStatus
-        if (isNodeBuilt) {
+        if (invalidateOnlyChildrenBuildStatus) {
             fillIndexedNodeInfosToInvalidate(nodeEntity.getIdNode(), false, invalidateNodeInfos);
         } else {
             NodeEntity closestNodeWithParentHavingBuiltDescendent = getSubTreeToInvalidateIndexedModifications(nodeEntity.getIdNode(), rootNetworkUuid);
