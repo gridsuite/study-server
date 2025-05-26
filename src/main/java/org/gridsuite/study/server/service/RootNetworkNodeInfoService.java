@@ -405,6 +405,10 @@ public class RootNetworkNodeInfoService {
             .toList();
     }
 
+    public List<RootNetworkNodeInfoEntity> getAllByStudyUuidWithLoadFlowResultsNotNull(UUID studyUuid) {
+        return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyIdAndLoadFlowResultUuidNotNull(studyUuid);
+    }
+
     public void assertNoRootNetworkNodeIsBuilding(UUID studyUuid) {
         if (rootNetworkNodeInfoRepository.existsByStudyUuidAndBuildStatus(studyUuid, BuildStatus.BUILDING)) {
             throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
@@ -653,7 +657,17 @@ public class RootNetworkNodeInfoService {
      * GET COMPUTATION STATUS *
      **************************/
     @Transactional(readOnly = true)
-    public String getLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public LoadFlowStatus getLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        return getBasicLoadFlowStatus(nodeUuid, rootNetworkUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isLFDone(UUID nodeUuid, UUID rootNetworkUuid) {
+        LoadFlowStatus loadFlowStatus = getBasicLoadFlowStatus(nodeUuid, rootNetworkUuid);
+        return loadFlowStatus != null && !LoadFlowStatus.NOT_DONE.equals(loadFlowStatus);
+    }
+
+    private LoadFlowStatus getBasicLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         return loadFlowService.getLoadFlowStatus(resultUuid);
     }
