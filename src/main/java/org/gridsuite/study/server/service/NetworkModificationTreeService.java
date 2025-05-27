@@ -949,10 +949,10 @@ public class NetworkModificationTreeService {
     }
 
     // For subTree
-    private void fillIndexedNodeTreeInfosToInvalidate(NodeEntity nodeEntity, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos, boolean invalidateOnlyChildrenBuildStatus) {
+    private void fillIndexedNodeTreeInfosToInvalidate(NodeEntity nodeEntity, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos, boolean childrenOnly) {
         // when invalidating node
         // we need to invalidate indexed modifications up to it's last built parent, not included
-        if (invalidateOnlyChildrenBuildStatus) {
+        if (childrenOnly) {
             fillIndexedNodeInfosToInvalidate(nodeEntity.getIdNode(), false, invalidateNodeInfos);
         } else {
             NodeEntity closestNodeWithParentHavingBuiltDescendent = getSubTreeToInvalidateIndexedModifications(nodeEntity.getIdNode(), rootNetworkUuid);
