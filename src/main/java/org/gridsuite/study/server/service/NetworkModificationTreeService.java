@@ -854,7 +854,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public InvalidateNodeInfos invalidateNodeTree(UUID nodeUuid, UUID rootNetworkUuid, boolean invalidateOnlyChildrenBuildStatus) {
+    public InvalidateNodeInfos invalidateNodeTree(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
 
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
@@ -863,9 +863,9 @@ public class NetworkModificationTreeService {
         if (nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION)) {
             boolean isNodeBuilt = self.getNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
             boolean shouldInvalidateIndexedInfos = isNodeBuilt || hasAnyBuiltChildren(getNodeEntity(nodeEntity.getIdNode()), rootNetworkUuid);
-            invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, !invalidateOnlyChildrenBuildStatus);
+            invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, !invalidateTreeParameters.isOnlyChildrenBuildStatusMode());
             if (shouldInvalidateIndexedInfos) {
-                fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos, invalidateOnlyChildrenBuildStatus);
+                fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos, invalidateTreeParameters.isOnlyChildrenBuildStatusMode());
             }
         }
 
