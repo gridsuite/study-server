@@ -50,6 +50,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -155,7 +156,7 @@ class StudyTest {
     private static final Report REPORT_TEST = Report.builder().id(REPORT_UUID).message("test").severity(StudyConstants.Severity.WARN).build();
     private static final UUID REPORT_LOG_PARENT_UUID = UUID.randomUUID();
     private static final UUID REPORT_ID = UUID.randomUUID();
-    private static final List<ReportLog> REPORT_LOGS = List.of(new ReportLog("test", StudyConstants.Severity.WARN, REPORT_LOG_PARENT_UUID));
+    private static final List<ReportLog> REPORT_LOGS = List.of(new ReportLog("test", StudyConstants.Severity.WARN, 0, REPORT_LOG_PARENT_UUID));
     private static final String VARIANT_ID = "variant_1";
     private static final String POST = "POST";
     private static final String DELETE = "DELETE";
@@ -2670,7 +2671,7 @@ class StudyTest {
         });
 
         if (wasBuilt) {
-            wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub, 1);
+            wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub, 1 + childCount);
         }
     }
 

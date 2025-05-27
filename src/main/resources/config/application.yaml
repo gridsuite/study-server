@@ -215,3 +215,6 @@ gridsuite:
     -
       name: study-config-server
       base-uri: http://study-config-server/
+
+study:
+  max-root-network-by-study: 3

@@ -13,6 +13,6 @@ import java.util.UUID;
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-public record ReportLog(String message, StudyConstants.Severity severity, UUID parentId) {
+public record ReportLog(String message, StudyConstants.Severity severity, int depth, UUID parentId) {
 
 }
