@@ -773,6 +773,7 @@ class StudyTest {
         String resultAsString;
         String userId = "userId";
 
+        // TODO : copier ce test plus ou moins pour la version supervision
         //empty list
         mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId")).andExpectAll(status().isOk(),
             content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));

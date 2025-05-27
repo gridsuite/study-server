@@ -159,7 +159,6 @@ public class SupervisionService {
     private static SupervisionStudyInfos toSupervisionStudyInfosDto(StudyEntity entity) {
         return SupervisionStudyInfos.builder()
                 .id(entity.getId())
-                .caseFormats(entity.getRootNetworks().stream().map(RootNetworkEntity::getCaseFormat).toList())
                 .rootNetworkUuids(entity.getRootNetworks().stream().map(RootNetworkEntity::getNetworkUuid).toList())
                 .build();
     }

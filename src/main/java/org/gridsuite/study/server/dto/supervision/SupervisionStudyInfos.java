@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.StudyInfos;
 import java.util.List;
 import java.util.UUID;
 
+// more detailed version of StudyInfos for supervision and admin tools operations
 @SuperBuilder
 @NoArgsConstructor
 @Getter
@@ -24,7 +25,5 @@ import java.util.UUID;
 @Schema(description = "Supervision Study attributes")
 @EqualsAndHashCode(callSuper = true)
 public class SupervisionStudyInfos extends StudyInfos {
-    // TODO : structure obsolète à mettre à jour
     private List<UUID> rootNetworkUuids;
-    private List<String> caseFormats;
 }
