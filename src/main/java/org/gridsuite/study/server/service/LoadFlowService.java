@@ -98,14 +98,14 @@ public class LoadFlowService extends AbstractComputationService {
         return restTemplate.getForObject(loadFlowServerBaseUri + path, Integer.class);
     }
 
-    public String getLoadFlowResultOrStatus(UUID resultUuid, String filters, Sort sort, String suffix) {
+    public String getLoadFlowResult(UUID resultUuid, String filters, Sort sort) {
         String result;
 
         if (resultUuid == null) {
             return null;
         }
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}" + suffix);
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}");
         if (!StringUtils.isEmpty(filters)) {
             uriComponentsBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
         }
@@ -125,12 +125,25 @@ public class LoadFlowService extends AbstractComputationService {
         return result;
     }
 
-    public String getLoadFlowResult(UUID resultUuid, String filters, Sort sort) {
-        return getLoadFlowResultOrStatus(resultUuid, filters, sort, "");
-    }
+    public LoadFlowStatus getLoadFlowStatus(UUID resultUuid) {
+        LoadFlowStatus result;
 
-    public String getLoadFlowStatus(UUID resultUuid) {
-        return getLoadFlowResultOrStatus(resultUuid, null, null, "/status");
+        if (resultUuid == null) {
+            return null;
+        }
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/status");
+        String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
+
+        try {
+            result = restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowStatus.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(LOADFLOW_NOT_FOUND);
+            }
+            throw e;
+        }
+        return result;
     }
 
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
@@ -174,8 +187,8 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     public void assertLoadFlowNotRunning(UUID resultUuid) {
-        String scs = getLoadFlowStatus(resultUuid);
-        if (LoadFlowStatus.RUNNING.name().equals(scs)) {
+        LoadFlowStatus loadFlowStatus = getLoadFlowStatus(resultUuid);
+        if (LoadFlowStatus.RUNNING.equals(loadFlowStatus)) {
             throw new StudyException(LOADFLOW_RUNNING);
         }
     }
