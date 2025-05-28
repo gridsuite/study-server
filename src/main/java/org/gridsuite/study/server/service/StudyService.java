@@ -845,9 +845,12 @@ public class StudyService {
         UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, networkUuid, variantId, lfParametersUuid, lfReportUuid, userId);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, LOAD_FLOW);
+
         // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
-        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS);
+        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ONLY_CHILDREN);
+
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+
         return result;
     }
 
