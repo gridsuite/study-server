@@ -668,10 +668,10 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestParam("withTapChanger") boolean withTapChanger,
+            @RequestParam("withRatioTapChangers") boolean withRatioTapChangers,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, withTapChanger, userId);
+        studyService.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -697,8 +697,9 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The loadflow status has not been found")})
     public ResponseEntity<String> getLoadFlowStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                 @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        LoadFlowStatus result = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
+                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                @RequestParam("withRatioTapChangers") boolean withRatioTapChangers) {
+        LoadFlowStatus result = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid, withRatioTapChangers);
         return result != null ? ResponseEntity.ok().body(result.name()) :
                 ResponseEntity.noContent().build();
     }
@@ -709,8 +710,9 @@ public class StudyController {
     public ResponseEntity<Void> stopLoadFlow(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                              @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                             @RequestParam("withRatioTapChangers") boolean withRatioTapChangers,
                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkNodeInfoService.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        rootNetworkNodeInfoService.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
         return ResponseEntity.ok().build();
     }
 

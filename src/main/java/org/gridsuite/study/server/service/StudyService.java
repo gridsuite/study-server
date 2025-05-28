@@ -825,7 +825,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withTapChanger, String userId) {
+    public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         if (prevResultUuid != null) {
@@ -837,7 +837,7 @@ public class StudyService {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
-        UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, networkUuid, variantId, lfParametersUuid, withTapChanger, lfReportUuid, userId);
+        UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, networkUuid, variantId, lfParametersUuid, withRatioTapChangers, lfReportUuid, userId);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, LOAD_FLOW);
         // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
@@ -1560,7 +1560,7 @@ public class StudyService {
             }
             // invalidate all nodeUuid children
             getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
-                invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), !rootNetworkNodeInfoService.isLFDone(nodeUuid, rootNetworkEntity.getId()))
+                invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), !rootNetworkNodeInfoService.isLoadflowDone(nodeUuid, rootNetworkEntity.getId()))
             );
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -1651,7 +1651,7 @@ public class StudyService {
     public void unbuildStudyNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
         // if loadflow was run on this node, all children node might have been impacted with loadflow modifications
         // we need to invalidate them all
-        if (rootNetworkNodeInfoService.isLFDone(nodeUuid, rootNetworkUuid)) {
+        if (rootNetworkNodeInfoService.isLoadflowDone(nodeUuid, rootNetworkUuid)) {
             invalidateNodeTree(studyUuid, nodeUuid);
         } else {
             invalidateNode(studyUuid, nodeUuid, rootNetworkUuid);
@@ -2639,8 +2639,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
         // pre-condition check
-        LoadFlowStatus lfStatus = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
-        if (!LoadFlowStatus.CONVERGED.equals(lfStatus)) {
+        if (!rootNetworkNodeInfoService.isLoadflowConverged(nodeUuid, rootNetworkUuid)) {
             throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic simulation");
         }
 
@@ -2755,8 +2754,7 @@ public class StudyService {
         Objects.requireNonNull(nodeUuid);
 
         // pre-condition check
-        LoadFlowStatus lfStatus = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
-        if (!LoadFlowStatus.CONVERGED.equals(lfStatus)) {
+        if (!rootNetworkNodeInfoService.isLoadflowConverged(nodeUuid, rootNetworkUuid)) {
             throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic security analysis");
         }
 
