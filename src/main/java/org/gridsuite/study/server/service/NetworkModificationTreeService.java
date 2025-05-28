@@ -870,7 +870,7 @@ public class NetworkModificationTreeService {
 
         // Invalidate indexed nodes
         if (shouldInvalidateIndexedInfos) {
-            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos, invalidateTreeParameters.isOnlyChildrenBuildStatusMode());
+            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos, invalidateTreeParameters.isOnlyChildren() || invalidateTreeParameters.isOnlyChildrenBuildStatusMode());
         }
 
         // Children
