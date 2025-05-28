@@ -50,6 +50,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -2703,7 +2704,7 @@ class StudyTest {
         });
 
         if (wasBuilt) {
-            wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub, 1);
+            wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub, 1 + childCount);
         }
     }
 
