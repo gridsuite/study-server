@@ -160,6 +160,7 @@ public class SupervisionService {
         return SupervisionStudyInfos.builder()
                 .id(entity.getId())
                 .rootNetworkUuids(entity.getRootNetworks().stream().map(RootNetworkEntity::getNetworkUuid).toList())
+                .caseUuids(entity.getRootNetworks().stream().map(RootNetworkEntity::getCaseUuid).toList())
                 .build();
     }
 

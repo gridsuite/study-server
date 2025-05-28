@@ -26,4 +26,5 @@ import java.util.UUID;
 @EqualsAndHashCode(callSuper = true)
 public class SupervisionStudyInfos extends StudyInfos {
     private List<UUID> rootNetworkUuids;
+    private List<UUID> caseUuids;
 }
