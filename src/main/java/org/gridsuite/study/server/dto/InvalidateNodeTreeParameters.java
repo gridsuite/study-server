@@ -19,6 +19,7 @@ public record InvalidateNodeTreeParameters(
     ComputationsInvalidationMode computationsInvalidationMode // Only for the first node (root node)
 ) {
     public static InvalidateNodeTreeParameters ALL = new InvalidateNodeTreeParameters(InvalidationMode.ALL, ComputationsInvalidationMode.ALL);
+    public static InvalidateNodeTreeParameters ONLY_CHILDREN = new InvalidateNodeTreeParameters(InvalidationMode.ONLY_CHILDREN, ComputationsInvalidationMode.ALL);
     public static InvalidateNodeTreeParameters ONLY_CHILDREN_BUILD_STATUS = new InvalidateNodeTreeParameters(InvalidationMode.ONLY_CHILDREN_BUILD_STATUS, ComputationsInvalidationMode.ALL);
     public static InvalidateNodeTreeParameters DEFAULT = ALL;
 
