@@ -855,20 +855,25 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public InvalidateNodeInfos invalidateNodeTree(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
-        NodeEntity nodeEntity = getNodeEntity(nodeUuid);
-
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
 
+        // Node status before invalidation
+        NodeEntity nodeEntity = getNodeEntity(nodeUuid);
+        boolean isModificationNode = nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION);
+        boolean isNodeBuilt = self.getNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
+        boolean shouldInvalidateIndexedInfos = isNodeBuilt || hasAnyBuiltChildren(nodeEntity, rootNetworkUuid);
+
         // First node
-        if (nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION)) {
-            boolean isNodeBuilt = self.getNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
-            boolean shouldInvalidateIndexedInfos = isNodeBuilt || hasAnyBuiltChildren(getNodeEntity(nodeEntity.getIdNode()), rootNetworkUuid);
+        if (isModificationNode && !invalidateTreeParameters.isOnlyChildren()) {
             invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, !invalidateTreeParameters.isOnlyChildrenBuildStatusMode());
-            if (shouldInvalidateIndexedInfos) {
-                fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos, invalidateTreeParameters.isOnlyChildrenBuildStatusMode());
-            }
         }
 
+        // Invalidate indexed nodes
+        if (shouldInvalidateIndexedInfos) {
+            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos, invalidateTreeParameters.isOnlyChildrenBuildStatusMode());
+        }
+
+        // Children
         invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid));
 
         if (!invalidateNodeInfos.getNodeUuids().isEmpty()) {
