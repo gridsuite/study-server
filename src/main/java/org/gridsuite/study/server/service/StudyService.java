@@ -2121,7 +2121,7 @@ public class StudyService {
         // - the move is a cut & paste or a position change inside the same node
         // - the move is a cut & paste between 2 nodes and the target node belongs to the source node subtree
         boolean targetNodeBelongsToSourceNodeSubTree = moveBetweenNodes && networkModificationTreeService.hasAncestor(targetNodeUuid, originNodeUuid);
-        boolean buildTargetNode = moveBetweenNodes && !targetNodeBelongsToSourceNodeSubTree;
+        boolean preserveTargetNodeBuildStatus = moveBetweenNodes && !targetNodeBelongsToSourceNodeSubTree;
 
         List<UUID> childrenUuids = networkModificationTreeService.getChildren(targetNodeUuid);
         List<UUID> originNodeChildrenUuids = new ArrayList<>();
@@ -2141,12 +2141,12 @@ public class StudyService {
                 .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
                 .toList();
 
-            NetworkModificationsResult networkModificationsResult = networkModificationService.moveModifications(originGroupUuid, targetGroupUuid, beforeUuid, Pair.of(modificationUuidList, modificationApplicationContexts), buildTargetNode);
+            NetworkModificationsResult networkModificationsResult = networkModificationService.moveModifications(originGroupUuid, targetGroupUuid, beforeUuid, Pair.of(modificationUuidList, modificationApplicationContexts), preserveTargetNodeBuildStatus);
             rootNetworkNodeInfoService.moveModificationsToExclude(originNodeUuid, targetNodeUuid, networkModificationsResult.modificationUuids());
 
             if (!targetNodeBelongsToSourceNodeSubTree) {
                 // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
-                emitNetworkModificationImpactsForAllRootNetworks(networkModificationsResult.modificationResults(), studyEntity, targetNodeUuid, buildTargetNode);
+                emitNetworkModificationImpactsForAllRootNetworks(networkModificationsResult.modificationResults(), studyEntity, targetNodeUuid, preserveTargetNodeBuildStatus);
             }
             if (moveBetweenNodes) {
                 emitNetworkModificationImpactsForAllRootNetworks(networkModificationsResult.modificationResults(), studyEntity, originNodeUuid, false);
@@ -2171,7 +2171,10 @@ public class StudyService {
             index++;
 
         }
-        invalidateNodeTree(studyEntity.getId(), impactedNode, invalidateOnlyChildrenBuildStatus ? InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS : InvalidateNodeTreeParameters.ALL);
+        getStudyRootNetworks(studyEntity.getId()).forEach(rootNetworkEntity -> {
+            boolean isLFDone = rootNetworkNodeInfoService.isLFDone(impactedNode, rootNetworkEntity.getId());
+            invalidateNodeTree(studyEntity.getId(), impactedNode, rootNetworkEntity.getId(), invalidateOnlyChildrenBuildStatus && !isLFDone ? InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS : InvalidateNodeTreeParameters.ALL);
+        });
     }
 
     @Transactional
@@ -2206,7 +2209,10 @@ public class StudyService {
                 }
             }
             // invalidate all nodeUuid children
-            invalidateNodeTree(studyUuid, targetNodeUuid, InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS);
+            getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+                boolean isLFDone = rootNetworkNodeInfoService.isLFDone(targetNodeUuid, rootNetworkEntity.getId());
+                invalidateNodeTree(studyUuid, targetNodeUuid, rootNetworkEntity.getId(), isLFDone ? InvalidateNodeTreeParameters.ALL : InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS);
+            });
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
         }
