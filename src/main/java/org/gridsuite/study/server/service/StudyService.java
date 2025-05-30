@@ -1567,10 +1567,7 @@ public class StudyService {
                 }
             }
             // invalidate all nodeUuid children
-            getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
-                boolean isLFDone = rootNetworkNodeInfoService.isLFDone(nodeUuid, rootNetworkEntity.getId());
-                invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), isLFDone ? InvalidateNodeTreeParameters.ALL : InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS);
-            });
+            invalidateNodeTreeWithLF(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1819,7 +1816,13 @@ public class StudyService {
             invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), invalidateTreeParameters));
     }
 
-    // Invalidate the node and its children
+    private void invalidateNodeTreeWithLF(UUID studyUuid, UUID nodeUuid) {
+        getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
+            boolean isLFDone = rootNetworkNodeInfoService.isLFDone(nodeUuid, rootNetworkEntity.getId());
+            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), isLFDone ? InvalidateNodeTreeParameters.ALL : InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS);
+        });
+    }
+
     public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.DEFAULT);
     }
@@ -2202,10 +2205,7 @@ public class StudyService {
                 }
             }
             // invalidate all nodeUuid children
-            getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
-                boolean isLFDone = rootNetworkNodeInfoService.isLFDone(targetNodeUuid, rootNetworkEntity.getId());
-                invalidateNodeTree(studyUuid, targetNodeUuid, rootNetworkEntity.getId(), isLFDone ? InvalidateNodeTreeParameters.ALL : InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS);
-            });
+            invalidateNodeTreeWithLF(studyUuid, targetNodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
         }
