@@ -52,7 +52,9 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     List<RootNetworkNodeInfoEntity> findAllByRootNetworkStudyId(UUID studyUuid);
 
-    List<RootNetworkNodeInfoEntity> findAllByRootNetworkStudyIdAndLoadFlowResultUuidNotNull(UUID studyUuid);
+    @Query("select rnni from RootNetworkNodeInfoEntity rnni WHERE rnni.rootNetwork.study.id = :studyUuid " +
+        "and (rnni.loadFlowResultUuid is not null OR rnni.loadFlowWithRatioTapChangersResultUuid is not null)")
+    List<RootNetworkNodeInfoEntity> findAllByRootNetworkStudyIdWithLoadFlowResultNotNull(UUID studyUuid);
 
     @Query("select count(rnni) > 0 from RootNetworkNodeInfoEntity rnni LEFT JOIN rnni.rootNetwork rn LEFT JOIN rn.study s " +
         "where s.id = :studyUuid and (rnni.nodeBuildStatus.globalBuildStatus = :buildStatus or rnni.nodeBuildStatus.localBuildStatus = :buildStatus)")

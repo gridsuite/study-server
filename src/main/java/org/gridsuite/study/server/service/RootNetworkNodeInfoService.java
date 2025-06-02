@@ -420,7 +420,7 @@ public class RootNetworkNodeInfoService {
     }
 
     public List<RootNetworkNodeInfoEntity> getAllByStudyUuidWithLoadFlowResultsNotNull(UUID studyUuid) {
-        return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyIdAndLoadFlowResultUuidNotNull(studyUuid);
+        return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyIdWithLoadFlowResultNotNull(studyUuid);
     }
 
     public void assertNoRootNetworkNodeIsBuilding(UUID studyUuid) {
