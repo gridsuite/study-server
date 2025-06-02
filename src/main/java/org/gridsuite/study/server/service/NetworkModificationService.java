@@ -16,6 +16,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
+import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -257,11 +258,11 @@ public class NetworkModificationService {
         }
     }
 
-    public void buildNode(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos) {
+    public void sendBuildRequest(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String receiver = buildReceiver(nodeUuid, rootNetworkUuid);
 
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build-and-save");
         var path = uriComponentsBuilder
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
             .build()
@@ -273,6 +274,22 @@ public class NetworkModificationService {
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(buildInfos, headers);
 
         restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, Void.class);
+    }
+
+    public NetworkModificationResult buildNode(@NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos) {
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");
+        var path = uriComponentsBuilder
+            .build()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(buildInfos, headers);
+
+        return restTemplate.exchange(getNetworkModificationServerURI(true) + path, HttpMethod.POST, httpEntity, NetworkModificationResult.class).getBody();
     }
 
     public void stopBuild(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {

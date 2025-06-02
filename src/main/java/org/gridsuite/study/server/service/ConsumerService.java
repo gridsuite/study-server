@@ -118,13 +118,8 @@ public class ConsumerService {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
                         NodeReceiver.class);
 
-                    LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
-
-                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(),
-                        NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
-
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
+                    studyService.handleBuildSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), networkModificationResult);
                 } catch (Exception e) {
                     LOGGER.error(e.toString());
                 }
@@ -684,7 +679,11 @@ public class ConsumerService {
 
     @Bean
     public Consumer<Message<String>> consumeLoadFlowResult() {
-        return message -> consumeCalculationResult(message, LOAD_FLOW);
+        return message -> {
+            Boolean withRatioTapChangers = message.getHeaders().get("withRatioTapChangers", Boolean.class);
+            ComputationType loadflowType = Boolean.TRUE.equals(withRatioTapChangers) ? LOAD_FLOW_WITH_TAP_CHANGERS : LOAD_FLOW;
+            consumeCalculationResult(message, loadflowType);
+        };
     }
 
     @Bean

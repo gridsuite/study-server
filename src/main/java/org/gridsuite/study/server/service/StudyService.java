@@ -61,6 +61,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
 
@@ -128,6 +129,7 @@ public class StudyService {
     private final StateEstimationService stateEstimationService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final RequireNewTransactionExecutor requireNewTransactionExecutor;
 
     private final ObjectMapper objectMapper;
 
@@ -189,7 +191,8 @@ public class StudyService {
         StateEstimationService stateEstimationService,
         @Lazy StudyService studyService,
         RootNetworkService rootNetworkService,
-        RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+        RootNetworkNodeInfoService rootNetworkNodeInfoService,
+        RequireNewTransactionExecutor requireNewTransactionExecutor) {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
@@ -225,6 +228,7 @@ public class StudyService {
         this.self = studyService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.requireNewTransactionExecutor = requireNewTransactionExecutor;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -827,11 +831,18 @@ public class StudyService {
     @Transactional
     public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
+        UUID prevResultUuid = rootNetworkNodeInfoService.getLoadflowResultUuid(nodeUuid, rootNetworkUuid);
         if (prevResultUuid != null) {
-            loadflowService.deleteLoadFlowResults(List.of(prevResultUuid));
+            requireNewTransactionExecutor.run(() -> invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid));
+            requireNewTransactionExecutor.run(() -> buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
+            return requireNewTransactionExecutor.execute(() -> sendLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId));
+        } else {
+            return sendLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
         }
+    }
 
+    public UUID sendLoadflowRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers, String userId) {
+        ComputationType loadflowType = withRatioTapChangers ? LOAD_FLOW_WITH_TAP_CHANGERS : LOAD_FLOW;
         UUID lfParametersUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
         UUID lfReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(LOAD_FLOW.name(), UUID.randomUUID());
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
@@ -839,10 +850,10 @@ public class StudyService {
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
         UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, networkUuid, variantId, lfParametersUuid, withRatioTapChangers, lfReportUuid, userId);
 
-        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, LOAD_FLOW);
+        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, loadflowType);
         // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
-        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, true);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        invalidateNodeTree(studyEntity.getId(), nodeUuid, rootNetworkUuid, true);
+        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, loadflowType.getUpdateStatusType());
         return result;
     }
 
@@ -1623,6 +1634,20 @@ public class StudyService {
         return networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
     }
 
+    public void buildNodeAsync(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+        assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
+        BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
+        Map<UUID, UUID> nodeUuidToReportUuid = buildInfos.getReportsInfos().stream().collect(Collectors.toMap(ReportInfos::nodeUuid, ReportInfos::reportUuid));
+        networkModificationTreeService.setModificationReports(nodeUuid, rootNetworkUuid, nodeUuidToReportUuid);
+        networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
+        try {
+            networkModificationService.sendBuildRequest(nodeUuid, rootNetworkUuid, buildInfos);
+        } catch (Exception e) {
+            networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+            throw new StudyException(NODE_BUILD_ERROR, e.getMessage());
+        }
+    }
+
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
@@ -1630,11 +1655,21 @@ public class StudyService {
         networkModificationTreeService.setModificationReports(nodeUuid, rootNetworkUuid, nodeUuidToReportUuid);
         networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         try {
-            networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos);
+            NetworkModificationResult result = networkModificationService.buildNode(rootNetworkUuid, buildInfos);
+            handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, result);
         } catch (Exception e) {
             networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
             throw new StudyException(NODE_BUILD_ERROR, e.getMessage());
         }
+    }
+
+    public void handleBuildSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NetworkModificationResult networkModificationResult) {
+        LOGGER.info("Build completed for node '{}'", nodeUuid);
+
+        networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid,
+            NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
+
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
     }
 
     private void assertCanBuildNode(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
