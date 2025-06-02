@@ -844,7 +844,7 @@ public class NetworkModificationTreeService {
     public InvalidateNodeInfos invalidateNode(UUID nodeUuid, UUID rootNetworkUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
 
-        InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, true);
+        InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL);
 
         fillIndexedNodeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos);
 
@@ -865,7 +865,7 @@ public class NetworkModificationTreeService {
 
         // First node
         if (isModificationNode && !invalidateTreeParameters.isOnlyChildren()) {
-            invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, !invalidateTreeParameters.isOnlyChildrenBuildStatusMode());
+            invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
         }
 
         // Invalidate indexed nodes
@@ -985,7 +985,7 @@ public class NetworkModificationTreeService {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         nodesRepository.findAllByParentNodeIdNode(nodeUuid)
             .forEach(child -> {
-                invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child.getIdNode(), rootNetworkUuid, true));
+                invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child.getIdNode(), rootNetworkUuid, InvalidateNodeTreeParameters.ALL));
                 invalidateNodeInfos.add(invalidateChildrenNodes(child.getIdNode(), rootNetworkUuid));
             });
         return invalidateNodeInfos;
