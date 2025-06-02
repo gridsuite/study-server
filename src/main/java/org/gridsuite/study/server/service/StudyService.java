@@ -2202,7 +2202,7 @@ public class StudyService {
 
         }
         getStudyRootNetworks(studyEntity.getId()).forEach(rootNetworkEntity -> {
-            boolean isLFDone = rootNetworkNodeInfoService.isLFDone(impactedNode, rootNetworkEntity.getId());
+            boolean isLFDone = rootNetworkNodeInfoService.isLoadflowDone(impactedNode, rootNetworkEntity.getId());
             invalidateNodeTree(studyEntity.getId(), impactedNode, rootNetworkEntity.getId(), invalidateOnlyChildrenBuildStatus && !isLFDone ? InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS : InvalidateNodeTreeParameters.ALL);
         });
     }
@@ -2888,7 +2888,7 @@ public class StudyService {
             // invalidate the whole subtree except the target node (we have built this node during the duplication)
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT); // send notification voltage init result has changed
             getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> { // do not delete the voltage init results
-                boolean isLFDone = rootNetworkNodeInfoService.isLFDone(nodeUuid, rootNetworkEntity.getId());
+                boolean isLFDone = rootNetworkNodeInfoService.isLoadflowDone(nodeUuid, rootNetworkEntity.getId());
                 updateStatuses(studyUuid, nodeUuid, rootNetworkEntity.getId(), !isLFDone, true, isLFDone);
             });
         } finally {
