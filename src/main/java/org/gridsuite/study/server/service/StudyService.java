@@ -838,21 +838,31 @@ public class StudyService {
         UUID prevResultUuid = rootNetworkNodeInfoService.getLoadflowResultUuid(nodeUuid, rootNetworkUuid);
         if (prevResultUuid != null) {
             requireNewTransactionExecutor.run(() -> invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid));
+            UUID loadflowResultUuid = requireNewTransactionExecutor.execute(() -> createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers));
             requireNewTransactionExecutor.run(() -> buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
-            return requireNewTransactionExecutor.execute(() -> sendLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId));
+            return requireNewTransactionExecutor.execute(() -> sendLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, Optional.of(loadflowResultUuid), withRatioTapChangers, userId));
         } else {
-            return sendLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
+            return sendLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, Optional.empty(), withRatioTapChangers, userId);
         }
     }
 
-    public UUID sendLoadflowRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers, String userId) {
+    private UUID createLoadflowRunningStatus(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers) {
+        ComputationType loadflowType = withRatioTapChangers ? LOAD_FLOW_WITH_TAP_CHANGERS : LOAD_FLOW;
+        // since invalidating and building nodes can be long, we create loadflow result status before execution long operations
+        UUID loadflowResultUuid = loadflowService.createRunningStatus();
+        rootNetworkNodeInfoService.updateComputationResultUuid(nodeUuid, rootNetworkUuid, loadflowResultUuid, loadflowType);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, loadflowType.getUpdateStatusType());
+        return loadflowResultUuid;
+    }
+
+    public UUID sendLoadflowRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, Optional<UUID> loadflowResultUuid, boolean withRatioTapChangers, String userId) {
         ComputationType loadflowType = withRatioTapChangers ? LOAD_FLOW_WITH_TAP_CHANGERS : LOAD_FLOW;
         UUID lfParametersUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
         UUID lfReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(LOAD_FLOW.name(), UUID.randomUUID());
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
-        UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, networkUuid, variantId, lfParametersUuid, withRatioTapChangers, lfReportUuid, userId);
+        UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, loadflowResultUuid, networkUuid, variantId, lfParametersUuid, withRatioTapChangers, lfReportUuid, userId);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, loadflowType);
         // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
@@ -1226,7 +1236,7 @@ public class StudyService {
     public List<LimitViolationInfos> getLimitViolations(@NonNull UUID nodeUuid, UUID rootNetworkUuid, String filters, String globalFilters, Sort sort) {
         UUID networkuuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.LOAD_FLOW);
+        UUID resultUuid = rootNetworkNodeInfoService.getLoadflowResultUuid(nodeUuid, rootNetworkUuid);
         return loadflowService.getLimitViolations(resultUuid, filters, globalFilters, sort, networkuuid, variantId);
     }
 

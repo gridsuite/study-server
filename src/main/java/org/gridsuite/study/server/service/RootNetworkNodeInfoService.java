@@ -567,7 +567,7 @@ public class RootNetworkNodeInfoService {
     }
 
     public void assertComputationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        loadFlowService.assertLoadFlowNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW));
+        loadFlowService.assertLoadFlowNotRunning(getLoadflowResultUuid(nodeUuid, rootNetworkUuid));
         securityAnalysisService.assertSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS));
         dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
         dynamicSecurityAnalysisService.assertDynamicSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS));
@@ -583,7 +583,7 @@ public class RootNetworkNodeInfoService {
      ***************************/
     @Transactional(readOnly = true)
     public String getLoadFlowResult(UUID nodeUuid, UUID rootNetworkUuid, String filters, Sort sort) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
+        UUID resultUuid = getLoadflowResultUuid(nodeUuid, rootNetworkUuid);
         return loadFlowService.getLoadFlowResult(resultUuid, filters, sort);
     }
 
