@@ -30,6 +30,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.ModificationInfosWithActivationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationType;
+import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
@@ -1172,15 +1173,39 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/logs", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get node report logs")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report logs"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<List<ReportLog>> getNodeReportLogs(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<ReportPage> getNodeReportLogs(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                              @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @Parameter(description = "reportId") @PathVariable("reportId") String reportId,
                                                              @Parameter(description = "The message filter") @RequestParam(name = "message", required = false) String messageFilter,
-                                                             @Parameter(description = "Severity levels filter") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
+                                                             @Parameter(description = "Severity levels filter") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels,
+                                                             @Parameter(description = "Whether we want paged logs") @RequestParam(name = "paged", required = false, defaultValue = "false") boolean paged,
+                                                             Pageable pageable) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(reportId, messageFilter, severityLevels));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(reportId, messageFilter, severityLevels, paged, pageable));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/logs/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get search term matches in node report logs")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The search term matches in the node report logs"),
+        @ApiResponse(responseCode = "404", description = "The study/node is not found")
+    })
+    public ResponseEntity<String> getNodeReportLogsSearchTermMatches(
+            @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "reportId") @PathVariable("reportId") UUID reportId,
+            @Parameter(description = "The message filter") @RequestParam(name = "message", required = false) String messageFilter,
+            @Parameter(description = "Severity levels filter") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels,
+            @Parameter(description = "The search term") @RequestParam(name = "searchTerm") String searchTerm,
+            @Parameter(description = "Rows per page") @RequestParam(name = "pageSize") int pageSize
+    ) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+                studyService.getSearchTermMatchesInFilteredLogs(reportId, severityLevels, messageFilter, searchTerm, pageSize));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -1344,6 +1369,22 @@ public class StudyController {
         @Parameter(description = "Equipment type") @RequestParam(value = "equipmentType", required = false) String equipmentType) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
             .body(studyService.searchEquipments(nodeUuid, rootNetworkUuid, userInput, fieldSelector, equipmentType, inUpstreamBuiltParentNode));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/modifications/indexation-infos", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Search modifications in elasticsearch by equipment")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "List of modifications found"),
+        @ApiResponse(responseCode = "404", description = "The study not found"),
+    })
+    public ResponseEntity<List<ModificationsSearchResultByNode>> searchModifications(
+            @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @Parameter(description = "User input") @RequestParam(value = "userInput") String userInput) {
+        studyService.assertIsStudyExist(studyUuid);
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(studyService.searchModifications(rootNetworkUuid, userInput));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
