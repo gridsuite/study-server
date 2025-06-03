@@ -128,7 +128,7 @@ class ModificationIndexationTest {
             node3.getModificationGroupUuid()
         ));
 
-        SQLStatementCountValidator.assertSelectCount(23);
+        SQLStatementCountValidator.assertSelectCount(21);
     }
 
     @Test
