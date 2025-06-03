@@ -19,7 +19,7 @@
 
     <groupId>org.gridsuite</groupId>
     <artifactId>gridsuite-study-server</artifactId>
-    <version>2.18.0</version>
+    <version>2.18.1</version>
 
     <packaging>jar</packaging>
     <name>Study Server</name>
