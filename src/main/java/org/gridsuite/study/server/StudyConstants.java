@@ -64,7 +64,6 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_MESSAGE_FILTER = "message";
 
     public static final String QUERY_PARAM_DEBUG = "debug";
-    public static final String QUERY_PARAM_BROWSER_TAB_UUID = "browserTabUuid";
     public static final String QUERY_PARAM_RECEIVER = "receiver";
     public static final String QUERY_PARAM_REPORT_UUID = "reportUuid";
     public static final String QUERY_PARAM_REPORTER_ID = "reporterId";

@@ -42,6 +42,7 @@ public class NotificationService {
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String HEADER_COMPUTATION_TYPE = "computationType";
+    public static final String HEADER_RESULT_UUID = "resultUuid";
     public static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
     public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
@@ -415,11 +416,12 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyDebug(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType, @Nullable String error) {
+    public void emitStudyDebug(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType, UUID resultUuid, @Nullable String error) {
         sendStudyUpdateMessage(studyUuid, STUDY_DEBUG, MessageBuilder.withPayload("")
             .setHeader(HEADER_NODE, nodeUuid)
             .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
             .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
+            .setHeader(HEADER_RESULT_UUID, resultUuid)
             .setHeader(HEADER_ERROR, error)
         );
     }

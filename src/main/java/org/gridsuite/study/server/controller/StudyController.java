@@ -1826,15 +1826,15 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/run")
     @Operation(summary = "run dynamic simulation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation has started")})
-    public ResponseEntity<UUID> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        UUID resultUuid = studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debug);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(resultUuid);
+        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debug);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries/metadata")
@@ -2340,18 +2340,5 @@ public class StudyController {
         studyService.assertIsStudyExist(studyUuid);
         studyService.updateNodeAliases(studyUuid, nodeAliases);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/result-uuid")
-    @Operation(summary = "Get the result uuid of a computation")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The result uuid of a computation"),
-        @ApiResponse(responseCode = "204", description = "No result uuid"),
-        @ApiResponse(responseCode = "404", description = "The computation result has not been found")})
-    public ResponseEntity<UUID> getResultUuid(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                   @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                   @Parameter(description = "computingType") @RequestParam("computingType") ComputationType computationType) {
-        UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, computationType);
-        return resultUuid == null ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(resultUuid);
     }
 }

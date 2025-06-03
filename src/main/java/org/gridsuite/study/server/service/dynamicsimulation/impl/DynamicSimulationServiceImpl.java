@@ -68,7 +68,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public UUID runDynamicSimulation(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId, boolean debug) {
+    public UUID runDynamicSimulation(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId,
+                                     UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId, boolean debug) {
 
         // create receiver for getting back the notification in rabbitmq
         String receiver;
