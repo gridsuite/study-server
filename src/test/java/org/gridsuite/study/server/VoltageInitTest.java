@@ -516,7 +516,7 @@ class VoltageInitTest {
         TestUtils.assertRequestMatches("PUT", "/v1/results/.*/modifications-group-uuid", server);
 
         // Applying modifications also invalidate all results of the node, so it creates a lot of study update notifications
-        IntStream.range(0, 21).forEach(i -> output.receive(1000, studyUpdateDestination));
+        IntStream.range(0, 22).forEach(i -> output.receive(1000, studyUpdateDestination));
         // It deletes the voltage-init modification and creates a new one on the node
         IntStream.range(0, 2).forEach(i -> output.receive(1000, elementUpdateDestination));
     }
@@ -735,6 +735,7 @@ class VoltageInitTest {
 
     private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid) {
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_WITH_RATIO_TAP_CHANGERS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
