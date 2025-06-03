@@ -514,4 +514,21 @@ public class WireMockUtils {
         }
         verifyGetRequest(stubUuid, "/v1/filters/export", queryParams);
     }
+
+    public UUID stubSearchModifications(String networkUuid, String userInput, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/network-modifications/indexation-infos"))
+                        .withQueryParam("networkUuid", WireMock.equalTo(networkUuid))
+                        .withQueryParam("userInput", WireMock.equalTo(userInput))
+                        .willReturn(WireMock.ok()
+                                .withHeader("Content-Type", "application/json")
+                                .withBody(responseBody)))
+                .getId();
+    }
+
+    public void verifySearchModifications(UUID stubUuid, String networkUuid, String userInput) {
+        verifyGetRequest(stubUuid, "/v1/network-modifications/indexation-infos",
+                Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid),
+                        "userInput", WireMock.equalTo(userInput)));
+    }
+
 }
