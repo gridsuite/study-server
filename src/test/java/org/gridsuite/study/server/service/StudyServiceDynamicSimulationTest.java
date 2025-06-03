@@ -118,7 +118,7 @@ class StudyServiceDynamicSimulationTest {
         // setup DynamicSimulationService mock
         given(dynamicSimulationService.runDynamicSimulation(any(), eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any())).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResults(anyList());
-        given(rootNetworkNodeInfoService.getLoadFlowStatus(NODE_UUID, ROOTNETWORK_UUID)).willReturn(LoadFlowStatus.CONVERGED.name());
+        given(rootNetworkNodeInfoService.getLoadFlowStatus(NODE_UUID, ROOTNETWORK_UUID)).willReturn(LoadFlowStatus.CONVERGED);
 
         // init parameters
         DynamicSimulationParametersInfos parameters = new DynamicSimulationParametersInfos();
