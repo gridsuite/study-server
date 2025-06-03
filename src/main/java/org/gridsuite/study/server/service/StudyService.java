@@ -279,7 +279,7 @@ public class StudyService {
             }
             persistNetwork(caseUuidToUse, basicStudyInfos.getId(), null, NetworkModificationTreeService.FIRST_VARIANT_ID, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.STUDY_CREATION);
         } catch (Exception e) {
-            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId());
             throw e;
         }
 
@@ -457,7 +457,7 @@ public class StudyService {
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
-            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId());
             LOGGER.trace("Create study '{}' from source {} : {} seconds", basicStudyInfos.getId(), sourceStudyUuid,
                     TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
@@ -497,7 +497,7 @@ public class StudyService {
         return networkModificationTreeService.getNetworkModificationsByNodeInfos(modificationsByGroup);
     }
 
-    private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
+    private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         DeleteStudyInfos deleteStudyInfos = null;
@@ -509,27 +509,13 @@ public class StudyService {
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
-                if (s.getLoadFlowParametersUuid() != null) {
-                    loadflowService.deleteLoadFlowParameters(s.getLoadFlowParametersUuid());
-                }
-                if (s.getSecurityAnalysisParametersUuid() != null) {
-                    securityAnalysisService.deleteSecurityAnalysisParameters(s.getSecurityAnalysisParametersUuid());
-                }
-                if (s.getVoltageInitParametersUuid() != null) {
-                    voltageInitService.deleteVoltageInitParameters(s.getVoltageInitParametersUuid());
-                }
-                if (s.getSensitivityAnalysisParametersUuid() != null) {
-                    sensitivityAnalysisService.deleteSensitivityAnalysisParameters(s.getSensitivityAnalysisParametersUuid());
-                }
-                if (s.getNetworkVisualizationParametersUuid() != null) {
-                    studyConfigService.deleteNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
-                }
-                if (s.getStateEstimationParametersUuid() != null) {
-                    stateEstimationService.deleteStateEstimationParameters(s.getStateEstimationParametersUuid());
-                }
-                if (s.getSpreadsheetConfigCollectionUuid() != null) {
-                    studyConfigService.deleteSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
-                }
+                removeLoadFlowParameters(s.getLoadFlowParametersUuid());
+                removeSecurityAnalysisParameters(s.getSecurityAnalysisParametersUuid());
+                removeVoltageInitParameters(s.getVoltageInitParametersUuid());
+                removeSensitivityAnalysisParameters(s.getSensitivityAnalysisParametersUuid());
+                removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
+                removeStateEstimationParameters(s.getStateEstimationParametersUuid());
+                removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -543,11 +529,31 @@ public class StudyService {
         }
     }
 
+    private void removeStateEstimationParameters(@Nullable UUID uuid) {
+        if (uuid != null) {
+            try {
+                stateEstimationService.deleteStateEstimationParameters(uuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not delete state estimation parameters with uuid:" + uuid, e);
+            }
+        }
+    }
+
+    private void removeNetworkVisualizationParameters(@Nullable UUID uuid) {
+        if (uuid != null) {
+            try {
+                studyConfigService.deleteNetworkVisualizationParameters(uuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not delete network visualization parameters with uuid:" + uuid, e);
+            }
+        }
+    }
+
     @Transactional
-    public void deleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
+    public void deleteStudyIfNotCreationInProgress(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         try {
-            Optional<DeleteStudyInfos> deleteStudyInfosOpt = doDeleteStudyIfNotCreationInProgress(studyUuid, userId);
+            Optional<DeleteStudyInfos> deleteStudyInfosOpt = doDeleteStudyIfNotCreationInProgress(studyUuid);
             if (deleteStudyInfosOpt.isPresent()) {
                 DeleteStudyInfos deleteStudyInfos = deleteStudyInfosOpt.get();
                 startTime.set(System.nanoTime());
@@ -558,7 +564,14 @@ public class StudyService {
                         // delete all distant resources linked to rootNetworks
                         rootNetworkService.getDeleteRootNetworkInfosFutures(deleteStudyInfos.getRootNetworkInfosList()),
                         // delete all distant resources linked to nodes
-                        Stream.of(studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuids().stream().filter(Objects::nonNull).forEach(networkModificationService::deleteModifications))) // TODO delete all with one request only
+                        Stream.of(
+                                studyServerExecutionService.runAsync(
+                                        () -> deleteStudyInfos.getModificationGroupUuids()
+                                                .stream()
+                                                .filter(Objects::nonNull)
+                                                .forEach(networkModificationService::deleteModifications)
+                                )
+                        ) // TODO delete all with one request only
                     ).toArray(CompletableFuture[]::new)
                 );
 
