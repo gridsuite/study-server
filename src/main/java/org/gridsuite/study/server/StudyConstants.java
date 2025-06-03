@@ -92,6 +92,7 @@ public final class StudyConstants {
         UNKNOWN,
         TRACE,
         DEBUG,
+        DETAIL,
         INFO,
         WARN,
         ERROR,
