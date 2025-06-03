@@ -1626,11 +1626,6 @@ public class StudyService {
         return getVoltageLevelSwitches(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, "switches");
     }
 
-    @Transactional(readOnly = true)
-    public UUID getStudyUuidFromNodeUuid(UUID nodeUuid) {
-        return networkModificationTreeService.getStudyUuidForNodeId(nodeUuid);
-    }
-
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
