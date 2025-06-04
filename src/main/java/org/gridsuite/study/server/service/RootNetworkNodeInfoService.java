@@ -255,7 +255,7 @@ public class RootNetworkNodeInfoService {
         rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(null);
         rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(null);
         rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(null);
-        if (!computationsInvalidationMode.isPreserveVoltageInitResults()) {
+        if (!ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode)) {
             rootNetworkNodeInfoEntity.setVoltageInitResultUuid(null);
         }
         rootNetworkNodeInfoEntity.setStateEstimationResultUuid(null);
@@ -263,7 +263,7 @@ public class RootNetworkNodeInfoService {
         Map<String, UUID> computationReports = rootNetworkNodeInfoEntity.getComputationReports()
             .entrySet()
             .stream()
-            .filter(entry -> VOLTAGE_INITIALIZATION.name().equals(entry.getKey()) && computationsInvalidationMode.isPreserveVoltageInitResults())
+            .filter(entry -> VOLTAGE_INITIALIZATION.name().equals(entry.getKey()) && ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         // Update the computation reports in the repository
@@ -274,7 +274,7 @@ public class RootNetworkNodeInfoService {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
 
         rootNetworkNodeInfoEntity.getComputationReports().forEach((key, value) -> {
-            if (!computationsInvalidationMode.isPreserveVoltageInitResults() || !VOLTAGE_INITIALIZATION.name().equals(key)) {
+            if (!ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode) || !VOLTAGE_INITIALIZATION.name().equals(key)) {
                 invalidateNodeInfos.addReportUuid(value);
             }
         });
@@ -297,7 +297,7 @@ public class RootNetworkNodeInfoService {
                 .ifPresent(invalidateNodeInfos::addShortCircuitAnalysisResultUuid);
         Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SHORT_CIRCUIT_ONE_BUS))
                 .ifPresent(invalidateNodeInfos::addOneBusShortCircuitAnalysisResultUuid);
-        if (!computationsInvalidationMode.isPreserveVoltageInitResults()) {
+        if (!ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode)) {
             Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, VOLTAGE_INITIALIZATION))
                 .ifPresent(invalidateNodeInfos::addVoltageInitResultUuid);
         }

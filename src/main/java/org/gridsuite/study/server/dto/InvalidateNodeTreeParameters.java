@@ -28,20 +28,12 @@ public record InvalidateNodeTreeParameters(
     }
 
     public enum ComputationsInvalidationMode {
-        ALL {
-            @Override
-            public boolean isPreserveVoltageInitResults() {
-                return false;
-            }
-        },
-        PRESERVE_VOLTAGE_INIT_RESULTS {
-            @Override
-            public boolean isPreserveVoltageInitResults() {
-                return true;
-            }
-        };
+        ALL,
+        PRESERVE_VOLTAGE_INIT_RESULTS;
 
-        public abstract boolean isPreserveVoltageInitResults();
+        public static boolean isPreserveVoltageInitResults(ComputationsInvalidationMode computationsInvalidationMode) {
+            return computationsInvalidationMode == PRESERVE_VOLTAGE_INIT_RESULTS;
+        }
     }
 
     public boolean isOnlyChildren() {
