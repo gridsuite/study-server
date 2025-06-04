@@ -530,10 +530,10 @@ class ModificationToExcludeTest {
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo2Entity);
 
         Mockito.doReturn(Optional.of(3)).when(userAdminService).getUserMaxAllowedBuilds("userId");
-        studyService.buildNodeAsync(studyEntity.getId(), secondNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), "userId");
+        studyService.buildNode(studyEntity.getId(), secondNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), "userId");
 
         ArgumentCaptor<BuildInfos> buildInfosCaptor = ArgumentCaptor.forClass(BuildInfos.class);
-        Mockito.verify(networkModificationService, Mockito.times(1)).sendBuildRequest(eq(secondNode.getId()), eq(rootNetworkBasicInfos.getFirst().rootNetworkUuid()), buildInfosCaptor.capture());
+        Mockito.verify(networkModificationService, Mockito.times(1)).buildNode(eq(secondNode.getId()), eq(rootNetworkBasicInfos.getFirst().rootNetworkUuid()), buildInfosCaptor.capture());
         assertThat(buildInfosCaptor.getValue().getModificationUuidsToExclude().get(firstNode.getModificationGroupUuid())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(MODIFICATIONS_TO_EXCLUDE_RN_1);
         assertThat(buildInfosCaptor.getValue().getModificationUuidsToExclude().get(secondNode.getModificationGroupUuid())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(MODIFICATIONS_TO_EXCLUDE_RN_2);
     }

@@ -286,13 +286,13 @@ class NetworkModificationTest {
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
         userAdminService.setUserAdminServerBaseUri(baseUrlWireMock);
 
-        buildOkStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build-and-save"))
+        buildOkStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result"))
             .willReturn(WireMock.ok())).getId();
-        buildFailedStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_2_STRING + "/build-and-save"))
+        buildFailedStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_2_STRING + "/build"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.run.dlx", HEADER_ERROR_MESSAGE, ERROR_MESSAGE))
             .willReturn(WireMock.ok())).getId();
-        buildErrorStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_3_STRING + "/build-and-save"))
+        buildErrorStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_3_STRING + "/build"))
             .willReturn(WireMock.serverError())).getId();
         buildStopStubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/build/stop"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", "", "destination", "build.stopped"))
@@ -2628,7 +2628,7 @@ class NetworkModificationTest {
         assertEquals(Set.of("s1", "s2"), buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
         wireMockUtils.verifyGetRequest(profileStubId, "/v1/users/" + userId + "/profile/max-builds", Map.of());
-        wireMockUtils.verifyPostRequest(buildOkStubId, "/v1/networks/" + NETWORK_UUID_STRING + "/build-and-save", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
+        wireMockUtils.verifyPostRequest(buildOkStubId, "/v1/networks/" + NETWORK_UUID_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
 
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).getGlobalBuildStatus());
     }
@@ -2655,7 +2655,7 @@ class NetworkModificationTest {
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_COMPLETED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(Set.of("s1", "s2"), buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE_SUBSTATIONS_IDS));
 
-        wireMockUtils.verifyPostRequest(buildOkStubId, "/v1/networks/" + NETWORK_UUID_STRING + "/build-and-save", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
+        wireMockUtils.verifyPostRequest(buildOkStubId, "/v1/networks/" + NETWORK_UUID_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
         wireMockUtils.verifyGetRequest(profileStubId, "/v1/users/" + userId + "/profile/max-builds", Map.of());
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).getGlobalBuildStatus());  // node is built
 
@@ -2703,7 +2703,7 @@ class NetworkModificationTest {
         assertEquals(NotificationService.UPDATE_TYPE_BUILD_FAILED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(ERROR_MESSAGE, buildStatusMessage.getHeaders().get(NotificationService.HEADER_ERROR));
 
-        wireMockUtils.verifyPostRequest(buildFailedStubId, "/v1/networks/" + NETWORK_UUID_2_STRING + "/build-and-save", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
+        wireMockUtils.verifyPostRequest(buildFailedStubId, "/v1/networks/" + NETWORK_UUID_2_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
         wireMockUtils.verifyGetRequest(userProfileQuotaStubId, "/v1/users/" + USER_ID + "/profile/max-builds", Map.of());
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).getGlobalBuildStatus());  // node is not built
@@ -2726,7 +2726,7 @@ class NetworkModificationTest {
         assertEquals(studyUuid, buildStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, buildStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        wireMockUtils.verifyPostRequest(buildErrorStubId, "/v1/networks/" + NETWORK_UUID_3_STRING + "/build-and-save", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
+        wireMockUtils.verifyPostRequest(buildErrorStubId, "/v1/networks/" + NETWORK_UUID_3_STRING + "/build", Map.of(QUERY_PARAM_RECEIVER, WireMock.matching(".*")));
         wireMockUtils.verifyGetRequest(userProfileQuotaStubId, "/v1/users/" + USER_ID + "/profile/max-builds", Map.of());
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).getGlobalBuildStatus());  // node is not built

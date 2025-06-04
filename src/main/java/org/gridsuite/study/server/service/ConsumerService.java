@@ -17,6 +17,8 @@ import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.workflow.RerunLoadFlowWorkflowInfos;
+import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -32,10 +34,7 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -120,11 +119,24 @@ public class ConsumerService {
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     studyService.handleBuildSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), networkModificationResult);
+                    handleBuildResultWorkflow(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message);
                 } catch (Exception e) {
                     LOGGER.error(e.toString());
                 }
             }
         };
+    }
+
+    private void handleBuildResultWorkflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Message<NetworkModificationResult> message) throws JsonProcessingException {
+        String workflowTypeStr = message.getHeaders().get(HEADER_WORKFLOW_TYPE, String.class);
+        String workflowInfosStr = message.getHeaders().get(HEADER_WORKFLOW_INFOS, String.class);
+        if (workflowTypeStr != null && workflowInfosStr != null) {
+            WorkflowType workflowType = WorkflowType.valueOf(workflowTypeStr);
+            if (WorkflowType.RERUN_LOAD_FLOW.equals(workflowType)) {
+                RerunLoadFlowWorkflowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowWorkflowInfos.class);
+                studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId());
+            }
+        }
     }
 
     @Bean
@@ -144,6 +156,7 @@ public class ConsumerService {
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), NotificationService.UPDATE_TYPE_BUILD_CANCELLED);
+                    handleBuildCanceledOrFailedWorkflow(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -168,11 +181,24 @@ public class ConsumerService {
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitNodeBuildFailed(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class));
+                    handleBuildCanceledOrFailedWorkflow(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
             }
         };
+    }
+
+    private void handleBuildCanceledOrFailedWorkflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Message<String> message) throws JsonProcessingException {
+        String workflowTypeStr = message.getHeaders().get(HEADER_WORKFLOW_TYPE, String.class);
+        String workflowInfosStr = message.getHeaders().get(HEADER_WORKFLOW_INFOS, String.class);
+        if (workflowTypeStr != null && workflowInfosStr != null) {
+            WorkflowType workflowType = WorkflowType.valueOf(workflowTypeStr);
+            if (WorkflowType.RERUN_LOAD_FLOW.equals(workflowType)) {
+                RerunLoadFlowWorkflowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowWorkflowInfos.class);
+                studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers());
+            }
+        }
     }
 
     //TODO: should be linked to a specific rootNetwork

@@ -1545,7 +1545,7 @@ public class StudyController {
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertNoBuildNoComputationForRootNetworkNode(nodeUuid, rootNetworkUuid);
-        studyService.buildNodeAsync(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 

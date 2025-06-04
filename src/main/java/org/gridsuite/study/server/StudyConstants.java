@@ -65,11 +65,15 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_MESSAGE_FILTER = "message";
 
     public static final String QUERY_PARAM_RECEIVER = "receiver";
+    public static final String QUERY_PARAM_WORKFLOW_TYPE = "workflowType";
+    public static final String QUERY_PARAM_WORKFLOW_INFOS = "workflowInfos";
     public static final String QUERY_PARAM_REPORT_UUID = "reportUuid";
     public static final String QUERY_PARAM_REPORTER_ID = "reporterId";
     public static final String QUERY_PARAM_REPORT_TYPE = "reportType";
     public static final String QUERY_WITH_TAP_CHANGER = "withRatioTapChangers";
     public static final String HEADER_RECEIVER = "receiver";
+    public static final String HEADER_WORKFLOW_TYPE = "workflowType";
+    public static final String HEADER_WORKFLOW_INFOS = "workflowInfos";
     public static final String HEADER_ERROR = "error";
     public static final String HEADER_BUS_ID = "busId";
     public static final String HEADER_IMPORT_PARAMETERS = "importParameters";
