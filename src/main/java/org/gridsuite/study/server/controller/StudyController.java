@@ -1650,7 +1650,7 @@ public class StudyController {
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @Parameter(description = "results selector") @RequestParam("selector") String selector,
         @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters
-        ) {
+    ) {
         String result = rootNetworkNodeInfoService.getSensitivityAnalysisResult(nodeUuid, rootNetworkUuid, selector, filters);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
