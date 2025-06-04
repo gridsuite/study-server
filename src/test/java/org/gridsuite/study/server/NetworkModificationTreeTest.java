@@ -47,6 +47,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
+import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -768,14 +769,26 @@ class NetworkModificationTreeTest {
     }
 
     private void stashNode(UUID studyUuid, AbstractNode child, boolean stashChildren, Set<AbstractNode> expectedStash, String userId) throws Exception {
+        NetworkModificationNode networkModificationNode = (NetworkModificationNode) child;
+        boolean nodeIsBuilt = networkModificationNode.getNodeBuildStatus().isBuilt();
+
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}/stash?stashChildren={stash}", studyUuid, child.getId(), stashChildren).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
 
         checkElementUpdatedMessageSent(studyUuid, userId);
 
-        //first message is node build status being reset and then is the node deleted
-        var message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(NODE_BUILD_STATUS_UPDATED, message.getHeaders().get(HEADER_UPDATE_TYPE));
+        Message<byte[]> message;
+
+        // first message is node build status being reset
+        if (nodeIsBuilt) {
+            message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+            assertEquals(NODE_BUILD_STATUS_UPDATED, message.getHeaders().get(HEADER_UPDATE_TYPE));
+        }
+
+        // computing status
+        checkUpdateModelsStatusMessagesReceived();
+
+        // node deleted message
         message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         Collection<UUID> stashedId = (Collection<UUID>) message.getHeaders().get(NotificationService.HEADER_NODES);
         assertNotNull(stashedId);
@@ -1648,5 +1661,28 @@ class NetworkModificationTreeTest {
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_SPREADSHEET_NODE_ALIASES, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
+    }
+
+    private void checkUpdateModelsStatusMessagesReceived() {
+        //loadflow_status
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        //securityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        //sensitivityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        //sensitivityAnalysisonEvacuated_status
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        //shortCircuitAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        //oneBusShortCircuitAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        //dynamicSimulation_status
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        //dynamicSecurityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        //voltageInit_status
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        //stateEstimation_status
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
     }
 }
