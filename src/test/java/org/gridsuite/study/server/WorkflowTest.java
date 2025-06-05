@@ -57,7 +57,7 @@ class WorkflowTest {
         Map<String, Object> headers = new HashMap<>();
         headers.put(HEADER_RECEIVER, objectMapper.writeValueAsString(nodeReceiver));
         headers.put(HEADER_WORKFLOW_TYPE, WorkflowType.RERUN_LOAD_FLOW.name());
-        headers.put(HEADER_WORKFLOW_INFOS, objectMapper.writeValueAsString(rerunLoadFlowWorkflowInfos));
+        headers.put(HEADER_WORKFLOW_INFOS, rerunLoadFlowWorkflowInfos.serialize(objectMapper));
         MessageHeaders messageHeaders = new MessageHeaders(headers);
 
         when(networkModificationTreeService.getStudyUuidForNodeId(nodeUuid)).thenReturn(studyUuid);

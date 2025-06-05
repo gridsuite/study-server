@@ -6,8 +6,11 @@
  */
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.controller.StudyController;
+import org.gridsuite.study.server.dto.workflow.RerunLoadFlowWorkflowInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
@@ -21,12 +24,15 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
+import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkService;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -44,8 +50,9 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_INFOS;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_TYPE;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 
 /**
@@ -65,10 +72,13 @@ class NetworkModificationUnitTest {
     private StudyRepository studyRepository;
     @Autowired
     private StudyController studyController;
+
     @MockBean
     private NetworkService networkService;
     @MockBean
     private RestTemplate restTemplate;
+    @MockBean
+    private RootNetworkService rootNetworkService;
 
     private static final String CASE_LOADFLOW_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
     private static final UUID CASE_LOADFLOW_UUID = UUID.fromString(CASE_LOADFLOW_UUID_STRING);
@@ -100,6 +110,10 @@ class NetworkModificationUnitTest {
     private RootNetworkRepository rootNetworkRepository;
     @Autowired
     private TestUtils studyTestUtils;
+    @Autowired
+    private NetworkModificationService networkModificationService;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setup() {
@@ -184,6 +198,28 @@ class NetworkModificationUnitTest {
     void deactivateNetworkModificationTest() {
         List<UUID> modificationToDeactivateUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
         updateNetworkModificationActivationStatus(modificationToDeactivateUuids, node1Uuid, List.of(node2Uuid, node3Uuid), List.of(node1Uuid, node2Uuid), true);
+    }
+
+    @Test
+    void buildNodeWithWorkflowInfos() {
+        UUID nodeUuid = UUID.randomUUID();
+        UUID rootNetworkUuid = UUID.randomUUID();
+        UUID networkUuid = UUID.randomUUID();
+        BuildInfos buildInfos = new BuildInfos();
+        RerunLoadFlowWorkflowInfos rerunLoadFlowWorkflowInfos = RerunLoadFlowWorkflowInfos.builder()
+            .userId("userId")
+            .withRatioTapChangers(true)
+            .loadflowResultUuid(UUID.randomUUID())
+            .build();
+
+        Mockito.when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
+        networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, rerunLoadFlowWorkflowInfos);
+
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        Mockito.verify(restTemplate, Mockito.times(1)).exchange(urlCaptor.capture(), eq(HttpMethod.POST), any(HttpEntity.class), eq(Void.class));
+
+        assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_TYPE + "=" + rerunLoadFlowWorkflowInfos.getWorkflowType().name()));
+        assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_INFOS + "=" + rerunLoadFlowWorkflowInfos.serialize(objectMapper)));
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
