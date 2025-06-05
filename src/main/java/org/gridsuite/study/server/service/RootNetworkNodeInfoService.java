@@ -343,7 +343,6 @@ public class RootNetworkNodeInfoService {
         };
     }
 
-    @Transactional(readOnly = true)
     public UUID getLoadflowResultUuid(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID result = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         if (result != null) {

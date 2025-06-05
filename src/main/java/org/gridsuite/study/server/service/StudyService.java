@@ -134,7 +134,6 @@ public class StudyService {
     private final StateEstimationService stateEstimationService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    private final RequireNewTransactionExecutor requireNewTransactionExecutor;
 
     private final ObjectMapper objectMapper;
 
@@ -196,8 +195,7 @@ public class StudyService {
         StateEstimationService stateEstimationService,
         @Lazy StudyService studyService,
         RootNetworkService rootNetworkService,
-        RootNetworkNodeInfoService rootNetworkNodeInfoService,
-        RequireNewTransactionExecutor requireNewTransactionExecutor) {
+        RootNetworkNodeInfoService rootNetworkNodeInfoService) {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
@@ -233,7 +231,6 @@ public class StudyService {
         this.self = studyService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
-        this.requireNewTransactionExecutor = requireNewTransactionExecutor;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -843,15 +840,15 @@ public class StudyService {
         UUID prevResultUuid = rootNetworkNodeInfoService.getLoadflowResultUuid(nodeUuid, rootNetworkUuid);
         if (prevResultUuid != null) {
             self.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers);
-            return self.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
+            UUID loadflowResultUuid = self.createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers);
+            return self.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
         } else {
             return self.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, userId);
         }
     }
 
     @Transactional
-    public UUID rerunLoadflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Boolean withRatioTapChangers, String userId) {
-        UUID loadflowResultUuid = createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers);
+    public UUID rerunLoadflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, Boolean withRatioTapChangers, String userId) {
         invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidationMode.ALL)
             .computationsInvalidationMode(ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
@@ -865,7 +862,8 @@ public class StudyService {
         return loadflowResultUuid;
     }
 
-    private UUID createLoadflowRunningStatus(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers) {
+    @Transactional
+    public UUID createLoadflowRunningStatus(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers) {
         ComputationType loadflowType = withRatioTapChangers ? LOAD_FLOW_WITH_TAP_CHANGERS : LOAD_FLOW;
         // since invalidating and building nodes can be long, we create loadflow result status before execution long operations
         UUID loadflowResultUuid = loadflowService.createRunningStatus();

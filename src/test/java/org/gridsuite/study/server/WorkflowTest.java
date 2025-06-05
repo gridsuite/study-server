@@ -1,0 +1,72 @@
+package org.gridsuite.study.server;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.workflow.RerunLoadFlowWorkflowInfos;
+import org.gridsuite.study.server.dto.workflow.WorkflowType;
+import org.gridsuite.study.server.service.ConsumerService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.support.MessageBuilder;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.gridsuite.study.server.StudyConstants.*;
+import static org.mockito.Mockito.*;
+
+@SpringBootTest
+@DisableElasticsearch
+class WorkflowTest {
+
+    UUID studyUuid = UUID.randomUUID();
+    UUID nodeUuid = UUID.randomUUID();
+    UUID rootNetworkUuid = UUID.randomUUID();
+    UUID loadflowResultUuid = UUID.randomUUID();
+    String userId = "userId";
+
+    @Autowired
+    ConsumerService consumerService;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @MockBean
+    private NetworkModificationTreeService networkModificationTreeService;
+    @MockBean
+    private StudyService studyService;
+
+    @Test
+    void testConsumeBuildInRerunLoadFlowWorkflow() throws JsonProcessingException {
+        boolean withRatioTapChangers = true;
+        NetworkModificationResult networkModificationResult = new NetworkModificationResult();
+        NodeReceiver nodeReceiver = new NodeReceiver(nodeUuid, rootNetworkUuid);
+        RerunLoadFlowWorkflowInfos rerunLoadFlowWorkflowInfos = RerunLoadFlowWorkflowInfos.builder()
+            .loadflowResultUuid(loadflowResultUuid)
+            .withRatioTapChangers(withRatioTapChangers)
+            .userId(userId)
+            .build();
+
+        Map<String, Object> headers = new HashMap<>();
+        headers.put(HEADER_RECEIVER, objectMapper.writeValueAsString(nodeReceiver));
+        headers.put(HEADER_WORKFLOW_TYPE, WorkflowType.RERUN_LOAD_FLOW.name());
+        headers.put(HEADER_WORKFLOW_INFOS, objectMapper.writeValueAsString(rerunLoadFlowWorkflowInfos));
+        MessageHeaders messageHeaders = new MessageHeaders(headers);
+
+        when(networkModificationTreeService.getStudyUuidForNodeId(nodeUuid)).thenReturn(studyUuid);
+
+        // execute consume
+        consumerService.consumeBuildResult().accept(MessageBuilder.createMessage(networkModificationResult, messageHeaders));
+
+        // check loadflow is actually ran after build is completed
+        verify(studyService, times(1)).handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, networkModificationResult);
+        verify(studyService, times(1)).sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+    }
+}
