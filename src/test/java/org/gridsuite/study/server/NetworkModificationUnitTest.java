@@ -37,6 +37,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -77,7 +78,7 @@ class NetworkModificationUnitTest {
     private NetworkService networkService;
     @MockBean
     private RestTemplate restTemplate;
-    @MockBean
+    @SpyBean
     private RootNetworkService rootNetworkService;
 
     private static final String CASE_LOADFLOW_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
@@ -212,7 +213,7 @@ class NetworkModificationUnitTest {
             .loadflowResultUuid(UUID.randomUUID())
             .build();
 
-        Mockito.when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
+        Mockito.doReturn(networkUuid).when(rootNetworkService).getNetworkUuid(rootNetworkUuid);
         networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, rerunLoadFlowWorkflowInfos);
 
         ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
