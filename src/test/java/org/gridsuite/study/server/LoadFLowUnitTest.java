@@ -46,6 +46,8 @@ class LoadFLowUnitTest {
     @MockBean
     private NetworkService networkService;
     @MockBean
+    private UserAdminService userAdminService;
+    @MockBean
     private NotificationService notificationService;
 
     @Test
