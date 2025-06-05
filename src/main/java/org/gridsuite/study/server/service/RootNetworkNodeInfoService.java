@@ -248,8 +248,10 @@ public class RootNetworkNodeInfoService {
     }
 
     private static void invalidateComputationResults(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ComputationsInvalidationMode computationsInvalidationMode) {
-        rootNetworkNodeInfoEntity.setLoadFlowResultUuid(null);
-        rootNetworkNodeInfoEntity.setLoadFlowWithRatioTapChangersResultUuid(null);
+        if (!ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
+            rootNetworkNodeInfoEntity.setLoadFlowResultUuid(null);
+            rootNetworkNodeInfoEntity.setLoadFlowWithRatioTapChangersResultUuid(null);
+        }
         rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(null);
         rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(null);
         rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(null);
@@ -265,18 +267,23 @@ public class RootNetworkNodeInfoService {
         Map<String, UUID> computationReports = rootNetworkNodeInfoEntity.getComputationReports()
             .entrySet()
             .stream()
-            .filter(entry -> VOLTAGE_INITIALIZATION.name().equals(entry.getKey()) && ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode))
+            .filter(entry -> shouldPreserveComputationReport(entry.getKey(), computationsInvalidationMode))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         // Update the computation reports in the repository
         rootNetworkNodeInfoEntity.setComputationReports(computationReports);
     }
 
+    private static boolean shouldPreserveComputationReport(String computationType, ComputationsInvalidationMode computationsInvalidationMode) {
+        return VOLTAGE_INITIALIZATION.name().equals(computationType) && ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode)
+            || LOAD_FLOW.name().equals(computationType) && ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode);
+    }
+
     private InvalidateNodeInfos getInvalidationComputationInfos(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ComputationsInvalidationMode computationsInvalidationMode) {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
 
         rootNetworkNodeInfoEntity.getComputationReports().forEach((key, value) -> {
-            if (!ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode) || !VOLTAGE_INITIALIZATION.name().equals(key)) {
+            if (!shouldPreserveComputationReport(key, computationsInvalidationMode)) {
                 invalidateNodeInfos.addReportUuid(value);
             }
         });
@@ -287,10 +294,12 @@ public class RootNetworkNodeInfoService {
     }
 
     private void fillComputationResultUuids(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos, ComputationsInvalidationMode computationsInvalidationMode) {
-        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, LOAD_FLOW))
+        if (!ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
+            Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, LOAD_FLOW))
                 .ifPresent(invalidateNodeInfos::addLoadFlowResultUuid);
-        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, LOAD_FLOW_WITH_TAP_CHANGERS))
-            .ifPresent(invalidateNodeInfos::addLoadFlowResultUuid);
+            Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, LOAD_FLOW_WITH_TAP_CHANGERS))
+                .ifPresent(invalidateNodeInfos::addLoadFlowResultUuid);
+        }
         Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SECURITY_ANALYSIS))
                 .ifPresent(invalidateNodeInfos::addSecurityAnalysisResultUuid);
         Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SENSITIVITY_ANALYSIS))
@@ -334,6 +343,7 @@ public class RootNetworkNodeInfoService {
         };
     }
 
+    @Transactional(readOnly = true)
     public UUID getLoadflowResultUuid(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID result = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         if (result != null) {

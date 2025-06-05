@@ -839,21 +839,30 @@ public class StudyService {
                 substationsIds, "all");
     }
 
-    @Transactional
     public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Boolean withRatioTapChangers, String userId) {
         UUID prevResultUuid = rootNetworkNodeInfoService.getLoadflowResultUuid(nodeUuid, rootNetworkUuid);
         if (prevResultUuid != null) {
-            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid);
-            UUID loadflowResultUuid = createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers);
-            buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, RerunLoadFlowWorkflowInfos.builder()
-                .loadflowResultUuid(loadflowResultUuid)
-                .withRatioTapChangers(withRatioTapChangers)
-                .userId(userId)
-                .build());
-            return loadflowResultUuid;
+            self.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers);
+            return self.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
         } else {
-            return sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, userId);
+            return self.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, userId);
         }
+    }
+
+    @Transactional
+    public UUID rerunLoadflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Boolean withRatioTapChangers, String userId) {
+        UUID loadflowResultUuid = createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers);
+        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
+            .invalidationMode(InvalidationMode.ALL)
+            .computationsInvalidationMode(ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
+            .build());
+        buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, RerunLoadFlowWorkflowInfos.builder()
+            .loadflowResultUuid(loadflowResultUuid)
+            .withRatioTapChangers(withRatioTapChangers)
+            .userId(userId)
+            .build());
+
+        return loadflowResultUuid;
     }
 
     private UUID createLoadflowRunningStatus(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers) {
@@ -865,6 +874,7 @@ public class StudyService {
         return loadflowResultUuid;
     }
 
+    @Transactional
     public void deleteLoadflowResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers) {
         ComputationType loadflowType = withRatioTapChangers ? LOAD_FLOW_WITH_TAP_CHANGERS : LOAD_FLOW;
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, null, loadflowType);
@@ -884,8 +894,6 @@ public class StudyService {
         UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, loadflowResultUuid, networkUuid, variantId, lfParametersUuid, withRatioTapChangers, lfReportUuid, userId);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, loadflowType);
-        // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
-        invalidateNodeTree(studyEntity.getId(), nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ONLY_CHILDREN);
 
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, loadflowType.getUpdateStatusType());
 
