@@ -60,7 +60,7 @@ class NetworkAreaDiagramTest {
     private static final UUID ELEMENT_UUID = UUID.randomUUID();
     private static final UUID ROOTNETWORK_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
-    private static final String ELEMENT_PARAMETERS = "{\"elementType\":\"DIAGRAM_CONFIG\",\"elementUuid\":\""+ELEMENT_UUID+"\"}";
+    private static final String ELEMENT_PARAMETERS = "{\"elementType\":\"DIAGRAM_CONFIG\",\"elementUuid\":\"" + ELEMENT_UUID + "\"}";
 
     @BeforeEach
     void setUp() {
