@@ -727,7 +727,9 @@ class VoltageInitTest {
         checkEquipmentUpdatingMessagesReceived(studyUuid, modificationNodeUuid);
         checkEquipmentMessagesReceived(studyUuid, modificationNodeUuid, NetworkImpactsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1")).build());
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.NODE_BUILD_STATUS_UPDATED);
+        if (!isBuildNode) {
+            checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.NODE_BUILD_STATUS_UPDATED);
+        }
         checkUpdateModelsStatusMessagesReceived(studyUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyUuid, "userId");
