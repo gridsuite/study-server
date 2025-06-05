@@ -235,7 +235,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
     public UUID run(String provider, @NonNull String receiver, @NonNull UUID networkUuid, String variantId,
                     @NonNull ReportInfos reportInfos, @NonNull UUID dynamicSimulationResultUuid,
-                    @NonNull UUID parametersUuid, String userId) {
+                    @NonNull UUID parametersUuid, String userId, boolean debug) {
         Objects.requireNonNull(receiver);
         Objects.requireNonNull(networkUuid);
         Objects.requireNonNull(reportInfos);
@@ -250,6 +250,9 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         }
         if (provider != null && !provider.isBlank()) {
             uriComponentsBuilder.queryParam("provider", provider);
+        }
+        if (debug) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, true);
         }
         uriComponentsBuilder
                 .queryParam("dynamicSimulationResultUuid", dynamicSimulationResultUuid)
