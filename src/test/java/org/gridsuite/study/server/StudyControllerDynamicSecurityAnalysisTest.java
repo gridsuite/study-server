@@ -218,7 +218,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         doAnswer(invocation -> RESULT_UUID)
             .when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(
                 any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
-                any(), any(), any(), any());
+                any(), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
@@ -288,7 +288,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // setup DynamicSecurityAnalysisService mock
         doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(any(),
-            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any());
+            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), eq(false));
 
         MvcResult result;
         // --- call endpoint to be tested --- //
@@ -365,7 +365,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // setup DynamicSecurityAnalysisService mock
         doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(any(),
-            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any());
+            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run

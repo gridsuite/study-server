@@ -60,7 +60,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
     private RemoteServicesProperties remoteServicesProperties;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-security-analysis-server", initMockWebServer());
         dynamicSecurityAnalysisClient = new DynamicSecurityAnalysisClient(remoteServicesProperties, restTemplate);
@@ -384,7 +384,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 ));
         // call service to test
         UUID resultUuid = dynamicSecurityAnalysisClient.run("Dynawo", "receiver", NETWORK_UUID,
-               "variantId", new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId");
+               "variantId", new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(expectedResultUuid);
@@ -404,7 +404,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
 
         // check result
         assertStudyException(() -> dynamicSecurityAnalysisClient.run("Dynawo", "receiver", NETWORK_UUID,
-                "variantId", new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId"),
+                "variantId", new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId", false),
                 RUN_DYNAMIC_SECURITY_ANALYSIS_FAILED, null);
     }
 
