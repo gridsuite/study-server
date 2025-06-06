@@ -36,6 +36,8 @@ public class RootNetworkNodeInfo {
 
     private UUID loadFlowResultUuid;
 
+    private UUID loadFlowWithRatioTapChangersResultUuid;
+
     private UUID voltageInitResultUuid;
 
     private UUID securityAnalysisResultUuid;
