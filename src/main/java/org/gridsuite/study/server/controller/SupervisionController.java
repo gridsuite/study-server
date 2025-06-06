@@ -15,6 +15,7 @@ import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.SupervisionService;
 
@@ -38,16 +39,33 @@ public class SupervisionController {
     private final SupervisionService supervisionService;
 
     private final StudyService studyService;
+    private final RootNetworkService rootNetworkService;
 
     private final EquipmentInfosService equipmentInfosService;
 
     private final RestClient restClient;
 
-    public SupervisionController(SupervisionService supervisionService, StudyService studyService, EquipmentInfosService equipmentInfosService, RestClient restClient) {
+    public SupervisionController(SupervisionService supervisionService, StudyService studyService, RootNetworkService rootNetworkService, EquipmentInfosService equipmentInfosService, RestClient restClient) {
         this.supervisionService = supervisionService;
         this.studyService = studyService;
+        this.rootNetworkService = rootNetworkService;
         this.equipmentInfosService = equipmentInfosService;
         this.restClient = restClient;
+    }
+
+    @GetMapping(value = "/root_networks")
+    @Operation(summary = "Get all the root_networks uuids")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of all the root networks uuids")})
+    public ResponseEntity<List<UUID>> getAllRootNetworks() {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getAllRootNetworksUuids());
+    }
+
+    @DeleteMapping(value = "/root_networks/{rootNetworkUuid}")
+    @Operation(summary = "delete the root network")
+    @ApiResponse(responseCode = "200", description = "Root network deleted")
+    public ResponseEntity<Void> deleteRootNetwork(@PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
+        rootNetworkService.deleteRootNetwork(rootNetworkUuid);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies")

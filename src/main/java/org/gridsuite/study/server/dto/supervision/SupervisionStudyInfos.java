@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.StudyInfos;
 
 import java.util.List;
@@ -25,6 +26,6 @@ import java.util.UUID;
 @Schema(description = "Supervision Study attributes")
 @EqualsAndHashCode(callSuper = true)
 public class SupervisionStudyInfos extends StudyInfos {
-    private List<UUID> rootNetworkUuids;
+    private List<RootNetworkInfos> rootNetworkInfos;
     private List<UUID> caseUuids;
 }

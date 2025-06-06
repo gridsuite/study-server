@@ -7,10 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.gridsuite.study.server.dto.RootNetworkInfos;
-import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
@@ -156,10 +153,21 @@ public class SupervisionService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<UUID> getAllRootNetworksUuids() {
+        return rootNetworkService.getAllRootNetworkUuids();
+    }
+
     private static SupervisionStudyInfos toSupervisionStudyInfosDto(StudyEntity entity) {
         return SupervisionStudyInfos.builder()
                 .id(entity.getId())
-                .rootNetworkUuids(entity.getRootNetworks().stream().map(RootNetworkEntity::getNetworkUuid).toList())
+                .rootNetworkInfos(
+                        entity.getRootNetworks().stream().map( rootNetworkEntity -> RootNetworkInfos.builder()
+                                .id(rootNetworkEntity.getId())
+                                .networkInfos(
+                                        new NetworkInfos(rootNetworkEntity.getNetworkUuid(), rootNetworkEntity.getNetworkId())
+                                ).build()
+                            ).toList())
                 .caseUuids(entity.getRootNetworks().stream().map(RootNetworkEntity::getCaseUuid).toList())
                 .build();
     }
