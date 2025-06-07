@@ -41,6 +41,7 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_TOPOLOGICAL_COLORING = "topologicalColoring";
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
     static final String QUERY_PARAM_DEPTH = "depth";
+    static final String QUERY_PARAM_SELECTED_VOLTAGE_LEVEL = "selectedVoltageLevel";
     static final String QUERY_PARAM_INIT_WITH_GEO_DATA = "withGeoData";
     static final String QUERY_PARAM_NAD_CONFIG_UUID = "nadConfigUuid";
     static final String NOT_FOUND = " not found";
@@ -168,13 +169,16 @@ public class SingleLineDiagramService {
         return result;
     }
 
-    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, List<String> voltageLevelsIds, int depth, boolean withGeoData) {
+    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, List<String> voltageLevelsIds, String selectedVoltageLevel, int depth, boolean withGeoData) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
                 "/network-area-diagram/{networkUuid}")
                 .queryParam(QUERY_PARAM_DEPTH, depth)
                 .queryParam(QUERY_PARAM_INIT_WITH_GEO_DATA, withGeoData);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        if (!StringUtils.isBlank(selectedVoltageLevel)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_SELECTED_VOLTAGE_LEVEL, selectedVoltageLevel);
         }
         var path = uriComponentsBuilder
                 .buildAndExpand(networkUuid)

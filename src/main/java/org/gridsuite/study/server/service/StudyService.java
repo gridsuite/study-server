@@ -1249,14 +1249,14 @@ public class StudyService {
         }
     }
 
-    public String getNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, List<String> voltageLevelsIds, int depth, boolean withGeoData) {
+    public String getNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, List<String> voltageLevelsIds, String selectedVoltageLevel, int depth, boolean withGeoData) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(ROOT_NETWORK_NOT_FOUND);
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            return singleLineDiagramService.getNetworkAreaDiagram(networkUuid, variantId, voltageLevelsIds, depth, withGeoData);
+            return singleLineDiagramService.getNetworkAreaDiagram(networkUuid, variantId, voltageLevelsIds, selectedVoltageLevel, depth, withGeoData);
         } else {
             return null;
         }
