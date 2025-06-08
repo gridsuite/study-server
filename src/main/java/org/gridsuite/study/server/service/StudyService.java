@@ -3178,6 +3178,11 @@ public class StudyService {
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
+    public void updateColumnsStates(UUID studyUuid, UUID configUuid, String columnStateUpdates) {
+        studyConfigService.updateColumnsStates(configUuid, columnStateUpdates);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
     public void setGlobalFilters(UUID studyUuid, UUID configUuid, String globalFilters) {
         studyConfigService.setGlobalFilters(configUuid, globalFilters);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
