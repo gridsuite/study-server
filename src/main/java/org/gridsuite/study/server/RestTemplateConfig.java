@@ -20,6 +20,10 @@ import com.powsybl.security.json.SecurityAnalysisJsonModule;
 import com.powsybl.sensitivity.json.SensitivityJsonModule;
 import com.powsybl.shortcircuit.json.ShortCircuitAnalysisJsonModule;
 import com.powsybl.timeseries.json.TimeSeriesJsonModule;
+
+import org.apache.hc.client5.http.classic.HttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
@@ -30,10 +34,30 @@ import org.springframework.web.client.RestTemplate;
 
 @Configuration
 public class RestTemplateConfig {
+    
+    @Bean
+    public HttpClient httpClient() {
+        PoolingHttpClientConnectionManager connectionManager = 
+            new PoolingHttpClientConnectionManager();
+        connectionManager.setMaxTotal(500);
+        connectionManager.setDefaultMaxPerRoute(200);
+//        RequestConfig requestConfig = RequestConfig.custom()
+//            .setConnectionRequestTimeout(Timeout.ofMilliseconds(properties.getConnectionRequestTimeout()))
+//            .setConnectTimeout(Timeout.ofMilliseconds(properties.getConnectTimeout()))
+//            .setResponseTimeout(Timeout.ofMilliseconds(properties.getResponseTimeout()))
+//            .build();
+ 
+        return HttpClients.custom()
+            .setConnectionManager(connectionManager)
+//            .setDefaultRequestConfig(requestConfig)
+            .build();
+    }
 
     @Bean
-    public RestTemplate restTemplate() {
-        final RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
+    public RestTemplate restTemplate(HttpClient httpClient) {
+        HttpComponentsClientHttpRequestFactory factory = 
+                new HttpComponentsClientHttpRequestFactory(httpClient);
+        final RestTemplate restTemplate = new RestTemplate(factory);
 
         //find and replace Jackson message converter with our own
         for (int i = 0; i < restTemplate.getMessageConverters().size(); i++) {
