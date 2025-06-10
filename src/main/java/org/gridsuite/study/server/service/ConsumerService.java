@@ -55,6 +55,7 @@ public class ConsumerService {
     static final String HEADER_CASE_FORMAT = "caseFormat";
     static final String HEADER_CASE_NAME = "caseName";
     static final String HEADER_ERROR_MESSAGE = "errorMessage";
+    static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
 
     private final ObjectMapper objectMapper;
 
@@ -611,7 +612,7 @@ public class ConsumerService {
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
-                if (computationType == LOAD_FLOW) {
+                if (computationType == LOAD_FLOW || computationType == LOAD_FLOW_WITH_TAP_CHANGERS) {
                     // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
                     studyService.invalidateNodeTree(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), InvalidateNodeTreeParameters.ONLY_CHILDREN);
                 }
@@ -718,7 +719,7 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeLoadFlowResult() {
         return message -> {
-            Boolean withRatioTapChangers = message.getHeaders().get("withRatioTapChangers", Boolean.class);
+            Boolean withRatioTapChangers = message.getHeaders().get(HEADER_WITH_RATIO_TAP_CHANGERS, Boolean.class);
             ComputationType loadflowType = Boolean.TRUE.equals(withRatioTapChangers) ? LOAD_FLOW_WITH_TAP_CHANGERS : LOAD_FLOW;
             consumeCalculationResult(message, loadflowType);
         };
