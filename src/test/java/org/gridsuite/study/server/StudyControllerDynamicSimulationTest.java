@@ -65,6 +65,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_DEBUG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.any;
 import static org.mockito.BDDMockito.eq;
@@ -267,12 +268,13 @@ class StudyControllerDynamicSimulationTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), eq(false));
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), eq(true));
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
+                        .param(QUERY_PARAM_DEBUG, "true")
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(PARAMETERS))
@@ -304,6 +306,20 @@ class StudyControllerDynamicSimulationTest {
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED);
+
+        // mock the notification from dynamic-simulation server to send debug notif
+        input.send(MessageBuilder.withPayload("")
+                .setHeader("resultUuid", RESULT_UUID.toString())
+                .setHeader("receiver", receiver)
+                .setHeader("debug", true)
+                .build(), DS_RESULT_DESTINATION);
+
+        // must have message STUDY_DEBUG from channel : studyUpdateDestination
+        Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertThat(dynamicSimulationResultMessage.getHeaders())
+                .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.STUDY_DEBUG);
+
         // resultUuid must be empty in database at this moment
         assertThat(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SIMULATION)).isNull();
     }
