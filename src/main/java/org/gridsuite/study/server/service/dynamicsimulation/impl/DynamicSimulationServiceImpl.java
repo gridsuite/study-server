@@ -176,9 +176,9 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public void deleteResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultUuids) {
         try {
-            dynamicSimulationClient.deleteResults(resultsUuids);
+            dynamicSimulationClient.deleteResults(resultUuids);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
         }

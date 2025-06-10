@@ -7,6 +7,8 @@
 
 package org.gridsuite.study.server.service.client.dynamicsimulation.impl;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ReportInfos;
@@ -29,8 +31,10 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.RUN_DYNAMIC_SIMULATION_FAILED;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -50,10 +54,10 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{networkUuid}/run");
-        if (variantId != null && !variantId.isBlank()) {
+        if (StringUtils.isNotBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        if (provider != null && !provider.isBlank()) {
+        if (StringUtils.isNotBlank(provider)) {
             uriComponentsBuilder.queryParam("provider", provider);
         }
         if (debug) {
@@ -74,7 +78,11 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
 
         // call dynamic-simulation REST API
         HttpEntity<DynamicSimulationParametersInfos> httpEntity = new HttpEntity<>(parameters, headers);
-        return getRestTemplate().postForObject(uriComponent.toUriString(), httpEntity, UUID.class);
+        try {
+            return getRestTemplate().postForObject(uriComponent.toUriString(), httpEntity, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, RUN_DYNAMIC_SIMULATION_FAILED);
+        }
     }
 
     @Override
@@ -142,7 +150,10 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
 
     @Override
     public void invalidateStatus(List<UUID> resultUuids) {
-        Objects.requireNonNull(resultUuids);
+        if (CollectionUtils.isEmpty(resultUuids)) {
+            return;
+        }
+
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/invalidate-status");
@@ -163,12 +174,13 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public void deleteResults(List<UUID> resultsUuids) {
-        if (resultsUuids != null && resultsUuids.isEmpty()) {
+    public void deleteResults(List<UUID> resultUuids) {
+        if (CollectionUtils.isEmpty(resultUuids)) {
             return;
         }
+
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
-        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
+        var uriComponents = UriComponentsBuilder.fromHttpUrl(endPointUrl).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultUuids);
         // call dynamic-simulation REST API
         getRestTemplate().delete(uriComponents.build().toUriString());
     }
