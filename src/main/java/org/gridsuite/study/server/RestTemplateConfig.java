@@ -23,6 +23,7 @@ import com.powsybl.timeseries.json.TimeSeriesJsonModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -33,7 +34,7 @@ public class RestTemplateConfig {
 
     @Bean
     public RestTemplate restTemplate() {
-        final RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
+        final RestTemplate restTemplate = new RestTemplate(new SimpleClientHttpRequestFactory());
 
         //find and replace Jackson message converter with our own
         for (int i = 0; i < restTemplate.getMessageConverters().size(); i++) {
