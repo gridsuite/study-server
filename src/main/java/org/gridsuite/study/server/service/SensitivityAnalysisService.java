@@ -117,7 +117,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
             .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuid.toString())
             .queryParam("selector", selector);
 
-        if (filters != null && !filters.isEmpty()) {
+        if (StringUtils.isNotBlank(filters)) {
             pathBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
         }
         URI uri = pathBuilder.build().encode().toUri();
