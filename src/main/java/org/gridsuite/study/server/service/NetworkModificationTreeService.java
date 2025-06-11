@@ -654,7 +654,6 @@ public class NetworkModificationTreeService {
                 ));
     }
 
-
     private Integer getNetworkModificationsCount(@NonNull UUID nodeUuid, boolean stashed) {
         return networkModificationService.getModificationsCount(self.getModificationGroupUuid(nodeUuid), stashed);
     }
