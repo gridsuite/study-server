@@ -1,8 +1,8 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
-    <changeSet author="lesaulnierkev (generated)" id="1748345925933-16">
+    <changeSet author="lesaulnierkev (generated)" id="1749647631832-16">
         <addColumn tableName="root_network_node_info">
-            <column name="loadflow_with_ratio_tap_changers_result_uuid" type="uuid"/>
+            <column name="loadflow_with_ratio_tap_changers" type="boolean"/>
         </addColumn>
     </changeSet>
 </databaseChangeLog>

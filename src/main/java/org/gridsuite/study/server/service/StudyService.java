@@ -837,7 +837,7 @@ public class StudyService {
     }
 
     public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Boolean withRatioTapChangers, String userId) {
-        UUID prevResultUuid = rootNetworkNodeInfoService.getLoadflowResultUuid(nodeUuid, rootNetworkUuid);
+        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         if (prevResultUuid != null) {
             self.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid);
             UUID loadflowResultUuid = self.createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers);
@@ -864,28 +864,23 @@ public class StudyService {
 
     @Transactional
     public UUID createLoadflowRunningStatus(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers) {
-        ComputationType loadflowType = withRatioTapChangers ? LOAD_FLOW_WITH_TAP_CHANGERS : LOAD_FLOW;
         // since invalidating and building nodes can be long, we create loadflow result status before execution long operations
         UUID loadflowResultUuid = loadflowService.createRunningStatus();
-        rootNetworkNodeInfoService.updateComputationResultUuid(nodeUuid, rootNetworkUuid, loadflowResultUuid, loadflowType);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, loadflowType.getUpdateStatusType());
+        rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         return loadflowResultUuid;
     }
 
     @Transactional
     public void deleteLoadflowResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid) {
-        ComputationType existingResultLoadflowType = rootNetworkNodeInfoService.getResultLoadFlowType(nodeUuid, rootNetworkUuid);
         loadflowService.deleteLoadFlowResults(List.of(loadflowResultUuid));
-        if (existingResultLoadflowType != null) {
-            updateComputationResultUuid(nodeUuid, rootNetworkUuid, null, existingResultLoadflowType);
-            notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, existingResultLoadflowType.getUpdateStatusType());
-        }
+        rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, null, null);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
     }
 
     @Transactional
     public UUID sendLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        ComputationType loadflowType = withRatioTapChangers ? LOAD_FLOW_WITH_TAP_CHANGERS : LOAD_FLOW;
         UUID lfParametersUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
         UUID lfReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(LOAD_FLOW.name(), UUID.randomUUID());
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
@@ -893,9 +888,9 @@ public class StudyService {
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
         UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, loadflowResultUuid, networkUuid, variantId, lfParametersUuid, withRatioTapChangers, lfReportUuid, userId);
 
-        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, loadflowType);
+        rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
 
-        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, loadflowType.getUpdateStatusType());
+        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
 
         return result;
     }
@@ -1037,7 +1032,6 @@ public class StudyService {
         invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
         invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_WITH_RATIO_TAP_CHANGERS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
@@ -1075,7 +1069,6 @@ public class StudyService {
             loadflowService.updateLoadFlowProvider(studyEntity.getLoadFlowParametersUuid(), provider);
             invalidateLoadFlowStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_WITH_RATIO_TAP_CHANGERS_STATUS);
             notificationService.emitComputationParamsChanged(studyUuid, LOAD_FLOW);
 
         });
@@ -1263,7 +1256,7 @@ public class StudyService {
     public List<LimitViolationInfos> getLimitViolations(@NonNull UUID nodeUuid, UUID rootNetworkUuid, String filters, String globalFilters, Sort sort) {
         UUID networkuuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID resultUuid = rootNetworkNodeInfoService.getLoadflowResultUuid(nodeUuid, rootNetworkUuid);
+        UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         return loadflowService.getLimitViolations(resultUuid, filters, globalFilters, sort, networkuuid, variantId);
     }
 
@@ -1808,7 +1801,7 @@ public class StudyService {
 
         deleteInvalidationInfos(invalidateNodeInfos);
 
-        emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid);
+        emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, ComputationsInvalidationMode.ALL);
 
         if (startTime.get() != null) {
             LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
@@ -1850,7 +1843,7 @@ public class StudyService {
 
         deleteInvalidationInfos(invalidateNodeInfos);
 
-        emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid);
+        emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
 
         if (startTime.get() != null) {
             LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
@@ -2953,7 +2946,6 @@ public class StudyService {
     public void invalidateLoadFlowStatus(UUID studyUuid, String userId) {
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_WITH_RATIO_TAP_CHANGERS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
@@ -3042,15 +3034,18 @@ public class StudyService {
                 .orElse("");
     }
 
-    private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_WITH_RATIO_TAP_CHANGERS_STATUS);
+    private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationsInvalidationMode computationsInvalidationMode) {
+        if(!ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        }
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        if(!ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode)) {
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        }
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);

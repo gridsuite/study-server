@@ -78,8 +78,8 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "loadflowResultUuid")
     private UUID loadFlowResultUuid;
 
-    @Column(name = "loadflowWithRatioTapChangersResultUuid")
-    private UUID loadFlowWithRatioTapChangersResultUuid;
+    @Column(name = "loadflowWithRatioTapChangers")
+    private Boolean loadFlowWithRatioTapChangers;
 
     @Column(name = "voltageInitResultUuid")
     private UUID voltageInitResultUuid;
@@ -124,7 +124,6 @@ public class RootNetworkNodeInfoEntity {
             .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
             .dynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid)
             .loadFlowResultUuid(loadFlowResultUuid)
-            .loadFlowWithRatioTapChangersResultUuid(loadFlowWithRatioTapChangersResultUuid)
             .nodeBuildStatus(nodeBuildStatus.toDto())
             .nonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid)
             .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)

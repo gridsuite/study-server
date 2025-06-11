@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
@@ -52,7 +53,7 @@ class LoadFLowUnitTest {
 
     @Test
     void testRunLoadFlow() {
-        when(rootNetworkNodeInfoService.getLoadflowResultUuid(nodeUuid, rootNetworkUuid)).thenReturn(null);
+        when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(null);
 
         doReturn(loadflowResultUuid).when(studyService).sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, false, userId);
         assertEquals(loadflowResultUuid, studyService.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId));
@@ -63,7 +64,7 @@ class LoadFLowUnitTest {
     @Test
     void testRunLoadFlowWithExistingResult() {
         UUID previousResultUuid = UUID.randomUUID();
-        when(rootNetworkNodeInfoService.getLoadflowResultUuid(nodeUuid, rootNetworkUuid)).thenReturn(previousResultUuid);
+        when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(previousResultUuid);
 
         doNothing().when(studyService).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
 

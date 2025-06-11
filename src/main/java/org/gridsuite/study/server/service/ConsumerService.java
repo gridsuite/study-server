@@ -598,6 +598,29 @@ public class ConsumerService {
         }
     }
 
+    public void consumeLoadFlowResult(Message<String> msg, boolean withRatioTapChangers) {
+        Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
+            .map(UUID::fromString)
+            .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {
+                LOGGER.info("{} result '{}' available for node '{}'",
+                    LOAD_FLOW.getLabel(),
+                    resultUuid,
+                    receiverObj.getNodeUuid());
+
+                // update DB
+                rootNetworkNodeInfoService.updateLoadflowResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, withRatioTapChangers);
+
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
+                studyService.invalidateNodeTree(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), InvalidateNodeTreeParameters.ONLY_CHILDREN);
+
+                // send notifications
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), LOAD_FLOW.getUpdateStatusType());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), LOAD_FLOW.getUpdateResultType());
+            }));
+    }
+
     public void consumeCalculationResult(Message<String> msg, ComputationType computationType) {
         Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
             .map(UUID::fromString)
@@ -611,11 +634,6 @@ public class ConsumerService {
                 rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
-                if (computationType == LOAD_FLOW || computationType == LOAD_FLOW_WITH_TAP_CHANGERS) {
-                    // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
-                    studyService.invalidateNodeTree(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), InvalidateNodeTreeParameters.ONLY_CHILDREN);
-                }
 
                 // send notifications
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
@@ -720,8 +738,7 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeLoadFlowResult() {
         return message -> {
             Boolean withRatioTapChangers = message.getHeaders().get(HEADER_WITH_RATIO_TAP_CHANGERS, Boolean.class);
-            ComputationType loadflowType = Boolean.TRUE.equals(withRatioTapChangers) ? LOAD_FLOW_WITH_TAP_CHANGERS : LOAD_FLOW;
-            consumeCalculationResult(message, loadflowType);
+            consumeLoadFlowResult(message, Boolean.TRUE.equals(withRatioTapChangers));
         };
     }
 
