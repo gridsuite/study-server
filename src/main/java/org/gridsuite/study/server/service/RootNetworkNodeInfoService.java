@@ -604,7 +604,7 @@ public class RootNetworkNodeInfoService {
     @Transactional(readOnly = true)
     public boolean isLoadflowDone(UUID nodeUuid, UUID rootNetworkUuid) {
         LoadFlowStatus loadFlowStatus = getBasicLoadFlowStatus(nodeUuid, rootNetworkUuid);
-        return LoadFlowStatus.NOT_DONE.equals(loadFlowStatus);
+        return loadFlowStatus != null && !LoadFlowStatus.NOT_DONE.equals(loadFlowStatus);
     }
 
     @Transactional(readOnly = true)

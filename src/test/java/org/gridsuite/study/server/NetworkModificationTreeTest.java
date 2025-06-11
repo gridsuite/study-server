@@ -1383,7 +1383,6 @@ class NetworkModificationTreeTest {
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION));
     }
 
@@ -1415,7 +1414,6 @@ class NetworkModificationTreeTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
@@ -1667,8 +1665,6 @@ class NetworkModificationTreeTest {
 
     private void checkUpdateModelsStatusMessagesReceived() {
         //loadflow_status
-        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
-        //loadflow_with_ratio_tap_changers_status
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         //securityAnalysis_status
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));

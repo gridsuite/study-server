@@ -2250,8 +2250,6 @@ class StudyTest {
 
         //loadflow_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //loadflow_with_ratio_tap_changers_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //securityAnalysis_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //sensitivityAnalysis_status
@@ -2653,8 +2651,6 @@ class StudyTest {
         }
         //loadflow_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //loadflow_with_ratio_tap_changers_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //securityAnalysis_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //sensitivityAnalysis_status
@@ -2687,8 +2683,6 @@ class StudyTest {
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             }
             //loadflow_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //loadflow_with_ratio_tap_changers_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //securityAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
