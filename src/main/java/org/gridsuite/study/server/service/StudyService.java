@@ -3035,7 +3035,7 @@ public class StudyService {
     }
 
     private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationsInvalidationMode computationsInvalidationMode) {
-        if(!ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
+        if (!ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         }
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
@@ -3043,7 +3043,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        if(!ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode)) {
+        if (!ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode)) {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         }
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
