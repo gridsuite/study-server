@@ -72,7 +72,7 @@ public class SupervisionController {
     @Operation(summary = "Get all the studies basic data")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of all the studies uuids, and some extra basic data")})
     public ResponseEntity<List<SupervisionStudyInfos>> getAllStudiesBasicData() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getStudies());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getSupervisionStudiesInfos());
     }
 
     @DeleteMapping(value = "/computation/results")

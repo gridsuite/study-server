@@ -771,7 +771,7 @@ class StudyTest {
 
     @Test
     void testSupervisionStudiesBasicData(final MockWebServer server) throws Exception {
-        // empty
+        // test empty return
         mockMvc.perform(get("/v1/supervision/studies")).andExpectAll(status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
 

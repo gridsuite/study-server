@@ -18,7 +18,11 @@ import org.gridsuite.study.server.dto.StudyInfos;
 import java.util.List;
 import java.util.UUID;
 
-// more detailed version of StudyInfos for supervision and admin tools operations
+/**
+ * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
+ *
+ * more detailed version of StudyInfos for supervision and admin tools operations
+ */
 @SuperBuilder
 @NoArgsConstructor
 @Getter

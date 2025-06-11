@@ -147,7 +147,7 @@ public class SupervisionService {
     }
 
     @Transactional(readOnly = true)
-    public List<SupervisionStudyInfos> getStudies() {
+    public List<SupervisionStudyInfos> getSupervisionStudiesInfos() {
         return studyRepository.findAll().stream()
                 .map(SupervisionService::toSupervisionStudyInfosDto)
                 .toList();
