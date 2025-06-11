@@ -162,7 +162,7 @@ public class SupervisionService {
         return SupervisionStudyInfos.builder()
                 .id(entity.getId())
                 .rootNetworkInfos(
-                        entity.getRootNetworks().stream().map( rootNetworkEntity -> RootNetworkInfos.builder()
+                        entity.getRootNetworks().stream().map(rootNetworkEntity -> RootNetworkInfos.builder()
                                 .id(rootNetworkEntity.getId())
                                 .networkInfos(
                                         new NetworkInfos(rootNetworkEntity.getNetworkUuid(), rootNetworkEntity.getNetworkId())
