@@ -352,6 +352,16 @@ public class RootNetworkNodeInfoService {
         }
     }
 
+    public ComputationType getResultLoadFlowType(UUID nodeUuid, UUID rootNetworkUuid) {
+        if (getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW) != null) {
+            return LOAD_FLOW;
+        }
+        if (getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW_WITH_TAP_CHANGERS) != null) {
+            return LOAD_FLOW_WITH_TAP_CHANGERS;
+        }
+        return null;
+    }
+
     public UUID getComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType) {
         Optional<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntityOpt = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
         return rootNetworkNodeInfoEntityOpt.map(rootNetworkNodeInfoEntity -> getComputationResultUuid(rootNetworkNodeInfoEntity, computationType)).orElse(null);

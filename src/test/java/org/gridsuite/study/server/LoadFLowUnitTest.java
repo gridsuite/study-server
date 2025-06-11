@@ -65,14 +65,14 @@ class LoadFLowUnitTest {
         UUID previousResultUuid = UUID.randomUUID();
         when(rootNetworkNodeInfoService.getLoadflowResultUuid(nodeUuid, rootNetworkUuid)).thenReturn(previousResultUuid);
 
-        doNothing().when(studyService).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid, false);
+        doNothing().when(studyService).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
 
         doReturn(loadflowResultUuid).when(studyService).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
         doReturn(loadflowResultUuid).when(studyService).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
 
         assertEquals(loadflowResultUuid, studyService.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId));
 
-        verify(studyService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid, false);
+        verify(studyService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
         verify(studyService, times(1)).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
         verify(studyService, times(1)).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
     }

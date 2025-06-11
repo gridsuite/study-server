@@ -98,6 +98,6 @@ class WorkflowTest {
 
         // check loadflow is actually ran after build is completed
         verify(notificationService, times(1)).emitNodeBuildFailed(studyUuid, nodeUuid, rootNetworkUuid, errorMessage);
-        verify(studyService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers);
+        verify(studyService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid);
     }
 }

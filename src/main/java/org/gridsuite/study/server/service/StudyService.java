@@ -839,7 +839,7 @@ public class StudyService {
     public UUID runLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Boolean withRatioTapChangers, String userId) {
         UUID prevResultUuid = rootNetworkNodeInfoService.getLoadflowResultUuid(nodeUuid, rootNetworkUuid);
         if (prevResultUuid != null) {
-            self.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers);
+            self.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid);
             UUID loadflowResultUuid = self.createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers);
             return self.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
         } else {
@@ -873,11 +873,13 @@ public class StudyService {
     }
 
     @Transactional
-    public void deleteLoadflowResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers) {
-        ComputationType loadflowType = withRatioTapChangers ? LOAD_FLOW_WITH_TAP_CHANGERS : LOAD_FLOW;
-        updateComputationResultUuid(nodeUuid, rootNetworkUuid, null, loadflowType);
+    public void deleteLoadflowResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid) {
+        ComputationType existingResultLoadflowType = rootNetworkNodeInfoService.getResultLoadFlowType(nodeUuid, rootNetworkUuid);
         loadflowService.deleteLoadFlowResults(List.of(loadflowResultUuid));
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, loadflowType.getUpdateStatusType());
+        if (existingResultLoadflowType != null) {
+            updateComputationResultUuid(nodeUuid, rootNetworkUuid, null, existingResultLoadflowType);
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, existingResultLoadflowType.getUpdateStatusType());
+        }
     }
 
     @Transactional

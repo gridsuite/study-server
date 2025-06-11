@@ -197,7 +197,7 @@ public class ConsumerService {
             WorkflowType workflowType = WorkflowType.valueOf(workflowTypeStr);
             if (WorkflowType.RERUN_LOAD_FLOW.equals(workflowType)) {
                 RerunLoadFlowWorkflowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowWorkflowInfos.class);
-                studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers());
+                studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid());
             }
         }
     }
