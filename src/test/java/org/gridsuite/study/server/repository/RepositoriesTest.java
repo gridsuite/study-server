@@ -50,17 +50,16 @@ class RepositoriesTest {
 
     @BeforeEach
     void setup() {
-        rootNodeInfoRepository.deleteAll();
-        networkModificationNodeInfoRepository.deleteAll();
-        nodeRepository.deleteAll();
-        rootNetworkRepository.deleteAll();
-        studyRepository.deleteAll();
+        System.out.println("CLEANINGGGGGGGGGGGGG");
+        rootNodeInfoRepository.findAll().forEach(r -> System.out.println("id;" + r.getId() + "name; " + r.getName()));
+        networkModificationNodeInfoRepository.findAll().forEach(System.out::println);
+        nodeRepository.findAll().forEach(System.out::println);
+        rootNetworkRepository.findAll().forEach(System.out::println);
+        studyRepository.findAll().forEach(System.out::println);
     }
 
     @AfterEach
     void tearDown() {
-        rootNetworkRepository.deleteAll();
-        nodeRepository.deleteAll();
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
     }
