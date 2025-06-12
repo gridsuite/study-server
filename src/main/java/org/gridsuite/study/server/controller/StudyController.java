@@ -1649,8 +1649,10 @@ public class StudyController {
         @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-        @Parameter(description = "results selector") @RequestParam("selector") String selector) {
-        String result = rootNetworkNodeInfoService.getSensitivityAnalysisResult(nodeUuid, rootNetworkUuid, selector);
+        @Parameter(description = "results selector") @RequestParam("selector") String selector,
+        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters
+    ) {
+        String result = rootNetworkNodeInfoService.getSensitivityAnalysisResult(nodeUuid, rootNetworkUuid, selector, filters);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }
@@ -2245,14 +2247,15 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilterFromFirstRootNetwork(studyUuid, filterUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/filters/elements")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/elements")
     @Operation(summary = "Evaluate a list of filters on root node to get matched elements")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
     public ResponseEntity<String> exportFilters(
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
         @Parameter(description = "Filters uuid to be resolved") @RequestParam("filtersUuid") List<UUID> filtersUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilters(rootNetworkUuid, filtersUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilters(rootNetworkUuid, filtersUuid, nodeUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/run")
