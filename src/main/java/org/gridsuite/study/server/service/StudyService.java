@@ -3067,8 +3067,9 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid) {
-        return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid);
+    public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid, UUID nodeUuid) {
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid, variantId);
     }
 
     @Transactional
