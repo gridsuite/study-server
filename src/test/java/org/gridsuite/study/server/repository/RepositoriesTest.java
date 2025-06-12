@@ -44,6 +44,7 @@ class RepositoriesTest {
 
     @BeforeEach
     void setup() {
+        rootNetworkRepository.deleteAll();
         nodeRepository.deleteAll();
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
@@ -51,6 +52,7 @@ class RepositoriesTest {
 
     @AfterEach
     void tearDown() {
+        rootNetworkRepository.deleteAll();
         nodeRepository.deleteAll();
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
