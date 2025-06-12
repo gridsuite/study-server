@@ -638,7 +638,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public Map<UUID, Set<UUID>> getModificationsToExcludeByRootNetwork(@NonNull UUID nodeUuid) {
+    public List<ExcludedNetworkModificationsByRootNetwork> getModificationsToExcludeByRootNetwork(@NonNull UUID nodeUuid) {
         List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos = rootNetworkNodeInfoService.getAllWithRootNetworkByNodeInfoId(nodeUuid);
         return getModificationsToExcludeByRootNetwork(rootNetworkByNodeInfos);
     }
@@ -646,12 +646,13 @@ public class NetworkModificationTreeService {
     /**
      * Get modifications to exclude by root network
      */
-    private Map<UUID, Set<UUID>> getModificationsToExcludeByRootNetwork(List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos) {
+    private List<ExcludedNetworkModificationsByRootNetwork> getModificationsToExcludeByRootNetwork(List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos) {
         return rootNetworkByNodeInfos.stream()
-                .collect(Collectors.toMap(
-                        r -> r.getRootNetwork().getId(),
-                        r -> new HashSet<>(r.getModificationsUuidsToExclude())
-                ));
+                .map(r -> new ExcludedNetworkModificationsByRootNetwork(
+                        r.getRootNetwork().getId(),
+                        new HashSet<>(r.getModificationsUuidsToExclude())
+                ))
+                .collect(Collectors.toList());
     }
 
     private Integer getNetworkModificationsCount(@NonNull UUID nodeUuid, boolean stashed) {

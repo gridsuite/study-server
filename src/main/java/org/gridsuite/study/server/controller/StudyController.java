@@ -1262,9 +1262,9 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications-status", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get network modifications from a node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Map<UUID, Set<UUID>>> getModificationsToExcludeByRootNetwork(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    @Operation(summary = "Get excluded network modifications from a node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The excluded network modifications were returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity< List<ExcludedNetworkModificationsByRootNetwork>> getModificationsToExcludeByRootNetwork(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
 
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
