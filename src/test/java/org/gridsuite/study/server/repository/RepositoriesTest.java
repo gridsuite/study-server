@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.repository;
 
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -38,15 +39,19 @@ class RepositoriesTest {
 
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
+    @Autowired
+    private NodeRepository nodeRepository;
 
     @BeforeEach
     void setup() {
+        nodeRepository.deleteAll();
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
     }
 
     @AfterEach
     void tearDown() {
+        nodeRepository.deleteAll();
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
     }
