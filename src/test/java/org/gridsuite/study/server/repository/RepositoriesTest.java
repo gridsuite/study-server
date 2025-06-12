@@ -8,7 +8,7 @@ package org.gridsuite.study.server.repository;
 
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -38,8 +38,8 @@ class RepositoriesTest {
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
 
-    @AfterEach
-    void tearDown() {
+    @BeforeEach
+    void setup() {
         studyRepository.deleteAll();
         studyCreationRequestRepository.deleteAll();
     }
