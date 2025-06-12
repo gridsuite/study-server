@@ -9,6 +9,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.common.collect.ImmutableSet;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.iidm.network.IdentifiableType;
 import com.powsybl.iidm.network.Network;
@@ -23,6 +24,7 @@ import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.modification.dto.VoltageInitModificationInfos;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
@@ -32,6 +34,7 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.AlertLevel;
+import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -39,6 +42,7 @@ import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEner
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -54,6 +58,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpHeaders;
@@ -73,10 +78,9 @@ import java.util.stream.IntStream;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
 import static org.gridsuite.study.server.notification.NotificationService.*;
-import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_REACTIVE_SLACKS_OVER_THRESHOLD;
-import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE;
-import static org.gridsuite.study.server.service.VoltageInitResultConsumer.HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE;
+import static org.gridsuite.study.server.service.VoltageInitResultConsumer.*;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -211,6 +215,9 @@ class VoltageInitTest {
     @Autowired
     private ReportService reportService;
 
+    @SpyBean
+    private LoadFlowService loadFlowService;
+
     @Autowired
     private SecurityAnalysisService securityAnalysisService;
 
@@ -245,8 +252,6 @@ class VoltageInitTest {
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
-    private StudyService studyService;
-    @Autowired
     private TestUtils studyTestUtils;
 
     @BeforeEach
@@ -263,6 +268,7 @@ class VoltageInitTest {
         voltageInitService.setVoltageInitServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
+        loadFlowService.setLoadFlowServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
@@ -379,7 +385,9 @@ class VoltageInitTest {
                 } else if (path.matches("/v1/parameters") && method.equals("POST")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS_UUID));
                 } else if (path.matches("/v1/parameters/default") && method.equals("POST")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS_UUID));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS_UUID));
+                } else if (path.matches("/v1/network-modifications/index\\?networkUuid=.*") && method.equals("DELETE")) {
+                    return new MockResponse(200);
                 } else {
                     LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
                     return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
@@ -661,7 +669,7 @@ class VoltageInitTest {
 
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
-        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
+        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3", BuildStatus.BUILT);
         UUID modificationNode3Uuid = modificationNode3.getId();
 
         // run a voltage init analysis
@@ -684,6 +692,8 @@ class VoltageInitTest {
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")
         ));
 
+        assertTrue(networkModificationTreeService.getNodeBuildStatus(modificationNode3Uuid, firstRootNetworkUuid).isBuilt());
+
         // clone and copy modifications to modificationNode3Uuid
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
             .header("userId", "userId")).andExpect(status().isOk());
@@ -693,14 +703,36 @@ class VoltageInitTest {
                 r.matches("/v1/groups/.*\\?action=COPY&originGroupUuid=.*")
         ));
 
-        checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid);
-        checkNodesBuildStatusUpdatedMessageReceived(studyNameUserIdUuid, List.of(modificationNode3Uuid));
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_STUDY);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.NODE_BUILD_STATUS_UPDATED);
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid);
-        checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid);
-        checkElementUpdatedMessageSent(studyNameUserIdUuid, "userId");
+        checkInsertVoltageInitModifications(studyNameUserIdUuid, modificationNode3Uuid, firstRootNetworkUuid, true);
+
+        // clone and copy modifications to modificationNode3Uuid with LF result -> node is invalidated
+        when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
+            .header("userId", "userId")).andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(7, server).stream().allMatch(r ->
+            r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
+                r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
+                r.matches("/v1/results\\?resultsUuids=" + VOLTAGE_INIT_RESULT_UUID) ||
+                r.matches("/v1/groups/.*\\?action=COPY&originGroupUuid=.*") ||
+                r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*") ||
+                r.matches("/v1/reports")
+        ));
+
+        checkInsertVoltageInitModifications(studyNameUserIdUuid, modificationNode3Uuid, firstRootNetworkUuid, false);
+    }
+
+    private void checkInsertVoltageInitModifications(UUID studyUuid, UUID modificationNodeUuid, UUID rootNetworkUuid, boolean isBuildNode) throws Exception {
+        NodeBuildStatus nodeBuildStatus = networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid, rootNetworkUuid);
+        assertTrue(isBuildNode ? nodeBuildStatus.isBuilt() : nodeBuildStatus.isNotBuilt());
+        checkEquipmentUpdatingMessagesReceived(studyUuid, modificationNodeUuid);
+        checkEquipmentMessagesReceived(studyUuid, modificationNodeUuid, NetworkImpactsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1")).build());
+        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
+        if (!isBuildNode) {
+            checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.NODE_BUILD_STATUS_UPDATED);
+        }
+        checkUpdateModelsStatusMessagesReceived(studyUuid);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNodeUuid);
+        checkElementUpdatedMessageSent(studyUuid, "userId");
     }
 
     private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid) {
@@ -714,6 +746,17 @@ class VoltageInitTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+    }
+
+    private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpactsInfos expectedPayload) throws Exception {
+        // assert that the broker message has been sent for updating study type
+        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        NetworkImpactsInfos actualPayload = objectMapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<>() { });
+        assertThat(expectedPayload, new MatcherJson<>(objectMapper, actualPayload));
+        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
+        assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_NODE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
@@ -730,15 +773,6 @@ class VoltageInitTest {
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, headersStudyUpdate.get(NotificationService.HEADER_PARENT_NODE));
         assertEquals(NotificationService.MODIFICATIONS_UPDATING_FINISHED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-    }
-
-    private void checkNodesBuildStatusUpdatedMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(messageStatus.getPayload()));
-        MessageHeaders headersStatus = messageStatus.getHeaders();
-        assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(new TreeSet<>(nodesUuids), new TreeSet<>((List) headersStatus.get(NotificationService.HEADER_NODES)));
-        assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkEquipmentUpdatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
