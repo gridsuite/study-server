@@ -50,13 +50,11 @@ class RepositoriesTest {
 
     @BeforeEach
     void setup() {
-        rootNetworkRepository.deleteAll();
+        rootNodeInfoRepository.deleteAll();
         networkModificationNodeInfoRepository.deleteAll();
-        rootNodeInfoRepository.deleteAll();
-        rootNodeInfoRepository.deleteAll();
         nodeRepository.deleteAll();
+        rootNetworkRepository.deleteAll();
         studyRepository.deleteAll();
-        studyCreationRequestRepository.deleteAll();
     }
 
     @AfterEach
