@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
+//TriggerCI
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class RepositoriesTest {
