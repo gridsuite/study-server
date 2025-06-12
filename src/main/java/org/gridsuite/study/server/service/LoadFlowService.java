@@ -55,7 +55,7 @@ public class LoadFlowService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, String userId) {
+    public UUID runLoadFlow(UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, UUID networkUuid, String variantId, UUID parametersUuid, boolean withRatioTapChangers, UUID reportUuid, String userId) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
@@ -65,10 +65,15 @@ public class LoadFlowService extends AbstractComputationService {
 
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run-and-save")
+                .queryParam(QUERY_WITH_TAP_CHANGER, withRatioTapChangers)
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
                 .queryParam(QUERY_PARAM_REPORTER_ID, nodeUuid.toString())
                 .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.LOAD_FLOW.reportKey);
+
+        if (loadflowResultUuid != null) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_RESULT_UUID, loadflowResultUuid);
+        }
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
         }
@@ -180,6 +185,14 @@ public class LoadFlowService extends AbstractComputationService {
 
             restTemplate.put(loadFlowServerBaseUri + path, Void.class);
         }
+    }
+
+    public UUID createRunningStatus() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/running-status")
+            .toUriString();
+
+        return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
     }
 
     public void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {

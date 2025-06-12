@@ -21,6 +21,7 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -669,9 +670,10 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestParam(value = "withRatioTapChangers", required = false, defaultValue = "false") boolean withRatioTapChangers,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        studyService.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -701,6 +703,16 @@ public class StudyController {
         LoadFlowStatus result = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().body(result.name()) :
                 ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/status-infos")
+    @Operation(summary = "Get the loadflow status infos on study node and root network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow status"),
+        @ApiResponse(responseCode = "404", description = "The loadflow status has not been found")})
+    public ResponseEntity<LoadFlowComputationInfos> getLoadFlowStatusInfos(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                    @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkNodeInfoService.getLoadFlowComputationInfos(nodeUuid, rootNetworkUuid));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/stop")

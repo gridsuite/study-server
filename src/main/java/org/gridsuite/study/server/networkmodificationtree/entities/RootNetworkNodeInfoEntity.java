@@ -78,6 +78,9 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "loadflowResultUuid")
     private UUID loadFlowResultUuid;
 
+    @Column(name = "loadflowWithRatioTapChangers")
+    private Boolean loadFlowWithRatioTapChangers;
+
     @Column(name = "voltageInitResultUuid")
     private UUID voltageInitResultUuid;
 
