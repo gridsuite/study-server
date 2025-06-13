@@ -16,6 +16,8 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyConstants.SINGLE_LINE_DIAGRAM_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.SVG_NOT_FOUND;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,12 +45,12 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
     static final String QUERY_PARAM_DEPTH = "depth";
     static final String QUERY_PARAM_INIT_WITH_GEO_DATA = "withGeoData";
-    static final String QUERY_PARAM_NAD_CONFIG_UUID = "nadConfigUuid";
+    static final String QUERY_PARAM_ELEMENT_PARAMS = "elementParams";
     static final String NOT_FOUND = " not found";
     static final String QUERY_PARAM_DISPLAY_MODE = "sldDisplayMode";
     static final String LANGUAGE = "language";
     static final String VOLTAGE_LEVEL = "Voltage level ";
-    static final String NAD_CONFIG_UUID = "Nad config UUID ";
+    static final String ELEMENT = "Element";
 
     private final RestTemplate restTemplate;
 
@@ -193,10 +195,10 @@ public class SingleLineDiagramService {
         return result;
     }
 
-    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, UUID nadConfigUuid) {
+    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, String elementParams) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
                 "/network-area-diagram/{networkUuid}")
-                .queryParam(QUERY_PARAM_NAD_CONFIG_UUID, nadConfigUuid);
+                .queryParam(QUERY_PARAM_ELEMENT_PARAMS, URLEncoder.encode(elementParams, StandardCharsets.UTF_8));
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
@@ -208,7 +210,7 @@ public class SingleLineDiagramService {
             result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, NAD_CONFIG_UUID + nadConfigUuid + NOT_FOUND);
+                throw new StudyException(SVG_NOT_FOUND, ELEMENT + NOT_FOUND);
             } else {
                 throw e;
             }
