@@ -22,6 +22,7 @@ import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.DiagramParameters;
+import org.gridsuite.study.server.dto.singlelinediagram.VoltageLevelSelectionInfos;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -169,7 +170,7 @@ public class SingleLineDiagramService {
         return result;
     }
 
-    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, List<String> voltageLevelsIds, String selectedVoltageLevel, int depth, boolean withGeoData) {
+    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, VoltageLevelSelectionInfos voltageLevelSelectionInfos, int depth, boolean withGeoData) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
                 "/network-area-diagram/{networkUuid}")
                 .queryParam(QUERY_PARAM_DEPTH, depth)
@@ -177,18 +178,15 @@ public class SingleLineDiagramService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        if (!StringUtils.isBlank(selectedVoltageLevel)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_SELECTED_VOLTAGE_LEVEL, selectedVoltageLevel);
-        }
         var path = uriComponentsBuilder
                 .buildAndExpand(networkUuid)
                 .toUriString();
         String result;
         try {
-            result = restTemplate.postForObject(singleLineDiagramServerBaseUri + path, voltageLevelsIds, String.class);
+            result = restTemplate.postForObject(singleLineDiagramServerBaseUri + path, voltageLevelSelectionInfos, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelsIds + NOT_FOUND);
+                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelSelectionInfos + NOT_FOUND);
             } else {
                 throw e;
             }

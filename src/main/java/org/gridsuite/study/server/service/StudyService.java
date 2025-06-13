@@ -32,6 +32,7 @@ import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNo
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
+import org.gridsuite.study.server.dto.singlelinediagram.VoltageLevelSelectionInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -1249,14 +1250,14 @@ public class StudyService {
         }
     }
 
-    public String getNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, List<String> voltageLevelsIds, String selectedVoltageLevel, int depth, boolean withGeoData) {
+    public String getNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, VoltageLevelSelectionInfos voltageLevelSelectionInfos, int depth, boolean withGeoData) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(ROOT_NETWORK_NOT_FOUND);
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            return singleLineDiagramService.getNetworkAreaDiagram(networkUuid, variantId, voltageLevelsIds, selectedVoltageLevel, depth, withGeoData);
+            return singleLineDiagramService.getNetworkAreaDiagram(networkUuid, variantId, voltageLevelSelectionInfos, depth, withGeoData);
         } else {
             return null;
         }

@@ -34,6 +34,7 @@ import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNo
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
+import org.gridsuite.study.server.dto.singlelinediagram.VoltageLevelSelectionInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
@@ -1112,11 +1113,10 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestBody List<String> voltageLevelsIds,
+            @RequestBody VoltageLevelSelectionInfos voltageLevelSelectionInfos,
             @Parameter(description = "depth") @RequestParam(name = "depth", defaultValue = "0") int depth,
-            @Parameter(description = "selected voltage level") @RequestParam(name = "selectedVoltageLevel", required = false) String selectedVoltageLevel,
             @Parameter(description = "Initialize NAD with Geographical Data") @RequestParam(name = "withGeoData", defaultValue = "true") boolean withGeoData) {
-        String result = studyService.getNetworkAreaDiagram(nodeUuid, rootNetworkUuid, voltageLevelsIds, selectedVoltageLevel, depth, withGeoData);
+        String result = studyService.getNetworkAreaDiagram(nodeUuid, rootNetworkUuid, voltageLevelSelectionInfos, depth, withGeoData);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
