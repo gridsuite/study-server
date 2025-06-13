@@ -6,9 +6,13 @@
  */
 package org.gridsuite.study.server.repository;
 
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -36,6 +40,24 @@ class RepositoriesTest {
 
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
+
+    @Autowired
+    private NodeRepository nodeRepository;
+
+    @Autowired
+    private RootNodeInfoRepository rootNodeInfoRepository;
+
+    @Autowired
+    private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+
+    @BeforeEach
+    void setup() {
+        rootNodeInfoRepository.deleteAll();
+        networkModificationNodeInfoRepository.deleteAll();
+        nodeRepository.deleteAll();
+        rootNetworkRepository.deleteAll();
+        studyRepository.deleteAll();
+    }
 
     @AfterEach
     void tearDown() {
