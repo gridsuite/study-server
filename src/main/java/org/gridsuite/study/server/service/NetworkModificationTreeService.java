@@ -637,22 +637,15 @@ public class NetworkModificationTreeService {
         return networkModificationService.getModifications(self.getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
     }
 
-    @Transactional(readOnly = true)
-    public List<ExcludedNetworkModificationsByRootNetwork> getModificationsToExcludeByRootNetwork(@NonNull UUID nodeUuid) {
+    @Transactional
+    public List<ExcludedNetworkModifications> getModificationsToExclude(@NonNull UUID nodeUuid) {
         List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos = rootNetworkNodeInfoService.getAllWithRootNetworkByNodeInfoId(nodeUuid);
-        return getModificationsToExcludeByRootNetwork(rootNetworkByNodeInfos);
-    }
+        return rootNetworkByNodeInfos.stream().
+        map(r -> new ExcludedNetworkModifications(
+                r.getRootNetwork().getId(),
+                new HashSet<>(r.getModificationsUuidsToExclude())
 
-    /**
-     * Get modifications to exclude by root network
-     */
-    private List<ExcludedNetworkModificationsByRootNetwork> getModificationsToExcludeByRootNetwork(List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos) {
-        return rootNetworkByNodeInfos.stream()
-                .map(r -> new ExcludedNetworkModificationsByRootNetwork(
-                        r.getRootNetwork().getId(),
-                        new HashSet<>(r.getModificationsUuidsToExclude())
-                ))
-                .collect(Collectors.toList());
+                )).toList();
     }
 
     private Integer getNetworkModificationsCount(@NonNull UUID nodeUuid, boolean stashed) {

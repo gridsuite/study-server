@@ -14,7 +14,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
-import org.gridsuite.study.server.networkmodificationtree.dto.ExcludedNetworkModificationsByRootNetwork;
+import org.gridsuite.study.server.networkmodificationtree.dto.ExcludedNetworkModifications;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
@@ -246,7 +246,7 @@ class ModificationToExcludeTest {
     }
 
     @Test
-    void testGetModificationsToExcludeByRootNetworkUuid() throws Exception {
+    void testGetModificationsToExclude() throws Exception {
         // create study with two root networks
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(studyEntity, "secondRootNetwork");
@@ -266,21 +266,21 @@ class ModificationToExcludeTest {
         rootNetworkNodeInfoEntity2.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_2);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity2);
 
-        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications-status",
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/excluded-network-modifications",
                          studyEntity.getId(), firstNode.getId())
                         .header(USER_ID, USER_ID))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        List<ExcludedNetworkModificationsByRootNetwork> excludedNetworkModificationsByRootNetwork = objectMapper.readValue(result.getResponse().getContentAsString(), new com.fasterxml.jackson.core.type.TypeReference<>() {
+        List<ExcludedNetworkModifications> excludedNetworkModifications = objectMapper.readValue(result.getResponse().getContentAsString(), new com.fasterxml.jackson.core.type.TypeReference<>() {
         });
 
-        assertEquals(2, excludedNetworkModificationsByRootNetwork.size());
+        assertEquals(2, excludedNetworkModifications.size());
 
-        assertEquals(excludedNetworkModificationsByRootNetwork.getFirst().rootNetworkUUID(), rootNetworkBasicInfos.getFirst().rootNetworkUuid());
-        assertEquals(excludedNetworkModificationsByRootNetwork.getFirst().modificationUuidsToExclude(), rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude());
-        assertEquals(excludedNetworkModificationsByRootNetwork.get(1).rootNetworkUUID(), rootNetworkBasicInfos.get(1).rootNetworkUuid());
-        assertEquals(excludedNetworkModificationsByRootNetwork.get(1).modificationUuidsToExclude(), rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude());
+        assertEquals(excludedNetworkModifications.getFirst().rootNetworkUuid(), rootNetworkBasicInfos.getFirst().rootNetworkUuid());
+        assertEquals(excludedNetworkModifications.getFirst().modificationUuidsToExclude(), rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude());
+        assertEquals(excludedNetworkModifications.get(1).rootNetworkUuid(), rootNetworkBasicInfos.get(1).rootNetworkUuid());
+        assertEquals(excludedNetworkModifications.get(1).modificationUuidsToExclude(), rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude());
     }
 
     @Test

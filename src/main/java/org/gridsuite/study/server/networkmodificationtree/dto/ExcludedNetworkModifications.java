@@ -12,4 +12,4 @@ import java.util.UUID;
 /**
  * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
-public record ExcludedNetworkModificationsByRootNetwork(UUID rootNetworkUUID, Set<UUID> modificationUuidsToExclude) { }
+public record ExcludedNetworkModifications(UUID rootNetworkUuid, Set<UUID> modificationUuidsToExclude) { }
