@@ -20,9 +20,9 @@ import com.powsybl.security.json.SecurityAnalysisJsonModule;
 import com.powsybl.sensitivity.json.SensitivityJsonModule;
 import com.powsybl.shortcircuit.json.ShortCircuitAnalysisJsonModule;
 import com.powsybl.timeseries.json.TimeSeriesJsonModule;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -32,8 +32,8 @@ import org.springframework.web.client.RestTemplate;
 public class RestTemplateConfig {
 
     @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        final RestTemplate restTemplate = builder.build();
+    public RestTemplate restTemplate() {
+        final RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
 
         //find and replace Jackson message converter with our own
         for (int i = 0; i < restTemplate.getMessageConverters().size(); i++) {
