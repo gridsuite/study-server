@@ -19,9 +19,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.nio.charset.StandardCharsets;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.mockito.Mockito.when;
@@ -55,9 +57,10 @@ class NetworkAreaDiagramTest {
     private static final String SINGLE_LINE_DIAGRAM_SERVER_BASE_URL = "/v1/network-area-diagram/";
     private static final String USER1 = "user1";
     private static final UUID NETWORK_UUID = UUID.randomUUID();
-    private static final UUID NAD_CONFIG_UUID = UUID.randomUUID();
+    private static final UUID ELEMENT_UUID = UUID.randomUUID();
     private static final UUID ROOTNETWORK_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
+    private static final String ELEMENT_PARAMETERS = "{\"elementType\":\"DIAGRAM_CONFIG\",\"elementUuid\":\"" + ELEMENT_UUID + "\"}";
 
     @BeforeEach
     void setUp() {
@@ -81,13 +84,13 @@ class NetworkAreaDiagramTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         NETWORK_UUID, ROOTNETWORK_UUID, NODE_UUID)
-                        .param("nadConfigUuid", NAD_CONFIG_UUID.toString())
+                        .param("elementParams", ELEMENT_PARAMETERS)
                         .header("userId", USER1))
                 .andExpectAll(status().isOk(), content().string("nad-svg-from-config"))
                 .andReturn();
 
         wireMockUtils.verifyGetRequest(stubId, SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID, Map.of(
-                "nadConfigUuid", WireMock.equalTo(NAD_CONFIG_UUID.toString()),
+                "elementParams", WireMock.equalTo(URLEncoder.encode(ELEMENT_PARAMETERS, StandardCharsets.UTF_8)),
                 "variantId", WireMock.equalTo(VariantManagerConstants.INITIAL_VARIANT_ID)));
     }
 
@@ -97,7 +100,7 @@ class NetworkAreaDiagramTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         NETWORK_UUID, ROOTNETWORK_UUID, NODE_UUID)
-                        .param("nadConfigUuid", NAD_CONFIG_UUID.toString())
+                        .param("elementParams", ELEMENT_PARAMETERS)
                         .header("userId", USER1))
                 .andExpectAll(status().isNoContent());
     }
@@ -106,24 +109,24 @@ class NetworkAreaDiagramTest {
     void testGetNetworkAreaDiagramFromConfigRootNetworkError() throws Exception {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
-                        .param("nadConfigUuid", NAD_CONFIG_UUID.toString())
+                        .param("elementParams", ELEMENT_PARAMETERS)
                         .header("userId", USER1))
                 .andExpectAll(status().isNotFound());
     }
 
     @Test
-    void testGetNetworkAreaDiagramFromConfigNadConfigUuidNotFound() throws Exception {
+    void testGetNetworkAreaDiagramFromConfigElementUuidNotFound() throws Exception {
         UUID stubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching(SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + ".*"))
                 .willReturn(WireMock.notFound())).getId();
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         NETWORK_UUID, ROOTNETWORK_UUID, NODE_UUID)
-                        .param("nadConfigUuid", NAD_CONFIG_UUID.toString())
+                        .param("elementParams", ELEMENT_PARAMETERS)
                         .header("userId", USER1))
                 .andExpectAll(status().isNotFound());
 
         wireMockUtils.verifyGetRequest(stubId, SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID, Map.of(
-                "nadConfigUuid", WireMock.equalTo(NAD_CONFIG_UUID.toString()),
+                "elementParams", WireMock.equalTo(URLEncoder.encode(ELEMENT_PARAMETERS, StandardCharsets.UTF_8)),
                 "variantId", WireMock.equalTo(VariantManagerConstants.INITIAL_VARIANT_ID)));
     }
 }

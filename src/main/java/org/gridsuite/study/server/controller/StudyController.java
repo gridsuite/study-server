@@ -1121,14 +1121,14 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram")
-    @Operation(summary = "get a the network area diagram from the config for the given network")
+    @Operation(summary = "get a network area diagram for the given network using a config or a filter")
     @ApiResponse(responseCode = "200", description = "The svg")
     public ResponseEntity<String> getNetworkAreaDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "NAD Config UUID") @RequestParam(name = "nadConfigUuid") UUID nadConfigUuid) {
-        String result = studyService.getNetworkAreaDiagram(nodeUuid, rootNetworkUuid, nadConfigUuid);
+            @Parameter(description = "Element parameters") @RequestParam(name = "elementParams") String elementParams) {
+        String result = studyService.getNetworkAreaDiagram(nodeUuid, rootNetworkUuid, elementParams);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
