@@ -40,10 +40,13 @@ class RepositoriesTest {
 
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
+
     @Autowired
     private NodeRepository nodeRepository;
+
     @Autowired
     private RootNodeInfoRepository rootNodeInfoRepository;
+
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
 
