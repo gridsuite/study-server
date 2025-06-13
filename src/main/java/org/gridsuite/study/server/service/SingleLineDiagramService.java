@@ -42,7 +42,6 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_TOPOLOGICAL_COLORING = "topologicalColoring";
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
     static final String QUERY_PARAM_DEPTH = "depth";
-    static final String QUERY_PARAM_SELECTED_VOLTAGE_LEVEL = "selectedVoltageLevel";
     static final String QUERY_PARAM_INIT_WITH_GEO_DATA = "withGeoData";
     static final String QUERY_PARAM_NAD_CONFIG_UUID = "nadConfigUuid";
     static final String NOT_FOUND = " not found";
@@ -186,7 +185,7 @@ public class SingleLineDiagramService {
             result = restTemplate.postForObject(singleLineDiagramServerBaseUri + path, voltageLevelSelectionInfos, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelSelectionInfos + NOT_FOUND);
+                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelSelectionInfos.getVoltageLevelsIds() + NOT_FOUND);
             } else {
                 throw e;
             }
