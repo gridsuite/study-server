@@ -220,6 +220,10 @@ class SingleLineDiagramTest {
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
                         return new MockResponse(500, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"tmp\",\"path\":\"/v1/networks\"}");
                     case "/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true":
+                        String requestBody = request.getBody().readUtf8();
+                        if (requestBody.contains("notFoundVl")) {
+                            return new MockResponse(404);
+                        }
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "nad-svg");
 
                     case "/v1/svg-component-libraries":
@@ -371,7 +375,15 @@ class SingleLineDiagramTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
 
-        //get voltage levels
+        // get the network area diagram non existing voltage level on network
+        voltageLevelSelectionInfos = VoltageLevelSelectionInfos.builder().voltageLevelsIds(List.of("notFoundVl")).build();
+        jsonBody = objectMapper.writeValueAsString(voltageLevelSelectionInfos);
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
+                        .content(jsonBody)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+
         mvcResult = getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "VOLTAGE_LEVEL", null, objectMapper.writeValueAsString(List.of()), TestUtils.resourceToString("/network-voltage-levels-infos.json"));
         List<VoltageLevelInfos> vliListResponse = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
         assertThat(vliListResponse, new MatcherJson<>(objectMapper, List.of(
