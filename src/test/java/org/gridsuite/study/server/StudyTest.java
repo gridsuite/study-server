@@ -714,7 +714,7 @@ class StudyTest {
         if (matcher.find()) {
             String receiverUrlString = matcher.group(1);
             input.send(MessageBuilder.withPayload("").setHeader("receiver", URLDecoder.decode(receiverUrlString, StandardCharsets.UTF_8))
-                    .setHeader("errorMessage", errorMessage)
+                    .setHeader("x-exception-message", errorMessage)
                     .build(), "case.import.start.dlx");
         }
     }
