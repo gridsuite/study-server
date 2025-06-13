@@ -1275,14 +1275,14 @@ public class StudyService {
         }
     }
 
-    public String getNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, UUID nadConfigUuid) {
+    public String getNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, String elementParams) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(ROOT_NETWORK_NOT_FOUND);
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            return singleLineDiagramService.getNetworkAreaDiagram(networkUuid, variantId, nadConfigUuid);
+            return singleLineDiagramService.getNetworkAreaDiagram(networkUuid, variantId, elementParams);
         } else {
             return null;
         }
@@ -3189,6 +3189,11 @@ public class StudyService {
 
     public void reorderColumns(UUID studyUuid, UUID configUuid, List<UUID> columnOrder) {
         studyConfigService.reorderColumns(configUuid, columnOrder);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public void updateColumnsStates(UUID studyUuid, UUID configUuid, String columnStateUpdates) {
+        studyConfigService.updateColumnsStates(configUuid, columnStateUpdates);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
