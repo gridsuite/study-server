@@ -27,6 +27,7 @@ import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
+import org.gridsuite.study.server.dto.singlelinediagram.VoltageLevelSelectionInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -347,8 +348,11 @@ class SingleLineDiagramTest {
                         randomUuid, randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
 
         // get the network area diagram
+        VoltageLevelSelectionInfos voltageLevelSelectionInfos = VoltageLevelSelectionInfos.builder().voltageLevelsIds(List.of("vlFr1A")).build();
+        String jsonBody = objectMapper.writeValueAsString(voltageLevelSelectionInfos);
+
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
-                        .content("[\"vlFr1A\"]")
+                        .content(jsonBody)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(
                 content().contentType(MediaType.APPLICATION_JSON),
@@ -359,8 +363,11 @@ class SingleLineDiagramTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true")));
 
         // get the network area diagram from a study that doesn't exist
+        voltageLevelSelectionInfos = VoltageLevelSelectionInfos.builder().voltageLevelsIds(List.of("vlFr1A")).build();
+        jsonBody = objectMapper.writeValueAsString(voltageLevelSelectionInfos);
+
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true", randomUuid, randomUuid, rootNodeUuid)
-                .content("[\"vlFr1A\"]")
+                .content(jsonBody)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
 
@@ -521,9 +528,12 @@ class SingleLineDiagramTest {
             status().isNoContent());
 
         //get the network area diagram on a non existing variant
+        VoltageLevelSelectionInfos voltageLevelSelectionInfos = VoltageLevelSelectionInfos.builder().voltageLevelsIds(List.of("vlFr1A")).build();
+        String jsonBody = objectMapper.writeValueAsString(voltageLevelSelectionInfos);
+
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?depth=0",
             studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
-                .content("[\"vlFr1A\"]")
+                .content(jsonBody)
                 .contentType(MediaType.APPLICATION_JSON)).andExpectAll(
             status().isNoContent());
     }
