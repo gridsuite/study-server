@@ -1301,7 +1301,7 @@ public class StudyService {
         loadflowService.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
     }
 
-    private void invalidateNodeTreeWithLoadFlowResults(UUID studyUuid) {
+    public void invalidateNodeTreeWithLoadFlowResults(UUID studyUuid) {
         Map<UUID, List<RootNetworkNodeInfoEntity>> rootNetworkNodeInfosWithLFByRootNetwork = rootNetworkNodeInfoService.getAllByStudyUuidWithLoadFlowResultsNotNull(studyUuid).stream()
             .collect(Collectors.groupingBy(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getRootNetwork().getId()));
 
