@@ -136,6 +136,7 @@ public class RootNetworkNodeInfoService {
             .build();
     }
 
+    @Transactional
     public void updateLoadflowResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, Boolean withRatioTapChangers) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         rootNetworkNodeInfoEntity.setLoadFlowResultUuid(loadflowResultUuid);
