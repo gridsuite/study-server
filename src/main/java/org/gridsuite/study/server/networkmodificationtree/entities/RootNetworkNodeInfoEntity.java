@@ -124,6 +124,7 @@ public class RootNetworkNodeInfoEntity {
             .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
             .dynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid)
             .loadFlowResultUuid(loadFlowResultUuid)
+            .loadFlowWithRatioTapChangers(loadFlowWithRatioTapChangers)
             .nodeBuildStatus(nodeBuildStatus.toDto())
             .nonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid)
             .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)
