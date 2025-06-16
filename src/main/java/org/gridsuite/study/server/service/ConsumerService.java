@@ -54,7 +54,6 @@ public class ConsumerService {
     static final String NETWORK_ID = "networkId";
     static final String HEADER_CASE_FORMAT = "caseFormat";
     static final String HEADER_CASE_NAME = "caseName";
-    static final String HEADER_ERROR_MESSAGE = "errorMessage";
     static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
 
     private final ObjectMapper objectMapper;
@@ -479,7 +478,7 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeCaseImportFailed() {
         return message -> {
             String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            String errorMessage = message.getHeaders().get(HEADER_ERROR_MESSAGE, String.class);
+            String errorMessage = message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class);
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
