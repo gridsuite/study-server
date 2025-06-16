@@ -384,6 +384,8 @@ class SingleLineDiagramTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
 
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true")));
+
         mvcResult = getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "VOLTAGE_LEVEL", null, objectMapper.writeValueAsString(List.of()), TestUtils.resourceToString("/network-voltage-levels-infos.json"));
         List<VoltageLevelInfos> vliListResponse = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
         assertThat(vliListResponse, new MatcherJson<>(objectMapper, List.of(
