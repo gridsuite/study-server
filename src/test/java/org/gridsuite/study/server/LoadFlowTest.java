@@ -617,6 +617,8 @@ class LoadFlowTest {
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
 
         checkUpdateModelsStatusMessagesReceived(studyUuid);
+
+        assertEquals(BuildStatus.NOT_BUILT, rootNetworkNodeInfoRepository.findById(rootNetworkNodeInfoEntity.getId()).get().getNodeBuildStatus().getLocalBuildStatus());
     }
 // /v1/results?resultsUuids=1b6cc22c-3f33-11ed-b878-0242ac120002
     // /v1/reports
