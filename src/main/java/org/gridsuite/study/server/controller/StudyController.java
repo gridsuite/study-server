@@ -34,6 +34,7 @@ import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNo
 import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParametersInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
+import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
@@ -1398,6 +1399,19 @@ public class StudyController {
                                                          @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.createNode(studyUuid, referenceId, node, insertMode, userId));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}", params = {"sequenceType"})
+    @Operation(summary = "Create a node sequence after the given node ID")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The node sequence has been added"),
+        @ApiResponse(responseCode = "404", description = "The study or the node not found")})
+    public ResponseEntity<NetworkModificationNode> createSequence(
+                                                              @Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                              @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
+                                                              @Parameter(description = "sequence to create") @RequestParam("sequenceType") NodeSequenceType nodeSequenceType,
+                                                              @RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.createSequence(studyUuid, referenceId, nodeSequenceType, userId));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes")

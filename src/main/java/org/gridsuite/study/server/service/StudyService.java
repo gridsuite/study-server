@@ -32,6 +32,7 @@ import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNo
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
+import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -3089,6 +3090,19 @@ public class StudyService {
             notificationService.emitElementUpdated(study.getId(), userId);
         }
         return newNode;
+    }
+
+    @Transactional
+    public NetworkModificationNode createSequence(UUID studyUuid, UUID parentNodeUuid, NodeSequenceType nodeSequenceType, String userId) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        NetworkModificationNode newParentNode = networkModificationTreeService.createTreeNodeFromNodeSequence(study, parentNodeUuid, nodeSequenceType);
+
+        notificationService.emitSubtreeInserted(study.getId(), newParentNode.getId(), parentNodeUuid);
+        // userId is null when creating initial nodes, we don't need to send element update notifications in this case
+        if (userId != null) {
+            notificationService.emitElementUpdated(study.getId(), userId);
+        }
+        return newParentNode;
     }
 
     private List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
