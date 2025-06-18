@@ -90,6 +90,19 @@ class NodeSequenceTest {
         AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
         checkSecuritySequence(nNode, "");
 
+        verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode.getId(), parentOfSubtree.getId());
+        verify(notificationService, times(1)).emitElementUpdated(studyUuid, userId);
+    }
+
+    @Test
+    void testCreateSecuritySequenceOnRootNode() {
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+
+        studyService.createSequence(studyUuid, rootNode.getIdNode(), NodeSequenceType.SECURITY_SEQUENCE, userId);
+
+        AbstractNode parentOfSubtree = networkModificationTreeService.getStudySubtree(studyUuid, rootNode.getIdNode(), null);
+        AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
+        checkSecuritySequence(nNode, "");
 
         verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode.getId(), parentOfSubtree.getId());
         verify(notificationService, times(1)).emitElementUpdated(studyUuid, userId);

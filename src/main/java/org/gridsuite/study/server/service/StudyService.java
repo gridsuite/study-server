@@ -3095,7 +3095,10 @@ public class StudyService {
     @Transactional
     public NetworkModificationNode createSequence(UUID studyUuid, UUID parentNodeUuid, NodeSequenceType nodeSequenceType, String userId) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        networkModificationTreeService.assertIsConstructionNode(parentNodeUuid);
+        if (networkModificationTreeService.getNode(parentNodeUuid, null).getType().equals(NodeType.NETWORK_MODIFICATION)) {
+            networkModificationTreeService.assertIsConstructionNode(parentNodeUuid);
+        }
+
         NetworkModificationNode newParentNode = networkModificationTreeService.createTreeNodeFromNodeSequence(study, parentNodeUuid, nodeSequenceType);
 
         notificationService.emitSubtreeInserted(study.getId(), newParentNode.getId(), parentNodeUuid);
