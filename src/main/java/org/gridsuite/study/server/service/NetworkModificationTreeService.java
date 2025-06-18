@@ -580,8 +580,8 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public void assertIsConstructionNode(UUID nodeUuid) {
-        if (!getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType().equals(NetworkModificationNodeType.CONSTRUCTION)) {
+    public void assertIsRootOrConstructionNode(UUID nodeUuid) {
+        if (!self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) && !getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType().equals(NetworkModificationNodeType.CONSTRUCTION)) {
             throw new StudyException(NOT_ALLOWED);
         }
     }
