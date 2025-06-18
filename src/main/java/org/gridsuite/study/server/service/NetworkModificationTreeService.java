@@ -580,6 +580,12 @@ public class NetworkModificationTreeService {
         }
     }
 
+    public void assertIsConstructionNode(UUID nodeUuid) {
+        if (!getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType().equals(NetworkModificationNodeType.CONSTRUCTION)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+    }
+
     @Transactional(readOnly = true)
     public boolean isNodeNameExists(UUID studyUuid, String nodeName) {
         return ROOT_NODE_NAME.equals(nodeName) || !networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyUuid, nodeName).stream().filter(abstractNodeInfoEntity -> !abstractNodeInfoEntity.getNode().isStashed()).toList().isEmpty();

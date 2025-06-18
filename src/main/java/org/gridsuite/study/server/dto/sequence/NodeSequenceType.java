@@ -5,6 +5,10 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModifi
 public enum NodeSequenceType {
     SECURITY_SEQUENCE;
 
+    public static final String N_NODE_NAME = "N";
+    public static final String NMK_NODE_NAME = "N-K";
+    public static final String CURATIF_NODE_NAME = "Curatif";
+
     public NodeTemplate getNodeSequence() {
         return switch (this) {
             case SECURITY_SEQUENCE -> buildSecuritySequence();
@@ -12,9 +16,9 @@ public enum NodeSequenceType {
     }
 
     private NodeTemplate buildSecuritySequence() {
-        NodeTemplate nNode = new NodeTemplate("N", NetworkModificationNodeType.SECURITY);
-        NodeTemplate nmKNode = new NodeTemplate("NmK", NetworkModificationNodeType.SECURITY);
-        NodeTemplate curNode = new NodeTemplate("Cur", NetworkModificationNodeType.SECURITY);
+        NodeTemplate nNode = new NodeTemplate(N_NODE_NAME, NetworkModificationNodeType.SECURITY);
+        NodeTemplate nmKNode = new NodeTemplate(NMK_NODE_NAME, NetworkModificationNodeType.SECURITY);
+        NodeTemplate curNode = new NodeTemplate(CURATIF_NODE_NAME, NetworkModificationNodeType.SECURITY);
 
         nmKNode.addChild(curNode);
         nNode.addChild(nmKNode);
