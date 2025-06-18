@@ -1629,8 +1629,7 @@ public class StudyService {
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
-        Map<UUID, UUID> nodeUuidToReportUuid = buildInfos.getReportsInfos().stream().collect(Collectors.toMap(ReportInfos::nodeUuid, ReportInfos::reportUuid));
-        networkModificationTreeService.setModificationReports(nodeUuid, rootNetworkUuid, nodeUuidToReportUuid);
+        networkModificationTreeService.setModificationReports(nodeUuid, rootNetworkUuid, buildInfos.getReportsMappings());
         networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         try {
             networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos);
