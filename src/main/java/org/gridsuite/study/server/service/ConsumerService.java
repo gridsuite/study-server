@@ -458,7 +458,7 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeCaseImportFailed() {
         return message -> {
             String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            String errorMessage = message.getHeaders().get(HEADER_ERROR_MESSAGE, String.class);
+            String errorMessage = message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class);
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
