@@ -53,8 +53,4 @@ public abstract class AbstractNode {
     Boolean readOnly;
 
     NodeType type;
-
-    public void addChild(AbstractNode child) {
-        this.children.add(child);
-    }
 }
