@@ -11,6 +11,7 @@ import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
@@ -42,8 +43,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
-import static org.gridsuite.study.server.StudyException.Type.ROOT_NETWORK_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 
@@ -134,6 +134,13 @@ public class RootNetworkNodeInfoService {
             .modificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())))
             .modificationsUuidsToExclude(modificationsToExclude)
             .build();
+    }
+
+    @Transactional
+    public void updateLoadflowResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, Boolean withRatioTapChangers) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        rootNetworkNodeInfoEntity.setLoadFlowResultUuid(loadflowResultUuid);
+        rootNetworkNodeInfoEntity.setLoadFlowWithRatioTapChangers(withRatioTapChangers);
     }
 
     @Transactional
@@ -247,7 +254,10 @@ public class RootNetworkNodeInfoService {
     }
 
     private static void invalidateComputationResults(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ComputationsInvalidationMode computationsInvalidationMode) {
-        rootNetworkNodeInfoEntity.setLoadFlowResultUuid(null);
+        if (!ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
+            rootNetworkNodeInfoEntity.setLoadFlowResultUuid(null);
+            rootNetworkNodeInfoEntity.setLoadFlowWithRatioTapChangers(null);
+        }
         rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(null);
         rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(null);
         rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(null);
@@ -263,18 +273,23 @@ public class RootNetworkNodeInfoService {
         Map<String, UUID> computationReports = rootNetworkNodeInfoEntity.getComputationReports()
             .entrySet()
             .stream()
-            .filter(entry -> VOLTAGE_INITIALIZATION.name().equals(entry.getKey()) && ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode))
+            .filter(entry -> shouldPreserveComputationReport(entry.getKey(), computationsInvalidationMode))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         // Update the computation reports in the repository
         rootNetworkNodeInfoEntity.setComputationReports(computationReports);
     }
 
+    private static boolean shouldPreserveComputationReport(String computationType, ComputationsInvalidationMode computationsInvalidationMode) {
+        return VOLTAGE_INITIALIZATION.name().equals(computationType) && ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode)
+            || LOAD_FLOW.name().equals(computationType) && ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode);
+    }
+
     private InvalidateNodeInfos getInvalidationComputationInfos(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ComputationsInvalidationMode computationsInvalidationMode) {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
 
         rootNetworkNodeInfoEntity.getComputationReports().forEach((key, value) -> {
-            if (!ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode) || !VOLTAGE_INITIALIZATION.name().equals(key)) {
+            if (!shouldPreserveComputationReport(key, computationsInvalidationMode)) {
                 invalidateNodeInfos.addReportUuid(value);
             }
         });
@@ -285,8 +300,10 @@ public class RootNetworkNodeInfoService {
     }
 
     private void fillComputationResultUuids(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos, ComputationsInvalidationMode computationsInvalidationMode) {
-        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, LOAD_FLOW))
+        if (!ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
+            Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, LOAD_FLOW))
                 .ifPresent(invalidateNodeInfos::addLoadFlowResultUuid);
+        }
         Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SECURITY_ANALYSIS))
                 .ifPresent(invalidateNodeInfos::addSecurityAnalysisResultUuid);
         Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SENSITIVITY_ANALYSIS))
@@ -587,14 +604,28 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public boolean isLFDone(UUID nodeUuid, UUID rootNetworkUuid) {
+    public boolean isLoadflowDone(UUID nodeUuid, UUID rootNetworkUuid) {
         LoadFlowStatus loadFlowStatus = getBasicLoadFlowStatus(nodeUuid, rootNetworkUuid);
         return loadFlowStatus != null && !LoadFlowStatus.NOT_DONE.equals(loadFlowStatus);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isLoadflowConverged(UUID nodeUuid, UUID rootNetworkUuid) {
+        LoadFlowStatus loadFlowStatus = getBasicLoadFlowStatus(nodeUuid, rootNetworkUuid);
+        return LoadFlowStatus.CONVERGED.equals(loadFlowStatus);
     }
 
     private LoadFlowStatus getBasicLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         return loadFlowService.getLoadFlowStatus(resultUuid);
+    }
+
+    public LoadFlowComputationInfos getLoadFlowComputationInfos(UUID nodeUuid, UUID rootNetworkUuid) {
+        Boolean isWithRatioTapChangers = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).map(RootNetworkNodeInfoEntity::getLoadFlowWithRatioTapChangers).orElseThrow(() -> new StudyException(LOADFLOW_NOT_FOUND));
+        if (isWithRatioTapChangers == null) {
+            throw new StudyException(LOADFLOW_ERROR);
+        }
+        return new LoadFlowComputationInfos(isWithRatioTapChangers);
     }
 
     @Transactional(readOnly = true)
