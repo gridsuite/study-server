@@ -20,6 +20,10 @@ import com.powsybl.security.json.SecurityAnalysisJsonModule;
 import com.powsybl.sensitivity.json.SensitivityJsonModule;
 import com.powsybl.shortcircuit.json.ShortCircuitAnalysisJsonModule;
 import com.powsybl.timeseries.json.TimeSeriesJsonModule;
+import org.apache.hc.client5.http.classic.HttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
@@ -31,9 +35,28 @@ import org.springframework.web.client.RestTemplate;
 @Configuration
 public class RestTemplateConfig {
 
+    @Value("${http.client.pool.max-connections:500}")
+    private int httpClientPoolMaxConnections;
+
+    @Value("${http.client.pool.max-connections-per-host:200}")
+    private int httpClientPoolMaxConnectionsPerHost;
+
     @Bean
-    public RestTemplate restTemplate() {
-        final RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory());
+    public HttpClient httpClient() {
+        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+        // By default, it's limited to 20 connections and 5 connections per host which is very too low for study-server needs
+        connectionManager.setMaxTotal(httpClientPoolMaxConnections);
+        connectionManager.setDefaultMaxPerRoute(httpClientPoolMaxConnectionsPerHost);
+
+        return HttpClients.custom()
+            .setConnectionManager(connectionManager)
+            .build();
+    }
+
+    @Bean
+    public RestTemplate restTemplate(HttpClient httpClient) {
+        // We're using HttpComponentsClientHttpRequestFactory from apache httpclient5 to handle properly HTTP PATCH method
+        final RestTemplate restTemplate = new RestTemplate(new HttpComponentsClientHttpRequestFactory(httpClient));
 
         //find and replace Jackson message converter with our own
         for (int i = 0; i < restTemplate.getMessageConverters().size(); i++) {
