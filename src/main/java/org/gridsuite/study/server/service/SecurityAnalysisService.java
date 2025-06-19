@@ -364,7 +364,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
 
         try {
-            restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.PATCH, httpEntity, Void.class);
+            restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_SECURITY_ANALYSIS_PROVIDER_FAILED);
         }
