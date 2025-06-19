@@ -588,7 +588,8 @@ public class ConsumerService {
                 var debug = msg.getHeaders().get(HEADER_DEBUG);
                 if (Boolean.TRUE.equals(debug)) {
                     String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR_MESSAGE);
-                    notificationService.emitStudyDebug(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType, resultUuid, errorMessage);
+                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
+                    notificationService.emitComputationDebugFileStatus(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType, userId, resultUuid, errorMessage);
                     return;
                 }
 

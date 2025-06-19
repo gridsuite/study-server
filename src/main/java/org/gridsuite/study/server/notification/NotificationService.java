@@ -132,7 +132,7 @@ public class NotificationService {
     public static final String ROOT_NETWORKS_UPDATE_FAILED = "rootNetworksUpdateFailed";
 
     public static final String STUDY_ALERT = "STUDY_ALERT";
-    public static final String STUDY_DEBUG = "STUDY_DEBUG";
+    public static final String COMPUTATION_DEBUG_FILE_STATUS = "computationDebugFileStatus";
 
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
 
@@ -416,11 +416,12 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyDebug(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType, UUID resultUuid, @Nullable String error) {
-        sendStudyUpdateMessage(studyUuid, STUDY_DEBUG, MessageBuilder.withPayload("")
+    public void emitComputationDebugFileStatus(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType, String userId, UUID resultUuid, @Nullable String error) {
+        sendStudyUpdateMessage(studyUuid, COMPUTATION_DEBUG_FILE_STATUS, MessageBuilder.withPayload("")
             .setHeader(HEADER_NODE, nodeUuid)
             .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
             .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
+            .setHeader(HEADER_USER_ID, userId)
             .setHeader(HEADER_RESULT_UUID, resultUuid)
             .setHeader(HEADER_ERROR, error)
         );
