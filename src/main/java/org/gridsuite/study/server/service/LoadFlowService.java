@@ -321,7 +321,7 @@ public class LoadFlowService extends AbstractComputationService {
         HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
 
         try {
-            restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PATCH, httpEntity, Void.class);
+            restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_LOADFLOW_PROVIDER_FAILED);
         }
