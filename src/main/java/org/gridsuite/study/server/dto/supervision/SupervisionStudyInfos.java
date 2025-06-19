@@ -19,9 +19,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
+ * More detailed version of {@code StudyInfos} used for supervision and admin tools operations.
  *
- * more detailed version of StudyInfos for supervision and admin tools operations
+ * @author Mathieu Deharbe <mathieu.deharbe@rte-france.com>
  */
 @SuperBuilder
 @NoArgsConstructor

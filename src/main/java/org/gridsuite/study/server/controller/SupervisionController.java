@@ -53,15 +53,15 @@ public class SupervisionController {
         this.restClient = restClient;
     }
 
-    @GetMapping(value = "/root_networks")
+    @GetMapping(value = "/root-networks")
     @Operation(summary = "Get all the root_networks uuids")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of all the root networks uuids")})
     public ResponseEntity<List<UUID>> getAllRootNetworks() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getAllRootNetworksUuids());
     }
 
-    @DeleteMapping(value = "/root_networks/{rootNetworkUuid}")
-    @Operation(summary = "delete the root network")
+    @DeleteMapping(value = "/root-networks/{rootNetworkUuid}")
+    @Operation(summary = "Delete a root network")
     @ApiResponse(responseCode = "200", description = "Root network deleted")
     public ResponseEntity<Void> deleteRootNetwork(@PathVariable("rootNetworkUuid") UUID rootNetworkUuid) {
         rootNetworkService.deleteRootNetwork(rootNetworkUuid);
@@ -69,8 +69,8 @@ public class SupervisionController {
     }
 
     @GetMapping(value = "/studies")
-    @Operation(summary = "Get all the studies basic data")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of all the studies uuids, and some extra basic data")})
+    @Operation(summary = "Get supervision information for all studies")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of supervision information for all studies")})
     public ResponseEntity<List<SupervisionStudyInfos>> getAllStudiesBasicData() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getSupervisionStudiesInfos());
     }

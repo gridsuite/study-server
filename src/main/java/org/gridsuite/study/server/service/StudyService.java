@@ -518,6 +518,7 @@ public class StudyService {
                 removeSecurityAnalysisParameters(s.getSecurityAnalysisParametersUuid());
                 removeVoltageInitParameters(s.getVoltageInitParametersUuid());
                 removeSensitivityAnalysisParameters(s.getSensitivityAnalysisParametersUuid());
+                removeDynamicSecurityAnalysisParameters(s.getDynamicSecurityAnalysisParametersUuid());
                 removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
