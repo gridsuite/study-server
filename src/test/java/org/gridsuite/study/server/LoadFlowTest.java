@@ -322,6 +322,10 @@ class LoadFlowTest {
                 } else if (path.matches("/v1/parameters/" + PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING + "/provider") && method.equals("PUT")) {
                     // provider update in duplicated params OK
                     return new MockResponse(200);
+                } else if (path.matches("/v1/parameters/default") && method.equals("POST")) {
+                    // create default parameters request
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
+                            objectMapper.writeValueAsString(LOADFLOW_PARAMETERS_UUID_STRING));
                 } else if (path.matches("/v1/default-provider")) {
                     return new MockResponse.Builder().code(200).body(DEFAULT_PROVIDER).build();
                 } else {
@@ -799,6 +803,39 @@ class LoadFlowTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters")));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
 
+    }
+
+    @Test
+    void testGetLoadFlowParametersId(final MockWebServer server) throws Exception {
+        // Test case 1: Study with existing loadflow parameters
+        StudyEntity studyEntity1 = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
+        UUID studyWithParametersUuid = studyEntity1.getId();
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters/id", studyWithParametersUuid))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        UUID returnedParametersId = UUID.fromString(mvcResult.getResponse().getContentAsString().replace("\"", ""));
+        assertEquals(LOADFLOW_PARAMETERS_UUID, returnedParametersId);
+
+        // Test case 2: Study without existing loadflow parameters (should create and return default)
+        StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
+        UUID studyWithoutParametersUuid = studyEntity2.getId();
+
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters/id", studyWithoutParametersUuid))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        UUID returnedDefaultParametersId = UUID.fromString(mvcResult.getResponse().getContentAsString().replace("\"", ""));
+        assertEquals(LOADFLOW_PARAMETERS_UUID, returnedDefaultParametersId); // Should return the default parameters UUID
+
+        // Test case 3: Non-existent study should return 404
+        UUID nonExistentStudyUuid = UUID.randomUUID();
+        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters/id", nonExistentStudyUuid))
+                .andExpect(status().isNotFound());
+
+        // Verify the appropriate service calls were made
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/default")));
     }
 
     @Test
