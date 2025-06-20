@@ -24,6 +24,7 @@ import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.DiagramParameters;
+import org.gridsuite.study.server.dto.singlelinediagram.VoltageLevelSelectionInfos;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -170,7 +171,7 @@ public class SingleLineDiagramService {
         return result;
     }
 
-    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, List<String> voltageLevelsIds, int depth, boolean withGeoData) {
+    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, VoltageLevelSelectionInfos voltageLevelSelectionInfos, int depth, boolean withGeoData) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
                 "/network-area-diagram/{networkUuid}")
                 .queryParam(QUERY_PARAM_DEPTH, depth)
@@ -183,10 +184,10 @@ public class SingleLineDiagramService {
                 .toUriString();
         String result;
         try {
-            result = restTemplate.postForObject(singleLineDiagramServerBaseUri + path, voltageLevelsIds, String.class);
+            result = restTemplate.postForObject(singleLineDiagramServerBaseUri + path, voltageLevelSelectionInfos, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelsIds + NOT_FOUND);
+                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelSelectionInfos.getVoltageLevelsIds() + NOT_FOUND);
             } else {
                 throw e;
             }
