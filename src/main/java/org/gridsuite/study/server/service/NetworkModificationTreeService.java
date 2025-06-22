@@ -482,8 +482,7 @@ public class NetworkModificationTreeService {
                     .withUntypedValue("modificationNodeId", modificationNode.getId().toString()).build();
         reportService.sendReport(getModificationReportUuid(networkModificationNode.getId(), firstRootNetworkUuid, networkModificationNode.getId()), reportNode);
 
-        BuildInfos buildInfos = getBuildInfos(modificationNode.getId(), firstRootNetworkUuid);
-        Map<UUID, UUID> nodeUuidToReportUuid = buildInfos.getReportsInfos().stream().collect(Collectors.toMap(ReportInfos::nodeUuid, ReportInfos::reportUuid));
+        Map<UUID, UUID> nodeUuidToReportUuid = getBuildInfos(modificationNode.getId(), firstRootNetworkUuid).getReportsMappings();
         rootNetworkNodeInfoService.updateRootNetworkNode(networkModificationNode.getId(), firstRootNetworkUuid,
             RootNetworkNodeInfo.builder().variantId(FIRST_VARIANT_ID).nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).modificationReports(nodeUuidToReportUuid).build());
     }
@@ -780,7 +779,7 @@ public class NetworkModificationTreeService {
             RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeEntity.getIdNode(), rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
             if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
                 UUID reportUuid = getModificationReportUuid(nodeEntity.getIdNode(), rootNetworkUuid, nodeToBuildUuid);
-                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), rootNetworkNodeInfoEntity.getModificationsUuidsToExclude(), new ReportInfos(reportUuid, modificationNode.getId()));
+                buildInfos.addApplicationContextInfos(modificationNode.getModificationGroupUuid(), Set.copyOf(rootNetworkNodeInfoEntity.getModificationsUuidsToExclude()), new ReportInfos(reportUuid, modificationNode.getId()));
                 getBuildInfos(nodeEntity.getParentNode(), rootNetworkUuid, buildInfos, nodeToBuildUuid);
             } else {
                 buildInfos.setOriginVariantId(self.getVariantId(nodeEntity.getIdNode(), rootNetworkUuid));
