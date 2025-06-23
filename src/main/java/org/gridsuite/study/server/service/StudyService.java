@@ -875,7 +875,7 @@ public class StudyService {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
-        UUID result = loadflowService.runLoadFlow(nodeUuid, rootNetworkUuid, loadflowResultUuid, networkUuid, variantId, lfParametersUuid, withRatioTapChangers, lfReportUuid, userId);
+        UUID result = loadflowService.runLoadFlow(new NodeReceiver(nodeUuid, rootNetworkUuid), loadflowResultUuid, new VariantInfos(networkUuid, variantId), lfParametersUuid, withRatioTapChangers, lfReportUuid, userId);
 
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
 

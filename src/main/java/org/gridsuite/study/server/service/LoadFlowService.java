@@ -28,7 +28,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -55,10 +58,10 @@ public class LoadFlowService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, UUID networkUuid, String variantId, UUID parametersUuid, boolean withRatioTapChangers, UUID reportUuid, String userId) {
+    public UUID runLoadFlow(NodeReceiver nodeReceiver, UUID loadflowResultUuid, VariantInfos variantInfos, UUID parametersUuid, boolean withRatioTapChangers, UUID reportUuid, String userId) {
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(nodeReceiver), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -68,7 +71,7 @@ public class LoadFlowService extends AbstractComputationService {
                 .queryParam(QUERY_WITH_TAP_CHANGER, withRatioTapChangers)
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
-                .queryParam(QUERY_PARAM_REPORTER_ID, nodeUuid.toString())
+                .queryParam(QUERY_PARAM_REPORTER_ID, nodeReceiver.getNodeUuid().toString())
                 .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.LOAD_FLOW.reportKey);
 
         if (loadflowResultUuid != null) {
@@ -77,10 +80,10 @@ public class LoadFlowService extends AbstractComputationService {
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
         }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        if (!StringUtils.isBlank(variantInfos.getVariantId())) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantInfos.getVariantId());
         }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
+        var path = uriComponentsBuilder.buildAndExpand(variantInfos.getNetworkUuid()).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
