@@ -529,9 +529,9 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public String getSensitivityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, String selector, String filters) {
+    public String getSensitivityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, String selector, String filters, String globalFilters) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
-        return sensitivityAnalysisService.getSensitivityAnalysisResult(resultUuid, selector, filters);
+        return sensitivityAnalysisService.getSensitivityAnalysisResult(resultUuid, selector, filters, globalFilters);
     }
 
     @Transactional(readOnly = true)

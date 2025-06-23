@@ -105,7 +105,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getSensitivityAnalysisResult(UUID resultUuid, String selector, String filters) {
+    public String getSensitivityAnalysisResult(UUID resultUuid, String selector, String filters, String globalFilters) {
         String result;
 
         if (resultUuid == null) {
@@ -119,6 +119,9 @@ public class SensitivityAnalysisService extends AbstractComputationService {
 
         if (StringUtils.isNotBlank(filters)) {
             uriBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+        }
+        if (!StringUtils.isEmpty(globalFilters)) {
+            uriBuilder.queryParam("globalFilters", URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
         }
         URI uri = uriBuilder.build().encode().toUri();
 
