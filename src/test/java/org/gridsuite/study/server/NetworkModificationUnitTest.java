@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.controller.StudyController;
-import org.gridsuite.study.server.dto.workflow.RerunLoadFlowWorkflowInfos;
+import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
@@ -207,20 +207,20 @@ class NetworkModificationUnitTest {
         UUID rootNetworkUuid = UUID.randomUUID();
         UUID networkUuid = UUID.randomUUID();
         BuildInfos buildInfos = new BuildInfos();
-        RerunLoadFlowWorkflowInfos rerunLoadFlowWorkflowInfos = RerunLoadFlowWorkflowInfos.builder()
+        RerunLoadFlowInfos rerunLoadFlowInfos = RerunLoadFlowInfos.builder()
             .userId("userId")
             .withRatioTapChangers(true)
             .loadflowResultUuid(UUID.randomUUID())
             .build();
 
         Mockito.doReturn(networkUuid).when(rootNetworkService).getNetworkUuid(rootNetworkUuid);
-        networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, rerunLoadFlowWorkflowInfos);
+        networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, rerunLoadFlowInfos);
 
         ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
         Mockito.verify(restTemplate, Mockito.times(1)).exchange(urlCaptor.capture(), eq(HttpMethod.POST), any(HttpEntity.class), eq(Void.class));
 
-        assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_TYPE + "=" + rerunLoadFlowWorkflowInfos.getWorkflowType().name()));
-        assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_INFOS + "=" + rerunLoadFlowWorkflowInfos.serialize(objectMapper)));
+        assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_TYPE + "=" + rerunLoadFlowInfos.getType().name()));
+        assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_INFOS + "=" + rerunLoadFlowInfos.serialize(objectMapper)));
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {

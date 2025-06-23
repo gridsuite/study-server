@@ -1,9 +1,15 @@
+/**
+ * Copyright (c) 2025, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
-import org.gridsuite.study.server.dto.workflow.RerunLoadFlowWorkflowInfos;
+import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -21,6 +27,9 @@ import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
 @SpringBootTest
 @DisableElasticsearch
 class LoadFLowUnitTest {
@@ -91,7 +100,7 @@ class LoadFLowUnitTest {
 
         BuildInfos buildInfos = new BuildInfos();
 
-        RerunLoadFlowWorkflowInfos expectedWorkflowInfo = RerunLoadFlowWorkflowInfos.builder()
+        RerunLoadFlowInfos expectedWorkflowInfo = RerunLoadFlowInfos.builder()
             .userId(userId)
             .withRatioTapChangers(withRatioTapChangers)
             .loadflowResultUuid(loadflowResultUuid)
@@ -111,7 +120,7 @@ class LoadFLowUnitTest {
         verify(notificationService, times(9)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
 
         // node build
-        ArgumentCaptor<RerunLoadFlowWorkflowInfos> rerunLoadFlowWorkflowInfosArgumentCaptor = ArgumentCaptor.forClass(RerunLoadFlowWorkflowInfos.class);
+        ArgumentCaptor<RerunLoadFlowInfos> rerunLoadFlowWorkflowInfosArgumentCaptor = ArgumentCaptor.forClass(RerunLoadFlowInfos.class);
         verify(networkModificationService, times(1)).buildNode(eq(nodeUuid), eq(rootNetworkUuid), eq(buildInfos), rerunLoadFlowWorkflowInfosArgumentCaptor.capture());
 
         // check workflow infos

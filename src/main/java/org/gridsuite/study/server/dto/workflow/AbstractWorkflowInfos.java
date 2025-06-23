@@ -27,5 +27,5 @@ public abstract class AbstractWorkflowInfos {
         return result;
     }
 
-    public abstract WorkflowType getWorkflowType();
+    public abstract WorkflowType getType();
 }

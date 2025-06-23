@@ -1,10 +1,16 @@
+/**
+ * Copyright (c) 2025, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.workflow.RerunLoadFlowWorkflowInfos;
+import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.ConsumerService;
@@ -25,6 +31,9 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
+ */
 @SpringBootTest
 @DisableElasticsearch
 class WorkflowTest {
@@ -51,7 +60,7 @@ class WorkflowTest {
         boolean withRatioTapChangers = true;
         NetworkModificationResult networkModificationResult = new NetworkModificationResult();
         NodeReceiver nodeReceiver = new NodeReceiver(nodeUuid, rootNetworkUuid);
-        RerunLoadFlowWorkflowInfos rerunLoadFlowWorkflowInfos = RerunLoadFlowWorkflowInfos.builder()
+        RerunLoadFlowInfos rerunLoadFlowInfos = RerunLoadFlowInfos.builder()
             .loadflowResultUuid(loadflowResultUuid)
             .withRatioTapChangers(withRatioTapChangers)
             .userId(userId)
@@ -60,7 +69,7 @@ class WorkflowTest {
         Map<String, Object> headers = new HashMap<>();
         headers.put(HEADER_RECEIVER, objectMapper.writeValueAsString(nodeReceiver));
         headers.put(HEADER_WORKFLOW_TYPE, WorkflowType.RERUN_LOAD_FLOW.name());
-        headers.put(HEADER_WORKFLOW_INFOS, rerunLoadFlowWorkflowInfos.serialize(objectMapper));
+        headers.put(HEADER_WORKFLOW_INFOS, rerunLoadFlowInfos.serialize(objectMapper));
         MessageHeaders messageHeaders = new MessageHeaders(headers);
 
         when(networkModificationTreeService.getStudyUuidForNodeId(nodeUuid)).thenReturn(studyUuid);
@@ -77,7 +86,7 @@ class WorkflowTest {
     void testConsumeBuildFailedInRerunLoadFlowWorkflow() throws JsonProcessingException {
         boolean withRatioTapChangers = true;
         NodeReceiver nodeReceiver = new NodeReceiver(nodeUuid, rootNetworkUuid);
-        RerunLoadFlowWorkflowInfos rerunLoadFlowWorkflowInfos = RerunLoadFlowWorkflowInfos.builder()
+        RerunLoadFlowInfos rerunLoadFlowInfos = RerunLoadFlowInfos.builder()
             .loadflowResultUuid(loadflowResultUuid)
             .withRatioTapChangers(withRatioTapChangers)
             .userId(userId)
@@ -88,7 +97,7 @@ class WorkflowTest {
         String errorMessage = "Build failure";
         headers.put(HEADER_ERROR_MESSAGE, errorMessage);
         headers.put(HEADER_WORKFLOW_TYPE, WorkflowType.RERUN_LOAD_FLOW.name());
-        headers.put(HEADER_WORKFLOW_INFOS, rerunLoadFlowWorkflowInfos.serialize(objectMapper));
+        headers.put(HEADER_WORKFLOW_INFOS, rerunLoadFlowInfos.serialize(objectMapper));
         MessageHeaders messageHeaders = new MessageHeaders(headers);
 
         when(networkModificationTreeService.getStudyUuidForNodeId(nodeUuid)).thenReturn(studyUuid);

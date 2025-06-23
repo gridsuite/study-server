@@ -265,7 +265,7 @@ public class NetworkModificationService {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");
 
         if (workflowInfos != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_WORKFLOW_TYPE, workflowInfos.getWorkflowType());
+            uriComponentsBuilder.queryParam(QUERY_PARAM_WORKFLOW_TYPE, workflowInfos.getType());
             uriComponentsBuilder.queryParam(QUERY_PARAM_WORKFLOW_INFOS, workflowInfos.serialize(objectMapper));
         }
 

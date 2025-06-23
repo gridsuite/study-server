@@ -35,7 +35,7 @@ import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
-import org.gridsuite.study.server.dto.workflow.RerunLoadFlowWorkflowInfos;
+import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -853,7 +853,7 @@ public class StudyService {
             .invalidationMode(InvalidationMode.ALL)
             .computationsInvalidationMode(ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
             .build());
-        buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, RerunLoadFlowWorkflowInfos.builder()
+        buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, RerunLoadFlowInfos.builder()
             .loadflowResultUuid(loadflowResultUuid)
             .withRatioTapChangers(withRatioTapChangers)
             .userId(userId)

@@ -16,13 +16,13 @@ import java.util.UUID;
  */
 @Getter
 @Builder
-public class RerunLoadFlowWorkflowInfos extends AbstractWorkflowInfos {
+public class RerunLoadFlowInfos extends AbstractWorkflowInfos {
     UUID loadflowResultUuid;
     String userId;
     boolean withRatioTapChangers;
 
     @Override
-    public WorkflowType getWorkflowType() {
+    public WorkflowType getType() {
         return WorkflowType.RERUN_LOAD_FLOW;
     }
 }

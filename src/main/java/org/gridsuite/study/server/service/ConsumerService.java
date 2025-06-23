@@ -17,7 +17,7 @@ import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.workflow.RerunLoadFlowWorkflowInfos;
+import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
@@ -133,7 +133,7 @@ public class ConsumerService {
         if (workflowTypeStr != null && workflowInfosStr != null) {
             WorkflowType workflowType = WorkflowType.valueOf(workflowTypeStr);
             if (WorkflowType.RERUN_LOAD_FLOW.equals(workflowType)) {
-                RerunLoadFlowWorkflowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowWorkflowInfos.class);
+                RerunLoadFlowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowInfos.class);
                 studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId());
             }
         }
@@ -195,7 +195,7 @@ public class ConsumerService {
         if (workflowTypeStr != null && workflowInfosStr != null) {
             WorkflowType workflowType = WorkflowType.valueOf(workflowTypeStr);
             if (WorkflowType.RERUN_LOAD_FLOW.equals(workflowType)) {
-                RerunLoadFlowWorkflowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowWorkflowInfos.class);
+                RerunLoadFlowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowInfos.class);
                 studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid());
             }
         }
