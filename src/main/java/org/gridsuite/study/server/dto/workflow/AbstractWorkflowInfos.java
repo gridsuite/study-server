@@ -6,26 +6,9 @@
  */
 package org.gridsuite.study.server.dto.workflow;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.io.UncheckedIOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 public abstract class AbstractWorkflowInfos {
-    public String serialize(ObjectMapper objectMapper) {
-        String result;
-        try {
-            result = URLEncoder.encode(objectMapper.writeValueAsString(this), StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-        return result;
-    }
-
     public abstract WorkflowType getType();
 }

@@ -21,7 +21,10 @@ import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.util.Pair;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -266,7 +269,7 @@ public class NetworkModificationService {
 
         if (workflowInfos != null) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_WORKFLOW_TYPE, workflowInfos.getType());
-            uriComponentsBuilder.queryParam(QUERY_PARAM_WORKFLOW_INFOS, workflowInfos.serialize(objectMapper));
+            uriComponentsBuilder.queryParam(QUERY_PARAM_WORKFLOW_INFOS, URLEncoder.encode(toJson(workflowInfos), StandardCharsets.UTF_8));
         }
 
         var path = uriComponentsBuilder
@@ -362,14 +365,18 @@ public class NetworkModificationService {
     }
 
     private String buildReceiver(UUID nodeUuid, UUID rootNetworkUuid) {
-        String receiver;
+        return URLEncoder.encode(toJson(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
+    }
+
+    private String toJson(Object object) {
+        String json;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)),
-                    StandardCharsets.UTF_8);
+            json = objectMapper.writeValueAsString(object);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
-        return receiver;
+
+        return json;
     }
 
     public void deleteStashedModifications(UUID groupUUid) {

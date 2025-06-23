@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
@@ -15,6 +16,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
@@ -33,6 +35,9 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @DisableElasticsearch
 class LoadFLowUnitTest {
+
+    @Autowired
+    private StudyController controller;
 
     @SpyBean
     private StudyService studyService;
@@ -63,28 +68,28 @@ class LoadFLowUnitTest {
     @Test
     void testRunLoadFlow() {
         when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(null);
+        doReturn(loadflowResultUuid).when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
 
-        doReturn(loadflowResultUuid).when(studyService).sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, false, userId);
-        assertEquals(loadflowResultUuid, studyService.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId));
+        controller.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId);
 
-        verify(studyService, times(1)).sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, false, userId);
+        verify(studyService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
     }
 
     @Test
     void testRunLoadFlowWithExistingResult() {
         UUID previousResultUuid = UUID.randomUUID();
-        when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(previousResultUuid);
+        when(rootNetworkNodeInfoService.getComputationResultUuid(any(), any(), any())).thenReturn(previousResultUuid);
 
-        doNothing().when(studyService).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
+        doNothing().when(studyService).deleteLoadflowResult(any(), any(), any(), any());
 
-        doReturn(loadflowResultUuid).when(studyService).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
-        doReturn(loadflowResultUuid).when(studyService).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
+        doReturn(loadflowResultUuid).when(studyService).createLoadflowRunningStatus(any(), any(), any(), anyBoolean());
+        doReturn(loadflowResultUuid).when(studyService).rerunLoadflow(any(), any(), any(), any(), anyBoolean(), anyString());
 
-        assertEquals(loadflowResultUuid, studyService.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId));
+        controller.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId);
 
-        verify(studyService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
-        verify(studyService, times(1)).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
-        verify(studyService, times(1)).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
+        verify(studyService, times(1)).deleteLoadflowResult(any(), any(), any(), any());
+        verify(studyService, times(1)).createLoadflowRunningStatus(any(), any(), any(), anyBoolean());
+        verify(studyService, times(1)).rerunLoadflow(any(), any(), any(), any(), anyBoolean(), anyString());
     }
 
     @Test

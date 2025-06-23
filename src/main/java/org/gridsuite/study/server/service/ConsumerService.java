@@ -597,7 +597,7 @@ public class ConsumerService {
         }
     }
 
-    public void consumeLoadFlowResult(Message<String> msg, boolean withRatioTapChangers) {
+    private void consumeLoadFlowResult(Message<String> msg, boolean withRatioTapChangers) {
         Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
             .map(UUID::fromString)
             .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {

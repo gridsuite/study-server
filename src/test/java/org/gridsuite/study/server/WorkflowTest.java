@@ -69,7 +69,7 @@ class WorkflowTest {
         Map<String, Object> headers = new HashMap<>();
         headers.put(HEADER_RECEIVER, objectMapper.writeValueAsString(nodeReceiver));
         headers.put(HEADER_WORKFLOW_TYPE, WorkflowType.RERUN_LOAD_FLOW.name());
-        headers.put(HEADER_WORKFLOW_INFOS, rerunLoadFlowInfos.serialize(objectMapper));
+        headers.put(HEADER_WORKFLOW_INFOS, objectMapper.writeValueAsString(rerunLoadFlowInfos));
         MessageHeaders messageHeaders = new MessageHeaders(headers);
 
         when(networkModificationTreeService.getStudyUuidForNodeId(nodeUuid)).thenReturn(studyUuid);
@@ -97,7 +97,7 @@ class WorkflowTest {
         String errorMessage = "Build failure";
         headers.put(HEADER_ERROR_MESSAGE, errorMessage);
         headers.put(HEADER_WORKFLOW_TYPE, WorkflowType.RERUN_LOAD_FLOW.name());
-        headers.put(HEADER_WORKFLOW_INFOS, rerunLoadFlowInfos.serialize(objectMapper));
+        headers.put(HEADER_WORKFLOW_INFOS, objectMapper.writeValueAsString(rerunLoadFlowInfos));
         MessageHeaders messageHeaders = new MessageHeaders(headers);
 
         when(networkModificationTreeService.getStudyUuidForNodeId(nodeUuid)).thenReturn(studyUuid);
