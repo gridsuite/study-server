@@ -78,18 +78,18 @@ class LoadFLowUnitTest {
     @Test
     void testRunLoadFlowWithExistingResult() {
         UUID previousResultUuid = UUID.randomUUID();
-        when(rootNetworkNodeInfoService.getComputationResultUuid(any(), any(), any())).thenReturn(previousResultUuid);
+        when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(previousResultUuid);
 
-        doNothing().when(studyService).deleteLoadflowResult(any(), any(), any(), any());
+        doNothing().when(studyService).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
 
-        doReturn(loadflowResultUuid).when(studyService).createLoadflowRunningStatus(any(), any(), any(), anyBoolean());
-        doReturn(loadflowResultUuid).when(studyService).rerunLoadflow(any(), any(), any(), any(), anyBoolean(), anyString());
+        doReturn(loadflowResultUuid).when(studyService).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
+        doReturn(loadflowResultUuid).when(studyService).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
 
-        controller.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId);
+        controller.runLoadFlow(studyUuid, rootNetworkUuid, nodeUuid, false, userId);
 
-        verify(studyService, times(1)).deleteLoadflowResult(any(), any(), any(), any());
-        verify(studyService, times(1)).createLoadflowRunningStatus(any(), any(), any(), anyBoolean());
-        verify(studyService, times(1)).rerunLoadflow(any(), any(), any(), any(), anyBoolean(), anyString());
+        verify(studyService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
+        verify(studyService, times(1)).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
+        verify(studyService, times(1)).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
     }
 
     @Test
