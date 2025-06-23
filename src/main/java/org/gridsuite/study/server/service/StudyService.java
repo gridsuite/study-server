@@ -986,7 +986,7 @@ public class StudyService {
     public boolean setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         boolean userProfileIssue = createOrUpdateLoadFlowParameters(studyEntity, parameters, userId);
-        invalidateLoadFlowStatusOnAllNodes(studyUuid);
+        invalidateNodeTreeWithLoadFlowResults(studyUuid);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
         invalidateNonEvacuatedEnergyAnalysisStatusOnAllNodes(studyUuid);
@@ -1028,7 +1028,7 @@ public class StudyService {
     public void updateLoadFlowProvider(UUID studyUuid, String provider, String userId) {
         updateProvider(studyUuid, userId, studyEntity -> {
             loadflowService.updateLoadFlowProvider(studyEntity.getLoadFlowParametersUuid(), provider);
-            invalidateLoadFlowStatusOnAllNodes(studyUuid);
+            invalidateNodeTreeWithLoadFlowResults(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
             notificationService.emitComputationParamsChanged(studyUuid, LOAD_FLOW);
 
@@ -1293,12 +1293,6 @@ public class StudyService {
 
     public void invalidateDynamicSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
         dynamicSecurityAnalysisService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SECURITY_ANALYSIS));
-    }
-
-    private void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
-        // when invalidating loadflow results for a study, all nodes with loadflow need to be invalidated, as well as their children
-        invalidateNodeTreeWithLoadFlowResults(studyUuid);
-        loadflowService.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
     }
 
     public void invalidateNodeTreeWithLoadFlowResults(UUID studyUuid) {
@@ -2894,7 +2888,7 @@ public class StudyService {
 
     @Transactional
     public void invalidateLoadFlowStatus(UUID studyUuid, String userId) {
-        invalidateLoadFlowStatusOnAllNodes(studyUuid);
+        invalidateNodeTreeWithLoadFlowResults(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
     }
