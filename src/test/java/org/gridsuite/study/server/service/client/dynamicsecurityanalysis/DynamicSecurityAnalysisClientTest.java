@@ -26,6 +26,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -60,7 +61,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
     private RemoteServicesProperties remoteServicesProperties;
 
     @BeforeEach
-    public void setup() {
+    void setup() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-security-analysis-server", initMockWebServer());
         dynamicSecurityAnalysisClient = new DynamicSecurityAnalysisClient(remoteServicesProperties, restTemplate);
@@ -384,27 +385,28 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 ));
         // call service to test
         UUID resultUuid = dynamicSecurityAnalysisClient.run("Dynawo", "receiver", NETWORK_UUID,
-               "variantId", new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId");
+               "variantId", new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(expectedResultUuid);
 
         // --- Error --- //
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
-                .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo("variantId"))
-                .withQueryParam("provider", equalTo("Dynawo"))
+                .withQueryParam(QUERY_PARAM_VARIANT_ID, absent())
+                .withQueryParam("provider", absent())
                 .withQueryParam("dynamicSimulationResultUuid", equalTo(DYNAMIC_SIMULATION_RESULT_UUID.toString()))
                 .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_SECURITY_ANALYSIS.reportKey))
+                .withHeader(QUERY_PARAM_DEBUG, equalTo("true"))
                 .withHeader(HEADER_USER_ID, equalTo("userId"))
                 .willReturn(WireMock.serverError()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.run("Dynawo", "receiver", NETWORK_UUID,
-                "variantId", new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId"),
+        assertStudyException(() -> dynamicSecurityAnalysisClient.run(null, "receiver", NETWORK_UUID,
+                null, new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId", true),
                 RUN_DYNAMIC_SECURITY_ANALYSIS_FAILED, null);
     }
 
