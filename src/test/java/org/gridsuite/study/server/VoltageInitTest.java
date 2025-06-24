@@ -501,7 +501,7 @@ class VoltageInitTest {
         TestUtils.assertRequestMatches("PUT", "/v1/results/.*/modifications-group-uuid", server);
 
         // Applying modifications also invalidate all results of the node, so it creates a lot of study update notifications
-        IntStream.range(0, 21).forEach(i -> output.receive(1000, studyUpdateDestination));
+        IntStream.range(0, 22).forEach(i -> output.receive(1000, studyUpdateDestination));
         // It deletes the voltage-init modification and creates a new one on the node
         IntStream.range(0, 2).forEach(i -> output.receive(1000, elementUpdateDestination));
     }
