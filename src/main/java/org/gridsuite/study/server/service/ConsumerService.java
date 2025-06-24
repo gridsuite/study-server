@@ -17,6 +17,8 @@ import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
+import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -32,10 +34,7 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -55,7 +54,7 @@ public class ConsumerService {
     static final String NETWORK_ID = "networkId";
     static final String HEADER_CASE_FORMAT = "caseFormat";
     static final String HEADER_CASE_NAME = "caseName";
-    static final String HEADER_ERROR_MESSAGE = "errorMessage";
+    static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
 
     private final ObjectMapper objectMapper;
 
@@ -118,18 +117,26 @@ public class ConsumerService {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
                         NodeReceiver.class);
 
-                    LOGGER.info("Build completed for node '{}'", receiverObj.getNodeUuid());
-
-                    networkModificationTreeService.updateNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(),
-                        NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
-
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
+                    studyService.handleBuildSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), networkModificationResult);
+                    handleBuildResultWorkflow(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message);
                 } catch (Exception e) {
                     LOGGER.error(e.toString());
                 }
             }
         };
+    }
+
+    private void handleBuildResultWorkflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Message<NetworkModificationResult> message) throws JsonProcessingException {
+        String workflowTypeStr = message.getHeaders().get(HEADER_WORKFLOW_TYPE, String.class);
+        String workflowInfosStr = message.getHeaders().get(HEADER_WORKFLOW_INFOS, String.class);
+        if (workflowTypeStr != null && workflowInfosStr != null) {
+            WorkflowType workflowType = WorkflowType.valueOf(workflowTypeStr);
+            if (WorkflowType.RERUN_LOAD_FLOW.equals(workflowType)) {
+                RerunLoadFlowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowInfos.class);
+                studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId());
+            }
+        }
     }
 
     @Bean
@@ -149,6 +156,7 @@ public class ConsumerService {
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), NotificationService.UPDATE_TYPE_BUILD_CANCELLED);
+                    handleBuildCanceledOrFailedWorkflow(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
@@ -173,11 +181,24 @@ public class ConsumerService {
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitNodeBuildFailed(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class));
+                    handleBuildCanceledOrFailedWorkflow(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
             }
         };
+    }
+
+    private void handleBuildCanceledOrFailedWorkflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Message<String> message) throws JsonProcessingException {
+        String workflowTypeStr = message.getHeaders().get(HEADER_WORKFLOW_TYPE, String.class);
+        String workflowInfosStr = message.getHeaders().get(HEADER_WORKFLOW_INFOS, String.class);
+        if (workflowTypeStr != null && workflowInfosStr != null) {
+            WorkflowType workflowType = WorkflowType.valueOf(workflowTypeStr);
+            if (WorkflowType.RERUN_LOAD_FLOW.equals(workflowType)) {
+                RerunLoadFlowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowInfos.class);
+                studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid());
+            }
+        }
     }
 
     //TODO: should be linked to a specific rootNetwork
@@ -457,7 +478,7 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeCaseImportFailed() {
         return message -> {
             String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
-            String errorMessage = message.getHeaders().get(HEADER_ERROR_MESSAGE, String.class);
+            String errorMessage = message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class);
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
@@ -576,6 +597,29 @@ public class ConsumerService {
         }
     }
 
+    private void consumeLoadFlowResult(Message<String> msg, boolean withRatioTapChangers) {
+        Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
+            .map(UUID::fromString)
+            .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {
+                LOGGER.info("{} result '{}' available for node '{}'",
+                    LOAD_FLOW.getLabel(),
+                    resultUuid,
+                    receiverObj.getNodeUuid());
+
+                // update DB
+                rootNetworkNodeInfoService.updateLoadflowResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, withRatioTapChangers);
+
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
+                studyService.invalidateNodeTree(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), InvalidateNodeTreeParameters.ONLY_CHILDREN);
+
+                // send notifications
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), LOAD_FLOW.getUpdateStatusType());
+                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), LOAD_FLOW.getUpdateResultType());
+            }));
+    }
+
     public void consumeCalculationResult(Message<String> msg, ComputationType computationType) {
         Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
             .map(UUID::fromString)
@@ -589,11 +633,6 @@ public class ConsumerService {
                 rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
 
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
-                if (computationType == LOAD_FLOW) {
-                    // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
-                    studyService.invalidateNodeTree(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), InvalidateNodeTreeParameters.ONLY_CHILDREN);
-                }
 
                 // send notifications
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
@@ -696,7 +735,10 @@ public class ConsumerService {
 
     @Bean
     public Consumer<Message<String>> consumeLoadFlowResult() {
-        return message -> consumeCalculationResult(message, LOAD_FLOW);
+        return message -> {
+            Boolean withRatioTapChangers = message.getHeaders().get(HEADER_WITH_RATIO_TAP_CHANGERS, Boolean.class);
+            consumeLoadFlowResult(message, Boolean.TRUE.equals(withRatioTapChangers));
+        };
     }
 
     @Bean

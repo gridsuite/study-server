@@ -16,7 +16,6 @@ import org.gridsuite.study.server.service.StudyService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -96,7 +95,19 @@ public class SpreadsheetConfigController {
         return ResponseEntity.noContent().build();
     }
 
-    @PatchMapping("/{id}/name")
+    @PutMapping("/{id}/columns/states")
+    @Operation(summary = "Update column state",
+            description = "Updates the visibility and order of columns in a spreadsheet configuration")
+    @ApiResponse(responseCode = "204", description = "Column state updated")
+    public ResponseEntity<Void> updateColumnState(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "ID of the spreadsheet config") @PathVariable UUID id,
+            @RequestBody String columnStateUpdates) {
+        studyService.updateColumnsStates(studyUuid, id, columnStateUpdates);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/name")
     @Operation(summary = "Rename a spreadsheet configuration",
             description = "Updates the name of an existing spreadsheet configuration")
     @ApiResponse(responseCode = "204", description = "Configuration renamed")

@@ -713,7 +713,7 @@ class StudyTest {
         if (matcher.find()) {
             String receiverUrlString = matcher.group(1);
             input.send(MessageBuilder.withPayload("").setHeader("receiver", URLDecoder.decode(receiverUrlString, StandardCharsets.UTF_8))
-                    .setHeader("errorMessage", errorMessage)
+                    .setHeader("x-exception-message", errorMessage)
                     .build(), "case.import.start.dlx");
         }
     }
@@ -2619,6 +2619,7 @@ class StudyTest {
             EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
         boolean wasBuilt = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeToCopy.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid)).get().getNodeBuildStatus().toDto().isBuilt();
         UUID deleteModificationIndexStub = wireMockUtils.stubNetworkModificationDeleteIndex();
+        output.receive(TIMEOUT, studyUpdateDestination);
         mockMvc.perform(post(STUDIES_URL +
                 "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 studyUuid, nodeToCopy.getId(), referenceNodeUuid, insertMode)
@@ -2864,8 +2865,6 @@ class StudyTest {
         assertNotNull(message);
         assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
         message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertNotNull(message);
-
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));

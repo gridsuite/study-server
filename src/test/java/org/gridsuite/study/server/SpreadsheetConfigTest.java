@@ -35,7 +35,6 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -101,22 +100,45 @@ class SpreadsheetConfigTest {
     }
 
     @Test
+    void testUpdateColumnsStates() throws Exception {
+        StudyEntity studyEntity = insertStudy();
+        String configServerUrl = "/v1/spreadsheet-configs/" + SPREADSHEET_CONFIG_UUID + "/columns/states";
+
+        UUID stubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.noContent())).getId();
+
+        String columnsStates = objectMapper.writeValueAsString(List.of(
+                Map.of("columnId", "col1", "visible", true, "order", 1),
+                Map.of("columnId", "col2", "visible", false, "order", 2),
+                Map.of("columnId", "col3", "visible", true, "order", 0)
+        ));
+        mockMvc.perform(put("/v1/studies/{studyUuid}/spreadsheet-config/{configUuid}/columns/states", studyEntity.getId(), SPREADSHEET_CONFIG_UUID)
+                        .header("content-type", "application/json")
+                        .content(columnsStates))
+                .andExpect(status().isNoContent())
+                .andReturn();
+
+        checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
+        wireMockUtils.verifyPutRequest(stubId, configServerUrl, false, Map.of(), columnsStates);
+    }
+
+    @Test
     void testRename() throws Exception {
         StudyEntity studyEntity = insertStudy();
         String configServerUrl = "/v1/spreadsheet-configs/" + SPREADSHEET_CONFIG_UUID + "/name";
 
-        UUID stubId = wireMockServer.stubFor(WireMock.patch(WireMock.urlPathEqualTo(configServerUrl))
+        UUID stubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(configServerUrl))
                 .willReturn(WireMock.noContent())).getId();
 
         String body = objectMapper.writeValueAsString("new name");
-        mockMvc.perform(patch("/v1/studies/{studyUuid}/spreadsheet-config/{configUuid}/name", studyEntity.getId(), SPREADSHEET_CONFIG_UUID)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/spreadsheet-config/{configUuid}/name", studyEntity.getId(), SPREADSHEET_CONFIG_UUID)
                         .header("content-type", "application/json")
                         .content(body))
                 .andExpect(status().isNoContent())
                 .andReturn();
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
-        wireMockUtils.verifyPatchRequest(stubId, configServerUrl, false, Map.of(), body);
+        wireMockUtils.verifyPutRequest(stubId, configServerUrl, false, Map.of(), body);
     }
 
     @Test

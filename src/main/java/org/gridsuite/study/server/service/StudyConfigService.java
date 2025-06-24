@@ -299,6 +299,19 @@ public class StudyConfigService {
         }
     }
 
+    public void updateColumnsStates(UUID configUuid, String columnStateUpdates) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/states");
+        String path = uriBuilder.buildAndExpand(configUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(columnStateUpdates, headers);
+        try {
+            restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
+        }
+    }
+
     public UUID createColumn(UUID configUuid, String columnInfos) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
@@ -340,7 +353,7 @@ public class StudyConfigService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(newName, headers);
         try {
-            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PATCH, httpEntity, String.class);
+            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, String.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
         }
