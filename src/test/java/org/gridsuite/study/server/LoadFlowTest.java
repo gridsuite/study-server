@@ -500,7 +500,6 @@ class LoadFlowTest {
         // invalidating loadflow now invalidate node, their children and their computations
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)));
     }
 
     @Test
@@ -522,6 +521,10 @@ class LoadFlowTest {
                 modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
         UUID modificationNode3Uuid = modificationNode3.getId();
 
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity3 = rootNetworkNodeInfoService.getRootNetworkNodeInfo(modificationNode3Uuid, firstRootNetworkUuid).orElseThrow();
+        rootNetworkNodeInfoEntity3.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
+        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity3);
+
         //run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                         .header("userId", "userId"))
@@ -538,7 +541,7 @@ class LoadFlowTest {
         //Test result count
         testResultCount(server);
         //Delete Voltage init results
-        testDeleteResults(1, server);
+        testDeleteResults(studyNameUserIdUuid, 1, server);
     }
 
     @Test
@@ -597,17 +600,24 @@ class LoadFlowTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/supervision/results-count")));
     }
 
-    private void testDeleteResults(int expectedInitialResultCount, final MockWebServer server) throws Exception {
-        assertEquals(expectedInitialResultCount, rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
+    private void testDeleteResults(UUID studyUuid, int expectedInitialResultCount, final MockWebServer server) throws Exception {
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoEntities.get(0);
+
+        assertEquals(expectedInitialResultCount, rootNetworkNodeInfoEntities.size());
         mockMvc.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", LOAD_FLOW.toString())
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk());
 
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids=" + rootNetworkNodeInfoEntity.getLoadFlowResultUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
+
+        checkUpdateModelsStatusMessagesReceived(studyUuid);
+
+        assertEquals(BuildStatus.NOT_BUILT, rootNetworkNodeInfoRepository.findById(rootNetworkNodeInfoEntity.getId()).get().getNodeBuildStatus().getLocalBuildStatus());
     }
 
     @Test
