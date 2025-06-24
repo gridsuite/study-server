@@ -14,6 +14,9 @@ package org.gridsuite.study.server.service;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -47,8 +50,10 @@ public class GeoDataService {
         var path = uriComponentsBuilder
                 .buildAndExpand()
                 .toUriString();
-
-        return restTemplate.postForObject(geoDataServerBaseUri + path, linesIds, String.class);
+        var headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<?> request = new HttpEntity<>(linesIds, headers);
+        return restTemplate.postForObject(geoDataServerBaseUri + path, request, String.class);
     }
 
     public String getSubstationsGraphics(UUID networkUuid, String variantId, List<String> substationsIds) {
@@ -63,7 +68,11 @@ public class GeoDataService {
                 .buildAndExpand()
                 .toUriString();
 
-        return restTemplate.postForObject(geoDataServerBaseUri + path, substationsIds, String.class);
+        var headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<?> request = new HttpEntity<>(substationsIds, headers);
+
+        return restTemplate.postForObject(geoDataServerBaseUri + path, request, String.class);
     }
 
     public void setGeoDataServerBaseUri(String geoDataServerBaseUri) {
