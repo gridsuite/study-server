@@ -28,7 +28,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
@@ -55,27 +58,32 @@ public class LoadFlowService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, String userId) {
+    public UUID runLoadFlow(NodeReceiver nodeReceiver, UUID loadflowResultUuid, VariantInfos variantInfos, UUID parametersUuid, boolean withRatioTapChangers, UUID reportUuid, String userId) {
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(nodeReceiver), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
 
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run-and-save")
+                .queryParam(QUERY_WITH_TAP_CHANGER, withRatioTapChangers)
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
-                .queryParam(QUERY_PARAM_REPORTER_ID, nodeUuid.toString())
+                .queryParam(QUERY_PARAM_REPORTER_ID, nodeReceiver.getNodeUuid().toString())
                 .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.LOAD_FLOW.reportKey);
+
+        if (loadflowResultUuid != null) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_RESULT_UUID, loadflowResultUuid);
+        }
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
         }
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        if (!StringUtils.isBlank(variantInfos.getVariantId())) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantInfos.getVariantId());
         }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
+        var path = uriComponentsBuilder.buildAndExpand(variantInfos.getNetworkUuid()).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
@@ -180,6 +188,14 @@ public class LoadFlowService extends AbstractComputationService {
 
             restTemplate.put(loadFlowServerBaseUri + path, Void.class);
         }
+    }
+
+    public UUID createRunningStatus() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/running-status")
+            .toUriString();
+
+        return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
     }
 
     public void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {
@@ -321,7 +337,7 @@ public class LoadFlowService extends AbstractComputationService {
         HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
 
         try {
-            restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PATCH, httpEntity, Void.class);
+            restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_LOADFLOW_PROVIDER_FAILED);
         }

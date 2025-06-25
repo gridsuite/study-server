@@ -353,7 +353,7 @@ public class StudyConfigService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(newName, headers);
         try {
-            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PATCH, httpEntity, String.class);
+            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, String.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
         }

@@ -81,6 +81,7 @@ public class SupervisionService {
     private final ElasticsearchOperations elasticsearchOperations;
 
     private final StudyInfosService studyInfosService;
+
     private final RootNetworkService rootNetworkService;
 
     public SupervisionService(StudyService studyService,
@@ -102,6 +103,7 @@ public class SupervisionService {
                               RootNetworkService rootNetworkService,
                               StudyRepository studyRepository
                               ) {
+                              RootNetworkService rootNetworkService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
@@ -196,14 +198,8 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
-        List<UUID> reportsToDelete = new ArrayList<>();
-        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfo -> {
-            rootNetworkNodeInfo.setLoadFlowResultUuid(null);
-            reportsToDelete.add(rootNetworkNodeInfo.getComputationReports().get(ComputationType.LOAD_FLOW.name()));
-            rootNetworkNodeInfo.getComputationReports().remove(ComputationType.LOAD_FLOW.name());
-        });
-        reportService.deleteReports(reportsToDelete);
-        loadFlowService.deleteAllLoadFlowResults();
+        List<UUID> studyUuids = rootNetworkNodeInfoEntities.stream().map(rnnie -> rnnie.getRootNetwork().getStudy().getId()).distinct().toList();
+        studyUuids.forEach(studyService::invalidateNodeTreeWithLoadFlowResults);
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOAD_FLOW, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }

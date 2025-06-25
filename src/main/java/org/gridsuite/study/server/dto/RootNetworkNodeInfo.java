@@ -36,6 +36,8 @@ public class RootNetworkNodeInfo {
 
     private UUID loadFlowResultUuid;
 
+    private Boolean loadFlowWithRatioTapChangers;
+
     private UUID voltageInitResultUuid;
 
     private UUID securityAnalysisResultUuid;
@@ -61,6 +63,7 @@ public class RootNetworkNodeInfo {
             .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)
             .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)
             .loadFlowResultUuid(loadFlowResultUuid)
+            .loadFlowWithRatioTapChangers(loadFlowWithRatioTapChangers)
             .voltageInitResultUuid(voltageInitResultUuid)
             .securityAnalysisResultUuid(securityAnalysisResultUuid)
             .sensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid)
