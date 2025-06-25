@@ -36,6 +36,8 @@ public class NetworkModificationNode extends AbstractNode {
 
     private UUID loadFlowResultUuid;
 
+    private Boolean loadFlowWithRatioTapChangers;
+
     private UUID shortCircuitAnalysisResultUuid;
 
     private UUID oneBusShortCircuitAnalysisResultUuid;
@@ -62,6 +64,7 @@ public class NetworkModificationNode extends AbstractNode {
     //TODO: temporary, used to keep nodeDTO identical since we don't export rootNetworks in APIs yet, once rootNetworks are exported, result uuid won't be stored in nodeDto
     public void completeDtoFromRootNetworkNodeInfo(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         this.setLoadFlowResultUuid(rootNetworkNodeInfoEntity.getLoadFlowResultUuid());
+        this.setLoadFlowWithRatioTapChangers(rootNetworkNodeInfoEntity.getLoadFlowWithRatioTapChangers());
         this.setShortCircuitAnalysisResultUuid(rootNetworkNodeInfoEntity.getShortCircuitAnalysisResultUuid());
         this.setOneBusShortCircuitAnalysisResultUuid(rootNetworkNodeInfoEntity.getOneBusShortCircuitAnalysisResultUuid());
         this.setVoltageInitResultUuid(rootNetworkNodeInfoEntity.getVoltageInitResultUuid());
