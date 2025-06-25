@@ -72,6 +72,7 @@ import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -414,7 +415,7 @@ class SensitivityAnalysisTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
                 studyNameUserIdUuid, firstRootNetworkUuid, UUID.randomUUID(), "fakeJsonSelector"))
-            .andExpectAll(status().isNoContent());
+            .andExpectAll(status().isNotFound());
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}",
                         studyNameUserIdUuid, firstRootNetworkUuid, UUID.randomUUID(), "fakeJsonSelector"))
@@ -490,7 +491,7 @@ class SensitivityAnalysisTest {
         UUID studyUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, firstRootNetworkUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
-                .andExpect(status().isNoContent()).andReturn();
+                .andExpect(status().isNotFound()).andReturn();
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, firstRootNetworkUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
                 .andExpect(status().isNoContent()).andReturn();
