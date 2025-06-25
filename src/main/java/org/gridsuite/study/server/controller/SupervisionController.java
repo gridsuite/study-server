@@ -54,7 +54,7 @@ public class SupervisionController {
     }
 
     @GetMapping(value = "/root-networks")
-    @Operation(summary = "Get all the root_networks uuids")
+    @Operation(summary = "Get all the root networks uuids")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of all the root networks uuids")})
     public ResponseEntity<List<UUID>> getAllRootNetworks() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(supervisionService.getAllRootNetworksUuids());
