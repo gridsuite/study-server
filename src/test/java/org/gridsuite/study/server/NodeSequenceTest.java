@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.sequence.SecuritySequence;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -137,17 +138,17 @@ class NodeSequenceTest {
 
     void checkSecuritySequence(AbstractNode nNode, String nameSuffix) {
         NetworkModificationNodeInfoEntity nNodeEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nNode.getId());
-        assertEquals(NodeSequenceType.N_NODE_NAME + nameSuffix, nNodeEntity.getName());
+        assertEquals(SecuritySequence.N_NODE_NAME + nameSuffix, nNodeEntity.getName());
         assertEquals(NetworkModificationNodeType.SECURITY, nNodeEntity.getNodeType());
 
         AbstractNode nmKNode = nNode.getChildren().getFirst();
         NetworkModificationNodeInfoEntity nmKNodeEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nmKNode.getId());
-        assertEquals(NodeSequenceType.NMK_NODE_NAME + nameSuffix, nmKNodeEntity.getName());
+        assertEquals(SecuritySequence.NMK_NODE_NAME + nameSuffix, nmKNodeEntity.getName());
         assertEquals(NetworkModificationNodeType.SECURITY, nmKNodeEntity.getNodeType());
 
         AbstractNode curNode = nmKNode.getChildren().getFirst();
         NetworkModificationNodeInfoEntity curNodeEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(curNode.getId());
-        assertEquals(NodeSequenceType.CURATIF_NODE_NAME + nameSuffix, curNodeEntity.getName());
+        assertEquals(SecuritySequence.CURATIF_NODE_NAME + nameSuffix, curNodeEntity.getName());
         assertEquals(NetworkModificationNodeType.SECURITY, curNodeEntity.getNodeType());
     }
 
