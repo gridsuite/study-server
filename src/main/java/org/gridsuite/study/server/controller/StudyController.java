@@ -1002,6 +1002,17 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getLoadFlowParametersInfos(studyUuid));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/loadflow/parameters/id")
+    @Operation(summary = "Get loadflow parameters ID for study")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The loadflow parameters ID"),
+        @ApiResponse(responseCode = "404", description = "The study is not found")
+    })
+    public ResponseEntity<UUID> getLoadflowParametersId(@PathVariable("studyUuid") UUID studyUuid) {
+        UUID parametersId = studyService.getLoadFlowParametersId(studyUuid);
+        return ResponseEntity.ok().body(parametersId);
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/loadflow/provider")
     @Operation(summary = "set load flow provider for the specified study, no body means reset to default provider")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is set")})
