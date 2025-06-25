@@ -23,6 +23,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,11 +70,6 @@ class NodeSequenceTest {
 
     @BeforeEach
     void setUp() {
-        rootNodeInfoRepository.deleteAll();
-        networkModificationNodeInfoRepository.deleteAll();
-        nodeRepository.deleteAll();
-        studyRepository.deleteAll();
-
         StudyEntity study = TestUtils.createDummyStudy(networkUuid, caseUuid, caseName, caseFormat, reportUuid);
         studyEntity = studyRepository.save(study);
         studyUuid = studyEntity.getId();
@@ -153,5 +149,13 @@ class NodeSequenceTest {
         NetworkModificationNodeInfoEntity curNodeEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(curNode.getId());
         assertEquals(NodeSequenceType.CURATIF_NODE_NAME + nameSuffix, curNodeEntity.getName());
         assertEquals(NetworkModificationNodeType.SECURITY, curNodeEntity.getNodeType());
+    }
+
+    @AfterEach
+    void cleanUp() {
+        rootNodeInfoRepository.deleteAll();
+        networkModificationNodeInfoRepository.deleteAll();
+        nodeRepository.deleteAll();
+        studyRepository.deleteAll();
     }
 }
