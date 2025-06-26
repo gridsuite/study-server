@@ -956,6 +956,13 @@ public class StudyService {
         return getLoadFlowParametersInfos(studyEntity);
     }
 
+    @Transactional(readOnly = true)
+    public UUID getLoadFlowParametersId(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid)
+                .orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
+    }
+
     public LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity studyEntity) {
         UUID loadFlowParamsUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
         return loadflowService.getLoadFlowParameters(loadFlowParamsUuid);
