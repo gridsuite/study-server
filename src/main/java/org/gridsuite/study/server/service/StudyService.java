@@ -32,6 +32,7 @@ import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNo
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.nonevacuatedenergy.*;
+import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
@@ -969,6 +970,13 @@ public class StudyService {
         return getLoadFlowParametersInfos(studyEntity);
     }
 
+    @Transactional(readOnly = true)
+    public UUID getLoadFlowParametersId(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid)
+                .orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
+    }
+
     public LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity studyEntity) {
         UUID loadFlowParamsUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
         return loadflowService.getLoadFlowParameters(loadFlowParamsUuid);
@@ -1718,6 +1726,7 @@ public class StudyService {
     public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         checkStudyContainsNode(sourceStudyUuid, nodeToCopyUuid);
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
+        networkModificationTreeService.assertIsRootOrConstructionNode(referenceNodeUuid);
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
         if (invalidateBuild) {
@@ -1731,6 +1740,7 @@ public class StudyService {
         List<NodeEntity> oldChildren = null;
         checkStudyContainsNode(studyUuid, nodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
+        networkModificationTreeService.assertIsRootOrConstructionNode(referenceNodeUuid);
         boolean shouldUnbuildChildren = networkModificationTreeService.hasModifications(nodeToMoveUuid, false);
 
         //Unbuild previous children if necessary
@@ -1754,6 +1764,7 @@ public class StudyService {
     public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
         checkStudyContainsNode(sourceStudyUuid, parentNodeToCopyUuid);
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
+        networkModificationTreeService.assertIsRootOrConstructionNode(referenceNodeUuid);
 
         StudyEntity studyEntity = studyRepository.findById(targetStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         StudyEntity sourceStudyEntity = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
@@ -1767,6 +1778,7 @@ public class StudyService {
     public void moveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID referenceNodeUuid, String userId) {
         checkStudyContainsNode(studyUuid, parentNodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
+        networkModificationTreeService.assertIsRootOrConstructionNode(referenceNodeUuid);
 
         List<UUID> allChildren = networkModificationTreeService.getChildren(parentNodeToMoveUuid);
         if (allChildren.contains(referenceNodeUuid)) {
@@ -2067,6 +2079,7 @@ public class StudyService {
     }
 
     public void restoreNodes(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId) {
+        networkModificationTreeService.assertIsRootOrConstructionNode(anchorNodeId);
         networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId);
     }
 
@@ -3129,6 +3142,7 @@ public class StudyService {
     @Transactional
     public NetworkModificationNode createNode(UUID studyUuid, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        networkModificationTreeService.assertIsRootOrConstructionNode(nodeId);
         NetworkModificationNode newNode = networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
 
         UUID parentUuid = networkModificationTreeService.getParentNodeUuid(newNode.getId()).orElse(null);
@@ -3138,6 +3152,21 @@ public class StudyService {
             notificationService.emitElementUpdated(study.getId(), userId);
         }
         return newNode;
+    }
+
+    @Transactional
+    public NetworkModificationNode createSequence(UUID studyUuid, UUID parentNodeUuid, NodeSequenceType nodeSequenceType, String userId) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        networkModificationTreeService.assertIsRootOrConstructionNode(parentNodeUuid);
+
+        NetworkModificationNode newParentNode = networkModificationTreeService.createTreeNodeFromNodeSequence(study, parentNodeUuid, nodeSequenceType);
+
+        notificationService.emitSubtreeInserted(study.getId(), newParentNode.getId(), parentNodeUuid);
+        // userId is null when creating initial nodes, we don't need to send element update notifications in this case
+        if (userId != null) {
+            notificationService.emitElementUpdated(study.getId(), userId);
+        }
+        return newParentNode;
     }
 
     private List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
