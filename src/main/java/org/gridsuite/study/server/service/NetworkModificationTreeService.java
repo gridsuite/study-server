@@ -10,11 +10,10 @@ import com.powsybl.commons.report.ReportNode;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.modification.dto.ModificationInfos;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.modification.ModificationInfosWithActivationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
+import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -579,6 +578,12 @@ public class NetworkModificationTreeService {
         }
     }
 
+    public void assertIsRootOrConstructionNode(UUID nodeUuid) {
+        if (!self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) && !getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType().equals(NetworkModificationNodeType.CONSTRUCTION)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+    }
+
     @Transactional(readOnly = true)
     public boolean isNodeNameExists(UUID studyUuid, String nodeName) {
         return ROOT_NODE_NAME.equals(nodeName) || !networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyUuid, nodeName).stream().filter(abstractNodeInfoEntity -> !abstractNodeInfoEntity.getNode().isStashed()).toList().isEmpty();
@@ -635,29 +640,19 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public List<ModificationInfosWithActivationStatus> getNetworkModifications(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata) {
-        List<ModificationInfos> modificationInfos = networkModificationService.getModifications(self.getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
-        if (!self.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
-            throw new StudyException(NOT_ALLOWED);
-        }
-
-        List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos = rootNetworkNodeInfoService.getAllWithRootNetworkByNodeInfoId(nodeUuid);
-        return modificationInfos.stream()
-                .map(modification ->
-                        (ModificationInfosWithActivationStatus) ModificationInfosWithActivationStatus.builder()
-                                .activationStatusByRootNetwork(getActivationStatusByRootNetwork(rootNetworkByNodeInfos, modification.getUuid()))
-                                .modificationInfos(modification)
-                                .build())
-                .toList();
+    public String getNetworkModifications(@NonNull UUID nodeUuid, boolean onlyStashed, boolean onlyMetadata) {
+        return networkModificationService.getModifications(self.getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
     }
 
-    /**
-     * Get modification activation status by root network
-     */
-    private Map<UUID, Boolean> getActivationStatusByRootNetwork(List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos, UUID modificationUuid) {
-        return rootNetworkByNodeInfos.stream().collect(Collectors.toMap(
-                r -> r.getRootNetwork().getId(),
-                r -> !r.getModificationsUuidsToExclude().contains(modificationUuid)));
+    @Transactional
+    public List<ExcludedNetworkModifications> getModificationsToExclude(@NonNull UUID nodeUuid) {
+        List<RootNetworkNodeInfoEntity> rootNetworkByNodeInfos = rootNetworkNodeInfoService.getAllWithRootNetworkByNodeInfoId(nodeUuid);
+        return rootNetworkByNodeInfos.stream().
+        map(r -> new ExcludedNetworkModifications(
+                r.getRootNetwork().getId(),
+                new HashSet<>(r.getModificationsUuidsToExclude())
+
+                )).toList();
     }
 
     private Integer getNetworkModificationsCount(@NonNull UUID nodeUuid, boolean stashed) {
@@ -1078,5 +1073,19 @@ public class NetworkModificationTreeService {
         allNodeInfos.addAll(rootNodeInfoRepository.findAllByNodeStudyId(studyId).stream().map(RootNodeInfoEntity::toDto).toList());
         allNodeInfos.addAll(networkModificationNodeInfoRepository.findAllByNodeStudyId(studyId).stream().map(NetworkModificationNodeInfoEntity::toDto).toList());
         return allNodeInfos.stream().collect(Collectors.toMap(AbstractNode::getId, node -> node));
+    }
+
+    public NetworkModificationNode createTreeNodeFromNodeSequence(StudyEntity studyEntity, UUID parentNodeUuid, NodeSequenceType nodeSequenceType) {
+        return createNodeTree(studyEntity, parentNodeUuid, nodeSequenceType.getNodeSequence().toNetworkModificationNodeTree());
+    }
+
+    public NetworkModificationNode createNodeTree(@NonNull StudyEntity study, @NonNull UUID nodeId, @NonNull NetworkModificationNode nodeInfo) {
+        nodeInfo.setName(getSuffixedNodeName(study.getId(), nodeInfo.getName()));
+        self.createNode(study, nodeId, nodeInfo, InsertMode.CHILD, null);
+
+        //TODO: make something better with AbstractNode and NetworkModificationNode casting
+        nodeInfo.getChildren().forEach(child -> self.createNodeTree(study, nodeInfo.getId(), (NetworkModificationNode) child));
+
+        return nodeInfo;
     }
 }
