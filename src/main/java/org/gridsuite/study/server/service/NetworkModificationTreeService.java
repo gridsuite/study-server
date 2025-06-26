@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
+import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -577,6 +578,12 @@ public class NetworkModificationTreeService {
         }
     }
 
+    public void assertIsRootOrConstructionNode(UUID nodeUuid) {
+        if (!self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) && !getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType().equals(NetworkModificationNodeType.CONSTRUCTION)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+    }
+
     @Transactional(readOnly = true)
     public boolean isNodeNameExists(UUID studyUuid, String nodeName) {
         return ROOT_NODE_NAME.equals(nodeName) || !networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyUuid, nodeName).stream().filter(abstractNodeInfoEntity -> !abstractNodeInfoEntity.getNode().isStashed()).toList().isEmpty();
@@ -1066,5 +1073,19 @@ public class NetworkModificationTreeService {
         allNodeInfos.addAll(rootNodeInfoRepository.findAllByNodeStudyId(studyId).stream().map(RootNodeInfoEntity::toDto).toList());
         allNodeInfos.addAll(networkModificationNodeInfoRepository.findAllByNodeStudyId(studyId).stream().map(NetworkModificationNodeInfoEntity::toDto).toList());
         return allNodeInfos.stream().collect(Collectors.toMap(AbstractNode::getId, node -> node));
+    }
+
+    public NetworkModificationNode createTreeNodeFromNodeSequence(StudyEntity studyEntity, UUID parentNodeUuid, NodeSequenceType nodeSequenceType) {
+        return createNodeTree(studyEntity, parentNodeUuid, nodeSequenceType.getNodeSequence().toNetworkModificationNodeTree());
+    }
+
+    public NetworkModificationNode createNodeTree(@NonNull StudyEntity study, @NonNull UUID nodeId, @NonNull NetworkModificationNode nodeInfo) {
+        nodeInfo.setName(getSuffixedNodeName(study.getId(), nodeInfo.getName()));
+        self.createNode(study, nodeId, nodeInfo, InsertMode.CHILD, null);
+
+        //TODO: make something better with AbstractNode and NetworkModificationNode casting
+        nodeInfo.getChildren().forEach(child -> self.createNodeTree(study, nodeInfo.getId(), (NetworkModificationNode) child));
+
+        return nodeInfo;
     }
 }
