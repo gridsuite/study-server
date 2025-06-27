@@ -39,6 +39,7 @@ import org.gridsuite.study.server.dto.modification.ModificationApplicationContex
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
+import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -768,6 +769,26 @@ class StudyTest {
                 .andExpectAll(status().isBadRequest(),
                         content().string("Enum unknown entry 'bogus' should be among NAME, ID"))
                 .andReturn();
+    }
+
+    @Test
+    void testSupervisionStudiesBasicData(final MockWebServer server) throws Exception {
+        // test empty return
+        mockMvc.perform(get("/v1/supervision/studies")).andExpectAll(status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
+
+        //insert a study
+        UUID studyUuid = createStudy(server, "userId", CASE_UUID);
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies", studyUuid))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        List<SupervisionStudyInfos> infos = mapper.readValue(resultAsString, new TypeReference<>() { });
+
+        assertEquals(1, infos.size());
+        // checks that the supervision extra data are here
+        assertEquals(1, infos.get(0).getCaseUuids().size());
+        assertEquals(1, infos.get(0).getRootNetworkInfos().size());
     }
 
     @Test
@@ -2635,6 +2656,7 @@ class StudyTest {
             EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
         boolean wasBuilt = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeToCopy.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid)).get().getNodeBuildStatus().toDto().isBuilt();
         UUID deleteModificationIndexStub = wireMockUtils.stubNetworkModificationDeleteIndex();
+        output.receive(TIMEOUT, studyUpdateDestination);
         mockMvc.perform(post(STUDIES_URL +
                 "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 studyUuid, nodeToCopy.getId(), referenceNodeUuid, insertMode)
@@ -2880,8 +2902,6 @@ class StudyTest {
         assertNotNull(message);
         assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
         message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertNotNull(message);
-
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
