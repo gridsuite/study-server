@@ -39,6 +39,7 @@ import org.gridsuite.study.server.dto.modification.ModificationApplicationContex
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
+import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -766,6 +767,26 @@ class StudyTest {
                 .andExpectAll(status().isBadRequest(),
                         content().string("Enum unknown entry 'bogus' should be among NAME, ID"))
                 .andReturn();
+    }
+
+    @Test
+    void testSupervisionStudiesBasicData(final MockWebServer server) throws Exception {
+        // test empty return
+        mockMvc.perform(get("/v1/supervision/studies")).andExpectAll(status().isOk(),
+                content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
+
+        //insert a study
+        UUID studyUuid = createStudy(server, "userId", CASE_UUID);
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies", studyUuid))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        List<SupervisionStudyInfos> infos = mapper.readValue(resultAsString, new TypeReference<>() { });
+
+        assertEquals(1, infos.size());
+        // checks that the supervision extra data are here
+        assertEquals(1, infos.get(0).getCaseUuids().size());
+        assertEquals(1, infos.get(0).getRootNetworkInfos().size());
     }
 
     @Test
