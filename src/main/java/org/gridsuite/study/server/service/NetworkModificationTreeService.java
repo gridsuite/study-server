@@ -128,7 +128,7 @@ public class NetworkModificationTreeService {
         if (insertMode.equals(InsertMode.BEFORE)) {
             reference.setParentNode(node);
         } else if (insertMode.equals(InsertMode.AFTER)) {
-            nodesRepository.findAllByParentNodeIdNode(nodeId).stream()
+            getChildren(nodeId).stream()
                 .filter(n -> !n.getIdNode().equals(node.getIdNode()))
                 .forEach(child -> child.setParentNode(node));
         }
@@ -238,7 +238,7 @@ public class NetworkModificationTreeService {
     private UUID moveNode(UUID nodeToMoveUuid, UUID anchorNodeUuid, InsertMode insertMode) {
         NodeEntity nodeToMoveEntity = getNodeEntity(nodeToMoveUuid);
 
-        nodesRepository.findAllByParentNodeIdNode(nodeToMoveUuid)
+        getChildren(nodeToMoveUuid)
             .forEach(child -> child.setParentNode(nodeToMoveEntity.getParentNode()));
 
         NodeEntity anchorNodeEntity = getNodeEntity(anchorNodeUuid);
@@ -253,7 +253,7 @@ public class NetworkModificationTreeService {
         if (insertMode.equals(InsertMode.BEFORE)) {
             anchorNodeEntity.setParentNode(nodeToMoveEntity);
         } else if (insertMode.equals(InsertMode.AFTER)) {
-            nodesRepository.findAllByParentNodeIdNode(anchorNodeUuid).stream()
+            getChildren(anchorNodeUuid).stream()
                 .filter(n -> !n.getIdNode().equals(nodeToMoveEntity.getIdNode()))
                 .forEach(child -> child.setParentNode(nodeToMoveEntity));
         }
@@ -299,9 +299,9 @@ public class NetworkModificationTreeService {
             UUID modificationGroupUuid = self.getModificationGroupUuid(nodeToStash.getIdNode());
             networkModificationService.deleteStashedModifications(modificationGroupUuid);
             if (!stashChildren) {
-                nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToStash.getParentNode()));
+                getChildren(id).forEach(node -> node.setParentNode(nodeToStash.getParentNode()));
             } else {
-                nodesRepository.findAllByParentNodeIdNode(id)
+                getChildren(id)
                     .forEach(child -> stashNodes(child.getIdNode(), true, stashedNodes, false));
             }
             stashedNodes.add(id);
@@ -329,9 +329,9 @@ public class NetworkModificationTreeService {
             rootNetworkNodeInfoService.fillDeleteNodeInfo(id, deleteNodeInfos);
 
             if (!deleteChildren) {
-                nodesRepository.findAllByParentNodeIdNode(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
+                getChildren(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
             } else {
-                nodesRepository.findAllByParentNodeIdNode(id)
+                getChildren(id)
                     .forEach(child -> deleteNodes(child.getIdNode(), true, false, removedNodes, deleteNodeInfos));
             }
             removedNodes.add(id);
@@ -361,7 +361,7 @@ public class NetworkModificationTreeService {
 
     private void doGetChildrenUuids(UUID parentUuid, List<UUID> children) {
         Optional<NodeEntity> optNode = nodesRepository.findById(parentUuid);
-        optNode.ifPresent(node -> nodesRepository.findAllByParentNodeIdNode(parentUuid)
+        optNode.ifPresent(node -> getChildren(parentUuid)
             .forEach(child -> {
                 children.add(child.getIdNode());
                 doGetChildrenUuids(child.getIdNode(), children);
@@ -574,7 +574,7 @@ public class NetworkModificationTreeService {
     @Transactional
     public AbstractNode getNode(UUID nodeId, UUID rootNetworkUuid) {
         AbstractNode node = getSimpleNode(nodeId);
-        nodesRepository.findAllByParentNodeIdNode(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
+        getChildren(node.getId()).stream().map(NodeEntity::getIdNode).forEach(node.getChildrenIds()::add);
         if (rootNetworkUuid != null) {
             completeNodeInfos(List.of(node), rootNetworkUuid);
         }
@@ -759,7 +759,7 @@ public class NetworkModificationTreeService {
     }
 
     private void restoreNodeChildren(UUID studyId, UUID parentNodeId) {
-        nodesRepository.findAllByParentNodeIdNode(parentNodeId).forEach(nodeEntity -> {
+        getChildren(parentNodeId).forEach(nodeEntity -> {
             NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeEntity.getIdNode()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
             if (self.isNodeNameExists(studyId, modificationNodeToRestore.getName())) {
                 String newName = getSuffixedNodeName(studyId, modificationNodeToRestore.getName());
