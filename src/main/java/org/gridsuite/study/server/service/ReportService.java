@@ -99,23 +99,35 @@ public class ReportService {
     }
 
     public ReportPage getPagedReportLogs(@NonNull UUID id, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
-        var uriBuilder = UriComponentsBuilder.fromPath("{id}/logs");
+        return getPagedMultipleReportLogs(List.of(id), messageFilter, severityLevels, paged, pageable);
+    }
+
+    public ReportPage getPagedMultipleReportLogs(@NonNull List<UUID> reportIds, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
+        var uriBuilder = reportIds.size() == 1
+            ? UriComponentsBuilder.fromPath("{id}/logs")
+            : UriComponentsBuilder.fromPath("logs").queryParam("reportIds", reportIds);
 
         if (paged) {
-            uriBuilder.queryParam("paged", paged);
-            uriBuilder.queryParam("page", pageable.getPageNumber());
-            uriBuilder.queryParam("size", pageable.getPageSize());
+            uriBuilder.queryParam("paged", paged)
+                    .queryParam("page", pageable.getPageNumber())
+                    .queryParam("size", pageable.getPageSize());
         }
 
         if (severityLevels != null && !severityLevels.isEmpty()) {
             uriBuilder.queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
         }
+
         if (!StringUtil.isBlank(messageFilter)) {
             uriBuilder.queryParam(QUERY_PARAM_MESSAGE_FILTER, URLEncoder.encode(messageFilter, StandardCharsets.UTF_8));
         }
-        var path = uriBuilder.buildAndExpand(id).toUriString();
+
+        var path = reportIds.size() == 1
+            ? uriBuilder.buildAndExpand(reportIds.get(0)).toUriString()
+            : uriBuilder.buildAndExpand().toUriString();
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+
         return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<ReportPage>() { }).getBody();
     }
 
@@ -146,9 +158,21 @@ public class ReportService {
         @NonNull String searchTerm,
         int pageSize
     ) {
-        var uriBuilder = UriComponentsBuilder
-                .fromPath("{id}/logs/search")
-                .queryParam("searchTerm", searchTerm)
+        return getSearchTermMatchesInMultipleFilteredLogs(List.of(reportId), severityLevels, messageFilter, searchTerm, pageSize);
+    }
+
+    public String getSearchTermMatchesInMultipleFilteredLogs(
+        @NonNull List<UUID> reportIds,
+        Set<String> severityLevels,
+        String messageFilter,
+        @NonNull String searchTerm,
+        int pageSize
+    ) {
+        var uriBuilder = reportIds.size() == 1
+            ? UriComponentsBuilder.fromPath("{id}/logs/search")
+            : UriComponentsBuilder.fromPath("logs/search").queryParam("reportIds", reportIds);
+
+        uriBuilder.queryParam("searchTerm", searchTerm)
                 .queryParam("pageSize", pageSize);
 
         if (severityLevels != null && !severityLevels.isEmpty()) {
@@ -158,7 +182,10 @@ public class ReportService {
             uriBuilder.queryParam(QUERY_PARAM_MESSAGE_FILTER, URLEncoder.encode(messageFilter, StandardCharsets.UTF_8));
         }
 
-        var path = uriBuilder.buildAndExpand(reportId).toUriString();
+        var path = reportIds.size() == 1
+            ? uriBuilder.buildAndExpand(reportIds.get(0)).toUriString()
+            : uriBuilder.buildAndExpand().toUriString();
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
