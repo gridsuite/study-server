@@ -598,7 +598,7 @@ class NetworkModificationTreeTest {
 
         List<AbstractNode> children = root.getChildren();
         assertEquals(2, children.size());
-        NetworkModificationNode n1 = (NetworkModificationNode) children.get(0);
+        NetworkModificationNode n1 = (NetworkModificationNode) (children.get(0).getName().equals("n1") ? children.get(0) : children.get(1));
         NetworkModificationNodeInfoEntity n1Infos = networkModificationTreeService.getNetworkModificationNodeInfoEntity(n1.getId());
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(n1.getId(), firstRootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
 
@@ -857,7 +857,7 @@ class NetworkModificationTreeTest {
          */
         root = getRootNode(root.getStudyId());
         assertEquals(1, root.getChildren().stream().filter(child -> child.getId().equals(unchangedNode.getId())).count());
-        AbstractNode newNode = root.getChildren().get(0).getId().equals(unchangedNode.getId()) ? root.getChildren().get(1) : root.getChildren().get(1);
+        AbstractNode newNode = root.getChildren().get(0).getId().equals(unchangedNode.getId()) ? root.getChildren().get(1) : root.getChildren().get(0);
         assertEquals(willBeMoved.getId(), newNode.getChildren().get(0).getId());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID())

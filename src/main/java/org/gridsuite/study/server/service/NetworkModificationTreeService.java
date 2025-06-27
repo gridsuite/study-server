@@ -264,7 +264,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void moveStudySubtree(UUID parentNodeToMoveUuid, UUID anchorNodeUuid) {
-        List<NodeEntity> children = getChildrenByParentUuid(parentNodeToMoveUuid);
+        List<NodeEntity> children = getChildren(parentNodeToMoveUuid);
         moveNode(parentNodeToMoveUuid, anchorNodeUuid, InsertMode.CHILD);
         children.forEach(child -> self.moveStudySubtree(child.getIdNode(), parentNodeToMoveUuid));
     }
@@ -344,12 +344,28 @@ public class NetworkModificationTreeService {
         });
     }
 
-    public List<NodeEntity> getChildrenByParentUuid(UUID parentUuid) {
+    public List<NodeEntity> getChildren(UUID parentUuid) {
         return nodesRepository.findAllByParentNodeIdNode(parentUuid);
     }
 
-    public List<String> getAllChildrenFromParentUuid(UUID parentUuid) {
-        return nodesRepository.findAllDescendants(parentUuid);
+    public List<UUID> getAllChildrenUuids(UUID parentUuid) {
+        return nodesRepository.findAllChildrenUuids(parentUuid);
+    }
+
+    // TODO Remove this method and use getAllChildrenUuids
+    public List<UUID> getChildrenUuids(UUID parentUuid) {
+        List<UUID> children = new ArrayList<>();
+        doGetChildrenUuids(parentUuid, children);
+        return children;
+    }
+
+    private void doGetChildrenUuids(UUID parentUuid, List<UUID> children) {
+        Optional<NodeEntity> optNode = nodesRepository.findById(parentUuid);
+        optNode.ifPresent(node -> nodesRepository.findAllByParentNodeIdNode(parentUuid)
+            .forEach(child -> {
+                children.add(child.getIdNode());
+                doGetChildrenUuids(child.getIdNode(), children);
+            }));
     }
 
     @Transactional
@@ -411,10 +427,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public AbstractNode getStudySubtree(UUID studyId, UUID parentNodeUuid, UUID rootNetworkUuid) {
-//        TODO: not working because of proxy appearing in tests TOFIX later
-//        List<UUID> nodeUuids = nodesRepository.findAllDescendants(parentNodeUuid).stream().map(UUID::fromString).toList();
-//        List<NodeEntity> nodes = nodesRepository.findAllById(nodeUuids);
-        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
+        List<NodeEntity> nodes = nodesRepository.findAllChildren(parentNodeUuid);
 
         List<AbstractNode> allNodeInfos = new ArrayList<>();
         allNodeInfos.addAll(rootNodeInfoRepository.findAllByNodeStudyId(studyId).stream().map(RootNodeInfoEntity::toDto).toList());
@@ -691,7 +704,7 @@ public class NetworkModificationTreeService {
         nodes.stream().map(node -> networkModificationNodeInfos.get(node.getIdNode()))
             .forEach(abstractNode -> {
                 ArrayList<UUID> children = new ArrayList<>();
-                doGetChildren(abstractNode.getId(), children);
+                doGetChildrenUuids(abstractNode.getId(), children);
                 result.add(Pair.of(abstractNode, children.size()));
             });
         return result;
@@ -883,7 +896,7 @@ public class NetworkModificationTreeService {
         }
         checkedChildren.add(node);
 
-        for (NodeEntity child : getChildrenByParentUuid(node.getIdNode())) {
+        for (NodeEntity child : getChildren(node.getIdNode())) {
             if (!checkedChildren.contains(child)
                 && hasAnyBuiltChildren(child, rootNetworkUuid, checkedChildren)) {
                 return true;
@@ -919,11 +932,12 @@ public class NetworkModificationTreeService {
 
     private InvalidateNodeInfos invalidateChildrenNodes(UUID nodeUuid, UUID rootNetworkUuid) {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
-        nodesRepository.findAllByParentNodeIdNode(nodeUuid)
-            .forEach(child -> {
-                invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child.getIdNode(), rootNetworkUuid, InvalidateNodeTreeParameters.ALL));
-                invalidateNodeInfos.add(invalidateChildrenNodes(child.getIdNode(), rootNetworkUuid));
-            });
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoService.getRootNetworkNodes(rootNetworkUuid, getAllChildrenUuids(nodeUuid));
+
+        rootNetworkNodeInfoEntities.forEach(child ->
+            invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, InvalidateNodeTreeParameters.ALL))
+        );
+
         return invalidateNodeInfos;
     }
 
@@ -1010,21 +1024,6 @@ public class NetworkModificationTreeService {
         return getNodeInfoEntity(nodeUuid).getReadOnly();
     }
 
-    public List<UUID> getChildren(UUID id) {
-        List<UUID> children = new ArrayList<>();
-        doGetChildren(id, children);
-        return children;
-    }
-
-    private void doGetChildren(UUID id, List<UUID> children) {
-        Optional<NodeEntity> optNode = nodesRepository.findById(id);
-        optNode.ifPresent(node -> nodesRepository.findAllByParentNodeIdNode(id)
-            .forEach(child -> {
-                children.add(child.getIdNode());
-                doGetChildren(child.getIdNode(), children);
-            }));
-    }
-
     // only used for tests
     @Transactional
     public UUID getParentNode(UUID nodeUuid, NodeType nodeType) {
@@ -1060,7 +1059,7 @@ public class NetworkModificationTreeService {
         if (includeParentNode) {
             nodesToInvalidate.add(parentNodeUuid);
         }
-        nodesToInvalidate.addAll(getChildren(parentNodeUuid));
+        nodesToInvalidate.addAll(getAllChildrenUuids(parentNodeUuid));
         invalidateNodeInfos.addGroupUuids(
             networkModificationNodeInfoRepository.findAllById(nodesToInvalidate).stream()
                 .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid).toList()
