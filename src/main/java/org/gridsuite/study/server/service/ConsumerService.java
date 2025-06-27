@@ -265,7 +265,7 @@ public class ConsumerService {
                 } finally {
                     // if studyEntity is already existing, we don't delete anything in the end of the process
                     if (caseImportAction == CaseImportAction.STUDY_CREATION) {
-                        studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+                        studyService.deleteStudyIfNotCreationInProgress(studyUuid);
                     }
                     LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
                         TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
@@ -490,7 +490,7 @@ public class ConsumerService {
                     UUID rootNetworkUuid = receiver.getRootNetworkUuid();
 
                     if (receiver.getCaseImportAction() == CaseImportAction.STUDY_CREATION) {
-                        studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+                        studyService.deleteStudyIfNotCreationInProgress(studyUuid);
                         notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
                     } else {
                         if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_CREATION) {
