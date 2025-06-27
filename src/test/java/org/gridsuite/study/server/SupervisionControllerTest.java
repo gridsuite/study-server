@@ -16,6 +16,8 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
+import org.apache.http.HttpHost;
+import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
@@ -58,7 +60,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 
 @AutoConfigureMockMvc
-@SpringBootTest(classes = {StudyApplication.class})
+@SpringBootTest
 class SupervisionControllerTest {
 
     @Autowired
