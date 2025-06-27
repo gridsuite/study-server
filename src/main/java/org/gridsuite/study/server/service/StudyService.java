@@ -2170,16 +2170,27 @@ public class StudyService {
         }
     }
 
-    public ReportPage getReportLogs(String reportId, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
-        return reportService.getPagedReportLogs(UUID.fromString(reportId), messageFilter, severityLevels, paged, pageable);
-    }
+    private ReportPage getParentNodesReportLogs(UUID nodeUuid, UUID rootNetworkUuid, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
+        List<UUID> nodeIds = nodesTree(nodeUuid);
+        Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
-    public String getSearchTermMatchesInFilteredLogs(UUID reportId, Set<String> severityLevels, String messageFilter, String searchTerm, int pageSize) {
-        return reportService.getSearchTermMatchesInFilteredLogs(reportId, severityLevels, messageFilter, searchTerm, pageSize);
+        List<UUID> reportUuids = nodeIds.stream()
+            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId, 
+                        networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
+            .filter(Objects::nonNull)
+            .toList();
+        return reportService.getPagedMultipleReportLogs(reportUuids, messageFilter, severityLevels, paged, pageable);
     }
 
     @Transactional(readOnly = true)
-    public String getSearchTermMatchesInParentNodesFilteredLogs(UUID nodeUuid, UUID rootNetworkUuid, Set<String> severityLevels, String messageFilter, String searchTerm, int pageSize) {
+    public ReportPage getReportLogs(UUID nodeUuid, UUID rootNetworkUuid, UUID reportId, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
+        if (reportId != null) {
+            return reportService.getPagedReportLogs(reportId, messageFilter, severityLevels, paged, pageable);
+        }
+        return getParentNodesReportLogs(nodeUuid, rootNetworkUuid, messageFilter, severityLevels, paged, pageable);
+    }
+
+    private String getSearchTermMatchesInParentNodesFilteredLogs(UUID nodeUuid, UUID rootNetworkUuid, Set<String> severityLevels, String messageFilter, String searchTerm, int pageSize) {
         List<UUID> nodeIds = nodesTree(nodeUuid);
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
@@ -2191,12 +2202,15 @@ public class StudyService {
         return reportService.getSearchTermMatchesInMultipleFilteredLogs(reportUuids, severityLevels, messageFilter, searchTerm, pageSize);
     }
 
-    public Set<String> getNodeReportAggregatedSeverities(UUID reportId) {
-        return reportService.getReportAggregatedSeverities(reportId);
+    @Transactional(readOnly = true)
+    public String getSearchTermMatchesInFilteredLogs(UUID nodeUuid, UUID rootNetworkUuid, UUID reportId, Set<String> severityLevels, String messageFilter, String searchTerm, int pageSize) {
+        if (reportId != null) {
+            return reportService.getSearchTermMatchesInFilteredLogs(reportId, severityLevels, messageFilter, searchTerm, pageSize);
+        }
+        return getSearchTermMatchesInParentNodesFilteredLogs(nodeUuid, rootNetworkUuid, severityLevels, messageFilter, searchTerm, pageSize);
     }
 
-    @Transactional(readOnly = true)
-    public Set<String> getParentNodesAggregatedReportSeverities(UUID nodeUuid, UUID rootNetworkUuid) {
+    private Set<String> getParentNodesAggregatedReportSeverities(UUID nodeUuid, UUID rootNetworkUuid) {
         List<UUID> nodeIds = nodesTree(nodeUuid);
         Set<String> severities = new HashSet<>();
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
@@ -2209,16 +2223,11 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public ReportPage getParentNodesReportLogs(UUID nodeUuid, UUID rootNetworkUuid, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
-        List<UUID> nodeIds = nodesTree(nodeUuid);
-        Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
-
-        List<UUID> reportUuids = nodeIds.stream()
-            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId, 
-                        networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
-            .filter(Objects::nonNull)
-            .toList();
-        return reportService.getPagedMultipleReportLogs(reportUuids, messageFilter, severityLevels, paged, pageable);
+    public Set<String> getAggregatedReportSeverities(UUID nodeUuid, UUID rootNetworkUuid, UUID reportId) {
+        if (reportId != null) {
+            return reportService.getReportAggregatedSeverities(reportId);
+        }
+        return getParentNodesAggregatedReportSeverities(nodeUuid, rootNetworkUuid);
     }
 
     @Transactional(readOnly = true)
