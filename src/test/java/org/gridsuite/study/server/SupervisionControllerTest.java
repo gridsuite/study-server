@@ -58,7 +58,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 
 @AutoConfigureMockMvc
-@SpringBootTest
+@SpringBootTest(classes = {StudyApplication.class})
 class SupervisionControllerTest {
 
     @Autowired
