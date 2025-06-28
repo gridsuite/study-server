@@ -7,15 +7,16 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.gridsuite.study.server.dto.RootNetworkInfos;
-import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
+import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -48,6 +49,8 @@ public class SupervisionService {
     private static final String DELETION_LOG_MESSAGE = "{} results deletion for all studies : {} seconds";
 
     private final StudyService studyService;
+
+    private final StudyRepository studyRepository;
 
     private final NetworkModificationTreeService networkModificationTreeService;
 
@@ -97,7 +100,8 @@ public class SupervisionService {
                               StateEstimationService stateEstimationService,
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
-                              RootNetworkService rootNetworkService) {
+                              RootNetworkService rootNetworkService,
+                              StudyRepository studyRepository) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
@@ -115,6 +119,7 @@ public class SupervisionService {
         this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
+        this.studyRepository = studyRepository;
     }
 
     @Transactional
@@ -139,6 +144,32 @@ public class SupervisionService {
                 dryRun ? stateEstimationService.getStateEstimationResultsCount() : deleteStateEstimationResults();
             default -> throw new StudyException(ELEMENT_NOT_FOUND);
         };
+    }
+
+    @Transactional(readOnly = true)
+    public List<SupervisionStudyInfos> getSupervisionStudiesInfos() {
+        return studyRepository.findAll().stream()
+                .map(SupervisionService::toSupervisionStudyInfosDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getAllRootNetworksUuids() {
+        return rootNetworkService.getAllRootNetworkUuids();
+    }
+
+    private static SupervisionStudyInfos toSupervisionStudyInfosDto(StudyEntity entity) {
+        return SupervisionStudyInfos.builder()
+                .id(entity.getId())
+                .rootNetworkInfos(
+                        entity.getRootNetworks().stream().map(rootNetworkEntity -> RootNetworkInfos.builder()
+                                .id(rootNetworkEntity.getId())
+                                .networkInfos(
+                                        new NetworkInfos(rootNetworkEntity.getNetworkUuid(), rootNetworkEntity.getNetworkId())
+                                ).build()
+                            ).toList())
+                .caseUuids(entity.getRootNetworks().stream().map(RootNetworkEntity::getCaseUuid).toList())
+                .build();
     }
 
     public long getStudyIndexedEquipmentsCount(UUID networkUUID) {

@@ -149,6 +149,10 @@ public class RootNetworkService {
         return rootNetworkRepository.findAll().stream().map(RootNetworkEntity::getNetworkUuid).toList();
     }
 
+    public List<UUID> getAllRootNetworkUuids() {
+        return rootNetworkRepository.findAll().stream().map(RootNetworkEntity::getId).toList();
+    }
+
     public Optional<RootNetworkEntity> getRootNetwork(UUID rootNetworkUuid) {
         return rootNetworkRepository.findById(rootNetworkUuid);
     }
@@ -269,6 +273,10 @@ public class RootNetworkService {
 
     public void deleteRootNetworkRequest(RootNetworkRequestEntity rootNetworkRequestEntity) {
         rootNetworkRequestRepository.delete(rootNetworkRequestEntity);
+    }
+
+    public void deleteRootNetwork(UUID rootNetworkUuid) {
+        rootNetworkRepository.deleteById(rootNetworkUuid);
     }
 
     public void assertCanCreateRootNetwork(UUID studyUuid, String rootNetworkName, String rootNetworkTag) {

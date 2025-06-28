@@ -17,6 +17,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
+import org.gridsuite.study.server.StudyConstants.SldDisplayMode;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
@@ -180,9 +182,8 @@ public class StudyController {
     @DeleteMapping(value = "/studies/{studyUuid}")
     @Operation(summary = "delete the study")
     @ApiResponse(responseCode = "200", description = "Study deleted")
-    public ResponseEntity<Void> deleteStudy(@PathVariable("studyUuid") UUID studyUuid,
-                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+    public ResponseEntity<Void> deleteStudy(@PathVariable("studyUuid") UUID studyUuid) {
+        studyService.deleteStudyIfNotCreationInProgress(studyUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -1193,33 +1194,33 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReport(nodeUuid, rootNetworkUuid, nodeOnlyReport, reportType, severityLevels));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/logs", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get node report logs")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report logs"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<ReportPage> getNodeReportLogs(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                             @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                             @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @Parameter(description = "reportId") @PathVariable("reportId") String reportId,
-                                                             @Parameter(description = "The message filter") @RequestParam(name = "message", required = false) String messageFilter,
-                                                             @Parameter(description = "Severity levels filter") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels,
-                                                             @Parameter(description = "Whether we want paged logs") @RequestParam(name = "paged", required = false, defaultValue = "false") boolean paged,
-                                                             Pageable pageable) {
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the report logs of the given node and all its parents")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report logs of the node and all its parent"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<ReportPage> getReportLogs(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                                    @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                                    @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                    @Parameter(description = "report id") @RequestParam(name = "reportId", required = false) UUID reportId,
+                                                                    @Parameter(description = "The message filter") @RequestParam(name = "message", required = false) String messageFilter,
+                                                                    @Parameter(description = "Severity levels filter") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels,
+                                                                    @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false, defaultValue = "false") boolean paged,
+                                                                    Pageable pageable) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(reportId, messageFilter, severityLevels, paged, pageable));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getReportLogs(nodeUuid, rootNetworkUuid, reportId, messageFilter, severityLevels, paged, pageable));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/logs/search", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get search term matches in node report logs")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get search term matches in parent nodes filtered logs")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The search term matches in the node report logs"),
+        @ApiResponse(responseCode = "200", description = "The search term matches in the parent nodes filtered logs"),
         @ApiResponse(responseCode = "404", description = "The study/node is not found")
     })
-    public ResponseEntity<String> getNodeReportLogsSearchTermMatches(
+    public ResponseEntity<String> getSearchTermMatchesInFilteredLogs(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "reportId") @PathVariable("reportId") UUID reportId,
+            @Parameter(description = "report id") @RequestParam(name = "reportId", required = false) UUID reportId,
             @Parameter(description = "The message filter") @RequestParam(name = "message", required = false) String messageFilter,
             @Parameter(description = "Severity levels filter") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels,
             @Parameter(description = "The search term") @RequestParam(name = "searchTerm") String searchTerm,
@@ -1228,19 +1229,7 @@ public class StudyController {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
-                studyService.getSearchTermMatchesInFilteredLogs(reportId, severityLevels, messageFilter, searchTerm, pageSize));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/{reportId}/aggregated-severities", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get node report severities")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The node report severities"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Set<String>> getNodeReportAggregatedSeverities(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                                       @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                       @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                       @Parameter(description = "reportId") @PathVariable("reportId") UUID reportId) {
-        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNodeReportAggregatedSeverities(reportId));
+                studyService.getSearchTermMatchesInFilteredLogs(nodeUuid, rootNetworkUuid, reportId, severityLevels, messageFilter, searchTerm, pageSize));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/aggregated-severities", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -1248,23 +1237,11 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report severities of the node and all its parent"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<Set<String>> getParentNodesAggregatedReportSeverities(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                                        @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                       @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid) {
+                                                                       @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                       @Parameter(description = "reportId") @RequestParam(name = "reportId", required = false) UUID reportId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesAggregatedReportSeverities(nodeUuid, rootNetworkUuid));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get the report logs of the given node and all its parents")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The report logs of the node and all its parent"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<List<ReportLog>> getParentNodesReportLogs(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                                    @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                    @Parameter(description = "node id") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                    @Parameter(description = "The message filter") @RequestParam(name = "message", required = false) String messageFilter,
-                                                                    @Parameter(description = "Severity levels filter") @RequestParam(name = "severityLevels", required = false) Set<String> severityLevels) {
-        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getParentNodesReportLogs(nodeUuid, rootNetworkUuid, messageFilter, severityLevels));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAggregatedReportSeverities(nodeUuid, rootNetworkUuid, reportId));
     }
 
     @GetMapping(value = "/svg-component-libraries")
