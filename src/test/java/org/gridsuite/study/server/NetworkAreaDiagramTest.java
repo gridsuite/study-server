@@ -21,17 +21,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.nio.charset.StandardCharsets;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -65,7 +62,6 @@ class NetworkAreaDiagramTest {
     private static final UUID ELEMENT_UUID = UUID.randomUUID();
     private static final UUID ROOTNETWORK_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
-    private static final String ELEMENT_PARAMETERS = "{\"elementType\":\"DIAGRAM_CONFIG\",\"elementUuid\":\"" + ELEMENT_UUID + "\"}";
 
     @BeforeEach
     void setUp() {
@@ -102,7 +98,7 @@ class NetworkAreaDiagramTest {
 
     @Test
     void testGetNetworkAreaDiagramFromConfig() throws Exception {
-        String nadRequestConfigInfos = createNadRequestInfos(ELEMENT_UUID,null,List.of(),List.of(),List.of(),true);
+        String nadRequestConfigInfos = createNadRequestInfos(ELEMENT_UUID, null, List.of(), List.of(), List.of(), true);
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching(SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + ".*"))
                 .withRequestBody(equalTo(nadRequestConfigInfos))
                 .willReturn(WireMock.ok()
@@ -121,7 +117,7 @@ class NetworkAreaDiagramTest {
 
     @Test
     void testGetNetworkAreaDiagramFromConfigVariantError() throws Exception {
-        String nadRequestConfigInfos = createNadRequestInfos(ELEMENT_UUID,null,List.of(),List.of(),List.of(),true);
+        String nadRequestConfigInfos = createNadRequestInfos(ELEMENT_UUID, null, List.of(), List.of(), List.of(), true);
 
         when(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).thenReturn("Another_variant");
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
@@ -133,7 +129,7 @@ class NetworkAreaDiagramTest {
 
     @Test
     void testGetNetworkAreaDiagramFromConfigRootNetworkError() throws Exception {
-        String nadRequestConfigInfos = createNadRequestInfos(ELEMENT_UUID,null,List.of(),List.of(),List.of(),true);
+        String nadRequestConfigInfos = createNadRequestInfos(ELEMENT_UUID, null, List.of(), List.of(), List.of(), true);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
@@ -144,9 +140,9 @@ class NetworkAreaDiagramTest {
 
     @Test
     void testGetNetworkAreaDiagramFromConfigElementUuidNotFound() throws Exception {
-        String nadRequestConfigInfos = createNadRequestInfos(ELEMENT_UUID,null,List.of(),List.of(),List.of(),true);
+        String nadRequestConfigInfos = createNadRequestInfos(ELEMENT_UUID, null, List.of(), List.of(), List.of(), true);
 
-        UUID stubId =  wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching(SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + ".*"))
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching(SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + ".*"))
                 .withRequestBody(equalTo(nadRequestConfigInfos))
                 .willReturn(WireMock.notFound())).getId();
 
