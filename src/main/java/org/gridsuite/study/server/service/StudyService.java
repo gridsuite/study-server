@@ -15,7 +15,6 @@ import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import org.apache.commons.collections4.CollectionUtils;
-
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
@@ -84,8 +83,6 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
-import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
-import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -908,6 +905,7 @@ public class StudyService {
         networkConversionService.exportNetwork(networkUuid, variantId, format, parametersJson, fileName, exportNetworkResponse);
     }
 
+    @Transactional(readOnly = true)
     public void assertIsNodeNotReadOnly(UUID nodeUuid) {
         Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid);
         if (Boolean.TRUE.equals(isReadOnly)) {
@@ -945,6 +943,11 @@ public class StudyService {
     public void assertNoBuildNoComputationForRootNetworkNode(UUID nodeUuid, UUID rootNetworkUuid) {
         rootNetworkNodeInfoService.assertComputationNotRunning(nodeUuid, rootNetworkUuid);
         rootNetworkNodeInfoService.assertNetworkNodeIsNotBuilding(rootNetworkUuid, nodeUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public void assertNoBlockedBuildInNodeTree(UUID nodeUuid, UUID rootNetworkUuid) {
+        rootNetworkNodeInfoService.assertNoBlockedBuildInNodeTree(rootNetworkUuid, networkModificationTreeService.getAllChildrenUuids(nodeUuid));
     }
 
     public void assertNoBuildNoComputationForNode(UUID studyUuid, UUID nodeUuid) {
@@ -1672,6 +1675,7 @@ public class StudyService {
         return getVoltageLevelSwitches(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, "switches");
     }
 
+    @Transactional
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, null);
     }
@@ -1699,7 +1703,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
     }
 
-    private void assertCanBuildNode(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+    public void assertCanBuildNode(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         // check restrictions on node builds number
         userAdminService.getUserMaxAllowedBuilds(userId).ifPresent(maxBuilds -> {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);

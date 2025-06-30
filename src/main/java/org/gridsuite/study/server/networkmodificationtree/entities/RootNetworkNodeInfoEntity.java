@@ -102,6 +102,9 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "stateEstimationResultUuid")
     private UUID stateEstimationResultUuid;
 
+    @Column(name = "blockedBuild")
+    private Boolean blockedBuild;
+
     @Embedded
     @AttributeOverrides(value = {
         @AttributeOverride(name = "localBuildStatus", column = @Column(name = "localBuildStatus", nullable = false)),
