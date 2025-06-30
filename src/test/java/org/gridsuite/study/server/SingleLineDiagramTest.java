@@ -57,6 +57,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -218,7 +219,7 @@ class SingleLineDiagramTest {
                     case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
                         return new MockResponse(500, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"tmp\",\"path\":\"/v1/networks\"}");
-                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true":
+                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING :
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "nad-svg");
 
                     case "/v1/svg-component-libraries":
@@ -237,6 +238,22 @@ class SingleLineDiagramTest {
             }
         };
         server.setDispatcher(dispatcher);
+    }
+
+    private String createNadRequestInfos(
+            List<String> voltageLevelIds
+    ) throws JsonProcessingException {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("nadConfigUuid", null);
+        requestBody.put("filterUuid", null);
+        requestBody.put("voltageLevelIds", voltageLevelIds);
+        requestBody.put("voltageLevelToExpandIds", List.of());
+        requestBody.put("voltageLevelToOmitIds", List.of());
+        requestBody.put("positions", List.of());
+        requestBody.put("withGeoData", true);
+
+        org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper objectMapper = new org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper();
+        return objectMapper.writeValueAsString(requestBody);
     }
 
     @Test
@@ -347,22 +364,21 @@ class SingleLineDiagramTest {
                         randomUuid, randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
 
         // get the network area diagram
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
-                        .content("[\"vlFr1A\"]")
-                        .contentType(MediaType.APPLICATION_JSON))
+        String nadRequestConfigInfos = createNadRequestInfos(List.of("vlFr1A"));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
+                        .content(nadRequestConfigInfos).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(
                 content().contentType(MediaType.APPLICATION_JSON),
                 status().isOk(),
                 content().string("nad-svg")
             );
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true")));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING)));
 
         // get the network area diagram from a study that doesn't exist
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true", randomUuid, randomUuid, rootNodeUuid)
-                .content("[\"vlFr1A\"]")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram", randomUuid, randomUuid, rootNodeUuid)
+                        .content(nadRequestConfigInfos).contentType(MediaType.APPLICATION_JSON))
+                 .andExpect(status().isNotFound());
 
         //get voltage levels
         mvcResult = getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "VOLTAGE_LEVEL", null, objectMapper.writeValueAsString(List.of()), TestUtils.resourceToString("/network-voltage-levels-infos.json"));
@@ -521,10 +537,11 @@ class SingleLineDiagramTest {
             status().isNoContent());
 
         //get the network area diagram on a non existing variant
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?depth=0",
+        String nadRequestConfigInfos = createNadRequestInfos(List.of("vlFr1A"));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
             studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
-                .content("[\"vlFr1A\"]")
-                .contentType(MediaType.APPLICATION_JSON)).andExpectAll(
+                        .content(nadRequestConfigInfos).contentType(MediaType.APPLICATION_JSON))
+                .andExpectAll(
             status().isNoContent());
     }
 
