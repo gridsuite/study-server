@@ -598,7 +598,7 @@ class NetworkModificationTreeTest {
 
         List<AbstractNode> children = root.getChildren();
         assertEquals(2, children.size());
-        NetworkModificationNode n1 = (NetworkModificationNode) (children.get(0).getName().equals("n1") ? children.get(0) : children.get(1));
+        NetworkModificationNode n1 = (NetworkModificationNode) (children.stream().filter(c -> c.getName().equals("n1")).findFirst().orElseThrow());
         NetworkModificationNodeInfoEntity n1Infos = networkModificationTreeService.getNetworkModificationNodeInfoEntity(n1.getId());
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(n1.getId(), firstRootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
 
@@ -669,7 +669,7 @@ class NetworkModificationTreeTest {
         node2.setName("niark");
         node1.setName("condriak");
         node1.setModificationGroupUuid(UUID.randomUUID());
-        AbstractNode child = children.get(0).getName().equals("loadflow") ? children.get(0) : children.get(1);
+        AbstractNode child = children.stream().filter(c -> c.getName().equals("loadflow")).findFirst().orElseThrow();
         createNode(root.getStudyId(), child, node2, userId);
         createNode(root.getStudyId(), child, node1, userId);
 
