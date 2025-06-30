@@ -1019,7 +1019,6 @@ public class NetworkModificationTreeService {
         }
     }
 
-    @Transactional(readOnly = true)
     public Boolean isReadOnly(UUID nodeUuid) {
         return getNodeInfoEntity(nodeUuid).getReadOnly();
     }

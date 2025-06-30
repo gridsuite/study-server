@@ -674,6 +674,7 @@ public class StudyController {
             @RequestParam(value = "withRatioTapChangers", required = false, defaultValue = "false") boolean withRatioTapChangers,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertNoBlockedBuildInNodeTree(nodeUuid, rootNetworkUuid);
         handleRunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
         return ResponseEntity.ok().build();
     }
@@ -1580,6 +1581,7 @@ public class StudyController {
                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertNoBlockedBuildInNodeTree(nodeUuid, rootNetworkUuid);
         studyService.assertNoBuildNoComputationForRootNetworkNode(nodeUuid, rootNetworkUuid);
         studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();

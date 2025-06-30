@@ -133,6 +133,7 @@ public class RootNetworkNodeInfoService {
             .variantId(UUID.randomUUID().toString())
             .modificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())))
             .modificationsUuidsToExclude(modificationsToExclude)
+            .blockedBuild(false)
             .build();
     }
 
@@ -379,6 +380,12 @@ public class RootNetworkNodeInfoService {
         NodeBuildStatusEmbeddable buildStatusEmbeddable = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         if (buildStatusEmbeddable.getGlobalBuildStatus().isBuilding() || buildStatusEmbeddable.getLocalBuildStatus().isBuilding()) {
             throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
+        }
+    }
+
+    public void assertNoBlockedBuildInNodeTree(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndBlockedBuild(rootNetworkUuid, nodesUuids)) {
+            throw new StudyException(NOT_ALLOWED, "There is already a network modification in progress in this branch !");
         }
     }
 
