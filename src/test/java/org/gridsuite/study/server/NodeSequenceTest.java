@@ -118,7 +118,7 @@ class NodeSequenceTest {
         AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
         checkSecuritySequence(nNode, " (1)");
 
-        verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, networkModificationTreeService.getChildrenByParentUuid(constructionNode.getId()).getFirst().getIdNode(), constructionNode.getId());
+        verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, networkModificationTreeService.getChildren(constructionNode.getId()).getFirst().getIdNode(), constructionNode.getId());
         verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode.getId(), parentOfSubtree.getId());
         verify(notificationService, times(2)).emitElementUpdated(studyUuid, userId);
     }

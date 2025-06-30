@@ -93,7 +93,7 @@ class ModificationIndexationTest {
             node3.getModificationGroupUuid()
         ));
 
-        SQLStatementCountValidator.assertSelectCount(21);
+        SQLStatementCountValidator.assertSelectCount(17);
     }
 
     @Test
@@ -105,7 +105,7 @@ class ModificationIndexationTest {
             node5.getModificationGroupUuid()
         ));
 
-        SQLStatementCountValidator.assertSelectCount(21);
+        SQLStatementCountValidator.assertSelectCount(17);
     }
 
     @Test
@@ -116,7 +116,7 @@ class ModificationIndexationTest {
             node5.getModificationGroupUuid()
         ));
 
-        SQLStatementCountValidator.assertSelectCount(12);
+        SQLStatementCountValidator.assertSelectCount(8);
     }
 
     @Test
@@ -128,7 +128,7 @@ class ModificationIndexationTest {
             node3.getModificationGroupUuid()
         ));
 
-        SQLStatementCountValidator.assertSelectCount(21);
+        SQLStatementCountValidator.assertSelectCount(17);
     }
 
     @Test
@@ -149,7 +149,7 @@ class ModificationIndexationTest {
             node3.getModificationGroupUuid()
         ));
 
-        SQLStatementCountValidator.assertSelectCount(21);
+        SQLStatementCountValidator.assertSelectCount(19);
     }
 
     private void createStudyAndNodesWithIndexedModification() {
