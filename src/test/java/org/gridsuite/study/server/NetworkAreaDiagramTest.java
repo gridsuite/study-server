@@ -18,16 +18,21 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
+import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.net.URLEncoder;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.nio.charset.StandardCharsets;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -74,59 +79,84 @@ class NetworkAreaDiagramTest {
         when(networkStoreService.getVariantsInfos(NETWORK_UUID)).thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
     }
 
+    private String createNadRequestInfos(
+            UUID nadConfigUuid,
+            UUID filterUuid,
+            List<String> voltageLevelIds,
+            List<String> voltageLevelToExpandIds,
+            List<String> voltageLevelToOmitIds,
+            boolean withGeoData
+    ) throws JsonProcessingException {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("nadConfigUuid", nadConfigUuid);
+        requestBody.put("filterUuid", filterUuid);
+        requestBody.put("voltageLevelIds", voltageLevelIds);
+        requestBody.put("voltageLevelToExpandIds", voltageLevelToExpandIds);
+        requestBody.put("voltageLevelToOmitIds", voltageLevelToOmitIds);
+        requestBody.put("positions", List.of());
+        requestBody.put("withGeoData", withGeoData);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        return objectMapper.writeValueAsString(requestBody);
+    }
+
     @Test
     void testGetNetworkAreaDiagramFromConfig() throws Exception {
-        UUID stubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching(SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + ".*"))
+        String nadRequestConfigInfos = createNadRequestInfos(ELEMENT_UUID,null,List.of(),List.of(),List.of(),true);
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching(SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + ".*"))
+                .withRequestBody(equalTo(nadRequestConfigInfos))
                 .willReturn(WireMock.ok()
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                         .withBody("nad-svg-from-config")
                 )).getId();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         NETWORK_UUID, ROOTNETWORK_UUID, NODE_UUID)
-                        .param("elementParams", ELEMENT_PARAMETERS)
+                        .content(nadRequestConfigInfos).contentType(MediaType.APPLICATION_JSON)
                         .header("userId", USER1))
                 .andExpectAll(status().isOk(), content().string("nad-svg-from-config"))
                 .andReturn();
-
-        wireMockUtils.verifyGetRequest(stubId, SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID, Map.of(
-                "elementParams", WireMock.equalTo(URLEncoder.encode(ELEMENT_PARAMETERS, StandardCharsets.UTF_8)),
-                "variantId", WireMock.equalTo(VariantManagerConstants.INITIAL_VARIANT_ID)));
+        wireMockUtils.verifyPostRequest(stubId, SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID, false, Map.of("variantId", WireMock.equalTo(VariantManagerConstants.INITIAL_VARIANT_ID)), nadRequestConfigInfos);
     }
 
     @Test
     void testGetNetworkAreaDiagramFromConfigVariantError() throws Exception {
-        when(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).thenReturn("Another_variant");
+        String nadRequestConfigInfos = createNadRequestInfos(ELEMENT_UUID,null,List.of(),List.of(),List.of(),true);
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
+        when(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).thenReturn("Another_variant");
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         NETWORK_UUID, ROOTNETWORK_UUID, NODE_UUID)
-                        .param("elementParams", ELEMENT_PARAMETERS)
+                        .content(nadRequestConfigInfos).contentType(MediaType.APPLICATION_JSON)
                         .header("userId", USER1))
                 .andExpectAll(status().isNoContent());
     }
 
     @Test
     void testGetNetworkAreaDiagramFromConfigRootNetworkError() throws Exception {
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
+        String nadRequestConfigInfos = createNadRequestInfos(ELEMENT_UUID,null,List.of(),List.of(),List.of(),true);
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
-                        .param("elementParams", ELEMENT_PARAMETERS)
+                        .content(nadRequestConfigInfos).contentType(MediaType.APPLICATION_JSON)
                         .header("userId", USER1))
                 .andExpectAll(status().isNotFound());
     }
 
     @Test
     void testGetNetworkAreaDiagramFromConfigElementUuidNotFound() throws Exception {
-        UUID stubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching(SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + ".*"))
+        String nadRequestConfigInfos = createNadRequestInfos(ELEMENT_UUID,null,List.of(),List.of(),List.of(),true);
+
+        UUID stubId =  wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching(SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + ".*"))
+                .withRequestBody(equalTo(nadRequestConfigInfos))
                 .willReturn(WireMock.notFound())).getId();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         NETWORK_UUID, ROOTNETWORK_UUID, NODE_UUID)
-                        .param("elementParams", ELEMENT_PARAMETERS)
+                        .content(nadRequestConfigInfos).contentType(MediaType.APPLICATION_JSON)
                         .header("userId", USER1))
                 .andExpectAll(status().isNotFound());
 
-        wireMockUtils.verifyGetRequest(stubId, SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID, Map.of(
-                "elementParams", WireMock.equalTo(URLEncoder.encode(ELEMENT_PARAMETERS, StandardCharsets.UTF_8)),
-                "variantId", WireMock.equalTo(VariantManagerConstants.INITIAL_VARIANT_ID)));
+        wireMockUtils.verifyPostRequest(stubId, SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID, Map.of(
+                 "variantId", WireMock.equalTo(VariantManagerConstants.INITIAL_VARIANT_ID)));
     }
 }
