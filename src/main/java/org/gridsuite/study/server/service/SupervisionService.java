@@ -7,15 +7,16 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.gridsuite.study.server.dto.RootNetworkInfos;
-import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
+import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -49,6 +50,8 @@ public class SupervisionService {
 
     private final StudyService studyService;
 
+    private final StudyRepository studyRepository;
+
     private final NetworkModificationTreeService networkModificationTreeService;
 
     private final ReportService reportService;
@@ -78,6 +81,7 @@ public class SupervisionService {
     private final ElasticsearchOperations elasticsearchOperations;
 
     private final StudyInfosService studyInfosService;
+
     private final RootNetworkService rootNetworkService;
 
     public SupervisionService(StudyService studyService,
@@ -95,7 +99,9 @@ public class SupervisionService {
                               EquipmentInfosService equipmentInfosService,
                               StateEstimationService stateEstimationService,
                               ElasticsearchOperations elasticsearchOperations,
-                              StudyInfosService studyInfosService, RootNetworkService rootNetworkService) {
+                              StudyInfosService studyInfosService,
+                              RootNetworkService rootNetworkService,
+                              StudyRepository studyRepository) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
@@ -113,6 +119,7 @@ public class SupervisionService {
         this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
+        this.studyRepository = studyRepository;
     }
 
     @Transactional
@@ -139,6 +146,32 @@ public class SupervisionService {
         };
     }
 
+    @Transactional(readOnly = true)
+    public List<SupervisionStudyInfos> getSupervisionStudiesInfos() {
+        return studyRepository.findAll().stream()
+                .map(SupervisionService::toSupervisionStudyInfosDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getAllRootNetworksUuids() {
+        return rootNetworkService.getAllRootNetworkUuids();
+    }
+
+    private static SupervisionStudyInfos toSupervisionStudyInfosDto(StudyEntity entity) {
+        return SupervisionStudyInfos.builder()
+                .id(entity.getId())
+                .rootNetworkInfos(
+                        entity.getRootNetworks().stream().map(rootNetworkEntity -> RootNetworkInfos.builder()
+                                .id(rootNetworkEntity.getId())
+                                .networkInfos(
+                                        new NetworkInfos(rootNetworkEntity.getNetworkUuid(), rootNetworkEntity.getNetworkId())
+                                ).build()
+                            ).toList())
+                .caseUuids(entity.getRootNetworks().stream().map(RootNetworkEntity::getCaseUuid).toList())
+                .build();
+    }
+
     public long getStudyIndexedEquipmentsCount(UUID networkUUID) {
         return equipmentInfosService.getEquipmentInfosCount(networkUUID);
     }
@@ -163,14 +196,8 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
-        List<UUID> reportsToDelete = new ArrayList<>();
-        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfo -> {
-            rootNetworkNodeInfo.setLoadFlowResultUuid(null);
-            reportsToDelete.add(rootNetworkNodeInfo.getComputationReports().get(ComputationType.LOAD_FLOW.name()));
-            rootNetworkNodeInfo.getComputationReports().remove(ComputationType.LOAD_FLOW.name());
-        });
-        reportService.deleteReports(reportsToDelete);
-        loadFlowService.deleteAllLoadFlowResults();
+        List<UUID> studyUuids = rootNetworkNodeInfoEntities.stream().map(rnnie -> rnnie.getRootNetwork().getStudy().getId()).distinct().toList();
+        studyUuids.forEach(studyService::invalidateNodeTreeWithLoadFlowResults);
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOAD_FLOW, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
