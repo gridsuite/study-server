@@ -199,6 +199,7 @@ class StudyControllerDynamicSimulationTest {
     //output destinations
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    private static final String DS_DEBUG_DESTINATION = "ds.debug";
     private static final String DS_RESULT_DESTINATION = "ds.result";
     private static final String DS_STOPPED_DESTINATION = "ds.stopped";
     private static final String DS_FAILED_DESTINATION = "ds.run.dlx";
@@ -307,14 +308,13 @@ class StudyControllerDynamicSimulationTest {
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED);
 
-        // mock the notification from dynamic-simulation server to send debug notif
+        // mock the notification from dynamic-simulation-server to send a debug status notif
         input.send(MessageBuilder.withPayload("")
                 .setHeader("resultUuid", RESULT_UUID.toString())
                 .setHeader("receiver", receiver)
-                .setHeader("debug", true)
-                .build(), DS_RESULT_DESTINATION);
+                .build(), DS_DEBUG_DESTINATION);
 
-        // must have message STUDY_DEBUG from channel : studyUpdateDestination
+        // must have message COMPUTATION_DEBUG_FILE_STATUS from channel : studyUpdateDestination
         Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSimulationResultMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
