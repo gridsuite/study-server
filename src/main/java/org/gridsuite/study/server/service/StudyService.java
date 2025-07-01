@@ -854,6 +854,7 @@ public class StudyService {
     public UUID rerunLoadflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, Boolean withRatioTapChangers, String userId) {
         invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidationMode.ALL)
+            .withBlockedNodeBuild(true)
             .computationsInvalidationMode(ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
             .build());
         buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, RerunLoadFlowInfos.builder()
@@ -882,7 +883,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID sendLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
+    public UUID sendLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, boolean invalidateNodeTree, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID lfParametersUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
         UUID lfReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(LOAD_FLOW.name(), UUID.randomUUID());
@@ -890,8 +891,15 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
         UUID result = loadflowService.runLoadFlow(new NodeReceiver(nodeUuid, rootNetworkUuid), loadflowResultUuid, new VariantInfos(networkUuid, variantId), lfParametersUuid, withRatioTapChangers, lfReportUuid, userId);
-
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
+
+        if (invalidateNodeTree) {
+            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
+                .invalidationMode(InvalidationMode.ONLY_CHILDREN)
+                .withBlockedNodeBuild(true)
+                .computationsInvalidationMode(ComputationsInvalidationMode.ALL)
+                .build());
+        }
 
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
 
@@ -947,7 +955,7 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public void assertNoBlockedBuildInNodeTree(UUID nodeUuid, UUID rootNetworkUuid) {
-        rootNetworkNodeInfoService.assertNoBlockedBuildInNodeTree(rootNetworkUuid, networkModificationTreeService.getAllChildrenUuids(nodeUuid));
+        rootNetworkNodeInfoService.assertNoBlockedBuild(rootNetworkUuid, networkModificationTreeService.getNodeTreeUuids(nodeUuid));
     }
 
     public void assertNoBuildNoComputationForNode(UUID studyUuid, UUID nodeUuid) {
@@ -2898,6 +2906,7 @@ public class StudyService {
                 invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(),
                     InvalidateNodeTreeParameters.builder()
                         .invalidationMode(isLFDone ? InvalidationMode.ALL : InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
+                        .withBlockedNodeBuild(false)
                         .computationsInvalidationMode(isLFDone ? ComputationsInvalidationMode.ALL : ComputationsInvalidationMode.PRESERVE_VOLTAGE_INIT_RESULTS)
                         .build());
             });

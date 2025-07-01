@@ -68,11 +68,11 @@ class LoadFLowUnitTest {
     @Test
     void testRunLoadFlow() {
         when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(null);
-        doReturn(loadflowResultUuid).when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
+        doReturn(loadflowResultUuid).when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyBoolean(), anyString());
 
         controller.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId);
 
-        verify(studyService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
+        verify(studyService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyBoolean(), anyString());
     }
 
     @Test
@@ -98,6 +98,7 @@ class LoadFLowUnitTest {
         InvalidateNodeTreeParameters expectedInvalidationParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
             .computationsInvalidationMode(InvalidateNodeTreeParameters.ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
+            .withBlockedNodeBuild(true)
             .build();
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         UUID groupUuidToInvalidate = UUID.randomUUID();

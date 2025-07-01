@@ -246,15 +246,24 @@ public class RootNetworkNodeInfoService {
 
         InvalidateNodeInfos invalidateNodeInfos = getInvalidationComputationInfos(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
 
-        if (!invalidateTreeParameters.isOnlyChildrenBuildStatusMode()) {
+        if (!invalidateTreeParameters.isOnlyChildrenBuildStatus()) {
             rootNetworkNodeInfoEntity.getModificationReports().forEach((key, value) -> invalidateNodeInfos.addReportUuid(value));
             invalidateNodeInfos.addVariantId(rootNetworkNodeInfoEntity.getVariantId());
             invalidateBuildStatus(rootNetworkNodeInfoEntity, invalidateNodeInfos);
+            rootNetworkNodeInfoEntity.setBlockedBuild(invalidateTreeParameters.withBlockedNodeBuild());
         }
 
         invalidateComputationResults(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
 
         return invalidateNodeInfos;
+    }
+
+    private static void invalidateBuildStatus(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos) {
+        rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
+        rootNetworkNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
+        rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(rootNetworkNodeInfoEntity.getNodeInfo().getId(), UUID.randomUUID())));
+
+        invalidateNodeInfos.addNodeUuid(rootNetworkNodeInfoEntity.getNodeInfo().getIdNode());
     }
 
     private static void invalidateComputationResults(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ComputationsInvalidationMode computationsInvalidationMode) {
@@ -383,24 +392,20 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    public void assertNoBlockedBuildInNodeTree(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+    public void assertNoBlockedBuild(UUID rootNetworkUuid, List<UUID> nodesUuids) {
         if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndBlockedBuild(rootNetworkUuid, nodesUuids)) {
             throw new StudyException(NOT_ALLOWED, "There is already a network modification in progress in this branch !");
         }
+    }
+
+    public void invalidateBlockedBuild(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        getRootNetworkNodes(rootNetworkUuid, nodesUuids).stream().forEach(rnn -> rnn.setBlockedBuild(false));
     }
 
     private void addLink(NetworkModificationNodeInfoEntity nodeInfoEntity, RootNetworkEntity rootNetworkEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         nodeInfoEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
-    }
-
-    private static void invalidateBuildStatus(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos) {
-        rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
-        rootNetworkNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
-        rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(rootNetworkNodeInfoEntity.getNodeInfo().getId(), UUID.randomUUID())));
-
-        invalidateNodeInfos.addNodeUuid(rootNetworkNodeInfoEntity.getNodeInfo().getIdNode());
     }
 
     public void updateModificationsToExclude(UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationUuids, boolean activated) {
