@@ -958,6 +958,14 @@ public class StudyService {
         rootNetworkNodeInfoService.assertNoBlockedBuild(rootNetworkUuid, networkModificationTreeService.getNodeTreeUuids(nodeUuid));
     }
 
+    @Transactional(readOnly = true)
+    public void assertNoBlockedBuildInStudy(UUID studyUuid, UUID nodeUuid) {
+        List<UUID> nodesUuids = networkModificationTreeService.getNodeTreeUuids(nodeUuid);
+        getStudyRootNetworks(studyUuid).stream().forEach(rootNetwork ->
+            rootNetworkNodeInfoService.assertNoBlockedBuild(rootNetwork.getId(), nodesUuids)
+        );
+    }
+
     public void assertNoBuildNoComputationForNode(UUID studyUuid, UUID nodeUuid) {
         getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
             rootNetworkNodeInfoService.assertComputationNotRunning(nodeUuid, rootNetwork.getId())
@@ -1613,6 +1621,9 @@ public class StudyService {
             List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
                 .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()))
                 .toList();
+
+            invalidateNodeTreeWithLF(studyUuid, nodeUuid);
+
             networkModificationResults = networkModificationService.createModification(groupUuid, Pair.of(createModificationAttributes, modificationApplicationContexts));
 
             if (networkModificationResults != null && networkModificationResults.modificationResults() != null) {
@@ -1625,8 +1636,8 @@ public class StudyService {
                     index++;
                 }
             }
-            // invalidate all nodeUuid children
-            invalidateNodeTreeWithLF(studyUuid, nodeUuid);
+
+            invalidateBlockedBuildNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -1872,6 +1883,12 @@ public class StudyService {
             LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
                 TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
+    }
+
+    private void invalidateBlockedBuildNodeTree(UUID studyUuid, UUID nodeUuid) {
+        getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
+            networkModificationTreeService.invalidateBlockedBuildNodeTree(rootNetworkEntity.getId(), nodeUuid)
+        );
     }
 
     public void deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {

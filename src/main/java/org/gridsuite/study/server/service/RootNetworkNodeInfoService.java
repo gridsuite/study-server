@@ -239,18 +239,24 @@ public class RootNetworkNodeInfoService {
     }
 
     public InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters) {
-        // No need to invalidate a node with a status different of "BUILT"
+        boolean notOnlyChildrenBuildStatus = !invalidateTreeParameters.isOnlyChildrenBuildStatus();
+
+        // Always update blocked build info
+        if (notOnlyChildrenBuildStatus) {
+            rootNetworkNodeInfoEntity.setBlockedBuild(invalidateTreeParameters.withBlockedNodeBuild());
+        }
+
+        // No need to delete node results with a status different of "BUILT"
         if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
             return new InvalidateNodeInfos();
         }
 
         InvalidateNodeInfos invalidateNodeInfos = getInvalidationComputationInfos(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
 
-        if (!invalidateTreeParameters.isOnlyChildrenBuildStatus()) {
+        if (notOnlyChildrenBuildStatus) {
             rootNetworkNodeInfoEntity.getModificationReports().forEach((key, value) -> invalidateNodeInfos.addReportUuid(value));
             invalidateNodeInfos.addVariantId(rootNetworkNodeInfoEntity.getVariantId());
             invalidateBuildStatus(rootNetworkNodeInfoEntity, invalidateNodeInfos);
-            rootNetworkNodeInfoEntity.setBlockedBuild(invalidateTreeParameters.withBlockedNodeBuild());
         }
 
         invalidateComputationResults(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());

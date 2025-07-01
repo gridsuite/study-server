@@ -1297,6 +1297,7 @@ public class StudyController {
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
         studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -1595,6 +1596,7 @@ public class StudyController {
     public ResponseEntity<Void> unbuildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        studyService.assertNoBlockedBuildInNodeTree(nodeUuid, rootNetworkUuid);
         studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
