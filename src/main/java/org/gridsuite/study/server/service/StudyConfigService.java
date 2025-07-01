@@ -10,6 +10,8 @@ import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -21,6 +23,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -35,7 +38,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  */
 @Service
 public class StudyConfigService {
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyConfigService.class);
     private static final String UUID_PARAM = "/{uuid}";
 
     private static final String NETWORK_VISU_PARAMETERS_URI = "/network-visualizations-params";
@@ -46,6 +49,9 @@ public class StudyConfigService {
 
     private static final String SPREADSHEET_CONFIG_URI = "/spreadsheet-configs";
     private static final String SPREADSHEET_CONFIG_WITH_ID_URI = SPREADSHEET_CONFIG_URI + UUID_PARAM;
+
+    private static final String STUDY_LAYOUT_URI = "/study-layout";
+    private static final String STUDY_LAYOUT_WITH_ID_URI = STUDY_LAYOUT_URI + UUID_PARAM;
 
     private final RestTemplate restTemplate;
 
@@ -369,6 +375,39 @@ public class StudyConfigService {
             restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
+        }
+    }
+
+    public String getStudyLayout(UUID studyLayoutUuid) {
+        Objects.requireNonNull(studyLayoutUuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + STUDY_LAYOUT_WITH_ID_URI)
+            .buildAndExpand(studyLayoutUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        HttpEntity<String> httpEntity = new HttpEntity<>(null, headers);
+        try {
+            return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.GET, httpEntity, String.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(STUDY_LAYOUT_NOT_FOUND);
+            }
+            throw e;
+        }
+    }
+
+    public UUID saveStudyLayout(String studyLayout) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + STUDY_LAYOUT_URI).toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(studyLayout, headers);
+        try {
+            return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(STUDY_LAYOUT_NOT_FOUND);
+            }
+            throw e;
         }
     }
 }

@@ -36,7 +36,6 @@ import org.gridsuite.study.server.dto.nonevacuatedenergy.NonEvacuatedEnergyParam
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
-import org.gridsuite.study.server.dto.studylayout.StudyLayout;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
@@ -83,7 +82,6 @@ public class StudyController {
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
-    private final StudyLayoutService studyLayoutService;
 
     public StudyController(StudyService studyService,
                            NetworkService networkStoreService,
@@ -93,7 +91,7 @@ public class StudyController {
                            CaseService caseService,
                            RemoteServicesInspector remoteServicesInspector,
                            RootNetworkService rootNetworkService,
-                           RootNetworkNodeInfoService rootNetworkNodeInfoService, SensitivityAnalysisService sensitivityAnalysisService, StudyLayoutService studyLayoutService) {
+                           RootNetworkNodeInfoService rootNetworkNodeInfoService, SensitivityAnalysisService sensitivityAnalysisService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -104,7 +102,6 @@ public class StudyController {
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
-        this.studyLayoutService = studyLayoutService;
     }
 
     @InitBinder
@@ -2386,13 +2383,24 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/layout")
-    @Operation(summary = "Get study layout parameters")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study layout is returned")})
-    public ResponseEntity<StudyLayout> getStudyLayout(
-        @PathVariable("studyUuid") UUID studyUuid,
-        @RequestHeader(HEADER_USER_ID) String userId) {
+    @GetMapping(value = "/studies/{studyUuid}/study-layout")
+    @Operation(summary = "Get study layout of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Study layout is returned"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<String> getStudyLayout(
+        @PathVariable("studyUuid") UUID studyUuid) {
         studyService.assertIsStudyExist(studyUuid);
-        return ResponseEntity.ok().body(studyLayoutService.getByStudyUuidAndUserId(studyUuid, userId));
+        String studyLayout = studyService.getStudyLayout(studyUuid);
+        return studyLayout != null ? ResponseEntity.ok().body(studyLayout) : ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/study-layout", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Save study layout of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Study layout is saved"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<UUID> saveStudyLayout(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody String studyLayout) {
+        studyService.assertIsStudyExist(studyUuid);
+
+        return ResponseEntity.ok().body(studyService.saveStudyLayout(studyUuid, studyLayout));
     }
 }
