@@ -25,7 +25,7 @@ public record InvalidateNodeTreeParameters(
     public static InvalidateNodeTreeParameters DEFAULT = ALL;
 
     public enum InvalidationMode {
-        ALL, ONLY_CHILDREN, ONLY_CHILDREN_BUILD_STATUS;
+        ALL, ONLY_CHILDREN, ONLY_CHILDREN_BUILD_STATUS
     }
 
     public enum ComputationsInvalidationMode {
@@ -48,9 +48,5 @@ public record InvalidateNodeTreeParameters(
 
     public boolean isOnlyChildrenBuildStatus() {
         return invalidationMode == InvalidationMode.ONLY_CHILDREN_BUILD_STATUS;
-    }
-
-    public boolean withBlockedNodeBuild() {
-        return withBlockedNodeBuild;
     }
 }
