@@ -2382,4 +2382,25 @@ public class StudyController {
         studyService.updateNodeAliases(studyUuid, nodeAliases);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping(value = "/studies/{studyUuid}/study-layout")
+    @Operation(summary = "Get study layout of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Study layout is returned"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<String> getStudyLayout(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.assertIsStudyExist(studyUuid);
+        String studyLayout = studyService.getStudyLayout(studyUuid);
+        return studyLayout != null ? ResponseEntity.ok().body(studyLayout) : ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/study-layout", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Save study layout of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Study layout is saved"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<UUID> saveStudyLayout(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody String studyLayout) {
+        studyService.assertIsStudyExist(studyUuid);
+
+        return ResponseEntity.ok().body(studyService.saveStudyLayout(studyUuid, studyLayout));
+    }
 }
