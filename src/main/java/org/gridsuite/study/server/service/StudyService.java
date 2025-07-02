@@ -1636,9 +1636,8 @@ public class StudyService {
                     index++;
                 }
             }
-
-            invalidateBlockedBuildNodeTree(studyUuid, nodeUuid);
         } finally {
+            invalidateBlockedBuildNodeTree(studyUuid, nodeUuid);
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
