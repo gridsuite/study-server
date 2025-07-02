@@ -2153,9 +2153,9 @@ class NetworkModificationTest {
 
         NetworkImpactsInfos expectedPayload = NetworkImpactsInfos.builder().build();
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
         checkElementUpdatedMessageSent(studyUuid, userId);
         checkEquipmentMessagesReceived(studyUuid, List.of(nodeUuid1), expectedPayload);
-        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
 
         url = "/v1/groups/" + node1.getModificationGroupUuid();

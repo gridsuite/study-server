@@ -1859,7 +1859,12 @@ public class StudyService {
     private void invalidateNodeTreeWithLF(UUID studyUuid, UUID nodeUuid) {
         getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
             boolean isLFDone = rootNetworkNodeInfoService.isLoadflowDone(nodeUuid, rootNetworkEntity.getId());
-            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), isLFDone ? InvalidateNodeTreeParameters.ALL : InvalidateNodeTreeParameters.ONLY_CHILDREN_BUILD_STATUS);
+            InvalidateNodeTreeParameters invalidateNodeTreeParameters = InvalidateNodeTreeParameters.builder()
+                .invalidationMode(isLFDone ? InvalidationMode.ALL : InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
+                .computationsInvalidationMode(ComputationsInvalidationMode.ALL)
+                .withBlockedNodeBuild(true)
+                .build();
+            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), invalidateNodeTreeParameters);
         });
     }
 
@@ -2227,6 +2232,9 @@ public class StudyService {
             List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
                 .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
                 .toList();
+
+            invalidateNodeTreeWithLF(studyUuid, targetNodeUuid);
+
             NetworkModificationsResult networkModificationResults = networkModificationService.duplicateOrInsertModifications(groupUuid, action, Pair.of(modificationsUuis, modificationApplicationContexts));
 
             Map<UUID, UUID> originToDuplicateModificationsUuids = new HashMap<>();
@@ -2247,8 +2255,9 @@ public class StudyService {
                 }
             }
             // invalidate all nodeUuid children
-            invalidateNodeTreeWithLF(studyUuid, targetNodeUuid);
+
         } finally {
+            invalidateBlockedBuildNodeTree(studyUuid, targetNodeUuid);
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
