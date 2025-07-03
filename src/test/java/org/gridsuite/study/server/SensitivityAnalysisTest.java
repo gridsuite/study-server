@@ -33,7 +33,6 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -303,7 +302,9 @@ class SensitivityAnalysisTest {
                 } else if (path.matches("/v1/parameters") && method.equals("POST")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID));
                 } else if (path.matches("/v1/parameters/default") && method.equals("POST")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID));
+                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_RESULT_UUID);
                 } else {
                     LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
                     return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
@@ -349,6 +350,14 @@ class SensitivityAnalysisTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, rootNetworkUuid, nodeUuid, "fakeJsonSelector"))
                 .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid + "/filter-options")));
+
+        // get result with filters , globalFilters and sort
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?filters=lineId2&selector=subjectId&globalFilters=ss", studyUuid, rootNetworkUuid, nodeUuid))
+                .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
+
+        Set<String> actualRequests = TestUtils.getRequestsDone(1, server);
+        assertTrue(actualRequests.stream().anyMatch(request -> request.contains("/v1/results/" + resultUuid) && request.contains("selector=subjectId") && request.contains("filters=lineId2") && request.contains("globalFilters=ss")
+        ));
 
         // get sensitivity analysis status
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/status", studyUuid, rootNetworkUuid, nodeUuid)).andExpectAll(
@@ -414,7 +423,7 @@ class SensitivityAnalysisTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}",
                 studyNameUserIdUuid, firstRootNetworkUuid, UUID.randomUUID(), "fakeJsonSelector"))
-            .andExpectAll(status().isNoContent());
+            .andExpectAll(status().isNotFound());
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}",
                         studyNameUserIdUuid, firstRootNetworkUuid, UUID.randomUUID(), "fakeJsonSelector"))
@@ -490,7 +499,7 @@ class SensitivityAnalysisTest {
         UUID studyUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, firstRootNetworkUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
-                .andExpect(status().isNoContent()).andReturn();
+                .andExpect(status().isNotFound()).andReturn();
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, firstRootNetworkUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
                 .andExpect(status().isNoContent()).andReturn();
