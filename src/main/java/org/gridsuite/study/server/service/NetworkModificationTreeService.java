@@ -1022,16 +1022,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public boolean hasAncestor(UUID nodeUuid, UUID ancestorNodeUuid) {
-        if (nodeUuid.equals(ancestorNodeUuid)) {
-            return true;
-        }
-        NodeEntity nodeEntity = getNodeEntity(nodeUuid);
-        if (nodeEntity.getType() == NodeType.ROOT) {
-            return false;
-        } else {
-            return self.hasAncestor(nodeEntity.getParentNode().getIdNode(), ancestorNodeUuid);
-        }
+    public boolean isAChild(UUID parentUuid, UUID nodeUuid) {
+        return parentUuid != nodeUuid && new HashSet<>(getAllChildrenUuids(parentUuid)).contains(nodeUuid);
     }
 
     public Boolean isReadOnly(UUID nodeUuid) {
