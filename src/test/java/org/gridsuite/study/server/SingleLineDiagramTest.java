@@ -252,8 +252,8 @@ class SingleLineDiagramTest {
         requestBody.put("positions", List.of());
         requestBody.put("withGeoData", true);
 
-        org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper objectMapper = new org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper();
-        return objectMapper.writeValueAsString(requestBody);
+        org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper mapper = new org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper();
+        return mapper.writeValueAsString(requestBody);
     }
 
     @Test
