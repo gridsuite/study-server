@@ -569,8 +569,8 @@ class LoadFlowTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), LOADFLOW_FAILED_DESTINATION);
             return resultUuid;
-        }).when(studyService).rerunLoadflow(any(), any(), any(), any(), any(), any());
-        studyService.rerunLoadflow(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, resultUuid, true, "");
+        }).when(studyService).rerunLoadflow(any(), any(), any(), any(), any());
+        studyService.rerunLoadflow(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, true, "");
 
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, LOAD_FLOW));

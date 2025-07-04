@@ -59,6 +59,8 @@ class LoadFLowUnitTest {
     @MockBean
     private NetworkModificationService networkModificationService;
     @MockBean
+    private LoadFlowService loadFlowService;
+    @MockBean
     private NetworkService networkService;
     @MockBean
     private UserAdminService userAdminService;
@@ -82,14 +84,12 @@ class LoadFLowUnitTest {
 
         doNothing().when(studyService).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
 
-        doReturn(loadflowResultUuid).when(studyService).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
-        doReturn(loadflowResultUuid).when(studyService).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
+        doReturn(loadflowResultUuid).when(studyService).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, false, userId);
 
         controller.runLoadFlow(studyUuid, rootNetworkUuid, nodeUuid, false, userId);
 
         verify(studyService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
-        verify(studyService, times(1)).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
-        verify(studyService, times(1)).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
+        verify(studyService, times(1)).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, false, userId);
     }
 
     @Test
@@ -116,14 +116,15 @@ class LoadFLowUnitTest {
         when(networkModificationTreeService.invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters)).thenReturn(invalidateNodeInfos);
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
         when(networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid)).thenReturn(buildInfos);
+        doReturn(loadflowResultUuid).when(loadFlowService).createRunningStatus();
 
         // execute loadflow rerun
-        assertEquals(loadflowResultUuid, studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId));
+        assertEquals(loadflowResultUuid, studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId));
 
         // node invalidation
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters);
         verify(networkModificationService, times(1)).deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), networkUuid);
-        verify(notificationService, times(9)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
+        verify(notificationService, times(10)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
 
         // node build
         ArgumentCaptor<RerunLoadFlowInfos> rerunLoadFlowWorkflowInfosArgumentCaptor = ArgumentCaptor.forClass(RerunLoadFlowInfos.class);
