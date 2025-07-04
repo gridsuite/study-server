@@ -348,6 +348,12 @@ public class NetworkModificationTreeService {
         return nodesRepository.findAllByParentNodeIdNode(parentUuid);
     }
 
+    public Boolean isReportReferencedByChildren(UUID rootNetworkUuid, UUID parentUuid, UUID reportUuid) {
+        return getChildren(parentUuid).stream().anyMatch(child ->
+            self.getModificationReports(child.getIdNode(), rootNetworkUuid).containsValue(reportUuid)
+        );
+    }
+
     public List<UUID> getAllChildrenUuids(UUID parentUuid) {
         return nodesRepository.findAllChildrenUuids(parentUuid);
     }
@@ -794,10 +800,9 @@ public class NetworkModificationTreeService {
             } else {
                 buildInfos.setOriginVariantId(self.getVariantId(nodeEntity.getIdNode(), rootNetworkUuid));
                 self.getModificationReports(modificationNode.getId(), rootNetworkUuid)
-                    .forEach((nodeUuid, reportUuid) -> {
-                        UUID duplicatedReportUuid = reportService.duplicateReport(reportUuid);
-                        buildInfos.getModificationNodeReports().put(nodeUuid, duplicatedReportUuid);
-                    });
+                    .forEach((nodeUuid, reportUuid) ->
+                        buildInfos.getModificationNodeReports().put(nodeUuid, reportUuid)
+                    );
             }
         }
     }
@@ -941,7 +946,7 @@ public class NetworkModificationTreeService {
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoService.getRootNetworkNodes(rootNetworkUuid, getAllChildrenUuids(nodeUuid));
 
         rootNetworkNodeInfoEntities.forEach(child ->
-            invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, InvalidateNodeTreeParameters.ALL))
+            invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, InvalidateNodeTreeParameters.ALL, nodeUuid, rootNetworkUuid))
         );
 
         return invalidateNodeInfos;
