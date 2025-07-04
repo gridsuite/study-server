@@ -160,6 +160,7 @@ class LoadFLowIntegrationTest {
     void testRerunLoadFlowWithRatioTapChangers() throws Exception {
         runLoadFlow(true);
         rerunLoadFlow(true);
+        Mockito.verify(networkModificationService, times(2)).deleteIndexedModifications(any(), any(UUID.class));
     }
 
     private void runLoadFlow(boolean withRatioTapChangers) throws Exception {
@@ -186,7 +187,6 @@ class LoadFLowIntegrationTest {
         Mockito.verify(loadFlowService, times(1)).createDefaultLoadFlowParameters();
         wireMockUtils.verifyDeleteLoadFlowResults(stubDeleteLoadflowResultUuid, List.of(loadflowResultUuid));
         wireMockUtils.verifyCreateRunningLoadflowStatus(stubCreateRunningLoadflowStatusUuid);
-        Mockito.verify(networkModificationService, times(1)).deleteIndexedModifications(any(), any(UUID.class));
         ArgumentCaptor<RerunLoadFlowInfos> rerunLoadFlowWorkflowInfosArgumentCaptor = ArgumentCaptor.forClass(RerunLoadFlowInfos.class);
         Mockito.verify(networkModificationService, times(1)).buildNode(eq(nodeUuid), eq(rootNetworkUuid), any(BuildInfos.class), rerunLoadFlowWorkflowInfosArgumentCaptor.capture());
         assertEquals(withRatioTapChangers, rerunLoadFlowWorkflowInfosArgumentCaptor.getValue().isWithRatioTapChangers());

@@ -134,7 +134,7 @@ public class ConsumerService {
             WorkflowType workflowType = WorkflowType.valueOf(workflowTypeStr);
             if (WorkflowType.RERUN_LOAD_FLOW.equals(workflowType)) {
                 RerunLoadFlowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowInfos.class);
-                studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId());
+                studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), false, workflowInfos.getUserId());
             }
         }
     }
@@ -534,8 +534,7 @@ public class ConsumerService {
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
                 if (computationType == LOAD_FLOW) {
-                    // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
-                    studyService.invalidateNodeTree(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), InvalidateNodeTreeParameters.ONLY_CHILDREN);
+                    networkModificationTreeService.invalidateBlockedBuildNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
                 }
 
                 // send notification for failed computation
@@ -608,13 +607,10 @@ public class ConsumerService {
 
                 // update DB
                 rootNetworkNodeInfoService.updateLoadflowResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, withRatioTapChangers);
-
-                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
-                // since running loadflow impacts the network linked to the node "nodeUuid", we need to invalidate its children nodes to prevent inconsistencies
-                studyService.invalidateNodeTree(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), InvalidateNodeTreeParameters.ONLY_CHILDREN);
+                networkModificationTreeService.invalidateBlockedBuildNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
 
                 // send notifications
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), LOAD_FLOW.getUpdateStatusType());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), LOAD_FLOW.getUpdateResultType());
             }));

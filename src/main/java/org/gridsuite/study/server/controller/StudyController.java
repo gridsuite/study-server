@@ -632,6 +632,7 @@ public class StudyController {
                                                         @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
                                                         @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
         studyService.moveNetworkModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -647,6 +648,7 @@ public class StudyController {
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
         if (originNodeUuid != null) {
             studyService.assertIsNodeExist(studyUuid, originNodeUuid);
             studyService.assertCanUpdateModifications(studyUuid, originNodeUuid);
@@ -674,22 +676,21 @@ public class StudyController {
             @RequestParam(value = "withRatioTapChangers", required = false, defaultValue = "false") boolean withRatioTapChangers,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertNoBlockedBuildInNodeTree(nodeUuid, rootNetworkUuid);
         handleRunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
         return ResponseEntity.ok().build();
     }
 
     /**
      * Need to have several transactions to send notifications by step
-     * Disadvantage is that it is not atomic
      */
     private UUID handleRunLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Boolean withRatioTapChangers, String userId) {
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         if (prevResultUuid != null) {
             studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid);
-            UUID loadflowResultUuid = studyService.createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers);
-            return studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+            return studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
         } else {
-            return studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, userId);
+            return studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, true, userId);
         }
     }
 
@@ -1296,6 +1297,7 @@ public class StudyController {
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
         studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -1309,6 +1311,7 @@ public class StudyController {
                                                           @RequestBody String modificationAttributes,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
         studyService.updateNetworkModification(studyUuid, modificationAttributes, nodeUuid, networkModificationUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -1580,6 +1583,7 @@ public class StudyController {
                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertNoBlockedBuildInNodeTree(nodeUuid, rootNetworkUuid);
         studyService.assertNoBuildNoComputationForRootNetworkNode(nodeUuid, rootNetworkUuid);
         studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
@@ -1593,6 +1597,7 @@ public class StudyController {
     public ResponseEntity<Void> unbuildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        studyService.assertNoBlockedBuildInNodeTree(nodeUuid, rootNetworkUuid);
         studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
@@ -2019,6 +2024,7 @@ public class StudyController {
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
         studyService.insertVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
