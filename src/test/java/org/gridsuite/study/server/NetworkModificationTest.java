@@ -507,7 +507,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testBuild() throws Exception {
+    void testBuild(final MockWebServer server) throws Exception {
         String userId = USER_ID;
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
@@ -591,6 +591,9 @@ class NetworkModificationTest {
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode4.getId(), rootNetworkUuid).getGlobalBuildStatus());
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode5.getId(), rootNetworkUuid).getGlobalBuildStatus());
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*/duplicate")));
     }
 
     @Test

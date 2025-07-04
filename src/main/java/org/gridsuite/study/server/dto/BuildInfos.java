@@ -32,6 +32,8 @@ public class BuildInfos {
 
     private List<ReportInfos> reportsInfos = new ArrayList<>();
 
+    private Map<UUID, UUID> modificationNodeReports = new HashMap<>();
+
     public void insertModificationInfos(UUID modificationGroupUuid, Set<UUID> modificationUuidsToExclude, ReportInfos reportInfos) {
         if (modificationUuidsToExclude != null && !modificationUuidsToExclude.isEmpty()) {
             this.modificationUuidsToExclude.put(modificationGroupUuid, modificationUuidsToExclude);

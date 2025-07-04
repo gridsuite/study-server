@@ -789,9 +789,15 @@ public class NetworkModificationTreeService {
             if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
                 UUID reportUuid = getModificationReportUuid(nodeEntity.getIdNode(), rootNetworkUuid, nodeToBuildUuid);
                 buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), rootNetworkNodeInfoEntity.getModificationsUuidsToExclude(), new ReportInfos(reportUuid, modificationNode.getId()));
+                buildInfos.getModificationNodeReports().put(modificationNode.getId(), reportUuid);
                 getBuildInfos(nodeEntity.getParentNode(), rootNetworkUuid, buildInfos, nodeToBuildUuid);
             } else {
                 buildInfos.setOriginVariantId(self.getVariantId(nodeEntity.getIdNode(), rootNetworkUuid));
+                self.getModificationReports(modificationNode.getId(), rootNetworkUuid)
+                    .forEach((nodeUuid, reportUuid) -> {
+                        UUID duplicatedReportUuid = reportService.duplicateReport(reportUuid);
+                        buildInfos.getModificationNodeReports().put(nodeUuid, duplicatedReportUuid);
+                    });
             }
         }
     }
