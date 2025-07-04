@@ -576,6 +576,7 @@ class RootNetworkTest {
         // create study with
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
+        networkModificationTreeService.createRoot(studyEntity);
 
         final UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         final String newRootNetworkName = "newRootNetworkName";
@@ -601,6 +602,7 @@ class RootNetworkTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
         RootNetworkEntity firstRootNetwork = studyEntity.getFirstRootNetwork();
+        networkModificationTreeService.createRoot(studyEntity);
         final UUID rootNetworkUuid = firstRootNetwork.getId();
         final String newRootNetworkTag = "tag1";
 
@@ -622,6 +624,7 @@ class RootNetworkTest {
         // create study with
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
+        networkModificationTreeService.createRoot(studyEntity);
         RootNetworkEntity firstRootNetwork = studyEntity.getFirstRootNetwork();
         final UUID rootNetworkUuid = firstRootNetwork.getId();
         final String newRootNetworkNameToUpdate = "nameToUpdate";
@@ -644,6 +647,7 @@ class RootNetworkTest {
         // create study with first root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
+        networkModificationTreeService.createRoot(studyEntity);
 
         final UUID rootNetworkUuid = UUID.randomUUID();
         final UUID caseUuid = UUID.randomUUID();
