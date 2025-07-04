@@ -32,6 +32,7 @@ import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResul
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -65,6 +66,7 @@ public class RootNetworkNodeInfoService {
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
     private final ReportService reportService;
+    private final NetworkModificationTreeService networkModificationTreeService;
 
     public RootNetworkNodeInfoService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                                       NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
@@ -78,7 +80,8 @@ public class RootNetworkNodeInfoService {
                                       DynamicSimulationService dynamicSimulationService,
                                       DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                                       StateEstimationService stateEstimationService,
-                                      ReportService reportService) {
+                                      ReportService reportService,
+                                      @Lazy NetworkModificationTreeService networkModificationTreeService) {
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.studyServerExecutionService = studyServerExecutionService;
@@ -92,6 +95,7 @@ public class RootNetworkNodeInfoService {
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
         this.reportService = reportService;
+        this.networkModificationTreeService = networkModificationTreeService;
     }
 
     public void createRootNetworkLinks(@NonNull UUID studyUuid, @NonNull RootNetworkEntity rootNetworkEntity) {
@@ -232,12 +236,12 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-        return invalidateRootNetworkNode(rootNetworkNodeInfoEntity, invalidateTreeParameters);
+    public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        return invalidateRootNetworkNode(rootNetworkNodeInfoEntity, invalidateTreeParameters, nodeUuid, rootNetworkUuid);
     }
 
-    public InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters) {
+    public InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters, UUID nodeUuid, UUID rootNetworkUuid) {
         // No need to invalidate a node with a status different of "BUILT"
         if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
             return new InvalidateNodeInfos();
@@ -246,7 +250,17 @@ public class RootNetworkNodeInfoService {
         InvalidateNodeInfos invalidateNodeInfos = getInvalidationComputationInfos(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
 
         if (!invalidateTreeParameters.isOnlyChildrenBuildStatusMode()) {
-            rootNetworkNodeInfoEntity.getModificationReports().forEach((key, value) -> invalidateNodeInfos.addReportUuid(value));
+            Map<UUID, UUID> modificationReports = rootNetworkNodeInfoEntity.getModificationReports();
+            boolean isReportReferencedByChildren = networkModificationTreeService.isReportReferencedByChildren(
+                rootNetworkUuid,
+                nodeUuid,
+                modificationReports.get(nodeUuid)
+            );
+            modificationReports.forEach((key, value) -> {
+                if (!(isReportReferencedByChildren && key.equals(nodeUuid))) {
+                    invalidateNodeInfos.addReportUuid(value);
+                }
+            });
             invalidateNodeInfos.addVariantId(rootNetworkNodeInfoEntity.getVariantId());
             invalidateBuildStatus(rootNetworkNodeInfoEntity, invalidateNodeInfos);
         }
