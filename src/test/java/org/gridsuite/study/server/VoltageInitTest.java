@@ -107,6 +107,8 @@ class VoltageInitTest {
 
     private static final String VOLTAGE_INIT_RESULT_UUID = "1b6cc22c-3f33-11ed-b878-0242ac120002";
 
+    private static final UUID VOLTAGE_INIT_MODIFICATION_UUID = UUID.fromString("10d2dd27-c1c8-486a-a588-8fc119733c75");
+
     private static final String VOLTAGE_INIT_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
 
     private static final String VOLTAGE_INIT_CANCEL_FAILED_UUID = "1b6cc22c-3f33-11ed-b878-0242ac120003";
@@ -310,7 +312,7 @@ class VoltageInitTest {
                     Optional<NetworkModificationResult> networkModificationResult =
                             createModificationResultWithElementImpact(SimpleImpactType.MODIFICATION,
                                     IdentifiableType.GENERATOR, "genId", Set.of("s1"));
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(new NetworkModificationsResult(List.of(), List.of(networkModificationResult))));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(new NetworkModificationsResult(List.of(VOLTAGE_INIT_MODIFICATION_UUID), List.of(networkModificationResult))));
                 } else if (path.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST));
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/stop.*")
