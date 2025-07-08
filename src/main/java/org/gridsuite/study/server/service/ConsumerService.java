@@ -257,7 +257,7 @@ public class ConsumerService {
                                 .caseInfos(caseInfos)
                                 .importParameters(importParameters)
                                 .reportUuid(importReportUuid)
-                                .build(), true);
+                                .build());
                     }
                     caseService.disableCaseExpiration(caseUuid);
                 } catch (Exception e) {
