@@ -57,7 +57,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.testcontainers.shaded.com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -242,7 +241,7 @@ class SingleLineDiagramTest {
 
     private String createNadRequestInfos(
             List<String> voltageLevelIds
-    ) throws JsonProcessingException {
+    ) {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("nadConfigUuid", null);
         requestBody.put("filterUuid", null);
@@ -251,9 +250,11 @@ class SingleLineDiagramTest {
         requestBody.put("voltageLevelToOmitIds", List.of());
         requestBody.put("positions", List.of());
         requestBody.put("withGeoData", true);
-
-        org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper mapper = new org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper();
-        return mapper.writeValueAsString(requestBody);
+        try {
+            return objectMapper.writeValueAsString(requestBody);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test
