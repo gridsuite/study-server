@@ -64,11 +64,11 @@ public class NetworkConversionService {
      * - one variant for root node - INITIAL_VARIANT
      * - one variant cloned from the previous one for the 1st node - *variantId*
      */
-    public void persistNetwork(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String variantId, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
+    public void persistNetwork(UUID caseUuid, UUID originalCaseUuid, UUID studyUuid, UUID rootNetworkUuid, String variantId, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(
-                        new CaseImportReceiver(studyUuid, rootNetworkUuid, caseUuid, importReportUuid, userId, System.nanoTime(), caseImportAction
+                        new CaseImportReceiver(studyUuid, rootNetworkUuid, caseUuid, originalCaseUuid, importReportUuid, userId, System.nanoTime(), caseImportAction
                     )),
                     StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
