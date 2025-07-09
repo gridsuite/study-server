@@ -241,8 +241,8 @@ public class RootNetworkNodeInfoService {
     public InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters) {
         boolean notOnlyChildrenBuildStatus = !invalidateTreeParameters.isOnlyChildrenBuildStatus();
         // Always update blocked build info
-        if (notOnlyChildrenBuildStatus) {
-            rootNetworkNodeInfoEntity.setBlockedBuild(invalidateTreeParameters.withBlockedNodeBuild());
+        if (notOnlyChildrenBuildStatus && invalidateTreeParameters.withBlockedNodeBuild()) {
+            rootNetworkNodeInfoEntity.setBlockedBuild(true);
         }
 
         // No need to delete node results with a status different of "BUILT"

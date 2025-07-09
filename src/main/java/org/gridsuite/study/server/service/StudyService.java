@@ -2179,18 +2179,9 @@ public class StudyService {
         try {
             checkStudyContainsNode(studyUuid, targetNodeUuid);
 
-            // Target node
-            if (!isTargetChildNode) {
-                if (isTargetInDifferentNodeTree) {
-                    invalidateNodeTreeWithLF(studyUuid, targetNodeUuid, ComputationsInvalidationMode.ALL);
-                } else {
-                    invalidateNodeTree(studyUuid, targetNodeUuid);
-                }
-            }
-
-            // Origin node
-            if (isTargetDifferentNode) {
-                invalidateNodeTree(studyUuid, originNodeUuid);
+            invalidateNodeTree(studyUuid, originNodeUuid);
+            if (isTargetInDifferentNodeTree) {
+                invalidateNodeTreeWithLF(studyUuid, targetNodeUuid, ComputationsInvalidationMode.ALL);
             }
 
             StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
@@ -2206,20 +2197,16 @@ public class StudyService {
             rootNetworkNodeInfoService.moveModificationsToExclude(originNodeUuid, targetNodeUuid, networkModificationsResult.modificationUuids());
 
             // Target node
-            if (!isTargetChildNode) {
-                // invalidate the whole subtree except maybe the target node itself (depends if we have built this node during the move)
+            if (isTargetInDifferentNodeTree) {
                 emitNetworkModificationImpactsForAllRootNetworks(networkModificationsResult.modificationResults(), studyEntity, targetNodeUuid);
             }
-
-            // Origin node
-            if (isTargetDifferentNode) {
-                emitNetworkModificationImpactsForAllRootNetworks(networkModificationsResult.modificationResults(), studyEntity, originNodeUuid);
-            }
         } finally {
-            invalidateBlockedBuildNodeTree(studyUuid, targetNodeUuid);
+            invalidateBlockedBuildNodeTree(studyUuid, originNodeUuid);
+            if (isTargetInDifferentNodeTree) {
+                invalidateBlockedBuildNodeTree(studyUuid, targetNodeUuid);
+            }
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
             if (isTargetDifferentNode) {
-                invalidateBlockedBuildNodeTree(studyUuid, originNodeUuid);
                 notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids);
             }
         }

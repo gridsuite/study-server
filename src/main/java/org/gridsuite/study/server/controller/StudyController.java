@@ -375,6 +375,7 @@ public class StudyController {
                                                        @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCopyParentNodeUuid") UUID subtreeToCopyParentNodeUuid,
                                                        @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertNoBlockedBuildInStudy(targetStudyUuid, referenceNodeUuid);
         studyService.duplicateStudySubtree(sourceStudyUuid, targetStudyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
         return ResponseEntity.ok().build();
     }
