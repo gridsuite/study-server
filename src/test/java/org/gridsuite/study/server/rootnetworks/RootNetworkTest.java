@@ -21,6 +21,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -47,17 +48,14 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -165,6 +163,8 @@ class RootNetworkTest {
     private StateEstimationService stateEstimationService;
     @MockBean
     private VoltageInitService voltageInitService;
+    @MockBean
+    private NetworkService networkService;
 
     @BeforeEach
     void setUp() {
@@ -645,8 +645,10 @@ class RootNetworkTest {
         createDummyRootNetwork(studyEntity, rootNetworkInfos);
         studyRepository.save(studyEntity);
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode modificationNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         assertEqualsRootNetworkInDB(rootNetworkInfos);
+        assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), false);
 
         // update root network
         RootNetworkInfos rootNetworkUpdateInfos = RootNetworkInfos.builder().id(rootNetworkInfos.getId()).name("newRootNetworkName").tag("newT")
@@ -659,7 +661,7 @@ class RootNetworkTest {
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
                 .willReturn(WireMock.ok())).getId();
         Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(newCaseUuid, true);
-        Mockito.doNothing().when(studyService).invalidateNodeTree(studyEntity.getId(), rootNode.getIdNode(), rootNetworkInfos.getId(), ALL_WITH_BLOCK_NODES);
+        Mockito.doNothing().when(networkService).deleteVariants(any(), any());
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}",
                 studyEntity.getId(), rootNetworkInfos.getId())
                 .contentType(APPLICATION_JSON)
@@ -681,10 +683,23 @@ class RootNetworkTest {
                 objectMapper.writeValueAsString(new HashMap<>())
         );
 
+        // verify that the node is blocked
+        // build is forbidden, for example
+        assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), true);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyEntity.getId(), rootNetworkInfos.getId(), modificationNode.getId()).header(HEADER_USER_ID, USER_ID))
+            .andExpect(status().isForbidden());
+
         rootNetworkService.insertModificationRequest(rootNetworkInfos.getId(), studyEntity.getId(), rootNetworkUpdateInfos.getName(), rootNetworkUpdateInfos.getTag(), USER_ID);
         createAndConsumeMessageCaseImport(studyEntity.getId(), rootNetworkUpdateInfos, CaseImportAction.ROOT_NETWORK_MODIFICATION);
 
         assertEqualsRootNetworkInDB(rootNetworkUpdateInfos);
+        assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), false);
+    }
+
+    private void assertNodeBlocked(UUID nodeUuid, UUID rootNetworkUuid, boolean isNodeBlocked) {
+        Optional<RootNetworkNodeInfoEntity> networkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
+        assertTrue(networkNodeInfoEntity.isPresent());
+        assertEquals(isNodeBlocked, networkNodeInfoEntity.get().getBlockedBuild());
     }
 
     private void assertEqualsRootNetworkInDB(RootNetworkInfos rootNetworkInfos) {

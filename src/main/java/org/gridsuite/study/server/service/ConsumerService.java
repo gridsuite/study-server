@@ -49,12 +49,12 @@ public class ConsumerService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConsumerService.class);
 
-    static final String RESULT_UUID = "resultUuid";
-    static final String NETWORK_UUID = "networkUuid";
-    static final String NETWORK_ID = "networkId";
-    static final String HEADER_CASE_FORMAT = "caseFormat";
-    static final String HEADER_CASE_NAME = "caseName";
-    static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
+    private static final String RESULT_UUID = "resultUuid";
+    private static final String NETWORK_UUID = "networkUuid";
+    private static final String NETWORK_ID = "networkId";
+    private static final String HEADER_CASE_FORMAT = "caseFormat";
+    private static final String HEADER_CASE_NAME = "caseName";
+    private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
 
     private final ObjectMapper objectMapper;
 
