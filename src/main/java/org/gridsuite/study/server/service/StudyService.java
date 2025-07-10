@@ -42,10 +42,7 @@ import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -82,6 +79,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.gridsuite.study.server.StudyConstants.DYNA_FLOW_PROVIDER;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
@@ -911,6 +909,15 @@ public class StudyService {
     public void assertIsNodeNotReadOnly(UUID nodeUuid) {
         Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid);
         if (Boolean.TRUE.equals(isReadOnly)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+    }
+
+    public void assertCanRunLoadFLow(UUID studyUuid, UUID nodeUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        String provider = getLoadFlowParametersInfos(studyEntity).getProvider();
+        NetworkModificationNodeInfoEntity networkModificationNodeInfoEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid);
+        if (networkModificationNodeInfoEntity.getNodeType() == NetworkModificationNodeType.CONSTRUCTION && DYNA_FLOW_PROVIDER.equals(provider)) {
             throw new StudyException(NOT_ALLOWED);
         }
     }
