@@ -813,6 +813,11 @@ class VoltageInitTest {
         assertEquals(0, ctx1.excludedModifications().size());
         assertEquals(1, ctx2.excludedModifications().size());
         assertTrue(ctx2.excludedModifications().contains(VOLTAGE_INIT_MODIFICATION_UUID)); // voltage-init modification not activated on 2nd root network
+
+        // Error case: try to generate the voltageInit modification on the second root network (where no computation has been made)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyUuid, secondRootNetworkUuid, nodeUuid)
+                .header("userId", "userId")).andExpect(status().isNotFound());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status")));
     }
 
     private NodeEntity insertRootNode(StudyEntity study, UUID nodeId) {
