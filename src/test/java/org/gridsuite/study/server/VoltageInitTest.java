@@ -267,9 +267,6 @@ class VoltageInitTest {
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
 
-    @SpyBean
-    private StudyService studyService;
-
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String voltageInitResultDestination = "voltageinit.result";
@@ -781,8 +778,6 @@ class VoltageInitTest {
         studyRepository.save(study);
         NodeEntity rootNode = insertRootNode(study, UUID.randomUUID());
         NodeEntity node = insertNode(study, rootNode, VARIANT_ID_2, VARIANT_ID_3, firstRootNetworkEntity, secondRootNetworkEntity);
-        rootNetworkRepository.save(firstRootNetworkEntity);
-        rootNetworkRepository.save(secondRootNetworkEntity);
         UUID nodeUuid = node.getIdNode();
         UUID studyUuid = study.getId();
 
@@ -816,7 +811,8 @@ class VoltageInitTest {
         ModificationApplicationContext ctx1 = rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, nodeUuid, NETWORK_UUID);
         ModificationApplicationContext ctx2 = rootNetworkNodeInfoService.getNetworkModificationApplicationContext(secondRootNetworkUuid, nodeUuid, SECOND_NETWORK_UUID);
         assertEquals(0, ctx1.excludedModifications().size());
-        assertEquals(1, ctx2.excludedModifications().size()); // voltage-init modification not present on 2nd root network
+        assertEquals(1, ctx2.excludedModifications().size());
+        assertTrue(ctx2.excludedModifications().contains(VOLTAGE_INIT_MODIFICATION_UUID)); // voltage-init modification not activated on 2nd root network
     }
 
     private NodeEntity insertRootNode(StudyEntity study, UUID nodeId) {
@@ -833,6 +829,8 @@ class VoltageInitTest {
         NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).modificationGroupUuid(UUID.randomUUID()).build());
         createNodeLinks(firstRootNetworkEntity, modificationNodeInfoEntity, firstVariantId, UUID.randomUUID(), BuildStatus.BUILT);
         createNodeLinks(secondRootNetworkEntity, modificationNodeInfoEntity, secondVariantId, UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        rootNetworkRepository.save(firstRootNetworkEntity);
+        rootNetworkRepository.save(secondRootNetworkEntity);
         return nodeEntity;
     }
 
