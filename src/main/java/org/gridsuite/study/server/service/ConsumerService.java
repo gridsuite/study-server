@@ -226,52 +226,57 @@ public class ConsumerService {
                     return;
                 }
 
-                UUID caseUuid = receiver.getCaseUuid();
-                UUID studyUuid = receiver.getStudyUuid();
-                String userId = receiver.getUserId();
-                Long startTime = receiver.getStartTime();
-                UUID importReportUuid = receiver.getReportUuid();
-                UUID rootNetworkUuid = receiver.getRootNetworkUuid();
-                CaseImportAction caseImportAction = receiver.getCaseImportAction();
-
-                CaseInfos caseInfos = new CaseInfos(caseUuid, caseName, caseFormat);
-                NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
-                try {
-                    switch (caseImportAction) {
-                        case STUDY_CREATION ->
-                            insertStudy(studyUuid, userId, networkInfos, caseInfos, importParameters, importReportUuid);
-                        case ROOT_NETWORK_CREATION ->
-                            studyService.createRootNetwork(studyUuid, RootNetworkInfos.builder()
-                                .id(rootNetworkUuid)
-                                .caseInfos(caseInfos)
-                                .reportUuid(importReportUuid)
-                                .networkInfos(networkInfos)
-                                .importParameters(importParameters)
-                                .build());
-                        case NETWORK_RECREATION ->
-                            studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
-                        case ROOT_NETWORK_MODIFICATION ->
-                            studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
-                                .id(rootNetworkUuid)
-                                .networkInfos(networkInfos)
-                                .caseInfos(caseInfos)
-                                .importParameters(importParameters)
-                                .reportUuid(importReportUuid)
-                                .build());
-                    }
-                    caseService.disableCaseExpiration(caseUuid);
-                } catch (Exception e) {
-                    LOGGER.error("Error while importing case", e);
-                } finally {
-                    // if studyEntity is already existing, we don't delete anything in the end of the process
-                    if (caseImportAction == CaseImportAction.STUDY_CREATION) {
-                        studyService.deleteStudyIfNotCreationInProgress(studyUuid);
-                    }
-                    LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
-                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
-                }
+                handleConsumeCaseImportSucceeded(receiver, networkUuid, networkId, caseName, caseFormat, importParameters);
             }
         };
+    }
+
+    private void handleConsumeCaseImportSucceeded(CaseImportReceiver receiver, UUID networkUuid, String networkId, String caseName, String caseFormat, Map<String, String> importParameters) {
+        UUID caseUuid = receiver.getCaseUuid();
+        UUID studyUuid = receiver.getStudyUuid();
+        String userId = receiver.getUserId();
+        Long startTime = receiver.getStartTime();
+        UUID importReportUuid = receiver.getReportUuid();
+        UUID rootNetworkUuid = receiver.getRootNetworkUuid();
+        CaseImportAction caseImportAction = receiver.getCaseImportAction();
+
+        CaseInfos caseInfos = new CaseInfos(caseUuid, caseName, caseFormat);
+        NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
+        try {
+            switch (caseImportAction) {
+                case STUDY_CREATION ->
+                    insertStudy(studyUuid, userId, networkInfos, caseInfos, importParameters, importReportUuid);
+                case ROOT_NETWORK_CREATION -> studyService.createRootNetwork(studyUuid, RootNetworkInfos.builder()
+                    .id(rootNetworkUuid)
+                    .caseInfos(caseInfos)
+                    .reportUuid(importReportUuid)
+                    .networkInfos(networkInfos)
+                    .importParameters(importParameters)
+                    .build());
+                case NETWORK_RECREATION -> studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
+                case ROOT_NETWORK_MODIFICATION -> studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
+                    .id(rootNetworkUuid)
+                    .networkInfos(networkInfos)
+                    .caseInfos(caseInfos)
+                    .importParameters(importParameters)
+                    .reportUuid(importReportUuid)
+                    .build());
+            }
+            caseService.disableCaseExpiration(caseUuid);
+        } catch (Exception e) {
+            LOGGER.error("Error while importing case", e);
+        } finally {
+            // if studyEntity is already existing, we don't delete anything in the end of the process
+            if (caseImportAction == CaseImportAction.STUDY_CREATION) {
+                studyService.deleteStudyIfNotCreationInProgress(studyUuid);
+            }
+            if (caseImportAction == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
+                UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+                networkModificationTreeService.invalidateBlockedBuildNodeTree(rootNetworkUuid, rootNodeUuid);
+            }
+            LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
+                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
+        }
     }
 
     private void insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos,
@@ -521,7 +526,7 @@ public class ConsumerService {
             }
         }
         if (!Strings.isBlank(receiver)) {
-            NodeReceiver receiverObj;
+            NodeReceiver receiverObj = null;
             try {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
@@ -530,23 +535,18 @@ public class ConsumerService {
                 // delete computation results from the databases
                 // ==> will probably be removed soon because it prevents the front from recovering the resultId ; or 'null' parameter will be replaced by null like in VOLTAGE_INITIALIZATION
                 rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
-
-                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-
-                if (computationType == LOAD_FLOW) {
-                    networkModificationTreeService.invalidateBlockedBuildNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
-                }
-
-                // send notification for failed computation
-                notificationService.emitStudyError(
-                    studyUuid,
-                    receiverObj.getNodeUuid(),
-                    receiverObj.getRootNetworkUuid(),
-                    computationType.getUpdateFailedType(),
-                    errorMessage,
-                    userId);
             } catch (JsonProcessingException e) {
                 LOGGER.error(e.toString());
+            } finally {
+                if (receiverObj != null) {
+                    if (computationType == LOAD_FLOW) {
+                        networkModificationTreeService.invalidateBlockedBuildNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
+                    }
+
+                    // send notification for failed computation
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateFailedType(), errorMessage, userId);
+                }
             }
         }
     }
@@ -600,19 +600,22 @@ public class ConsumerService {
         Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
             .map(UUID::fromString)
             .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {
-                LOGGER.info("{} result '{}' available for node '{}'",
-                    LOAD_FLOW.getLabel(),
-                    resultUuid,
-                    receiverObj.getNodeUuid());
+                try {
+                    LOGGER.info("{} result '{}' available for node '{}'",
+                        LOAD_FLOW.getLabel(),
+                        resultUuid,
+                        receiverObj.getNodeUuid());
 
-                // update DB
-                rootNetworkNodeInfoService.updateLoadflowResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, withRatioTapChangers);
-                networkModificationTreeService.invalidateBlockedBuildNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
+                    // update DB
+                    rootNetworkNodeInfoService.updateLoadflowResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, withRatioTapChangers);
+                } finally {
+                    networkModificationTreeService.invalidateBlockedBuildNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
 
-                // send notifications
-                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), LOAD_FLOW.getUpdateStatusType());
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), LOAD_FLOW.getUpdateResultType());
+                    // send notifications
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), LOAD_FLOW.getUpdateStatusType());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), LOAD_FLOW.getUpdateResultType());
+                }
             }));
     }
 

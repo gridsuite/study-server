@@ -391,8 +391,6 @@ public class StudyService {
 
     @Transactional
     public void modifyRootNetwork(UUID studyUuid, RootNetworkInfos rootNetworkInfos) {
-        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        networkModificationTreeService.invalidateBlockedBuildNodeTree(rootNetworkInfos.getId(), rootNodeUuid);
         updateRootNetworkBasicInfos(studyUuid, rootNetworkInfos, true);
     }
 

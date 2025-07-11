@@ -119,7 +119,6 @@ class LoadFLowUnitTest {
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
         when(networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid)).thenReturn(buildInfos);
         doReturn(loadflowResultUuid).when(loadFlowService).createRunningStatus();
-        doReturn(loadflowResultUuid).when(loadFlowService).createRunningStatus();
 
         // execute loadflow rerun
         assertEquals(loadflowResultUuid, studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId));
