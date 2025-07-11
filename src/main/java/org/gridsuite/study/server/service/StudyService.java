@@ -82,8 +82,6 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
-import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
-import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -3323,5 +3321,29 @@ public class StudyService {
     public void reorderSpreadsheetConfigs(UUID studyUuid, UUID collectionUuid, List<UUID> newOrder) {
         studyConfigService.reorderSpreadsheetConfigs(collectionUuid, newOrder);
         notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
+    }
+
+    public String getStudyLayout(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID studyLayoutUuid = studyEntity.getStudyLayoutUuid();
+        if (studyLayoutUuid == null) {
+            return null;
+        }
+
+        return studyConfigService.getStudyLayout(studyLayoutUuid);
+    }
+
+    @Transactional
+    public UUID saveStudyLayout(UUID studyUuid, String studyLayout) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID existingStudyLayoutUuid = studyEntity.getStudyLayoutUuid();
+        if (existingStudyLayoutUuid == null) {
+            UUID newStudyLayoutUuid = studyConfigService.saveStudyLayout(studyLayout);
+            studyEntity.setStudyLayoutUuid(newStudyLayoutUuid);
+            return newStudyLayoutUuid;
+        }
+
+        studyConfigService.updateStudyLayout(existingStudyLayoutUuid, studyLayout);
+        return existingStudyLayoutUuid;
     }
 }

@@ -134,6 +134,7 @@ public class RestResponseEntityExceptionHandler {
                     -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getType());
             case NOT_IMPLEMENTED -> ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(exception.getMessage());
             case MAX_NODE_BUILDS_EXCEEDED -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(StudyException.Type.MAX_NODE_BUILDS_EXCEEDED + " " + exception.getMessage());
+            case STUDY_LAYOUT_NOT_FOUND -> ResponseEntity.noContent().build();
             default -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         };
     }
