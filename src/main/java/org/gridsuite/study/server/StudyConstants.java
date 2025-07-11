@@ -64,6 +64,7 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_REPORT_SEVERITY_LEVEL = "severityLevels";
     public static final String QUERY_PARAM_MESSAGE_FILTER = "message";
 
+    public static final String QUERY_PARAM_DEBUG = "debug";
     public static final String QUERY_PARAM_RECEIVER = "receiver";
     public static final String QUERY_PARAM_WORKFLOW_TYPE = "workflowType";
     public static final String QUERY_PARAM_WORKFLOW_INFOS = "workflowInfos";

@@ -68,7 +68,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public UUID runDynamicSimulation(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId) {
+    public UUID runDynamicSimulation(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId,
+                                     UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId, boolean debug) {
 
         // create receiver for getting back the notification in rabbitmq
         String receiver;
@@ -79,7 +80,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             throw new UncheckedIOException(e);
         }
 
-        return dynamicSimulationClient.run(provider, receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), parameters, userId);
+        return dynamicSimulationClient.run(provider, receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), parameters, userId, debug);
     }
 
     @Override
@@ -175,9 +176,9 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public void deleteResults(List<UUID> resultsUuids) {
+    public void deleteResults(List<UUID> resultUuids) {
         try {
-            dynamicSimulationClient.deleteResults(resultsUuids);
+            dynamicSimulationClient.deleteResults(resultUuids);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
         }
