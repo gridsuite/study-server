@@ -674,6 +674,7 @@ public class StudyController {
             @RequestParam(value = "withRatioTapChangers", required = false, defaultValue = "false") boolean withRatioTapChangers,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertCanRunLoadFLow(studyUuid, nodeUuid);
         handleRunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
         return ResponseEntity.ok().build();
     }

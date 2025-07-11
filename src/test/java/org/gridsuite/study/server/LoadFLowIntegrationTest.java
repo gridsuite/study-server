@@ -9,8 +9,10 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.loadflow.LoadFlowParameters;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -162,20 +164,38 @@ class LoadFLowIntegrationTest {
         rerunLoadFlow(true);
     }
 
+    @Test
+    void testRerunLoadFlowNotAllowed() throws Exception {
+        LoadFlowParametersInfos loadFlowParametersInfos = createLoadFlowParametersInfos("DynaFlow");
+        UUID loadFlowParametersStubUuid = wireMockUtils.stubLoadFlowParameters(parametersUuid, objectMapper.writeValueAsString(loadFlowParametersInfos));
+        Mockito.doReturn(parametersUuid).when(loadFlowService).createDefaultLoadFlowParameters();
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, nodeUuid, userId)
+                        .param(QUERY_WITH_TAP_CHANGER, "false")
+                        .header("userId", userId))
+                .andExpect(status().isForbidden());
+        wireMockUtils.verifyLoadFlowParametersGet(loadFlowParametersStubUuid, parametersUuid);
+    }
+
     private void runLoadFlow(boolean withRatioTapChangers) throws Exception {
+        LoadFlowParametersInfos loadFlowParametersInfos = createLoadFlowParametersInfos("test_provider");
         UUID runLoadflowStubUuid = wireMockUtils.stubRunLoadFlow(networkUuid, withRatioTapChangers, null, objectMapper.writeValueAsString(loadflowResultUuid));
+        UUID loadFlowParametersStubUuid = wireMockUtils.stubLoadFlowParameters(parametersUuid, objectMapper.writeValueAsString(loadFlowParametersInfos));
         Mockito.doReturn(parametersUuid).when(loadFlowService).createDefaultLoadFlowParameters();
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, nodeUuid, userId)
                 .param(QUERY_WITH_TAP_CHANGER, withRatioTapChangers ? "true" : "false")
                 .header("userId", userId))
             .andExpect(status().isOk());
         wireMockUtils.verifyRunLoadflow(runLoadflowStubUuid, networkUuid, withRatioTapChangers, null);
+        wireMockUtils.verifyLoadFlowParametersGet(loadFlowParametersStubUuid, parametersUuid);
     }
 
     private void rerunLoadFlow(boolean withRatioTapChangers) throws Exception {
         UUID newLoadflowResultUuid = UUID.randomUUID();
+        LoadFlowParametersInfos loadFlowParametersInfos = createLoadFlowParametersInfos("test_provider");
         UUID stubDeleteLoadflowResultUuid = wireMockUtils.stubDeleteLoadFlowResults(List.of(loadflowResultUuid));
         UUID stubCreateRunningLoadflowStatusUuid = wireMockUtils.stubCreateRunningLoadflowStatus(objectMapper.writeValueAsString(newLoadflowResultUuid));
+        UUID loadFlowParametersStubUuid = wireMockUtils.stubLoadFlowParameters(parametersUuid, objectMapper.writeValueAsString(loadFlowParametersInfos));
+
         Mockito.doReturn(parametersUuid).when(loadFlowService).createDefaultLoadFlowParameters();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, nodeUuid, userId)
@@ -183,13 +203,23 @@ class LoadFLowIntegrationTest {
                 .header("userId", userId))
             .andExpect(status().isOk());
 
-        Mockito.verify(loadFlowService, times(1)).createDefaultLoadFlowParameters();
+        Mockito.verify(loadFlowService, times(2)).createDefaultLoadFlowParameters();
         wireMockUtils.verifyDeleteLoadFlowResults(stubDeleteLoadflowResultUuid, List.of(loadflowResultUuid));
         wireMockUtils.verifyCreateRunningLoadflowStatus(stubCreateRunningLoadflowStatusUuid);
         Mockito.verify(networkModificationService, times(1)).deleteIndexedModifications(any(), any(UUID.class));
         ArgumentCaptor<RerunLoadFlowInfos> rerunLoadFlowWorkflowInfosArgumentCaptor = ArgumentCaptor.forClass(RerunLoadFlowInfos.class);
         Mockito.verify(networkModificationService, times(1)).buildNode(eq(nodeUuid), eq(rootNetworkUuid), any(BuildInfos.class), rerunLoadFlowWorkflowInfosArgumentCaptor.capture());
         assertEquals(withRatioTapChangers, rerunLoadFlowWorkflowInfosArgumentCaptor.getValue().isWithRatioTapChangers());
+        wireMockUtils.verifyLoadFlowParametersGet(loadFlowParametersStubUuid, parametersUuid);
+
+    }
+
+    private LoadFlowParametersInfos createLoadFlowParametersInfos(String provider) {
+        return LoadFlowParametersInfos.builder()
+                .provider(provider)
+                .commonParameters(LoadFlowParameters.load())
+                .specificParametersPerProvider(Map.of())
+                .build();
     }
 
     private StudyEntity insertStudy() {
@@ -201,7 +231,7 @@ class LoadFLowIntegrationTest {
 
     private NodeEntity insertNode(StudyEntity study, UUID nodeId, String variantId, UUID reportUuid, NodeEntity parentNode, RootNetworkEntity rootNetworkEntity, BuildStatus buildStatus) {
         NodeEntity nodeEntity = nodeRepository.save(new NodeEntity(nodeId, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
-        NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).modificationGroupUuid(UUID.randomUUID()).build());
+        NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).modificationGroupUuid(UUID.randomUUID()).nodeType(NetworkModificationNodeType.CONSTRUCTION).build());
         createNodeLinks(rootNetworkEntity, modificationNodeInfoEntity, variantId, reportUuid, buildStatus);
         return nodeEntity;
     }
