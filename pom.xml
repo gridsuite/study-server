@@ -82,7 +82,7 @@
         </plugins>
     </build>
 
-     <dependencyManagement>
+    <dependencyManagement>
         <dependencies>
             <!-- overrides of imports -->
             <!-- FIXME to remove at next upgrade of powsybl-ws-dependencies -->
