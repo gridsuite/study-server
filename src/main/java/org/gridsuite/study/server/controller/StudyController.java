@@ -682,20 +682,30 @@ public class StudyController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertNoBlockedBuildInNodeTree(nodeUuid, rootNetworkUuid);
-        handleRunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
+        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
+        if (prevResultUuid != null) {
+            handleRerunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers, userId);
+        } else {
+            studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, true, userId);
+        }
         return ResponseEntity.ok().build();
     }
 
     /**
      * Need to have several transactions to send notifications by step
+     * Disadvantage is that it is not atomic so need a try/catch to rollback
      */
-    private UUID handleRunLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Boolean withRatioTapChangers, String userId) {
-        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
-        if (prevResultUuid != null) {
+    private UUID handleRerunLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID prevResultUuid, Boolean withRatioTapChangers, String userId) {
+        UUID loadflowResultUuid = null;
+        try {
             studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid);
-            return studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers, userId);
-        } else {
-            return studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, true, userId);
+            loadflowResultUuid = studyService.createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers);
+            return studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+        } catch (Exception e) {
+            if (loadflowResultUuid != null) {
+                studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid);
+            }
+            throw e;
         }
     }
 

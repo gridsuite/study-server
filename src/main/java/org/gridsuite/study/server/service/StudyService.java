@@ -852,14 +852,12 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID rerunLoadflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Boolean withRatioTapChangers, String userId) {
+    public UUID rerunLoadflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, Boolean withRatioTapChangers, String userId) {
         invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidationMode.ALL)
             .withBlockedNodeBuild(true)
             .computationsInvalidationMode(ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
             .build());
-
-        UUID loadflowResultUuid = createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers);
 
         buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, RerunLoadFlowInfos.builder()
             .loadflowResultUuid(loadflowResultUuid)
@@ -870,7 +868,8 @@ public class StudyService {
         return loadflowResultUuid;
     }
 
-    private UUID createLoadflowRunningStatus(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers) {
+    @Transactional
+    public UUID createLoadflowRunningStatus(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers) {
         // since invalidating and building nodes can be long, we create loadflow result status before execution long operations
         UUID loadflowResultUuid = loadflowService.createRunningStatus();
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers);
@@ -1875,7 +1874,7 @@ public class StudyService {
         invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.DEFAULT);
     }
 
-    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+    private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
 
