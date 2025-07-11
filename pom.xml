@@ -42,7 +42,7 @@
     </developers>
 
     <properties>
-		<!-- FIXME to remove at next upgrade of powsybl-ws-dependencies -->
+        <!-- FIXME to remove at next upgrade of powsybl-ws-dependencies -->
         <powsybl-network-store.version>1.28.0</powsybl-network-store.version>
         <gridsuite-dependencies.version>41.0.0</gridsuite-dependencies.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
