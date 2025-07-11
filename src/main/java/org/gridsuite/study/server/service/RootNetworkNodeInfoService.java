@@ -234,7 +234,10 @@ public class RootNetworkNodeInfoService {
 
     public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        return invalidateRootNetworkNode(rootNetworkNodeInfoEntity, invalidateTreeParameters);
+    }
 
+    public InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters) {
         // No need to invalidate a node with a status different of "BUILT"
         if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
             return new InvalidateNodeInfos();
@@ -356,6 +359,10 @@ public class RootNetworkNodeInfoService {
             .map(rootNetworkNodeInfoEntity -> getComputationResultUuid(rootNetworkNodeInfoEntity, computationType))
             .filter(Objects::nonNull)
             .toList();
+    }
+
+    public List<RootNetworkNodeInfoEntity> getRootNetworkNodes(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        return rootNetworkNodeInfoRepository.getAllByRootNetworkIdAndNodeInfoIdIn(rootNetworkUuid, nodesUuids);
     }
 
     public List<RootNetworkNodeInfoEntity> getAllByStudyUuidWithLoadFlowResultsNotNull(UUID studyUuid) {
