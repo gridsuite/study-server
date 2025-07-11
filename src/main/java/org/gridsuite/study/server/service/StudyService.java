@@ -3388,4 +3388,12 @@ public class StudyService {
         studyConfigService.reorderSpreadsheetConfigs(collectionUuid, newOrder);
         notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
     }
+
+    @Transactional(readOnly = true)
+    public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid, String globalFilters) {
+        UUID networkuuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
+        return voltageInitService.getVoltageInitResult(resultUuid, networkuuid, variantId, globalFilters);
+    }
 }
