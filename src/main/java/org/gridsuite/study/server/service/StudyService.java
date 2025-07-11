@@ -3313,7 +3313,7 @@ public class StudyService {
     public String getStudyLayout(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID studyLayoutUuid = studyEntity.getStudyLayoutUuid();
-        if(studyLayoutUuid == null) {
+        if (studyLayoutUuid == null) {
             return null;
         }
 
@@ -3323,9 +3323,14 @@ public class StudyService {
     @Transactional
     public UUID saveStudyLayout(UUID studyUuid, String studyLayout) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID existingStudyLayoutUuid = studyEntity.getStudyLayoutUuid();
+        if (existingStudyLayoutUuid == null) {
+            UUID newStudyLayoutUuid = studyConfigService.saveStudyLayout(studyLayout);
+            studyEntity.setStudyLayoutUuid(newStudyLayoutUuid);
+            return newStudyLayoutUuid;
+        }
 
-        UUID studyLayoutUuid = studyConfigService.saveStudyLayout(studyLayout);
-        studyEntity.setStudyLayoutUuid(studyLayoutUuid);
-        return studyLayoutUuid;
+        studyConfigService.updateStudyLayout(existingStudyLayoutUuid, studyLayout);
+        return existingStudyLayoutUuid;
     }
 }

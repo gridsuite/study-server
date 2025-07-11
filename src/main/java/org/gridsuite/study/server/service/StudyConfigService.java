@@ -410,4 +410,21 @@ public class StudyConfigService {
             throw e;
         }
     }
+
+    public void updateStudyLayout(UUID studyLayoutUuid, String studyLayout) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + STUDY_LAYOUT_WITH_ID_URI)
+            .buildAndExpand(studyLayoutUuid).toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(studyLayout, headers);
+        try {
+            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(STUDY_LAYOUT_NOT_FOUND);
+            }
+            throw e;
+        }
+    }
 }
