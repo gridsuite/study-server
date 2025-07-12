@@ -79,7 +79,7 @@ class WorkflowTest {
 
         // check loadflow is actually ran after build is completed
         verify(studyService, times(1)).handleBuildSuccess(studyUuid, nodeUuid, rootNetworkUuid, networkModificationResult);
-        verify(studyService, times(1)).sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+        verify(studyService, times(1)).sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, false, userId);
     }
 
     @Test
