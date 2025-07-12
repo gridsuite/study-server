@@ -224,7 +224,7 @@ public class StudyController {
             .id(rootNetworkUuid)
             .name(name)
             // .importParameters(importParameters) CANNOT BE PLACED IN DTO (not same type)
-            .caseInfos(new CaseInfos(caseUuid, null, caseFormat))
+            .caseInfos(new CaseInfos(caseUuid, null, null, caseFormat))
             .tag(tag)
             .build();
         // then pass importParameters separately
