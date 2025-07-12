@@ -24,6 +24,7 @@ public class CaseImportReceiver {
     private UUID studyUuid;
     private UUID rootNetworkUuid;
     private UUID caseUuid;
+    private UUID originalCaseUuid;
     private UUID reportUuid;
     private String userId;
     private Long startTime;

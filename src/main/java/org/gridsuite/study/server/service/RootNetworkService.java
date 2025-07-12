@@ -129,6 +129,7 @@ public class RootNetworkService {
         rootNetworkEntity.setCaseUuid(caseInfos.getCaseUuid());
         rootNetworkEntity.setCaseFormat(caseInfos.getCaseFormat());
         rootNetworkEntity.setCaseName(caseInfos.getCaseName());
+        rootNetworkEntity.setOriginalCaseUuid(caseInfos.getOriginalCaseUuid());
     }
 
     private void updateNetworkInfos(@NonNull RootNetworkEntity rootNetworkEntity, @NonNull NetworkInfos networkInfos) {
@@ -189,7 +190,7 @@ public class RootNetworkService {
                         .id(UUID.randomUUID())
                         .name(rootNetworkEntityToDuplicate.getName())
                         .importParameters(newImportParameters)
-                        .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
+                        .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getOriginalCaseUuid(), rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
                         .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
                         .reportUuid(clonedRootNodeReportUuid)
                         .tag(rootNetworkEntityToDuplicate.getTag())

@@ -263,8 +263,8 @@ class SupervisionControllerTest {
     @Test
     void testReindexStudy() throws Exception {
         UUID studyToReindexUuid = UUID.randomUUID();
-        BasicRootNetworkInfos network1 = new BasicRootNetworkInfos(UUID.randomUUID(), "name1", "tag1", false);
-        BasicRootNetworkInfos network2 = new BasicRootNetworkInfos(UUID.randomUUID(), "name2", "tag2", false);
+        BasicRootNetworkInfos network1 = new BasicRootNetworkInfos(UUID.randomUUID(), UUID.randomUUID(), "name1", "tag1", false);
+        BasicRootNetworkInfos network2 = new BasicRootNetworkInfos(UUID.randomUUID(), UUID.randomUUID(), "name2", "tag2", false);
         doReturn(List.of(network1, network2))
                 .when(studyService).getExistingBasicRootNetworkInfos(studyToReindexUuid);
         doNothing().when(studyService).reindexRootNetwork(studyToReindexUuid, network1.rootNetworkUuid());

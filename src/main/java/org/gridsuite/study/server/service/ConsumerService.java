@@ -240,7 +240,7 @@ public class ConsumerService {
         UUID rootNetworkUuid = receiver.getRootNetworkUuid();
         CaseImportAction caseImportAction = receiver.getCaseImportAction();
 
-        CaseInfos caseInfos = new CaseInfos(caseUuid, caseName, caseFormat);
+        CaseInfos caseInfos = new CaseInfos(caseUuid, receiver.getOriginalCaseUuid(), caseName, caseFormat);
         NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
         try {
             switch (caseImportAction) {

@@ -255,10 +255,6 @@ public class VoltageInitService extends AbstractComputationService {
     }
 
     public UUID getModificationsGroupUuid(UUID nodeUuid, UUID resultUuid) {
-        if (resultUuid == null) {
-            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init results");
-        }
-
         UUID modificationsGroupUuid;
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
             .buildAndExpand(resultUuid).toUriString();
@@ -283,10 +279,7 @@ public class VoltageInitService extends AbstractComputationService {
         }
     }
 
-    public void resetModificationsGroupUuid(UUID nodeUuid, UUID resultUuid) {
-        if (resultUuid == null) {
-            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init results");
-        }
+    public void resetModificationsGroupUuid(UUID resultUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
             .buildAndExpand(resultUuid).toUriString();
 

@@ -47,6 +47,6 @@ public class RootNetworkRequestEntity {
     }
 
     public BasicRootNetworkInfos toBasicDto() {
-        return new BasicRootNetworkInfos(getId(), getName(), getTag(), true);
+        return new BasicRootNetworkInfos(getId(), null, getName(), getTag(), true);
     }
 }

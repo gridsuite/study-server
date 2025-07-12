@@ -21,6 +21,8 @@ import java.util.UUID;
 public class CaseInfos {
     private UUID caseUuid;
 
+    private UUID originalCaseUuid;
+
     private String caseName;
 
     private String caseFormat;
