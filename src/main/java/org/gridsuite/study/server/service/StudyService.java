@@ -19,8 +19,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
-import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
@@ -285,7 +283,14 @@ public class StudyService {
             if (duplicateCase) {
                 caseUuidToUse = caseService.duplicateCase(caseUuid, true);
             }
-            persistNetwork(caseUuidToUse, basicStudyInfos.getId(), null, NetworkModificationTreeService.FIRST_VARIANT_ID, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.STUDY_CREATION);
+            RootNetworkCreationInfos rootNetworkCreationInfos = new RootNetworkCreationInfos(
+                    caseUuidToUse,
+                    caseUuid,
+                    basicStudyInfos.getId(),
+                    null,
+                    caseFormat
+            );
+            persistNetwork(rootNetworkCreationInfos, NetworkModificationTreeService.FIRST_VARIANT_ID, userId, importReportUuid, importParameters, CaseImportAction.STUDY_CREATION);
         } catch (Exception e) {
             self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId());
             throw e;
@@ -322,7 +327,14 @@ public class StudyService {
         RootNetworkRequestEntity rootNetworkCreationRequestEntity = rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity.getId(), rootNetworkName, rootNetworkTag, userId);
         try {
             UUID clonedCaseUuid = caseService.duplicateCase(caseUuid, true);
-            persistNetwork(clonedCaseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
+            RootNetworkCreationInfos rootNetworkCreationInfos = new RootNetworkCreationInfos(
+                    clonedCaseUuid,
+                    caseUuid,
+                    studyUuid,
+                    rootNetworkUuid,
+                    caseFormat
+            );
+            persistNetwork(rootNetworkCreationInfos, null, userId, importReportUuid, importParameters, CaseImportAction.ROOT_NETWORK_CREATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntity);
             throw new StudyException(ROOT_NETWORK_CREATION_FAILED);
@@ -380,8 +392,15 @@ public class StudyService {
     private void updateRootNetworkCaseInfos(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId, Map<String, Object> importParameters, RootNetworkRequestEntity rootNetworkModificationRequestEntity) {
         UUID importReportUuid = UUID.randomUUID();
         UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkInfos.getCaseInfos().getCaseUuid(), true);
+        RootNetworkCreationInfos rootNetworkCreationInfos = new RootNetworkCreationInfos(
+            clonedCaseUuid,
+            rootNetworkInfos.getCaseInfos().getCaseUuid(),
+            studyUuid,
+            rootNetworkInfos.getId(),
+            rootNetworkInfos.getCaseInfos().getCaseFormat()
+        );
         try {
-            persistNetwork(clonedCaseUuid, studyUuid, rootNetworkInfos.getId(), null, userId, importReportUuid, rootNetworkInfos.getCaseInfos().getCaseFormat(), importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+            persistNetwork(rootNetworkCreationInfos, null, userId, importReportUuid, importParameters, CaseImportAction.ROOT_NETWORK_MODIFICATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkModificationRequestEntity);
             throw new StudyException(ROOT_NETWORK_MODIFICATION_FAILED);
@@ -414,7 +433,14 @@ public class StudyService {
      * @param importParameters
      */
     public void recreateNetwork(UUID caseUuid, String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat, Map<String, Object> importParameters) {
-        recreateNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, importParameters, false);
+        RootNetworkCreationInfos rootNetworkCreationInfos = new RootNetworkCreationInfos(
+            caseUuid,
+            caseUuid,
+            studyUuid,
+            rootNetworkUuid,
+            caseFormat
+        );
+        recreateNetwork(rootNetworkCreationInfos, userId, importParameters, false);
     }
 
     /**
@@ -423,18 +449,27 @@ public class StudyService {
      * @param studyUuid
      */
     public void recreateNetwork(String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat) {
-        UUID caseUuid = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getCaseUuid();
-        recreateNetwork(caseUuid, userId, studyUuid, rootNetworkUuid, caseFormat, null, true);
+        RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        UUID caseUuid = rootNetwork.getCaseUuid();
+        UUID originalCaseUuid = rootNetwork.getOriginalCaseUuid();
+        RootNetworkCreationInfos rootNetworkCreationInfos = new RootNetworkCreationInfos(
+            caseUuid,
+            originalCaseUuid,
+            studyUuid,
+            rootNetworkUuid,
+            caseFormat
+        );
+        recreateNetwork(rootNetworkCreationInfos, userId, null, true);
     }
 
-    private void recreateNetwork(UUID caseUuid, String userId, UUID studyUuid, UUID rootNetworkUuid, String caseFormat, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters) {
-        caseService.assertCaseExists(caseUuid);
+    private void recreateNetwork(RootNetworkCreationInfos rootNetworkCreationInfos, String userId, Map<String, Object> importParameters, boolean shouldLoadPreviousImportParameters) {
+        caseService.assertCaseExists(rootNetworkCreationInfos.caseUuid());
         UUID importReportUuid = UUID.randomUUID();
         Map<String, Object> importParametersToUse = shouldLoadPreviousImportParameters
-            ? new HashMap<>(rootNetworkService.getImportParameters(rootNetworkUuid))
+            ? new HashMap<>(rootNetworkService.getImportParameters(rootNetworkCreationInfos.rootNetworkUuid()))
             : importParameters;
 
-        persistNetwork(caseUuid, studyUuid, rootNetworkUuid, null, userId, importReportUuid, caseFormat, importParametersToUse, CaseImportAction.NETWORK_RECREATION);
+        persistNetwork(rootNetworkCreationInfos, null, userId, importReportUuid, importParametersToUse, CaseImportAction.NETWORK_RECREATION);
     }
 
     public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
@@ -779,9 +814,9 @@ public class StudyService {
         }
     }
 
-    private void persistNetwork(UUID caseUuid, UUID studyUuid, UUID rootNetworkUuid, String variantId, String userId, UUID importReportUuid, String caseFormat, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
+    private void persistNetwork(RootNetworkCreationInfos rootNetworkCreationInfos, String variantId, String userId, UUID importReportUuid, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
         try {
-            networkConversionService.persistNetwork(caseUuid, studyUuid, rootNetworkUuid, variantId, userId, importReportUuid, caseFormat, importParameters, caseImportAction);
+            networkConversionService.persistNetwork(rootNetworkCreationInfos, variantId, userId, importReportUuid, importParameters, caseImportAction);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, STUDY_CREATION_FAILED);
         }
@@ -1899,9 +1934,7 @@ public class StudyService {
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.deleteModifications(groupId, modificationsUuids);
             // for each root network, remove modifications from excluded ones
-            studyEntity.getRootNetworks().forEach(rootNetworkEntity -> {
-                rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkEntity.getId(), new HashSet<>(modificationsUuids), true);
-            });
+            studyEntity.getRootNetworks().forEach(rootNetworkEntity -> rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkEntity.getId(), new HashSet<>(modificationsUuids), true));
         } finally {
             notificationService.emitEndDeletionEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -2848,6 +2881,9 @@ public class StudyService {
     public String getVoltageInitModifications(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
         // get modifications group uuid associated to voltage init results
         UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
+        if (resultUuid == null) {
+            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, String.format("Missing results for rootNetwork %s on node %s", rootNetworkUuid, nodeUuid));
+        }
         UUID voltageInitModificationsGroupUuid = voltageInitService.getModificationsGroupUuid(nodeUuid, resultUuid);
         return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false, false);
     }
@@ -2856,23 +2892,37 @@ public class StudyService {
     public void insertVoltageInitModifications(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         // get modifications group uuid associated to voltage init results
         UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.VOLTAGE_INITIALIZATION);
-        UUID voltageInitModificationsGroupUuid = voltageInitService.getModificationsGroupUuid(nodeUuid, resultUuid);
-        if (voltageInitModificationsGroupUuid == null) {
-            return;
+        if (resultUuid == null) {
+            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, String.format("Missing results for rootNetwork %s on node %s", rootNetworkUuid, nodeUuid));
         }
+        UUID voltageInitModificationsGroupUuid = voltageInitService.getModificationsGroupUuid(nodeUuid, resultUuid);
 
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
 
+            // voltageInit modification should apply only on the root network where the computation has been made:
+            // - application context will point to the computation root network only
+            // - after creation, we deactivate the new modification for all other root networks
             List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(studyUuid);
-            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
-                .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()))
-                .toList();
+            List<ModificationApplicationContext> modificationApplicationContexts = new ArrayList<>();
+            List<UUID> rootNetworkToDeactivateUuids = new ArrayList<>();
+            studyRootNetworkEntities.forEach(rootNetworkEntity -> {
+                if (rootNetworkUuid.equals(rootNetworkEntity.getId())) {
+                    modificationApplicationContexts.add(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()));
+                } else {
+                    rootNetworkToDeactivateUuids.add(rootNetworkEntity.getId());
+                }
+            });
+            // duplicate the modification created by voltageInit server into the current node
             NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModificationsFromGroup(networkModificationTreeService.getModificationGroupUuid(nodeUuid), voltageInitModificationsGroupUuid, Pair.of(List.of(), modificationApplicationContexts));
 
-            if (networkModificationResults != null) {
+            // We expect a single voltageInit modification in the result list
+            if (networkModificationResults != null && networkModificationResults.modificationUuids().size() == 1) {
+                for (UUID otherRootNetwork : rootNetworkToDeactivateUuids) {
+                    rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, otherRootNetwork, Set.of(networkModificationResults.modificationUuids().getFirst()), false);
+                }
                 int index = 0;
                 // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
                 for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
@@ -2883,7 +2933,7 @@ public class StudyService {
                 }
             }
 
-            voltageInitService.resetModificationsGroupUuid(nodeUuid, resultUuid);
+            voltageInitService.resetModificationsGroupUuid(resultUuid);
 
             // invalidate the whole subtree except the target node (we have built this node during the duplication)
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT); // send notification voltage init result has changed

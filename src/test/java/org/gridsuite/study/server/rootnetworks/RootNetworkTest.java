@@ -361,7 +361,7 @@ class RootNetworkTest {
 
         // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
-        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
+        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, CASE_UUID, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
         Map<String, String> importParameters = new HashMap<>();
         importParameters.put("param1", "value1");
         importParameters.put("param2", "value2");
@@ -406,7 +406,7 @@ class RootNetworkTest {
 
         // prepare all headers that will be sent to consumer supposed to receive "caseImportFailed" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportFailed();
-        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
+        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, CASE_UUID, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
         Map<String, Object> headers = createConsumeCaseImportFailedHeaders(caseImportReceiver);
 
         // send message to consumer
@@ -432,7 +432,7 @@ class RootNetworkTest {
 
         // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
-        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
+        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, CASE_UUID, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
         Map<String, String> importParameters = new HashMap<>();
         importParameters.put("param1", "value1");
         importParameters.put("param2", "value2");
@@ -467,7 +467,7 @@ class RootNetworkTest {
             .id(rootNetworkEntityToDeleteUuid)
             .name(CASE_NAME2)
             .importParameters(Map.of("param1", "value1", "param2", "value2"))
-            .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
+            .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))
             .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
             .reportUuid(REPORT_UUID2)
             .tag("dum")
@@ -542,7 +542,7 @@ class RootNetworkTest {
             .id(secondRootNetworkUuid)
             .name(CASE_NAME2)
             .importParameters(Map.of("param1", "value1", "param2", "value2"))
-            .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
+            .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))
             .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
             .reportUuid(REPORT_UUID2)
             .tag("dum")
@@ -706,7 +706,7 @@ class RootNetworkTest {
 
         // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
-        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyUuid, rootNetworkUuid, NEW_CASE_UUID, NEW_REPORT_UUID, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyUuid, rootNetworkUuid, NEW_CASE_UUID, CASE_UUID, NEW_REPORT_UUID, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_MODIFICATION);
         Map<String, String> importParameters = new HashMap<>();
         importParameters.put("param1", "value1");
         importParameters.put("param2", "value2");
@@ -747,7 +747,7 @@ class RootNetworkTest {
         UUID rootNetworkUuid = UUID.randomUUID();
         createDummyRootNetwork(studyEntity, RootNetworkInfos.builder()
             .name(CASE_NAME2)
-            .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
+            .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))
             .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
             .reportUuid(REPORT_UUID2)
             .id(rootNetworkUuid)
@@ -820,7 +820,7 @@ class RootNetworkTest {
         rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity.getId(), "dummyRootNetwork3", "RN_3", USER_ID);
         studyService.createRootNetwork(studyEntity.getId(), RootNetworkInfos.builder()
             .name(CASE_NAME2)
-            .caseInfos(new CaseInfos(CASE_UUID2, CASE_NAME2, CASE_FORMAT2))
+            .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))
             .networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
             .reportUuid(REPORT_UUID2)
             .id(rootNetworkUuid)
@@ -861,7 +861,7 @@ class RootNetworkTest {
         RootNetworkEntity rootNetworkEntity = RootNetworkInfos.builder()
             .id(UUID.randomUUID())
             .name(name)
-            .caseInfos(new CaseInfos(UUID.randomUUID(), "caseName", "caseFormat"))
+            .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), "caseName", "caseFormat"))
             .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
             .reportUuid(UUID.randomUUID())
             .tag("dum")
