@@ -90,6 +90,7 @@ class SingleLineDiagramTest {
     private static final String VARIANT_ID = "variant_1";
     private static final String NETWORK_UUID_VARIANT_ERROR_STRING = "88400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String VARIANT_ERROR_ID = "noVariant";
+    private static final String BODY_CONTENT = "bodyContent";
 
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
@@ -239,24 +240,6 @@ class SingleLineDiagramTest {
         server.setDispatcher(dispatcher);
     }
 
-    private String createNadRequestInfos(
-            List<String> voltageLevelIds
-    ) {
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("nadConfigUuid", null);
-        requestBody.put("filterUuid", null);
-        requestBody.put("voltageLevelIds", voltageLevelIds);
-        requestBody.put("voltageLevelToExpandIds", List.of());
-        requestBody.put("voltageLevelToOmitIds", List.of());
-        requestBody.put("positions", List.of());
-        requestBody.put("withGeoData", true);
-        try {
-            return objectMapper.writeValueAsString(requestBody);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     @Test
     void testDiagramsAndGraphics(final MockWebServer server) throws Exception {
         MvcResult mvcResult;
@@ -365,9 +348,8 @@ class SingleLineDiagramTest {
                         randomUuid, randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
 
         // get the network area diagram
-        String nadRequestConfigInfos = createNadRequestInfos(List.of("vlFr1A"));
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
-                        .content(nadRequestConfigInfos).contentType(MediaType.APPLICATION_JSON))
+                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(
                 content().contentType(MediaType.APPLICATION_JSON),
                 status().isOk(),
@@ -378,7 +360,7 @@ class SingleLineDiagramTest {
 
         // get the network area diagram from a study that doesn't exist
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram", randomUuid, randomUuid, rootNodeUuid)
-                        .content(nadRequestConfigInfos).contentType(MediaType.APPLICATION_JSON))
+                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON))
                  .andExpect(status().isNotFound());
 
         //get voltage levels
@@ -538,10 +520,9 @@ class SingleLineDiagramTest {
             status().isNoContent());
 
         //get the network area diagram on a non existing variant
-        String nadRequestConfigInfos = createNadRequestInfos(List.of("vlFr1A"));
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
             studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
-                        .content(nadRequestConfigInfos).contentType(MediaType.APPLICATION_JSON))
+                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(
             status().isNoContent());
     }
