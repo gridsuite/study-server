@@ -82,6 +82,8 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
+import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
+import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
