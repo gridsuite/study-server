@@ -598,9 +598,13 @@ public class NetworkModificationTreeService {
     }
 
     public void assertIsRootOrConstructionNode(UUID nodeUuid) {
-        if (!self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) && !getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType().equals(NetworkModificationNodeType.CONSTRUCTION)) {
+        if (!self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) && !isConstructionNode(nodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
+    }
+
+    public boolean isConstructionNode(UUID nodeUuid) {
+        return getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType() == NetworkModificationNodeType.CONSTRUCTION;
     }
 
     @Transactional(readOnly = true)

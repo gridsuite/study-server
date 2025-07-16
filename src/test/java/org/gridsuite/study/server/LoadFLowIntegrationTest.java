@@ -54,6 +54,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.StudyConstants.DYNA_FLOW_PROVIDER;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -176,7 +177,7 @@ class LoadFLowIntegrationTest {
 
     @Test
     void testRerunLoadFlowNotAllowed() throws Exception {
-        LoadFlowParametersInfos loadFlowParametersInfos = createLoadFlowParametersInfos("DynaFlow");
+        LoadFlowParametersInfos loadFlowParametersInfos = createLoadFlowParametersInfos(DYNA_FLOW_PROVIDER);
         UUID loadFlowParametersStubUuid = wireMockUtils.stubLoadFlowParameters(parametersUuid, objectMapper.writeValueAsString(loadFlowParametersInfos));
         Mockito.doReturn(parametersUuid).when(loadFlowService).createDefaultLoadFlowParameters();
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, nodeUuid, userId)
