@@ -597,6 +597,26 @@ public class NetworkModificationTreeService {
         }
     }
 
+    public void assertIsNetworkModificationNodeCreationAllowed(UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode) {
+        NetworkModificationNodeType newNodeType = nodeInfo.getNodeType();
+        NodeEntity reference = getNodeEntity(nodeId);
+
+        NetworkModificationNodeType referenceNodeType = reference.getType().equals(NodeType.ROOT)
+                ? null
+                : getNetworkModificationNodeInfoEntity(nodeId).getNodeType();
+
+        if (newNodeType.equals(NetworkModificationNodeType.CONSTRUCTION)
+                && referenceNodeType == NetworkModificationNodeType.SECURITY) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+
+        if (newNodeType.equals(NetworkModificationNodeType.SECURITY)
+                && insertMode != InsertMode.CHILD
+                && referenceNodeType != NetworkModificationNodeType.SECURITY) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+    }
+
     @Transactional(readOnly = true)
     public boolean isNodeNameExists(UUID studyUuid, String nodeName) {
         return ROOT_NODE_NAME.equals(nodeName) || !networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyUuid, nodeName).stream().filter(abstractNodeInfoEntity -> !abstractNodeInfoEntity.getNode().isStashed()).toList().isEmpty();
@@ -626,7 +646,6 @@ public class NetworkModificationTreeService {
             .stream()
             .map(AbstractNodeInfoEntity::getName)
             .toList();
-
         String uniqueName = nodeName;
         int i = 1;
         while (studyNodeNames.contains(uniqueName)) {
