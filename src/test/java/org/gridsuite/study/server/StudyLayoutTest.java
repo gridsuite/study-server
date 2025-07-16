@@ -3,6 +3,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.StudyConfigService;
@@ -24,8 +25,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.STUDY_CONFIG_API_VERSION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -136,5 +136,18 @@ class StudyLayoutTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/study-layout", studyUuid))
             .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testDeleteStudyLayout() {
+        UUID studyLayoutUuid = UUID.randomUUID();
+
+        wireMockServer.stubFor(WireMock.delete(DELIMITER + STUDY_CONFIG_API_VERSION + "/study-layout/" + studyLayoutUuid)
+            .willReturn(WireMock.ok()));
+
+        studyConfigService.deleteStudyLayout(studyLayoutUuid);
+
+        RequestPatternBuilder requestBuilder = WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/study-layout/" + studyLayoutUuid));
+        wireMockServer.verify(1, requestBuilder);
     }
 }
