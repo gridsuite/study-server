@@ -38,7 +38,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  */
 @Service
 public class StudyConfigService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(StudyConfigService.class);
     private static final String UUID_PARAM = "/{uuid}";
 
     private static final String NETWORK_VISU_PARAMETERS_URI = "/network-visualizations-params";
