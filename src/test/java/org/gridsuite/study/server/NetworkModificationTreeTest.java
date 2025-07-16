@@ -629,15 +629,15 @@ class NetworkModificationTreeTest {
         UUID n4Id = n2Children.get(1).getId();
         UUID badUuid = UUID.randomUUID();
 
-        assertTrue(networkModificationTreeService.hasAncestor(rootId, rootId));
-        assertFalse(networkModificationTreeService.hasAncestor(rootId, n1Id));
-        assertTrue(networkModificationTreeService.hasAncestor(n1Id, rootId));
-        assertTrue(networkModificationTreeService.hasAncestor(n3Id, rootId));
-        assertTrue(networkModificationTreeService.hasAncestor(n4Id, rootId));
-        assertTrue(networkModificationTreeService.hasAncestor(n4Id, n2Id));
-        assertFalse(networkModificationTreeService.hasAncestor(n4Id, n1Id));
-        assertFalse(networkModificationTreeService.hasAncestor(n3Id, badUuid));
-        assertThrows(StudyException.class, () -> networkModificationTreeService.hasAncestor(badUuid, rootId), "ELEMENT_NOT_FOUND");
+        assertFalse(networkModificationTreeService.isAChild(rootId, rootId));
+        assertFalse(networkModificationTreeService.isAChild(n1Id, rootId));
+        assertTrue(networkModificationTreeService.isAChild(rootId, n1Id));
+        assertTrue(networkModificationTreeService.isAChild(rootId, n3Id));
+        assertTrue(networkModificationTreeService.isAChild(rootId, n4Id));
+        assertTrue(networkModificationTreeService.isAChild(n2Id, n4Id));
+        assertFalse(networkModificationTreeService.isAChild(n1Id, n4Id));
+        assertFalse(networkModificationTreeService.isAChild(badUuid, n3Id));
+        assertFalse(networkModificationTreeService.isAChild(rootId, badUuid));
     }
 
     @Test
