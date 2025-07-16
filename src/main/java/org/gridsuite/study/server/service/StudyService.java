@@ -967,7 +967,7 @@ public class StudyService {
 
     public String getLoadFlowProvider(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        return getLoadFlowParametersInfos(studyEntity).getProvider();
+        return loadflowService.getLoadFlowProvider(studyEntity.getLoadFlowParametersUuid());
     }
 
     public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid) {
