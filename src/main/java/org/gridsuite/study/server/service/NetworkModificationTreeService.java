@@ -348,6 +348,12 @@ public class NetworkModificationTreeService {
         return nodesRepository.findAllByParentNodeIdNode(parentUuid);
     }
 
+    public List<UUID> getNodeTreeUuids(UUID parentUuid) {
+        List<UUID> nodesUuids = nodesRepository.findAllChildrenUuids(parentUuid);
+        nodesUuids.add(parentUuid);
+        return nodesUuids;
+    }
+
     public List<UUID> getAllChildrenUuids(UUID parentUuid) {
         return nodesRepository.findAllChildrenUuids(parentUuid);
     }
@@ -876,17 +882,37 @@ public class NetworkModificationTreeService {
 
         // Invalidate indexed nodes
         if (shouldInvalidateIndexedInfos) {
-            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos, isNodeBuilt && (invalidateTreeParameters.isOnlyChildren() || invalidateTreeParameters.isOnlyChildrenBuildStatusMode()));
+            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos, isNodeBuilt && (invalidateTreeParameters.isOnlyChildren() || invalidateTreeParameters.isOnlyChildrenBuildStatus()));
         }
 
         // Children
-        invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid));
+        invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid, invalidateTreeParameters));
 
         if (!invalidateNodeInfos.getNodeUuids().isEmpty()) {
             notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), invalidateNodeInfos.getNodeUuids().stream().toList(), rootNetworkUuid);
         }
 
         return invalidateNodeInfos;
+    }
+
+    private InvalidateNodeInfos invalidateChildrenNodes(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoService.getRootNetworkNodes(rootNetworkUuid, getAllChildrenUuids(nodeUuid));
+
+        InvalidateNodeTreeParameters invalidateChildrenParameters = InvalidateNodeTreeParameters.builder()
+            .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
+            .withBlockedNodeBuild(invalidateTreeParameters.withBlockedNodeBuild())
+            .build();
+        rootNetworkNodeInfoEntities.forEach(child ->
+            invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters))
+        );
+
+        return invalidateNodeInfos;
+    }
+
+    @Transactional
+    public void invalidateBlockedBuildNodeTree(UUID rootNetworkUuid, UUID nodeUuid) {
+        rootNetworkNodeInfoService.invalidateBlockedBuild(rootNetworkUuid, getNodeTreeUuids(nodeUuid));
     }
 
     /**
@@ -962,17 +988,6 @@ public class NetworkModificationTreeService {
         }
     }
 
-    private InvalidateNodeInfos invalidateChildrenNodes(UUID nodeUuid, UUID rootNetworkUuid) {
-        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
-        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoService.getRootNetworkNodes(rootNetworkUuid, getAllChildrenUuids(nodeUuid));
-
-        rootNetworkNodeInfoEntities.forEach(child ->
-            invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, InvalidateNodeTreeParameters.ALL))
-        );
-
-        return invalidateNodeInfos;
-    }
-
     @Transactional
     public void updateNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid, NodeBuildStatus nodeBuildStatus) {
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
@@ -1039,19 +1054,10 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional(readOnly = true)
-    public boolean hasAncestor(UUID nodeUuid, UUID ancestorNodeUuid) {
-        if (nodeUuid.equals(ancestorNodeUuid)) {
-            return true;
-        }
-        NodeEntity nodeEntity = getNodeEntity(nodeUuid);
-        if (nodeEntity.getType() == NodeType.ROOT) {
-            return false;
-        } else {
-            return self.hasAncestor(nodeEntity.getParentNode().getIdNode(), ancestorNodeUuid);
-        }
+    public boolean isAChild(UUID parentUuid, UUID nodeUuid) {
+        return parentUuid != nodeUuid && new HashSet<>(getAllChildrenUuids(parentUuid)).contains(nodeUuid);
     }
 
-    @Transactional(readOnly = true)
     public Boolean isReadOnly(UUID nodeUuid) {
         return getNodeInfoEntity(nodeUuid).getReadOnly();
     }
