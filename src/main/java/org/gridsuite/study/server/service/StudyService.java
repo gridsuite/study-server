@@ -562,6 +562,7 @@ public class StudyService {
                 removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
+                removeStudyLayout(s.getStudyLayoutUuid());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -2572,6 +2573,16 @@ public class StudyService {
                 studyConfigService.deleteSpreadsheetConfigCollection(spreadsheetConfigCollectionUuid);
             } catch (Exception e) {
                 LOGGER.error("Could not remove spreadsheet config collection with uuid:" + spreadsheetConfigCollectionUuid, e);
+            }
+        }
+    }
+
+    private void removeStudyLayout(@Nullable UUID studyLayoutUuid) {
+        if (studyLayoutUuid != null) {
+            try {
+                studyConfigService.deleteStudyLayout(studyLayoutUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove study layout config with uuid:" + studyLayoutUuid, e);
             }
         }
     }

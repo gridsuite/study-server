@@ -395,6 +395,21 @@ public class StudyConfigService {
         }
     }
 
+    public void deleteStudyLayout(UUID studyLayoutUuid) {
+        Objects.requireNonNull(studyLayoutUuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + STUDY_LAYOUT_WITH_ID_URI)
+            .buildAndExpand(studyLayoutUuid).toUriString();
+
+        try {
+            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.DELETE, null, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(STUDY_LAYOUT_NOT_FOUND);
+            }
+            throw e;
+        }
+    }
+
     public UUID saveStudyLayout(String studyLayout) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + STUDY_LAYOUT_URI).toUriString();
 
