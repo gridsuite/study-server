@@ -2413,4 +2413,11 @@ public class StudyController {
         studyService.updateNodeAliases(studyUuid, nodeAliases);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping(value = "/studies/{studyUuid}/loadflow/provider")
+    @Operation(summary = "Get loadflow provider for a specified study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow provider is returned")})
+    public ResponseEntity<String> getLoadFlowProvider(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
+    }
 }

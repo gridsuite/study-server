@@ -965,6 +965,11 @@ public class StudyService {
         }
     }
 
+    public String getLoadFlowProvider(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return getLoadFlowParametersInfos(studyEntity).getProvider();
+    }
+
     public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid) {
         boolean exists = networkModificationTreeService.getAllNodes(studyUuid).stream()
                 .anyMatch(nodeEntity -> nodeUuid.equals(nodeEntity.getIdNode()));
