@@ -90,6 +90,7 @@ class SingleLineDiagramTest {
     private static final String VARIANT_ID = "variant_1";
     private static final String NETWORK_UUID_VARIANT_ERROR_STRING = "88400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String VARIANT_ERROR_ID = "noVariant";
+    private static final String BODY_CONTENT = "bodyContent";
 
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
@@ -218,7 +219,7 @@ class SingleLineDiagramTest {
                     case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
                         return new MockResponse(500, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"tmp\",\"path\":\"/v1/networks\"}");
-                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true":
+                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING :
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "nad-svg");
 
                     case "/v1/svg-component-libraries":
@@ -347,22 +348,20 @@ class SingleLineDiagramTest {
                         randomUuid, randomUuid, rootNodeUuid, "substationId")).andExpect(status().isNotFound());
 
         // get the network area diagram
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
-                        .content("[\"vlFr1A\"]")
-                        .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
+                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(
                 content().contentType(MediaType.APPLICATION_JSON),
                 status().isOk(),
                 content().string("nad-svg")
             );
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING + "?depth=0&withGeoData=true")));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING)));
 
         // get the network area diagram from a study that doesn't exist
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?&depth=0&withGeoData=true", randomUuid, randomUuid, rootNodeUuid)
-                .content("[\"vlFr1A\"]")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram", randomUuid, randomUuid, rootNodeUuid)
+                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON))
+                 .andExpect(status().isNotFound());
 
         //get voltage levels
         mvcResult = getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "VOLTAGE_LEVEL", null, objectMapper.writeValueAsString(List.of()), TestUtils.resourceToString("/network-voltage-levels-infos.json"));
@@ -521,10 +520,10 @@ class SingleLineDiagramTest {
             status().isNoContent());
 
         //get the network area diagram on a non existing variant
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram?depth=0",
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
             studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
-                .content("[\"vlFr1A\"]")
-                .contentType(MediaType.APPLICATION_JSON)).andExpectAll(
+                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON))
+                .andExpectAll(
             status().isNoContent());
     }
 
