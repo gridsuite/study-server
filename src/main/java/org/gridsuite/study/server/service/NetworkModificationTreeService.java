@@ -603,13 +603,14 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public void assertIsNetworkModificationNodeCreationAllowed(UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode) {
-        NetworkModificationNodeType newNodeType = nodeInfo.getNodeType();
-        NodeEntity reference = getNodeEntity(nodeId);
-
-        NetworkModificationNodeType referenceNodeType = reference.getType().equals(NodeType.ROOT)
+    private void assertIsNetworkModificationInsertionAllowed(
+            NodeEntity referenceNode,
+            NetworkModificationNodeType newNodeType,
+            InsertMode insertMode
+    ) {
+        NetworkModificationNodeType referenceNodeType = referenceNode.getType().equals(NodeType.ROOT)
                 ? null
-                : getNetworkModificationNodeInfoEntity(nodeId).getNodeType();
+                : getNetworkModificationNodeInfoEntity(referenceNode.getIdNode()).getNodeType();
 
         if (newNodeType.equals(NetworkModificationNodeType.CONSTRUCTION)
                 && referenceNodeType == NetworkModificationNodeType.SECURITY) {
@@ -621,6 +622,12 @@ public class NetworkModificationTreeService {
                 && referenceNodeType != NetworkModificationNodeType.SECURITY) {
             throw new StudyException(NOT_ALLOWED);
         }
+    }
+
+    public void assertIsNetworkModificationNodeCreationAllowed(UUID referenceNodeUuid, NetworkModificationNode nodeInfo, InsertMode insertMode) {
+        NetworkModificationNodeType newNodeType = nodeInfo.getNodeType();
+        NodeEntity reference = getNodeEntity(referenceNodeUuid);
+        assertIsNetworkModificationInsertionAllowed(reference, newNodeType, insertMode);
     }
 
     @Transactional(readOnly = true)
