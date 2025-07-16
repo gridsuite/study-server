@@ -6,11 +6,9 @@
  */
 package org.gridsuite.study.server.utils.elasticsearch;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
 import org.testcontainers.elasticsearch.ElasticsearchContainer;
-
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 
 import java.util.Map;
 
@@ -45,15 +43,5 @@ public class EmbeddedElasticsearch {
         elasticsearchContainer.start();
 
         System.setProperty("spring.elasticsearch.uris", "http://localhost:".concat(Integer.toString(elasticsearchContainer.getMappedPort(9200))));
-    }
-
-    @PreDestroy
-    private void preDestroy() {
-        if (elasticsearchContainer == null) {
-            return;
-        }
-
-        elasticsearchContainer.stop();
-        elasticsearchContainer = null;
     }
 }
