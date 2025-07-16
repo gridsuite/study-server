@@ -1358,27 +1358,14 @@ public class StudyService {
         }
     }
 
-    public String getNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, List<String> voltageLevelsIds, int depth, boolean withGeoData) {
+    public String getNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, String nadRequestInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(ROOT_NETWORK_NOT_FOUND);
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            return singleLineDiagramService.getNetworkAreaDiagram(networkUuid, variantId, voltageLevelsIds, depth, withGeoData);
-        } else {
-            return null;
-        }
-    }
-
-    public String getNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, String elementParams) {
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        if (networkUuid == null) {
-            throw new StudyException(ROOT_NETWORK_NOT_FOUND);
-        }
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        if (networkStoreService.existVariant(networkUuid, variantId)) {
-            return singleLineDiagramService.getNetworkAreaDiagram(networkUuid, variantId, elementParams);
+            return singleLineDiagramService.getNetworkAreaDiagram(networkUuid, variantId, nadRequestInfos);
         } else {
             return null;
         }
