@@ -80,16 +80,16 @@ public class SecurityAnalysisService extends AbstractComputationService {
             pathBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
         }
 
-        for (Sort.Order order : pageable.getSort()) {
-            pathBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection());
-        }
-
         if (!StringUtils.isEmpty(globalFilters)) {
             pathBuilder.queryParam("globalFilters", URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
             pathBuilder.queryParam("networkUuid", networkUuid);
             if (!StringUtils.isBlank(variantId)) {
                 pathBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
             }
+        }
+
+        for (Sort.Order order : pageable.getSort()) {
+            pathBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection());
         }
 
         String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
