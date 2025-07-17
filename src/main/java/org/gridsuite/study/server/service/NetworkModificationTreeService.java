@@ -636,6 +636,23 @@ public class NetworkModificationTreeService {
         assertIsNetworkModificationInsertionAllowed(reference, newNodeType, insertMode);
     }
 
+    public boolean assertSubtreeCanBeDuplicatedOrMoved(List<NetworkModificationNodeInfoEntity> subtreeNodes, UUID referenceNodeUuid) {
+        boolean allSecurityNodes = subtreeNodes.stream()
+                .allMatch(child -> child.getNodeType() == NetworkModificationNodeType.SECURITY);
+
+        if (allSecurityNodes) {
+            return false;
+        }
+
+        return !self.getNode(referenceNodeUuid, null).getType().equals(NodeType.ROOT) && !getNetworkModificationNodeInfoEntity(referenceNodeUuid).getNodeType().equals(NetworkModificationNodeType.CONSTRUCTION);
+    }
+
+    public List<NetworkModificationNodeInfoEntity> getAllNetworkModificationNodeInfoByParentNodeId(UUID nodeUuid, List<UUID> childrenUuids) {
+        List<UUID> allNodeUuids = new ArrayList<>(childrenUuids);
+        allNodeUuids.add(nodeUuid);
+        return networkModificationNodeInfoRepository.findAllById(allNodeUuids);
+    }
+
     @Transactional(readOnly = true)
     public boolean isNodeNameExists(UUID studyUuid, String nodeName) {
         return ROOT_NODE_NAME.equals(nodeName) || !networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyUuid, nodeName).stream().filter(abstractNodeInfoEntity -> !abstractNodeInfoEntity.getNode().isStashed()).toList().isEmpty();
