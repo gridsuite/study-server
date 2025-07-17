@@ -12,7 +12,10 @@ import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.ReportInfos;
+import org.gridsuite.study.server.dto.RunSecurityAnalysisParametersInfos;
+import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
@@ -62,7 +65,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public String getSecurityAnalysisResult(UUID resultUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
+    public String getSecurityAnalysisResult(UUID resultUuid, UUID networkUuid, String variantId, SecurityAnalysisResultType resultType, String filters, String globalFilters, Pageable pageable) {
         String result;
 
         if (resultUuid == null) {
@@ -75,6 +78,14 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
         if (filters != null && !filters.isEmpty()) {
             pathBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+        }
+
+        if (!StringUtils.isEmpty(globalFilters)) {
+            pathBuilder.queryParam("globalFilters", URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
+            pathBuilder.queryParam("networkUuid", networkUuid);
+            if (!StringUtils.isBlank(variantId)) {
+                pathBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
         }
 
         for (Sort.Order order : pageable.getSort()) {
