@@ -27,6 +27,7 @@ import static org.gridsuite.study.server.StudyConstants.STUDY_CONFIG_API_VERSION
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -150,4 +151,73 @@ class StudyLayoutTest {
         RequestPatternBuilder requestBuilder = WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/study-layout/" + studyLayoutUuid));
         wireMockServer.verify(1, requestBuilder);
     }
+
+    @Test
+    void testDeleteStudyLayoutWithError() {
+        UUID studyLayoutUuid = UUID.randomUUID();
+
+        wireMockServer.stubFor(WireMock.delete(DELIMITER + STUDY_CONFIG_API_VERSION + "/study-layout/" + studyLayoutUuid)
+            .willReturn(WireMock.notFound()));
+
+        StudyException exception = assertThrows(StudyException.class, () -> {
+            studyConfigService.deleteStudyLayout(studyLayoutUuid);
+        });
+
+        assertEquals(StudyException.Type.STUDY_LAYOUT_NOT_FOUND, exception.getType());
+
+        wireMockServer.stubFor(WireMock.delete(DELIMITER + STUDY_CONFIG_API_VERSION + "/study-layout/" + studyLayoutUuid)
+            .willReturn(WireMock.serverError()));
+
+        assertThrows(Exception.class, () -> {
+            studyConfigService.deleteStudyLayout(studyLayoutUuid);
+        });
+    }
+
+    @Test
+    void testSaveStudyLayoutWithError() {
+        String payload = "PAYLOAD";
+
+        wireMockServer.stubFor(WireMock.post(DELIMITER + STUDY_CONFIG_API_VERSION + "/study-layout")
+            .withRequestBody(equalTo(payload))
+            .willReturn(WireMock.notFound()));
+
+        StudyException exception = assertThrows(StudyException.class, () -> {
+            studyConfigService.saveStudyLayout(payload);
+        });
+
+        assertEquals(StudyException.Type.STUDY_LAYOUT_NOT_FOUND, exception.getType());
+
+        wireMockServer.stubFor(WireMock.post(DELIMITER + STUDY_CONFIG_API_VERSION + "/study-layout")
+            .withRequestBody(equalTo(payload))
+            .willReturn(WireMock.serverError()));
+
+        assertThrows(Exception.class, () -> {
+            studyConfigService.saveStudyLayout(payload);
+        });
+    }
+
+    @Test
+    void testUpdateStudyLayoutWithError() {
+        UUID studyLayoutUuid = UUID.randomUUID();
+        String payload = "PAYLOAD";
+
+        wireMockServer.stubFor(WireMock.put(DELIMITER + STUDY_CONFIG_API_VERSION + "/study-layout/" + studyLayoutUuid)
+            .withRequestBody(equalTo(payload))
+            .willReturn(WireMock.notFound()));
+
+        StudyException exception = assertThrows(StudyException.class, () -> {
+            studyConfigService.updateStudyLayout(studyLayoutUuid, payload);
+        });
+
+        assertEquals(StudyException.Type.STUDY_LAYOUT_NOT_FOUND, exception.getType());
+
+        wireMockServer.stubFor(WireMock.put(DELIMITER + STUDY_CONFIG_API_VERSION + "/study-layout/" + studyLayoutUuid)
+            .withRequestBody(equalTo(payload))
+            .willReturn(WireMock.serverError()));
+
+        assertThrows(Exception.class, () -> {
+            studyConfigService.updateStudyLayout(studyLayoutUuid, payload);
+        });
+    }
+
 }
