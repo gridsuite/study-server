@@ -333,6 +333,19 @@ public class StudyConfigService {
         restTemplate.delete(studyConfigServerBaseUri + path);
     }
 
+    public void duplicateColumn(UUID configUuid, UUID columnUuid) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/{colId}/duplicate");
+        String path = uriBuilder.buildAndExpand(configUuid, columnUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(null, headers);
+        try {
+            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
+        }
+    }
+
     public void renameSpreadsheetConfig(UUID configUuid, String newName) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/name");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();

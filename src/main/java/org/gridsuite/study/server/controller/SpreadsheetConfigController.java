@@ -85,6 +85,17 @@ public class SpreadsheetConfigController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/columns/{columnUuid}/duplicate")
+    @Operation(summary = "duplicate a column", description = "duplicate an existing column")
+    @ApiResponse(responseCode = "204", description = "Column duplicated")
+    public ResponseEntity<Void> duplicateColumn(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "ID of the spreadsheet config") @PathVariable UUID id,
+            @Parameter(description = "ID of the column to duplicate") @PathVariable UUID columnUuid) {
+        studyService.duplicateColumn(studyUuid, id, columnUuid);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}/columns/reorder")
     @Operation(summary = "Reorder columns", description = "Reorders the columns of a spreadsheet configuration")
     @ApiResponse(responseCode = "204", description = "Columns reordered")

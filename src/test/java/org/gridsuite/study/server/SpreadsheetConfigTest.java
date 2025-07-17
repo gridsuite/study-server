@@ -137,6 +137,23 @@ class SpreadsheetConfigTest {
     }
 
     @Test
+    void testDuplicateColumn() throws Exception {
+        StudyEntity studyEntity = insertStudy();
+        String configServerUrl = "/v1/spreadsheet-configs/" + SPREADSHEET_CONFIG_UUID + "/columns/" + SPREADSHEET_CONFIG_COLUMN_UUID + "/duplicate";
+
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.noContent())).getId();
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/spreadsheet-config/{configUuid}/columns/{columnUuid}/duplicate", studyEntity.getId(), SPREADSHEET_CONFIG_UUID, SPREADSHEET_CONFIG_COLUMN_UUID)
+                        .header("content-type", "application/json"))
+                .andExpect(status().isNoContent())
+                .andReturn();
+
+        checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
+        wireMockUtils.verifyPostRequest(stubId, configServerUrl, Map.of(), 1);
+    }
+
+    @Test
     void testUpdateColumn() throws Exception {
         StudyEntity studyEntity = insertStudy();
         String configServerUrl = "/v1/spreadsheet-configs/" + SPREADSHEET_CONFIG_UUID + "/columns/" + SPREADSHEET_CONFIG_COLUMN_UUID;
