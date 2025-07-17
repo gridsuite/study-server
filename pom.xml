@@ -19,7 +19,7 @@
 
     <groupId>org.gridsuite</groupId>
     <artifactId>gridsuite-study-server</artifactId>
-    <version>2.18.0-SNAPSHOT</version>
+    <version>2.21.0-SNAPSHOT</version>
 
     <packaging>jar</packaging>
     <name>Study Server</name>
@@ -42,13 +42,12 @@
     </developers>
 
     <properties>
-        <gridsuite-dependencies.version>39.0.0</gridsuite-dependencies.version>
+        <!-- FIXME to remove at next upgrade of powsybl-ws-dependencies -->
+        <powsybl-network-store.version>1.28.0</powsybl-network-store.version>
+        <gridsuite-dependencies.version>41.0.0</gridsuite-dependencies.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
         <mockwebserver3.version>5.0.0-alpha.14</mockwebserver3.version>
-        <!-- TODO network-modification.version remove when migration powsybl -->
-        <network-modification.version>0.16.0</network-modification.version>
-        <apache.httpclient.version>5.3</apache.httpclient.version>
-        <db-util.version>1.0.5</db-util.version>
+         <db-util.version>1.0.5</db-util.version>
         <sonar.organization>gridsuite</sonar.organization>
         <sonar.projectKey>org.gridsuite:study-server</sonar.projectKey>
     </properties>
@@ -86,6 +85,24 @@
     <dependencyManagement>
         <dependencies>
             <!-- overrides of imports -->
+            <!-- FIXME to remove at next upgrade of powsybl-ws-dependencies -->
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-network-store-model</artifactId>
+                <version>${powsybl-network-store.version}</version>
+            </dependency>
+            <!-- FIXME to remove at next upgrade of powsybl-ws-dependencies -->
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-network-store-iidm-impl</artifactId>
+                <version>${powsybl-network-store.version}</version>
+            </dependency>
+            <!-- FIXME to remove at next upgrade of powsybl-ws-dependencies -->
+            <dependency>
+                <groupId>com.powsybl</groupId>
+                <artifactId>powsybl-network-store-client</artifactId>
+                <version>${powsybl-network-store.version}</version>
+            </dependency>
             <dependency><!-- To remove when integrate in next release of gridsuite-dependencies or powsybl-ws-dependencies -->
                 <groupId>com.squareup.okhttp3</groupId>
                 <artifactId>okhttp-bom</artifactId>
@@ -105,12 +122,6 @@
 
             <!-- project specific dependencies -->
             <dependency>
-                <groupId>org.apache.httpcomponents.client5</groupId>
-                <artifactId>httpclient5</artifactId>
-                <version>${apache.httpclient.version}</version>
-            </dependency>
-
-            <dependency>
                 <groupId>com.vladmihalcea</groupId>
                 <artifactId>db-util</artifactId>
                 <version>${db-util.version}</version>
@@ -120,12 +131,7 @@
 
     <dependencies>
         <!-- Compilation dependencies -->
-        <dependency>
-            <groupId>org.gridsuite</groupId>
-            <artifactId>gridsuite-network-modification</artifactId>
-            <version>${network-modification.version}</version>
-        </dependency>
-        <dependency>
+         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-commons</artifactId>
         </dependency>
@@ -196,12 +202,6 @@
         </dependency>
 
         <!-- Runtime dependencies -->
-        <dependency>
-            <!-- Used by RestTemplate -->
-            <groupId>org.apache.httpcomponents.client5</groupId>
-            <artifactId>httpclient5</artifactId>
-            <scope>runtime</scope>
-        </dependency>
         <dependency>
             <groupId>org.liquibase</groupId>
             <artifactId>liquibase-core</artifactId>

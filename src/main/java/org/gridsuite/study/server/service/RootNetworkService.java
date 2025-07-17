@@ -129,6 +129,7 @@ public class RootNetworkService {
         rootNetworkEntity.setCaseUuid(caseInfos.getCaseUuid());
         rootNetworkEntity.setCaseFormat(caseInfos.getCaseFormat());
         rootNetworkEntity.setCaseName(caseInfos.getCaseName());
+        rootNetworkEntity.setOriginalCaseUuid(caseInfos.getOriginalCaseUuid());
     }
 
     private void updateNetworkInfos(@NonNull RootNetworkEntity rootNetworkEntity, @NonNull NetworkInfos networkInfos) {
@@ -147,6 +148,10 @@ public class RootNetworkService {
 
     public List<UUID> getAllNetworkUuids() {
         return rootNetworkRepository.findAll().stream().map(RootNetworkEntity::getNetworkUuid).toList();
+    }
+
+    public List<UUID> getAllRootNetworkUuids() {
+        return rootNetworkRepository.findAll().stream().map(RootNetworkEntity::getId).toList();
     }
 
     public Optional<RootNetworkEntity> getRootNetwork(UUID rootNetworkUuid) {
@@ -185,7 +190,7 @@ public class RootNetworkService {
                         .id(UUID.randomUUID())
                         .name(rootNetworkEntityToDuplicate.getName())
                         .importParameters(newImportParameters)
-                        .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
+                        .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getOriginalCaseUuid(), rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
                         .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
                         .reportUuid(clonedRootNodeReportUuid)
                         .tag(rootNetworkEntityToDuplicate.getTag())
@@ -269,6 +274,10 @@ public class RootNetworkService {
 
     public void deleteRootNetworkRequest(RootNetworkRequestEntity rootNetworkRequestEntity) {
         rootNetworkRequestRepository.delete(rootNetworkRequestEntity);
+    }
+
+    public void deleteRootNetwork(UUID rootNetworkUuid) {
+        rootNetworkRepository.deleteById(rootNetworkUuid);
     }
 
     public void assertCanCreateRootNetwork(UUID studyUuid, String rootNetworkName, String rootNetworkTag) {

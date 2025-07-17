@@ -263,15 +263,6 @@ public class WireMockUtils {
         verifyRequest(stubId, requestBuilder, queryParams, body, nbRequests);
     }
 
-    public void verifyPatchRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body) {
-        verifyPatchRequest(stubId, urlPath, regexMatching, queryParams, body, 1);
-    }
-
-    public void verifyPatchRequest(UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body, int nbRequests) {
-        RequestPatternBuilder requestBuilder = regexMatching ? WireMock.patchRequestedFor(WireMock.urlPathMatching(urlPath)) : WireMock.patchRequestedFor(WireMock.urlPathEqualTo(urlPath));
-        verifyRequest(stubId, requestBuilder, queryParams, body, nbRequests);
-    }
-
     public void verifyPutRequestWithUrlMatching(UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams, String body) {
         verifyPutRequest(stubId, urlPath, true, queryParams, body);
     }
@@ -357,6 +348,54 @@ public class WireMockUtils {
         RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/exists"));
         wireMock.verify(1, requestBuilder);
         removeRequestForStub(stubUuid, 1);
+    }
+
+    public UUID stubRunLoadFlow(UUID networkUuid, boolean withRatioTapChangers, UUID loadFlowResultUuid, String responseBody) {
+        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/run-and-save"))
+            .withQueryParam(QUERY_WITH_TAP_CHANGER, WireMock.equalTo(withRatioTapChangers ? "true" : "false"))
+            .withQueryParam(QUERY_PARAM_RECEIVER, WireMock.matching(".*"));
+
+        if (loadFlowResultUuid != null) {
+            mappingBuilder.withQueryParam(QUERY_PARAM_RESULT_UUID, WireMock.equalTo(loadFlowResultUuid.toString()));
+        }
+
+        return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(responseBody))).getId();
+    }
+
+    public void verifyRunLoadflow(UUID stubUuid, UUID networkUuid, boolean withRatioTapChangers, UUID loadFlowResultUuid) {
+        HashMap<String, StringValuePattern> params = new HashMap<>();
+        params.put(QUERY_WITH_TAP_CHANGER, WireMock.equalTo(withRatioTapChangers ? "true" : "false"));
+        params.put(QUERY_PARAM_RECEIVER, WireMock.matching(".*"));
+
+        if (loadFlowResultUuid != null) {
+            params.put(QUERY_PARAM_RESULT_UUID, WireMock.equalTo(loadFlowResultUuid.toString()));
+        }
+
+        verifyPostRequest(stubUuid, "/v1/networks/" + networkUuid + "/run-and-save", params);
+    }
+
+    public UUID stubDeleteLoadFlowResults(List<UUID> loadFlowResultUuids) {
+        return wireMock.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/results"))
+                .withQueryParam(QUERY_PARAM_RESULTS_UUIDS, WireMock.equalTo(String.join(",", loadFlowResultUuids.stream().map(UUID::toString).toList())))
+            .willReturn(WireMock.ok())
+        ).getId();
+    }
+
+    public void verifyDeleteLoadFlowResults(UUID stubUuid, List<UUID> loadFlowResultUuids) {
+        HashMap<String, StringValuePattern> params = new HashMap<>();
+        params.put(QUERY_PARAM_RESULTS_UUIDS, WireMock.equalTo(String.join(",", loadFlowResultUuids.stream().map(UUID::toString).toList())));
+
+        verifyDeleteRequest(stubUuid, "/v1/results", false, params);
+    }
+
+    public UUID stubCreateRunningLoadflowStatus(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/results/running-status"))
+            .willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(responseBody))
+        ).getId();
+    }
+
+    public void verifyCreateRunningLoadflowStatus(UUID stubUuid) {
+        verifyPostRequest(stubUuid, "/v1/results/running-status", false, new HashMap<>(), null);
     }
 
     public UUID stubImportNetwork(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String variantId, String caseFormat, String caseName, CountDownLatch countDownLatch) {
@@ -514,4 +553,21 @@ public class WireMockUtils {
         }
         verifyGetRequest(stubUuid, "/v1/filters/export", queryParams);
     }
+
+    public UUID stubSearchModifications(String networkUuid, String userInput, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/network-modifications/indexation-infos"))
+                        .withQueryParam("networkUuid", WireMock.equalTo(networkUuid))
+                        .withQueryParam("userInput", WireMock.equalTo(userInput))
+                        .willReturn(WireMock.ok()
+                                .withHeader("Content-Type", "application/json")
+                                .withBody(responseBody)))
+                .getId();
+    }
+
+    public void verifySearchModifications(UUID stubUuid, String networkUuid, String userInput) {
+        verifyGetRequest(stubUuid, "/v1/network-modifications/indexation-infos",
+                Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid),
+                        "userInput", WireMock.equalTo(userInput)));
+    }
+
 }

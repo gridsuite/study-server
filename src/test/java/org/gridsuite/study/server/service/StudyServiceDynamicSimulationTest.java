@@ -12,7 +12,6 @@ import com.powsybl.timeseries.IrregularTimeSeriesIndex;
 import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
@@ -118,7 +117,7 @@ class StudyServiceDynamicSimulationTest {
         // setup DynamicSimulationService mock
         given(dynamicSimulationService.runDynamicSimulation(any(), eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any())).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResults(anyList());
-        given(rootNetworkNodeInfoService.getLoadFlowStatus(NODE_UUID, ROOTNETWORK_UUID)).willReturn(LoadFlowStatus.CONVERGED.name());
+        given(rootNetworkNodeInfoService.isLoadflowConverged(NODE_UUID, ROOTNETWORK_UUID)).willReturn(true);
 
         // init parameters
         DynamicSimulationParametersInfos parameters = new DynamicSimulationParametersInfos();

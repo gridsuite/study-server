@@ -78,6 +78,9 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "loadflowResultUuid")
     private UUID loadFlowResultUuid;
 
+    @Column(name = "loadflowWithRatioTapChangers")
+    private Boolean loadFlowWithRatioTapChangers;
+
     @Column(name = "voltageInitResultUuid")
     private UUID voltageInitResultUuid;
 
@@ -98,6 +101,9 @@ public class RootNetworkNodeInfoEntity {
 
     @Column(name = "stateEstimationResultUuid")
     private UUID stateEstimationResultUuid;
+
+    @Column(name = "blockedBuild")
+    private Boolean blockedBuild;
 
     @Embedded
     @AttributeOverrides(value = {
@@ -121,6 +127,7 @@ public class RootNetworkNodeInfoEntity {
             .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
             .dynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid)
             .loadFlowResultUuid(loadFlowResultUuid)
+            .loadFlowWithRatioTapChangers(loadFlowWithRatioTapChangers)
             .nodeBuildStatus(nodeBuildStatus.toDto())
             .nonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid)
             .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)

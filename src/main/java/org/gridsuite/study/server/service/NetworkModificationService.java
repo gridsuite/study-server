@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
-import org.gridsuite.modification.dto.ModificationInfos;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
@@ -17,6 +16,7 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
+import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.util.Pair;
@@ -30,6 +30,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -51,6 +52,8 @@ public class NetworkModificationService {
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String QUERY_PARAM_ACTION = "action";
+    private static final String PARAM_USER_INPUT = "userInput";
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final RootNetworkService rootNetworkService;
@@ -80,7 +83,7 @@ public class NetworkModificationService {
                 .toUriString();
     }
 
-    public List<ModificationInfos> getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata) {
+    public String getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH)
             .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
@@ -90,8 +93,7 @@ public class NetworkModificationService {
             .toUriString();
 
         try {
-            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<ModificationInfos>>() {
-            }).getBody();
+            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, GET_MODIFICATIONS_FAILED);
         }
@@ -257,11 +259,17 @@ public class NetworkModificationService {
         }
     }
 
-    public void buildNode(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos) {
+    public void buildNode(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos, AbstractWorkflowInfos workflowInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String receiver = buildReceiver(nodeUuid, rootNetworkUuid);
 
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(buildPathFrom(networkUuid) + "build");
+
+        if (workflowInfos != null) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_WORKFLOW_TYPE, workflowInfos.getType());
+            uriComponentsBuilder.queryParam(QUERY_PARAM_WORKFLOW_INFOS, URLEncoder.encode(toJson(workflowInfos), StandardCharsets.UTF_8));
+        }
+
         var path = uriComponentsBuilder
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
             .build()
@@ -355,14 +363,18 @@ public class NetworkModificationService {
     }
 
     private String buildReceiver(UUID nodeUuid, UUID rootNetworkUuid) {
-        String receiver;
+        return URLEncoder.encode(toJson(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
+    }
+
+    private String toJson(Object object) {
+        String json;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)),
-                    StandardCharsets.UTF_8);
+            json = objectMapper.writeValueAsString(object);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
-        return receiver;
+
+        return json;
     }
 
     public void deleteStashedModifications(UUID groupUUid) {
@@ -399,5 +411,20 @@ public class NetworkModificationService {
             .toUriString();
 
         restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.DELETE, null, Void.class);
+    }
+
+    public Map<UUID, Object> searchModifications(UUID networkUuid, String userInput) {
+        URI uri = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + "/indexation-infos")
+                .queryParam("networkUuid", "{networkUuid}")
+                .queryParam(PARAM_USER_INPUT, "{userInput}")
+                .build(networkUuid, userInput);
+
+        return restTemplate
+                .exchange(uri, HttpMethod.GET,
+                        null,
+                        new ParameterizedTypeReference<Map<UUID, Object>>() {
+                        }).getBody();
+
     }
 }

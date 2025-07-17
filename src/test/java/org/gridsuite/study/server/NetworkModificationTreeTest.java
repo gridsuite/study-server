@@ -47,6 +47,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
+import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -597,7 +598,7 @@ class NetworkModificationTreeTest {
 
         List<AbstractNode> children = root.getChildren();
         assertEquals(2, children.size());
-        NetworkModificationNode n1 = (NetworkModificationNode) children.get(0);
+        NetworkModificationNode n1 = (NetworkModificationNode) (children.stream().filter(c -> c.getName().equals("n1")).findFirst().orElseThrow());
         NetworkModificationNodeInfoEntity n1Infos = networkModificationTreeService.getNetworkModificationNodeInfoEntity(n1.getId());
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(n1.getId(), firstRootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
 
@@ -628,15 +629,15 @@ class NetworkModificationTreeTest {
         UUID n4Id = n2Children.get(1).getId();
         UUID badUuid = UUID.randomUUID();
 
-        assertTrue(networkModificationTreeService.hasAncestor(rootId, rootId));
-        assertFalse(networkModificationTreeService.hasAncestor(rootId, n1Id));
-        assertTrue(networkModificationTreeService.hasAncestor(n1Id, rootId));
-        assertTrue(networkModificationTreeService.hasAncestor(n3Id, rootId));
-        assertTrue(networkModificationTreeService.hasAncestor(n4Id, rootId));
-        assertTrue(networkModificationTreeService.hasAncestor(n4Id, n2Id));
-        assertFalse(networkModificationTreeService.hasAncestor(n4Id, n1Id));
-        assertFalse(networkModificationTreeService.hasAncestor(n3Id, badUuid));
-        assertThrows(StudyException.class, () -> networkModificationTreeService.hasAncestor(badUuid, rootId), "ELEMENT_NOT_FOUND");
+        assertFalse(networkModificationTreeService.isAChild(rootId, rootId));
+        assertFalse(networkModificationTreeService.isAChild(n1Id, rootId));
+        assertTrue(networkModificationTreeService.isAChild(rootId, n1Id));
+        assertTrue(networkModificationTreeService.isAChild(rootId, n3Id));
+        assertTrue(networkModificationTreeService.isAChild(rootId, n4Id));
+        assertTrue(networkModificationTreeService.isAChild(n2Id, n4Id));
+        assertFalse(networkModificationTreeService.isAChild(n1Id, n4Id));
+        assertFalse(networkModificationTreeService.isAChild(badUuid, n3Id));
+        assertFalse(networkModificationTreeService.isAChild(rootId, badUuid));
     }
 
     @Test
@@ -661,27 +662,27 @@ class NetworkModificationTreeTest {
         /*  expected :
                 root
                /    \
-           node1     node2
+   node1(hypo 1)     node2(loadflow)
         */
         assertChildrenEquals(Set.of(node1, node2), root.getChildren());
 
         node2.setName("niark");
         node1.setName("condriak");
         node1.setModificationGroupUuid(UUID.randomUUID());
-        createNode(root.getStudyId(), children.get(1), node2, userId);
-        createNode(root.getStudyId(), children.get(1), node1, userId);
+        AbstractNode child = children.stream().filter(c -> c.getName().equals("loadflow")).findFirst().orElseThrow();
+        createNode(root.getStudyId(), child, node2, userId);
+        createNode(root.getStudyId(), child, node1, userId);
 
         /*  expected
                 root
                /    \
-           node1      node2
+           node1      node2(loadflow)
                     /    \
         node(condriak)   node(niark)
          */
 
         root = getRootNode(root.getStudyId(), firstRootNetwork);
-        AbstractNode child;
-        if (root.getChildren().get(0).getName().equals(children.get(1).getName())) {
+        if (root.getChildren().get(0).getName().equals(child.getName())) {
             child = root.getChildren().get(0);
         } else {
             child = root.getChildren().get(1);
@@ -692,23 +693,26 @@ class NetworkModificationTreeTest {
         deleteNode(root.getStudyId(), List.of(child), false, Set.of(child), true, userId);
 
         /*  expected
-              root
-            /   |   \
-          node node node
+                  root
+            /      |      \
+          node    node      node
+       (hypo 1) (condriak) (niark)
         */
 
         root = getRootNode(root.getStudyId(), firstRootNetwork);
         assertEquals(3, root.getChildren().size());
         child = root.getChildren().get(0);
+
         createNode(root.getStudyId(), child, node4, userId);
 
         deleteNode(root.getStudyId(), List.of(child), true, Set.of(child, node4), userId);
 
         /* expected
-             root
-              |
-             node
+                 root
+              |        \
+             node      node
          */
+
         root = getRootNode(root.getStudyId(), firstRootNetwork);
         assertEquals(2, root.getChildren().size());
         assertEquals(3, nodeRepository.findAll().size());
@@ -856,7 +860,7 @@ class NetworkModificationTreeTest {
          */
         root = getRootNode(root.getStudyId());
         assertEquals(1, root.getChildren().stream().filter(child -> child.getId().equals(unchangedNode.getId())).count());
-        AbstractNode newNode = root.getChildren().get(0).getId().equals(unchangedNode.getId()) ? root.getChildren().get(1) : root.getChildren().get(1);
+        AbstractNode newNode = root.getChildren().get(0).getId().equals(unchangedNode.getId()) ? root.getChildren().get(1) : root.getChildren().get(0);
         assertEquals(willBeMoved.getId(), newNode.getChildren().get(0).getId());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID())

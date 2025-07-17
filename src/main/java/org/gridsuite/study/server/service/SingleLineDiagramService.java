@@ -24,8 +24,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.DiagramParameters;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -42,12 +41,12 @@ public class SingleLineDiagramService {
     static final String QUERY_PARAM_SUBSTATION_LAYOUT = "substationLayout";
     static final String QUERY_PARAM_DEPTH = "depth";
     static final String QUERY_PARAM_INIT_WITH_GEO_DATA = "withGeoData";
-    static final String QUERY_PARAM_NAD_CONFIG_UUID = "nadConfigUuid";
+    static final String QUERY_PARAM_ELEMENT_PARAMS = "elementParams";
     static final String NOT_FOUND = " not found";
     static final String QUERY_PARAM_DISPLAY_MODE = "sldDisplayMode";
     static final String LANGUAGE = "language";
     static final String VOLTAGE_LEVEL = "Voltage level ";
-    static final String NAD_CONFIG_UUID = "Nad config UUID ";
+    static final String ELEMENT = "Element";
 
     private final RestTemplate restTemplate;
 
@@ -168,51 +167,29 @@ public class SingleLineDiagramService {
         return result;
     }
 
-    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, List<String> voltageLevelsIds, int depth, boolean withGeoData) {
+    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, String nadRequestInfos) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
-                "/network-area-diagram/{networkUuid}")
-                .queryParam(QUERY_PARAM_DEPTH, depth)
-                .queryParam(QUERY_PARAM_INIT_WITH_GEO_DATA, withGeoData);
+                "/network-area-diagram/{networkUuid}");
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         var path = uriComponentsBuilder
                 .buildAndExpand(networkUuid)
                 .toUriString();
-        String result;
-        try {
-            result = restTemplate.postForObject(singleLineDiagramServerBaseUri + path, voltageLevelsIds, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelsIds + NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-        return result;
-    }
 
-    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, UUID nadConfigUuid) {
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
-                "/network-area-diagram/{networkUuid}")
-                .queryParam(QUERY_PARAM_NAD_CONFIG_UUID, nadConfigUuid);
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder
-                .buildAndExpand(networkUuid)
-                .toUriString();
-        String result;
+        var headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> request = new HttpEntity<>(nadRequestInfos, headers);
+
         try {
-            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
+            return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, request, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, NAD_CONFIG_UUID + nadConfigUuid + NOT_FOUND);
+                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + NOT_FOUND);
             } else {
                 throw e;
             }
         }
-        return result;
     }
 
     public void setSingleLineDiagramServerBaseUri(String singleLineDiagramServerBaseUri) {

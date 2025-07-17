@@ -29,6 +29,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -308,7 +309,7 @@ class SecurityAnalysisTest {
                 } else if (path.matches("/v1/parameters/" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING) && method.equals("GET")) {
                     // profile params get request OK
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
-                } else if (path.matches("/v1/parameters/" + PROFILE_SECURITY_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING + "/provider") && method.equals("PATCH")) {
+                } else if (path.matches("/v1/parameters/" + PROFILE_SECURITY_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING + "/provider") && method.equals("PUT")) {
                     // provider update in duplicated params OK
                     return new MockResponse(200);
                 } else if (path.matches("/v1/parameters") && method.equals("POST")) {

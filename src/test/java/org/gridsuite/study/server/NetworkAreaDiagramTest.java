@@ -23,9 +23,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,9 +56,9 @@ class NetworkAreaDiagramTest {
     private static final String SINGLE_LINE_DIAGRAM_SERVER_BASE_URL = "/v1/network-area-diagram/";
     private static final String USER1 = "user1";
     private static final UUID NETWORK_UUID = UUID.randomUUID();
-    private static final UUID NAD_CONFIG_UUID = UUID.randomUUID();
     private static final UUID ROOTNETWORK_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
+    private static final String BODY_CONTENT = "bodyContent";
 
     @BeforeEach
     void setUp() {
@@ -73,57 +74,57 @@ class NetworkAreaDiagramTest {
 
     @Test
     void testGetNetworkAreaDiagramFromConfig() throws Exception {
-        UUID stubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching(SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + ".*"))
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching(SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + ".*"))
+                .withRequestBody(equalTo(BODY_CONTENT))
                 .willReturn(WireMock.ok()
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                         .withBody("nad-svg-from-config")
                 )).getId();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         NETWORK_UUID, ROOTNETWORK_UUID, NODE_UUID)
-                        .param("nadConfigUuid", NAD_CONFIG_UUID.toString())
+                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON)
                         .header("userId", USER1))
                 .andExpectAll(status().isOk(), content().string("nad-svg-from-config"))
                 .andReturn();
-
-        wireMockUtils.verifyGetRequest(stubId, SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID, Map.of(
-                "nadConfigUuid", WireMock.equalTo(NAD_CONFIG_UUID.toString()),
-                "variantId", WireMock.equalTo(VariantManagerConstants.INITIAL_VARIANT_ID)));
+        wireMockUtils.verifyPostRequest(
+                stubId,
+                SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID,
+                Map.of("variantId", WireMock.equalTo(VariantManagerConstants.INITIAL_VARIANT_ID)));
     }
 
     @Test
     void testGetNetworkAreaDiagramFromConfigVariantError() throws Exception {
         when(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).thenReturn("Another_variant");
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         NETWORK_UUID, ROOTNETWORK_UUID, NODE_UUID)
-                        .param("nadConfigUuid", NAD_CONFIG_UUID.toString())
+                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON)
                         .header("userId", USER1))
                 .andExpectAll(status().isNoContent());
     }
 
     @Test
     void testGetNetworkAreaDiagramFromConfigRootNetworkError() throws Exception {
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
-                        .param("nadConfigUuid", NAD_CONFIG_UUID.toString())
+                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON)
                         .header("userId", USER1))
                 .andExpectAll(status().isNotFound());
     }
 
     @Test
-    void testGetNetworkAreaDiagramFromConfigNadConfigUuidNotFound() throws Exception {
-        UUID stubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching(SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + ".*"))
+    void testGetNetworkAreaDiagramFromConfigElementUuidNotFound() throws Exception {
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching(SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + ".*"))
+                .withRequestBody(equalTo(BODY_CONTENT))
                 .willReturn(WireMock.notFound())).getId();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
                         NETWORK_UUID, ROOTNETWORK_UUID, NODE_UUID)
-                        .param("nadConfigUuid", NAD_CONFIG_UUID.toString())
+                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON)
                         .header("userId", USER1))
                 .andExpectAll(status().isNotFound());
 
-        wireMockUtils.verifyGetRequest(stubId, SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID, Map.of(
-                "nadConfigUuid", WireMock.equalTo(NAD_CONFIG_UUID.toString()),
-                "variantId", WireMock.equalTo(VariantManagerConstants.INITIAL_VARIANT_ID)));
+        wireMockUtils.verifyPostRequest(stubId, SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID, Map.of(
+                 "variantId", WireMock.equalTo(VariantManagerConstants.INITIAL_VARIANT_ID)));
     }
 }

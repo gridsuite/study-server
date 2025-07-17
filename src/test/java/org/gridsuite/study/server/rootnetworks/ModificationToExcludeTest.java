@@ -6,17 +6,15 @@
  */
 package org.gridsuite.study.server.rootnetworks;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
-import org.gridsuite.modification.dto.LoadCreationInfos;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.modification.ModificationInfosWithActivationStatus;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
+import org.gridsuite.study.server.networkmodificationtree.dto.ExcludedNetworkModifications;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
@@ -157,37 +155,13 @@ class ModificationToExcludeTest {
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
         assertEquals(validModificationUuid, rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude().stream().findFirst().orElseThrow());
-
-        // get modifications list with activation status
-        Mockito.when(networkModificationService.getModifications(firstNode.getModificationGroupUuid(), false, true)).thenReturn(
-            List.of(LoadCreationInfos.builder().uuid(UUID.fromString(validModificationUuid.toString())).equipmentId("load").build())
-        );
-        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=true", studyEntity.getId(), firstNode.getId()))
-            .andExpect(status().isOk())
-            .andReturn();
-        List<ModificationInfosWithActivationStatus> networkModifications = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
-        assertEquals(1, networkModifications.size());
-        Map<UUID, Boolean> activationStatuses = networkModifications.getFirst().getActivationStatusByRootNetwork();
-        assertFalse(activationStatuses.get(rootNetworkBasicInfos.getFirst().rootNetworkUuid()));
-        assertTrue(activationStatuses.get(rootNetworkBasicInfos.getLast().rootNetworkUuid()));
-
         // enable modification then check it's not stored in database anymore
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), firstNode.getId())
-                .param("uuids", validModificationUuid.toString())
-                .param("activated", Boolean.TRUE.toString())
-                .header(USER_ID, USER_ID))
-            .andExpect(status().isOk());
+                        .param("uuids", validModificationUuid.toString())
+                        .param("activated", Boolean.TRUE.toString())
+                        .header(USER_ID, USER_ID))
+                .andExpect(status().isOk());
         assertEquals(0, rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude().size());
-
-        // get modifications list with activation status
-        result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=true", studyEntity.getId(), firstNode.getId()))
-            .andExpect(status().isOk())
-            .andReturn();
-        networkModifications = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
-        assertEquals(1, networkModifications.size());
-        activationStatuses = networkModifications.getFirst().getActivationStatusByRootNetwork();
-        assertTrue(activationStatuses.get(rootNetworkBasicInfos.getFirst().rootNetworkUuid()));
-        assertTrue(activationStatuses.get(rootNetworkBasicInfos.getLast().rootNetworkUuid()));
     }
 
     @Test
@@ -269,6 +243,44 @@ class ModificationToExcludeTest {
         // assert those values are empty, duplicating node between studies should empty modifications to exclude
         assertTrue(duplicateRootNetworkNodeInfoEntity1.getModificationsUuidsToExclude().isEmpty());
         assertTrue(duplicateRootNetworkNodeInfoEntity2.getModificationsUuidsToExclude().isEmpty());
+    }
+
+    @Test
+    void testGetModificationsToExclude() throws Exception {
+        // create study with two root networks
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        createDummyRootNetwork(studyEntity, "secondRootNetwork");
+        studyRepository.save(studyEntity);
+        List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
+
+        // create root node and a network modification node - it will create a RootNetworkNodeInfoEntity for each root network
+        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+
+        // for each RootNetworkNodeInfoEntity, set some modifications to exclude
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        rootNetworkNodeInfoEntity1.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
+        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity1);
+
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        rootNetworkNodeInfoEntity2.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_2);
+        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity2);
+
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/excluded-network-modifications",
+                         studyEntity.getId(), firstNode.getId())
+                        .header(USER_ID, USER_ID))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        List<ExcludedNetworkModifications> excludedNetworkModifications = objectMapper.readValue(result.getResponse().getContentAsString(), new com.fasterxml.jackson.core.type.TypeReference<>() {
+        });
+
+        assertEquals(2, excludedNetworkModifications.size());
+
+        assertEquals(excludedNetworkModifications.getFirst().rootNetworkUuid(), rootNetworkBasicInfos.getFirst().rootNetworkUuid());
+        assertEquals(excludedNetworkModifications.getFirst().modificationUuidsToExclude(), rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude());
+        assertEquals(excludedNetworkModifications.get(1).rootNetworkUuid(), rootNetworkBasicInfos.get(1).rootNetworkUuid());
+        assertEquals(excludedNetworkModifications.get(1).modificationUuidsToExclude(), rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude());
     }
 
     @Test
@@ -533,7 +545,7 @@ class ModificationToExcludeTest {
         studyService.buildNode(studyEntity.getId(), secondNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), "userId");
 
         ArgumentCaptor<BuildInfos> buildInfosCaptor = ArgumentCaptor.forClass(BuildInfos.class);
-        Mockito.verify(networkModificationService, Mockito.times(1)).buildNode(eq(secondNode.getId()), eq(rootNetworkBasicInfos.getFirst().rootNetworkUuid()), buildInfosCaptor.capture());
+        Mockito.verify(networkModificationService, Mockito.times(1)).buildNode(eq(secondNode.getId()), eq(rootNetworkBasicInfos.getFirst().rootNetworkUuid()), buildInfosCaptor.capture(), eq(null));
         assertThat(buildInfosCaptor.getValue().getModificationUuidsToExclude().get(firstNode.getModificationGroupUuid())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(MODIFICATIONS_TO_EXCLUDE_RN_1);
         assertThat(buildInfosCaptor.getValue().getModificationUuidsToExclude().get(secondNode.getModificationGroupUuid())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(MODIFICATIONS_TO_EXCLUDE_RN_2);
     }
@@ -543,7 +555,7 @@ class ModificationToExcludeTest {
             .id(UUID.randomUUID())
             .name(name)
             .tag(UUID.randomUUID().toString().substring(0, 4))
-            .caseInfos(new CaseInfos(UUID.randomUUID(), "caseName", "caseFormat"))
+            .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), "caseName", "caseFormat"))
             .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
             .reportUuid(UUID.randomUUID())
             .build().toEntity();

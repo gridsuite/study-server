@@ -14,11 +14,12 @@ import lombok.NonNull;
 import org.apache.poi.util.StringUtil;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.Report;
-import org.gridsuite.study.server.dto.ReportLog;
+import org.gridsuite.study.server.dto.ReportPage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -97,19 +98,37 @@ public class ReportService {
         }
     }
 
-    public List<ReportLog> getReportLogs(@NonNull UUID id, String messageFilter, Set<String> severityLevels) {
-        var uriBuilder = UriComponentsBuilder.fromPath("{id}/logs");
+    public ReportPage getPagedReportLogs(@NonNull UUID id, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
+        return getPagedMultipleReportLogs(List.of(id), messageFilter, severityLevels, paged, pageable);
+    }
+
+    public ReportPage getPagedMultipleReportLogs(@NonNull List<UUID> reportIds, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
+        var uriBuilder = reportIds.size() == 1
+            ? UriComponentsBuilder.fromPath("{id}/logs")
+            : UriComponentsBuilder.fromPath("logs").queryParam("reportIds", reportIds);
+
+        if (paged) {
+            uriBuilder.queryParam("paged", paged)
+                    .queryParam("page", pageable.getPageNumber())
+                    .queryParam("size", pageable.getPageSize());
+        }
+
         if (severityLevels != null && !severityLevels.isEmpty()) {
             uriBuilder.queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
         }
+
         if (!StringUtil.isBlank(messageFilter)) {
             uriBuilder.queryParam(QUERY_PARAM_MESSAGE_FILTER, URLEncoder.encode(messageFilter, StandardCharsets.UTF_8));
         }
-        var path = uriBuilder.buildAndExpand(id).toUriString();
+
+        var path = reportIds.size() == 1
+            ? uriBuilder.buildAndExpand(reportIds.get(0)).toUriString()
+            : uriBuilder.buildAndExpand().toUriString();
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<List<ReportLog>>() {
-        }).getBody();
+
+        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<ReportPage>() { }).getBody();
     }
 
     public UUID duplicateReport(@NonNull UUID id) {
@@ -130,6 +149,46 @@ public class ReportService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), new ParameterizedTypeReference<Set<String>>() {
         }).getBody();
+    }
+
+    public String getSearchTermMatchesInFilteredLogs(
+        @NonNull UUID reportId,
+        Set<String> severityLevels,
+        String messageFilter,
+        @NonNull String searchTerm,
+        int pageSize
+    ) {
+        return getSearchTermMatchesInMultipleFilteredLogs(List.of(reportId), severityLevels, messageFilter, searchTerm, pageSize);
+    }
+
+    public String getSearchTermMatchesInMultipleFilteredLogs(
+        @NonNull List<UUID> reportIds,
+        Set<String> severityLevels,
+        String messageFilter,
+        @NonNull String searchTerm,
+        int pageSize
+    ) {
+        var uriBuilder = reportIds.size() == 1
+            ? UriComponentsBuilder.fromPath("{id}/logs/search")
+            : UriComponentsBuilder.fromPath("logs/search").queryParam("reportIds", reportIds);
+
+        uriBuilder.queryParam("searchTerm", searchTerm)
+                .queryParam("pageSize", pageSize);
+
+        if (severityLevels != null && !severityLevels.isEmpty()) {
+            uriBuilder.queryParam(QUERY_PARAM_REPORT_SEVERITY_LEVEL, severityLevels);
+        }
+        if (!StringUtil.isBlank(messageFilter)) {
+            uriBuilder.queryParam(QUERY_PARAM_MESSAGE_FILTER, URLEncoder.encode(messageFilter, StandardCharsets.UTF_8));
+        }
+
+        var path = reportIds.size() == 1
+            ? uriBuilder.buildAndExpand(reportIds.get(0)).toUriString()
+            : uriBuilder.buildAndExpand().toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
     }
 
     public void sendReport(UUID reportUuid, ReportNode reportNode) {
