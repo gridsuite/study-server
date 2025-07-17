@@ -3353,6 +3353,11 @@ public class StudyService {
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
+    public void duplicateColumn(UUID studyUuid, UUID configUuid, UUID columnUuid) {
+        studyConfigService.duplicateColumn(configUuid, columnUuid);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
     public void reorderColumns(UUID studyUuid, UUID configUuid, List<UUID> columnOrder) {
         studyConfigService.reorderColumns(configUuid, columnOrder);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
