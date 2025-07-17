@@ -959,8 +959,7 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public void assertCanRunLoadFLow(UUID studyUuid, UUID nodeUuid) {
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        if (networkModificationTreeService.isConstructionNode(nodeUuid) && DYNA_FLOW_PROVIDER.equals(getLoadFlowParametersInfos(studyEntity).getProvider())) {
+        if (networkModificationTreeService.isConstructionNode(nodeUuid) && DYNA_FLOW_PROVIDER.equals(getLoadFlowProvider(studyUuid))) {
             throw new StudyException(NOT_ALLOWED, "DynaFlow must run only from a security type node !");
         }
     }

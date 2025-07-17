@@ -9,11 +9,9 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.loadflow.LoadFlowParameters;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -84,6 +82,7 @@ class LoadFLowIntegrationTest {
     String variantId = "variantId";
     UUID parametersUuid = UUID.randomUUID();
     UUID loadflowResultUuid = UUID.randomUUID();
+    String testProvider = "test_provider";
 
     String userId = "userId";
 
@@ -177,35 +176,30 @@ class LoadFLowIntegrationTest {
 
     @Test
     void testRerunLoadFlowNotAllowed() throws Exception {
-        LoadFlowParametersInfos loadFlowParametersInfos = createLoadFlowParametersInfos(DYNA_FLOW_PROVIDER);
-        UUID loadFlowParametersStubUuid = wireMockUtils.stubLoadFlowParameters(parametersUuid, objectMapper.writeValueAsString(loadFlowParametersInfos));
-        Mockito.doReturn(parametersUuid).when(loadFlowService).createDefaultLoadFlowParameters();
+        UUID loadFlowProviderStubUuid = wireMockUtils.stubLoadFlowProvider(parametersUuid, DYNA_FLOW_PROVIDER);
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, nodeUuid, userId)
                         .param(QUERY_WITH_TAP_CHANGER, "false")
                         .header("userId", userId))
                 .andExpect(status().isForbidden());
-        wireMockUtils.verifyLoadFlowParametersGet(loadFlowParametersStubUuid, parametersUuid);
+        wireMockUtils.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
     }
 
     private void runLoadFlow(boolean withRatioTapChangers) throws Exception {
-        LoadFlowParametersInfos loadFlowParametersInfos = createLoadFlowParametersInfos("test_provider");
         UUID runLoadflowStubUuid = wireMockUtils.stubRunLoadFlow(networkUuid, withRatioTapChangers, null, objectMapper.writeValueAsString(loadflowResultUuid));
-        UUID loadFlowParametersStubUuid = wireMockUtils.stubLoadFlowParameters(parametersUuid, objectMapper.writeValueAsString(loadFlowParametersInfos));
-        Mockito.doReturn(parametersUuid).when(loadFlowService).createDefaultLoadFlowParameters();
+        UUID loadFlowProviderStubUuid = wireMockUtils.stubLoadFlowProvider(parametersUuid, testProvider);
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, nodeUuid, userId)
                 .param(QUERY_WITH_TAP_CHANGER, withRatioTapChangers ? "true" : "false")
                 .header("userId", userId))
             .andExpect(status().isOk());
         wireMockUtils.verifyRunLoadflow(runLoadflowStubUuid, networkUuid, withRatioTapChangers, null);
-        wireMockUtils.verifyLoadFlowParametersGet(loadFlowParametersStubUuid, parametersUuid);
+        wireMockUtils.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
     }
 
     private void rerunLoadFlow(boolean withRatioTapChangers) throws Exception {
         UUID newLoadflowResultUuid = UUID.randomUUID();
-        LoadFlowParametersInfos loadFlowParametersInfos = createLoadFlowParametersInfos("test_provider");
         UUID stubDeleteLoadflowResultUuid = wireMockUtils.stubDeleteLoadFlowResults(List.of(loadflowResultUuid));
         UUID stubCreateRunningLoadflowStatusUuid = wireMockUtils.stubCreateRunningLoadflowStatus(objectMapper.writeValueAsString(newLoadflowResultUuid));
-        UUID loadFlowParametersStubUuid = wireMockUtils.stubLoadFlowParameters(parametersUuid, objectMapper.writeValueAsString(loadFlowParametersInfos));
+        UUID loadFlowProviderStubUuid = wireMockUtils.stubLoadFlowProvider(parametersUuid, testProvider);
 
         Mockito.doReturn(parametersUuid).when(loadFlowService).createDefaultLoadFlowParameters();
 
@@ -216,13 +210,12 @@ class LoadFLowIntegrationTest {
                 .header("userId", userId))
             .andExpect(status().isOk());
 
-        Mockito.verify(loadFlowService, times(2)).createDefaultLoadFlowParameters();
         wireMockUtils.verifyDeleteLoadFlowResults(stubDeleteLoadflowResultUuid, List.of(loadflowResultUuid));
         wireMockUtils.verifyCreateRunningLoadflowStatus(stubCreateRunningLoadflowStatusUuid);
         ArgumentCaptor<RerunLoadFlowInfos> rerunLoadFlowWorkflowInfosArgumentCaptor = ArgumentCaptor.forClass(RerunLoadFlowInfos.class);
         Mockito.verify(networkModificationService, times(1)).buildNode(eq(nodeUuid), eq(rootNetworkUuid), any(BuildInfos.class), rerunLoadFlowWorkflowInfosArgumentCaptor.capture());
         assertEquals(withRatioTapChangers, rerunLoadFlowWorkflowInfosArgumentCaptor.getValue().isWithRatioTapChangers());
-        wireMockUtils.verifyLoadFlowParametersGet(loadFlowParametersStubUuid, parametersUuid);
+        wireMockUtils.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
 
         // verify that the node is blocked
         // build is forbidden, for example
@@ -244,18 +237,11 @@ class LoadFLowIntegrationTest {
         assertEquals(isNodeBlocked, networkNodeInfoEntity.get().getBlockedBuild());
     }
 
-    private LoadFlowParametersInfos createLoadFlowParametersInfos(String provider) {
-        return LoadFlowParametersInfos.builder()
-            .provider(provider)
-            .commonParameters(LoadFlowParameters.load())
-            .specificParametersPerProvider(Map.of())
-            .build();
-    }
-
     private StudyEntity insertStudy() {
         return StudyEntity.builder()
             .id(UUID.randomUUID())
             .voltageInitParameters(new StudyVoltageInitParametersEntity())
+            .loadFlowParametersUuid(parametersUuid)
             .build();
     }
 
