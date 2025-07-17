@@ -560,6 +560,7 @@ public class StudyService {
                 removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
+                removeStudyLayout(s.getStudyLayoutUuid());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -2608,6 +2609,16 @@ public class StudyService {
         }
     }
 
+    private void removeStudyLayout(@Nullable UUID studyLayoutUuid) {
+        if (studyLayoutUuid != null) {
+            try {
+                studyConfigService.deleteStudyLayout(studyLayoutUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove study layout config with uuid:" + studyLayoutUuid, e);
+            }
+        }
+    }
+
     @Transactional
     public String updateSpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid, boolean appendMode) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
@@ -3387,5 +3398,29 @@ public class StudyService {
     public void reorderSpreadsheetConfigs(UUID studyUuid, UUID collectionUuid, List<UUID> newOrder) {
         studyConfigService.reorderSpreadsheetConfigs(collectionUuid, newOrder);
         notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
+    }
+
+    public String getStudyLayout(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID studyLayoutUuid = studyEntity.getStudyLayoutUuid();
+        if (studyLayoutUuid == null) {
+            return null;
+        }
+
+        return studyConfigService.getStudyLayout(studyLayoutUuid);
+    }
+
+    @Transactional
+    public UUID saveStudyLayout(UUID studyUuid, String studyLayout) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID existingStudyLayoutUuid = studyEntity.getStudyLayoutUuid();
+        if (existingStudyLayoutUuid == null) {
+            UUID newStudyLayoutUuid = studyConfigService.saveStudyLayout(studyLayout);
+            studyEntity.setStudyLayoutUuid(newStudyLayoutUuid);
+            return newStudyLayoutUuid;
+        }
+
+        studyConfigService.updateStudyLayout(existingStudyLayoutUuid, studyLayout);
+        return existingStudyLayoutUuid;
     }
 }
