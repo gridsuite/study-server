@@ -682,6 +682,7 @@ public class StudyController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertNoBlockedBuildInNodeTree(nodeUuid, rootNetworkUuid);
+        studyService.assertCanRunLoadFLow(studyUuid, nodeUuid);
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         if (prevResultUuid != null) {
             handleRerunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers, userId);
@@ -2396,5 +2397,12 @@ public class StudyController {
         studyService.assertIsStudyExist(studyUuid);
         studyService.updateNodeAliases(studyUuid, nodeAliases);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/loadflow/provider")
+    @Operation(summary = "Get loadflow provider for a specified study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow provider is returned")})
+    public ResponseEntity<String> getLoadFlowProvider(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
     }
 }
