@@ -597,10 +597,13 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public String getShortCircuitAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
+    public String getShortCircuitAnalysisResult(UUID rootNetworkUuid, UUID nodeUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, String globalFilters, boolean paged, Pageable pageable) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElse(null);
+        String variantId = rootNetworkNodeInfoEntity == null ? null : rootNetworkNodeInfoEntity.getVariantId();
+        UUID networkUuid = rootNetworkNodeInfoEntity == null ? rootNetworkUuid : rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
             type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
-        return shortCircuitService.getShortCircuitAnalysisResult(resultUuid, mode, type, filters, paged, pageable);
+        return shortCircuitService.getShortCircuitAnalysisResult(networkUuid, variantId, resultUuid, mode, type, filters, globalFilters, paged, pageable);
     }
 
     @Transactional(readOnly = true)
