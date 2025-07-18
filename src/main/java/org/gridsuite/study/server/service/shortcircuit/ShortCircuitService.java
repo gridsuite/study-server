@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
@@ -122,9 +123,9 @@ public class ShortCircuitService extends AbstractComputationService {
         return resultPath + "/paged";
     }
 
-    public String getShortCircuitAnalysisResult(UUID resultUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
+    public String getShortCircuitAnalysisResult(UUID rootNetworkUuid, String variantId, UUID resultUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, String globalFilters, boolean paged, Pageable pageable) {
         if (paged) {
-            return getShortCircuitAnalysisResultsPage(resultUuid, mode, type, filters, pageable);
+            return getShortCircuitAnalysisResultsPage(rootNetworkUuid, variantId, resultUuid, mode, type, filters, globalFilters, pageable);
         } else {
             return getShortCircuitAnalysisResult(resultUuid, mode);
         }
@@ -170,17 +171,23 @@ public class ShortCircuitService extends AbstractComputationService {
         return getShortCircuitAnalysisResource(builder.build().toUri());
     }
 
-    public String getShortCircuitAnalysisResultsPage(UUID resultUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, Pageable pageable) {
+    public String getShortCircuitAnalysisResultsPage(UUID rootNetworkUuid, String variantId, UUID resultUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, String globalFilters, Pageable pageable) {
         String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(resultUuid, type);
         if (resultsPath == null) {
             return null;
         }
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultsPath)
+                .queryParam("rootNetworkUuid", rootNetworkUuid)
+                .queryParam("variantId", variantId)
                 .queryParam("mode", mode);
 
         if (filters != null && !filters.isEmpty()) {
             builder.queryParam("filters", filters);
+        }
+
+        if (globalFilters != null && !globalFilters.isEmpty()) {
+            builder.queryParam("globalFilters", globalFilters);
         }
 
         addPageableToQueryParams(builder, pageable);
