@@ -46,6 +46,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
+import org.gridsuite.study.server.utils.StudyParameters;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
@@ -801,7 +802,7 @@ public class StudyController {
                                                         @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
                                                         @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false, defaultValue = "false") boolean paged,
                                                         Pageable pageable) {
-        String result = rootNetworkNodeInfoService.getShortCircuitAnalysisResult(rootNetworkUuid, nodeUuid, mode, type, filters, globalFilters, paged, pageable);
+        String result = rootNetworkNodeInfoService.getShortCircuitAnalysisResult(new StudyParameters(rootNetworkUuid, nodeUuid), mode, type, filters, globalFilters, paged, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
                 ResponseEntity.noContent().build();
     }
