@@ -337,6 +337,8 @@ class VoltageInitTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitErrorResultUuidStr);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_RESULT_JSON);
+                } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "\\?globalFilters=.*networkUuid=.*variantId.*")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_STATUS_JSON);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")) {
@@ -587,6 +589,12 @@ class VoltageInitTest {
                 status().isOk(),
                 content().string(VOLTAGE_INIT_RESULT_JSON));
         TestUtils.assertRequestMatches("GET", "/v1/results/" + VOLTAGE_INIT_RESULT_UUID, server);
+
+        // get voltage init result with globalFilters
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/result?globalFilters=ss", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)).andExpectAll(
+                status().isOk(),
+                content().string(VOLTAGE_INIT_RESULT_JSON));
+        TestUtils.assertRequestMatches("GET", "/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "\\?globalFilters=.*\\&networkUuid=.*\\&variantId=.*", server);
 
         // get voltage init status
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)).andExpectAll(

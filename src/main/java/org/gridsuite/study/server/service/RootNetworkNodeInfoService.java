@@ -612,12 +612,6 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
-        return voltageInitService.getVoltageInitResult(resultUuid);
-    }
-
-    @Transactional(readOnly = true)
     public String getStateEstimationResult(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
         return stateEstimationService.getStateEstimationResult(resultUuid);
