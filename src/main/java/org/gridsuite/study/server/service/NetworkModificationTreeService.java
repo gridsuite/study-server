@@ -598,42 +598,55 @@ public class NetworkModificationTreeService {
     }
 
     public void assertIsRootOrConstructionNode(UUID nodeUuid) {
-        if (!self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) && !getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType().equals(NetworkModificationNodeType.CONSTRUCTION)) {
+        if (!self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) && !isConstructionNode(nodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
     }
 
+    private NetworkModificationNodeType getReferenceNodeType(NodeEntity referenceNode) {
+        return referenceNode.getType().equals(NodeType.ROOT)
+                ? null
+                : getNetworkModificationNodeInfoEntity(referenceNode.getIdNode()).getNodeType();
+    }
+
+    private boolean isConstructionUnderSecurityNode(NetworkModificationNodeType newNodeType, NetworkModificationNodeType referenceNodeType) {
+        return newNodeType == NetworkModificationNodeType.CONSTRUCTION &&
+                referenceNodeType == NetworkModificationNodeType.SECURITY;
+    }
+
+    private boolean isInvalidSecurityNodeInsertion(NetworkModificationNodeType newNodeType, InsertMode insertMode, NetworkModificationNodeType referenceNodeType) {
+        return newNodeType == NetworkModificationNodeType.SECURITY &&
+                insertMode != InsertMode.CHILD &&
+                referenceNodeType != NetworkModificationNodeType.SECURITY;
+    }
+
     private void assertIsNetworkModificationInsertionAllowed(
-            NodeEntity referenceNode,
+            NodeEntity nodeEntity,
             NetworkModificationNodeType newNodeType,
             InsertMode insertMode
     ) {
-        NetworkModificationNodeType referenceNodeType = referenceNode.getType().equals(NodeType.ROOT)
-                ? null
-                : getNetworkModificationNodeInfoEntity(referenceNode.getIdNode()).getNodeType();
+        NetworkModificationNodeType referenceNodeType = getReferenceNodeType(nodeEntity);
 
-        if (newNodeType.equals(NetworkModificationNodeType.CONSTRUCTION)
-                && referenceNodeType == NetworkModificationNodeType.SECURITY) {
+        if (isConstructionUnderSecurityNode(newNodeType, referenceNodeType) ||
+                isInvalidSecurityNodeInsertion(newNodeType, insertMode, referenceNodeType)) {
             throw new StudyException(NOT_ALLOWED);
         }
+    }
 
-        if (newNodeType.equals(NetworkModificationNodeType.SECURITY)
-                && insertMode != InsertMode.CHILD
-                && referenceNodeType != NetworkModificationNodeType.SECURITY) {
-            throw new StudyException(NOT_ALLOWED);
-        }
+    public void assertIsNetworkModificationNodeCreationAllowed(UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode) {
+        NetworkModificationNodeType newNodeType = nodeInfo.getNodeType();
+        NodeEntity nodeEntity = getNodeEntity(nodeId);
+        assertIsNetworkModificationInsertionAllowed(nodeEntity, newNodeType, insertMode);
+    }
+
+    public boolean isConstructionNode(UUID nodeUuid) {
+        return getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType() == NetworkModificationNodeType.CONSTRUCTION;
     }
 
     public void assertNodeCanBeDuplicatedOrCut(UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) {
         NodeEntity referenceNode = getNodeEntity(referenceNodeUuid);
         NetworkModificationNodeInfoEntity nodeToCopy = networkModificationNodeInfoRepository.getReferenceById(nodeToCopyUuid);
         assertIsNetworkModificationInsertionAllowed(referenceNode, nodeToCopy.getNodeType(), insertMode);
-    }
-
-    public void assertIsNetworkModificationNodeCreationAllowed(UUID referenceNodeUuid, NetworkModificationNode nodeInfo, InsertMode insertMode) {
-        NetworkModificationNodeType newNodeType = nodeInfo.getNodeType();
-        NodeEntity reference = getNodeEntity(referenceNodeUuid);
-        assertIsNetworkModificationInsertionAllowed(reference, newNodeType, insertMode);
     }
 
     public boolean assertSubtreeCanBeDuplicatedOrMoved(List<NetworkModificationNodeInfoEntity> subtreeNodes, UUID referenceNodeUuid) {
@@ -682,6 +695,7 @@ public class NetworkModificationTreeService {
             .stream()
             .map(AbstractNodeInfoEntity::getName)
             .toList();
+
         String uniqueName = nodeName;
         int i = 1;
         while (studyNodeNames.contains(uniqueName)) {
