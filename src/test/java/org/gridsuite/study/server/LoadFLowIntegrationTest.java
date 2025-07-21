@@ -193,6 +193,14 @@ class LoadFLowIntegrationTest {
             .andExpect(status().isOk());
         wireMockUtils.verifyRunLoadflow(runLoadflowStubUuid, networkUuid, withRatioTapChangers, null);
         wireMockUtils.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
+        assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
+
+        // consume loadflow result
+        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
+        MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", loadflowResultUuid.toString(), "withRatioTapChangers", withRatioTapChangers, HEADER_RECEIVER, resultUuidJson));
+        consumerService.consumeLoadFlowResult().accept(MessageBuilder.createMessage("", messageHeaders));
+
+        assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
     }
 
     private void rerunLoadFlow(boolean withRatioTapChangers) throws Exception {

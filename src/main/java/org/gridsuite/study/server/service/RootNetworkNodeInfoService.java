@@ -240,8 +240,9 @@ public class RootNetworkNodeInfoService {
 
     public InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters) {
         boolean notOnlyChildrenBuildStatus = !invalidateTreeParameters.isOnlyChildrenBuildStatus();
+
         // Always update blocked build info
-        if (notOnlyChildrenBuildStatus && invalidateTreeParameters.withBlockedNodeBuild()) {
+        if (invalidateTreeParameters.withBlockedNodeBuild()) {
             rootNetworkNodeInfoEntity.setBlockedBuild(true);
         }
 

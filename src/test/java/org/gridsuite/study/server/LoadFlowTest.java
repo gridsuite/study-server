@@ -177,6 +177,8 @@ class LoadFlowTest {
     private TestUtils studyTestUtils;
     @Autowired
     private NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
+    @Autowired
+    private ConsumerService consumerService;
 
     @BeforeEach
     void setup(final MockWebServer server) throws Exception {
@@ -250,10 +252,6 @@ class LoadFlowTest {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = Objects.requireNonNull(request.getMethod());
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + ".*")) {
-                    input.send(MessageBuilder.withPayload("")
-                            .setHeader("resultUuid", LOADFLOW_RESULT_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
-                            .build(), LOADFLOW_RESULT_DESTINATION);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), loadFlowResultUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
@@ -340,6 +338,25 @@ class LoadFlowTest {
         server.setDispatcher(dispatcher);
     }
 
+    private void assertNodeBlocked(UUID nodeUuid, UUID rootNetworkUuid, boolean isNodeBlocked) {
+        Optional<RootNetworkNodeInfoEntity> networkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
+        assertTrue(networkNodeInfoEntity.isPresent());
+        assertEquals(isNodeBlocked, networkNodeInfoEntity.get().getBlockedBuild());
+    }
+
+    private void consumeLoadFlowResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) throws JsonProcessingException {
+        assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
+
+        // consume loadflow result
+        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
+        MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", LOADFLOW_RESULT_UUID.toString(), "withRatioTapChangers", false, HEADER_RECEIVER, resultUuidJson));
+        consumerService.consumeLoadFlowResult().accept(MessageBuilder.createMessage("", messageHeaders));
+        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
+
+        assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
+    }
+
     @Test
     void testLoadFlow(final MockWebServer server) throws Exception {
         MvcResult mvcResult;
@@ -370,16 +387,14 @@ class LoadFlowTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
-
         // running loadflow now invalidate node children and their computations
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
 
         assertRequestsDone(server, List.of("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2, "/v1/parameters/" + LOADFLOW_PARAMETERS_UUID + "/provider"));
+
+        consumeLoadFlowResult(studyNameUserIdUuid, modificationNode3Uuid, firstRootNetworkUuid);
 
         // get loadflow result
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/result", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)).andExpectAll(
@@ -443,14 +458,13 @@ class LoadFlowTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
-
         // running loadflow now invalidate node children and their computations
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         assertRequestsDone(server, List.of("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID + "/provider", "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
+
+        consumeLoadFlowResult(studyNameUserIdUuid, modificationNode1Uuid, firstRootNetworkUuid);
 
         // get computing status
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
@@ -500,14 +514,13 @@ class LoadFlowTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
-
         // running loadflow now invalidate children and their computations
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         assertRequestsDone(server, List.of("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID + "/provider", "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
+
+        consumeLoadFlowResult(studyNameUserIdUuid, modificationNode1Uuid, firstRootNetworkUuid);
 
         // invalidate status
         mockMvc.perform(put("/v1/studies/{studyUuid}/loadflow/invalidate-status", studyNameUserIdUuid)
@@ -545,14 +558,14 @@ class LoadFlowTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
-
         // running loadflow now invalidate node children and their computations
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         assertRequestsDone(server, List.of("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID + "/provider", "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
+
+        consumeLoadFlowResult(studyNameUserIdUuid, modificationNode3Uuid, firstRootNetworkUuid);
+
         //Test result count
         testResultCount(server);
         //Delete Voltage init results
