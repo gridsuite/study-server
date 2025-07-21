@@ -161,6 +161,7 @@ class StudyTest {
     private static final ReportPage REPORT_PAGE = new ReportPage(0, REPORT_LOGS, 1, 1);
     private static final String VARIANT_ID = "variant_1";
     private static final String POST = "POST";
+    private static final String GET = "GET";
     private static final String DELETE = "DELETE";
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
@@ -558,6 +559,8 @@ class StudyTest {
                     return new MockResponse(404); // params duplication request KO
                 } else if (path.matches("/v1/network-visualizations-params\\?duplicateFrom=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
+                } else if (path.matches("/v1/parameters/.*/provider") && GET.equals(request.getMethod())) {
+                    return new MockResponse.Builder().code(200).body(defaultNonEvacuatedEnergyProvider).build();
                 } else if (path.matches("/v1/parameters/.*/provider")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/default-provider")) {
@@ -2939,6 +2942,18 @@ class StudyTest {
                 content().string("SuperNEE"));
 
         var requests = TestUtils.getRequestsDone(2, server);
+        assertTrue(requests.stream().allMatch(r -> r.matches("/v1/parameters/.*/provider")));
+    }
+
+    @Test
+    void loadFlowProviderTest(final MockWebServer server) throws Exception {
+        UUID studyUuid = createStudy(server, USER_ID_HEADER, CASE_UUID);
+        assertNotNull(studyUuid);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyUuid))
+                .andExpectAll(status().isOk(),
+                        content().string(defaultNonEvacuatedEnergyProvider));
+
+        var requests = TestUtils.getRequestsDone(1, server);
         assertTrue(requests.stream().allMatch(r -> r.matches("/v1/parameters/.*/provider")));
     }
 
