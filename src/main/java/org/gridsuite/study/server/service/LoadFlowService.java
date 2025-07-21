@@ -377,6 +377,18 @@ public class LoadFlowService extends AbstractComputationService {
         return studyEntity.getLoadFlowParametersUuid();
     }
 
+    public String getLoadFlowProvider(UUID parametersUuid) {
+
+        String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI + "/provider")
+                .buildAndExpand(parametersUuid).toUriString();
+
+        try {
+            return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, GET_LOADFLOW_PROVIDER_FAILED);
+        }
+    }
+
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuid) {
         return getEnumValues(enumName, resultUuid, LOADFLOW_API_VERSION, loadFlowServerBaseUri, LOADFLOW_NOT_FOUND, restTemplate);

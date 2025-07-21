@@ -41,10 +41,7 @@ import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -81,6 +78,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.gridsuite.study.server.StudyConstants.DYNA_FLOW_PROVIDER;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES;
@@ -957,6 +955,18 @@ public class StudyService {
         if (Boolean.TRUE.equals(isReadOnly)) {
             throw new StudyException(NOT_ALLOWED);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public void assertCanRunLoadFLow(UUID studyUuid, UUID nodeUuid) {
+        if (networkModificationTreeService.isConstructionNode(nodeUuid) && DYNA_FLOW_PROVIDER.equals(getLoadFlowProvider(studyUuid))) {
+            throw new StudyException(NOT_ALLOWED, "DynaFlow must run only from a security type node !");
+        }
+    }
+
+    public String getLoadFlowProvider(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return loadflowService.getLoadFlowProvider(studyEntity.getLoadFlowParametersUuid());
     }
 
     public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid) {
@@ -1864,7 +1874,7 @@ public class StudyService {
 
         deleteInvalidationInfos(invalidateNodeInfos);
 
-        emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, ComputationsInvalidationMode.ALL);
+        emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode.ALL);
 
         if (startTime.get() != null) {
             LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
@@ -3152,8 +3162,8 @@ public class StudyService {
                 .orElse("");
     }
 
-    private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationsInvalidationMode computationsInvalidationMode) {
-        if (!ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
+    private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode computationsInvalidationMode) {
+        if (!InvalidateNodeTreeParameters.ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         }
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
@@ -3360,6 +3370,11 @@ public class StudyService {
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
+    public void duplicateColumn(UUID studyUuid, UUID configUuid, UUID columnUuid) {
+        studyConfigService.duplicateColumn(configUuid, columnUuid);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
     public void reorderColumns(UUID studyUuid, UUID configUuid, List<UUID> columnOrder) {
         studyConfigService.reorderColumns(configUuid, columnOrder);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
@@ -3394,5 +3409,13 @@ public class StudyService {
     public void reorderSpreadsheetConfigs(UUID studyUuid, UUID collectionUuid, List<UUID> newOrder) {
         studyConfigService.reorderSpreadsheetConfigs(collectionUuid, newOrder);
         notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid, String globalFilters) {
+        UUID networkuuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
+        return voltageInitService.getVoltageInitResult(resultUuid, networkuuid, variantId, globalFilters);
     }
 }
