@@ -604,13 +604,13 @@ public class NetworkModificationTreeService {
     }
 
     private void assertIsNetworkModificationInsertionAllowed(
-            NodeEntity referenceNode,
+            NodeEntity nodeEntity,
             NetworkModificationNodeType newNodeType,
             InsertMode insertMode
     ) {
-        NetworkModificationNodeType referenceNodeType = referenceNode.getType().equals(NodeType.ROOT)
+        NetworkModificationNodeType referenceNodeType = nodeEntity.getType().equals(NodeType.ROOT)
                 ? null
-                : getNetworkModificationNodeInfoEntity(referenceNode.getIdNode()).getNodeType();
+                : getNetworkModificationNodeInfoEntity(nodeEntity.getIdNode()).getNodeType();
 
         if (newNodeType.equals(NetworkModificationNodeType.CONSTRUCTION)
                 && referenceNodeType == NetworkModificationNodeType.SECURITY) {
@@ -624,10 +624,10 @@ public class NetworkModificationTreeService {
         }
     }
 
-    public void assertIsNetworkModificationNodeCreationAllowed(UUID referenceNodeUuid, NetworkModificationNode nodeInfo, InsertMode insertMode) {
+    public void assertIsNetworkModificationNodeCreationAllowed(UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode) {
         NetworkModificationNodeType newNodeType = nodeInfo.getNodeType();
-        NodeEntity reference = getNodeEntity(referenceNodeUuid);
-        assertIsNetworkModificationInsertionAllowed(reference, newNodeType, insertMode);
+        NodeEntity nodeEntity = getNodeEntity(nodeId);
+        assertIsNetworkModificationInsertionAllowed(nodeEntity, newNodeType, insertMode);
     }
 
     public boolean isConstructionNode(UUID nodeUuid) {
