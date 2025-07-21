@@ -598,7 +598,7 @@ public class NetworkModificationTreeService {
     }
 
     public void assertIsRootOrConstructionNode(UUID nodeUuid) {
-        if (!self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) && !getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType().equals(NetworkModificationNodeType.CONSTRUCTION)) {
+        if (!self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) && !isConstructionNode(nodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
     }
@@ -630,6 +630,10 @@ public class NetworkModificationTreeService {
         assertIsNetworkModificationInsertionAllowed(reference, newNodeType, insertMode);
     }
 
+    public boolean isConstructionNode(UUID nodeUuid) {
+        return getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType() == NetworkModificationNodeType.CONSTRUCTION;
+    }
+
     @Transactional(readOnly = true)
     public boolean isNodeNameExists(UUID studyUuid, String nodeName) {
         return ROOT_NODE_NAME.equals(nodeName) || !networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyUuid, nodeName).stream().filter(abstractNodeInfoEntity -> !abstractNodeInfoEntity.getNode().isStashed()).toList().isEmpty();
@@ -659,6 +663,7 @@ public class NetworkModificationTreeService {
             .stream()
             .map(AbstractNodeInfoEntity::getName)
             .toList();
+
         String uniqueName = nodeName;
         int i = 1;
         while (studyNodeNames.contains(uniqueName)) {
