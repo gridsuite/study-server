@@ -122,7 +122,8 @@ public class RestResponseEntityExceptionHandler {
                     RUN_DYNAMIC_SECURITY_ANALYSIS_FAILED,
                     INVALIDATE_DYNAMIC_SECURITY_ANALYSIS_FAILED,
                     UPDATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED,
-                    DUPLICATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED
+                    DUPLICATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED,
+                    UPDATE_SPREADSHEET_CONFIG_FAILED
                     -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND,
                     NO_VOLTAGE_INIT_RESULTS_FOR_NODE,
