@@ -37,6 +37,7 @@ public class RootNetworkInfos {
             .networkUuid(networkInfos.getNetworkUuid())
             .networkId(networkInfos.getNetworkId())
             .caseUuid(caseInfos.getCaseUuid())
+            .originalCaseUuid(caseInfos.getOriginalCaseUuid())
             .caseName(caseInfos.getCaseName())
             .caseFormat(caseInfos.getCaseFormat())
             .reportUuid(reportUuid)
