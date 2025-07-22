@@ -921,7 +921,7 @@ public class StudyService {
     public UUID sendLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, boolean invalidateNodeTree, String userId) {
         if (invalidateNodeTree) {
             invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
-                .invalidationMode(InvalidationMode.ONLY_CHILDREN)
+                .invalidationMode(InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
                 .withBlockedNodeBuild(true)
                 .computationsInvalidationMode(ComputationsInvalidationMode.ALL)
                 .build());
@@ -1882,7 +1882,7 @@ public class StudyService {
     }
 
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid) {
-        invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.DEFAULT);
+        invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ALL);
     }
 
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
@@ -1907,7 +1907,7 @@ public class StudyService {
     }
 
     public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
-        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.DEFAULT);
+        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL);
     }
 
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
