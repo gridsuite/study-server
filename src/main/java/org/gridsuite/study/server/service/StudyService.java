@@ -3253,7 +3253,7 @@ public class StudyService {
     @Transactional
     public NetworkModificationNode createNode(UUID studyUuid, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        networkModificationTreeService.assertIsRootOrConstructionNode(nodeId);
+        networkModificationTreeService.assertIsNetworkModificationNodeCreationAllowed(nodeId, nodeInfo, insertMode);
         NetworkModificationNode newNode = networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
 
         UUID parentUuid = networkModificationTreeService.getParentNodeUuid(newNode.getId()).orElse(null);
@@ -3360,6 +3360,11 @@ public class StudyService {
 
     public void deleteColumn(UUID studyUuid, UUID configUuid, UUID columnUuid) {
         studyConfigService.deleteColumn(configUuid, columnUuid);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public void duplicateColumn(UUID studyUuid, UUID configUuid, UUID columnUuid) {
+        studyConfigService.duplicateColumn(configUuid, columnUuid);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
