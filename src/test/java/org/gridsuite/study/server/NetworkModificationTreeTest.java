@@ -415,6 +415,68 @@ class NetworkModificationTreeTest {
     }
 
     @Test
+    void testNodeInsertionRules() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        UUID studyId = root.getStudyId();
+
+        // Create a base construction node under root
+        final NetworkModificationNode node1 = buildNetworkModificationConstructionNode(
+                "not_built", "not built node",
+                MODIFICATION_GROUP_UUID_2, VARIANT_ID, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, root, node1, userId);
+
+        // Build tree:
+        // root
+        //  |- construction1
+        //       |- construction2
+        //  |- security1
+        //  |- security2
+        final NetworkModificationNode construction1 = buildNetworkModificationConstructionNode(
+                "construction1", "n1", UUID.randomUUID(), "variant1",
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, root, construction1, userId);
+
+        final NetworkModificationNode construction2 = buildNetworkModificationConstructionNode(
+                "construction2", "n2", UUID.randomUUID(), "variant2",
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, construction1, construction2, userId);
+
+        final NetworkModificationNode security1 = buildNetworkModificationSecurityNode(
+                "security1", "sec1", UUID.randomUUID(), VARIANT_ID,
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, root, security1, userId);
+
+        final NetworkModificationNode security2 = buildNetworkModificationSecurityNode(
+                "security2", "sec2", UUID.randomUUID(), VARIANT_ID,
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, root, security2, userId);
+
+        // Construction -> Security
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+                        studyId, construction2.getId(), security1.getId(), InsertMode.BEFORE)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+
+        // Security -> Construction (not NEW_BRANCH)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+                        studyId, security2.getId(), construction2.getId(), InsertMode.BEFORE)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+
+        // Security -> Root (not NEW_BRANCH)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+                        studyId, security2.getId(), construction1.getId(), InsertMode.BEFORE)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void testNodeCreationRules() throws Exception {
         RootNode root = createRoot();
         String userId = "userId";
