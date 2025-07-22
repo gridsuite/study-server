@@ -1826,7 +1826,7 @@ public class StudyService {
         List<UUID> allChildren = networkModificationTreeService.getChildrenUuids(parentNodeToCopyUuid);
 
         List<NetworkModificationNodeInfoEntity> subtreeNodes = networkModificationTreeService.getAllNetworkModificationNodeInfoByParentNodeId(parentNodeToCopyUuid, allChildren);
-        if (networkModificationTreeService.assertSubtreeCanBeDuplicatedOrMoved(subtreeNodes, referenceNodeUuid)) {
+        if (networkModificationTreeService.isSubtreeDuplicationOrMoveForbidden(subtreeNodes, referenceNodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
         StudyEntity studyEntity = studyRepository.findById(targetStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
@@ -1846,7 +1846,7 @@ public class StudyService {
             throw new StudyException(NOT_ALLOWED);
         }
         List<NetworkModificationNodeInfoEntity> subtreeNodes = networkModificationTreeService.getAllNetworkModificationNodeInfoByParentNodeId(parentNodeToMoveUuid, allChildren);
-        if (networkModificationTreeService.assertSubtreeCanBeDuplicatedOrMoved(subtreeNodes, referenceNodeUuid)) {
+        if (networkModificationTreeService.isSubtreeDuplicationOrMoveForbidden(subtreeNodes, referenceNodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
         networkModificationTreeService.moveStudySubtree(parentNodeToMoveUuid, referenceNodeUuid);

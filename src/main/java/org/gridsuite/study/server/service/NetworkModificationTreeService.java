@@ -649,7 +649,7 @@ public class NetworkModificationTreeService {
         assertIsNetworkModificationInsertionAllowed(referenceNode, nodeToCopy.getNodeType(), insertMode);
     }
 
-    public boolean assertSubtreeCanBeDuplicatedOrMoved(List<NetworkModificationNodeInfoEntity> subtreeNodes, UUID referenceNodeUuid) {
+    public boolean isSubtreeDuplicationOrMoveForbidden(List<NetworkModificationNodeInfoEntity> subtreeNodes, UUID referenceNodeUuid) {
         boolean allSecurityNodes = subtreeNodes.stream()
                 .allMatch(child -> child.getNodeType() == NetworkModificationNodeType.SECURITY);
 
