@@ -637,9 +637,18 @@ public class StudyController {
                                                         @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
                                                         @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
-        studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
-        studyService.moveNetworkModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, userId);
+        handleMoveNetworkModification(studyUuid, nodeUuid, modificationUuid, beforeUuid, userId);
         return ResponseEntity.ok().build();
+    }
+
+    private void handleMoveNetworkModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid, String userId) {
+        studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
+        studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
+        try {
+            studyService.moveNetworkModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, false, userId);
+        } finally {
+            studyService.invalidateBlockedBuildNodeTree(studyUuid, nodeUuid);
+        }
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -653,22 +662,45 @@ public class StudyController {
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
-        studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
         if (originNodeUuid != null) {
             studyService.assertIsNodeExist(studyUuid, originNodeUuid);
             studyService.assertCanUpdateModifications(studyUuid, originNodeUuid);
         }
         switch (action) {
             case COPY, INSERT:
-                studyService.duplicateOrInsertNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
+                handleDuplicateOrInsertNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
                 break;
             case MOVE:
-                studyService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
+                handleMoveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
             default:
                 throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
         }
         return ResponseEntity.ok().build();
+    }
+
+    private void handleDuplicateOrInsertNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId, ModificationsActionType action) {
+        studyService.assertNoBlockedBuildInStudy(studyUuid, targetNodeUuid);
+        studyService.invalidateNodeTreeWithLF(studyUuid, targetNodeUuid);
+        try {
+            studyService.duplicateOrInsertNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
+        } finally {
+            studyService.invalidateBlockedBuildNodeTree(studyUuid, targetNodeUuid);
+        }
+    }
+
+    private void handleMoveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
+        studyService.assertNoBlockedBuildInStudy(studyUuid, originNodeUuid);
+        studyService.assertNoBlockedBuildInStudy(studyUuid, targetNodeUuid);
+        boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
+        try {
+            studyService.moveNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, null, isTargetInDifferentNodeTree, userId);
+        } finally {
+            studyService.invalidateBlockedBuildNodeTree(studyUuid, originNodeUuid);
+            if (isTargetInDifferentNodeTree) {
+                studyService.invalidateBlockedBuildNodeTree(studyUuid, targetNodeUuid);
+            }
+        }
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run")
@@ -1302,8 +1334,17 @@ public class StudyController {
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
-        studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid, userId);
+        handleCreateNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
         return ResponseEntity.ok().build();
+    }
+
+    private void handleCreateNetworkModification(UUID studyUuid, UUID nodeUuid, String modificationAttributes, String userId) {
+        studyService.invalidateNodeTreeWithLF(studyUuid, nodeUuid);
+        try {
+            studyService.createNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
+        } finally {
+            studyService.invalidateBlockedBuildNodeTree(studyUuid, nodeUuid);
+        }
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{uuid}")
