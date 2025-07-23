@@ -603,68 +603,57 @@ public class NetworkModificationTreeService {
         }
     }
 
-    private NetworkModificationNodeType getReferenceNodeType(NodeEntity referenceNode) {
-        return referenceNode.getType().equals(NodeType.ROOT)
-                ? null
-                : getNetworkModificationNodeInfoEntity(referenceNode.getIdNode()).getNodeType();
-    }
-
-    private boolean isConstructionUnderSecurityNode(NetworkModificationNodeType newNodeType, NetworkModificationNodeType referenceNodeType) {
-        return newNodeType == NetworkModificationNodeType.CONSTRUCTION &&
-                referenceNodeType == NetworkModificationNodeType.SECURITY;
-    }
-
-    private boolean isInvalidSecurityNodeInsertion(NetworkModificationNodeType newNodeType, InsertMode insertMode, NetworkModificationNodeType referenceNodeType) {
-        return newNodeType == NetworkModificationNodeType.SECURITY &&
-                insertMode != InsertMode.CHILD &&
-                referenceNodeType != NetworkModificationNodeType.SECURITY;
-    }
-
-    private void assertIsNetworkModificationInsertionAllowed(
-            NodeEntity nodeEntity,
+    private void assertInsertNode(
+            UUID parentNodeId,
             NetworkModificationNodeType newNodeType,
             InsertMode insertMode
     ) {
-        NetworkModificationNodeType referenceNodeType = getReferenceNodeType(nodeEntity);
+        if (getNodeEntity(parentNodeId).getType() == NodeType.ROOT) {
+            return;
+        }
 
-        if (isConstructionUnderSecurityNode(newNodeType, referenceNodeType) ||
-                isInvalidSecurityNodeInsertion(newNodeType, insertMode, referenceNodeType)) {
+        NetworkModificationNodeType parentNodeType = getNetworkModificationNodeInfoEntity(parentNodeId).getNodeType();
+
+        if (parentNodeType == NetworkModificationNodeType.SECURITY
+            && newNodeType == NetworkModificationNodeType.CONSTRUCTION) {
             throw new StudyException(NOT_ALLOWED);
         }
-    }
 
-    public void assertIsNetworkModificationNodeCreationAllowed(UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode) {
-        NetworkModificationNodeType newNodeType = nodeInfo.getNodeType();
-        NodeEntity nodeEntity = getNodeEntity(nodeId);
-        assertIsNetworkModificationInsertionAllowed(nodeEntity, newNodeType, insertMode);
+        if (parentNodeType == NetworkModificationNodeType.CONSTRUCTION
+            && newNodeType == NetworkModificationNodeType.SECURITY
+            && insertMode != InsertMode.CHILD
+        ) {
+            throw new StudyException(NOT_ALLOWED);
+        }
     }
 
     public boolean isConstructionNode(UUID nodeUuid) {
         return getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType() == NetworkModificationNodeType.CONSTRUCTION;
     }
 
-    public void assertNodeCanBeDuplicatedOrCut(UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) {
-        NodeEntity referenceNode = getNodeEntity(referenceNodeUuid);
-        NetworkModificationNodeInfoEntity nodeToCopy = networkModificationNodeInfoRepository.getReferenceById(nodeToCopyUuid);
-        assertIsNetworkModificationInsertionAllowed(referenceNode, nodeToCopy.getNodeType(), insertMode);
+    public void assertCreateNode(UUID parentNodeId, NetworkModificationNodeType newNodeType, InsertMode insertMode) {
+        assertInsertNode(parentNodeId, newNodeType, insertMode);
     }
 
-    public boolean isSubtreeDuplicationOrMoveForbidden(List<NetworkModificationNodeInfoEntity> subtreeNodes, UUID referenceNodeUuid) {
+    public void assertMoveOrDuplicateNode(UUID nodeToCopyUuid, UUID parentNodeId, InsertMode insertMode) {
+        NetworkModificationNodeInfoEntity nodeToCopy = getNetworkModificationNodeInfoEntity(nodeToCopyUuid);
+        assertInsertNode(parentNodeId, nodeToCopy.getNodeType(), insertMode);
+    }
 
-        AbstractNode referenceNode = self.getNode(referenceNodeUuid, null);
-        NodeType referenceNodeType = referenceNode.getType();
-
-        if (referenceNodeType == NodeType.ROOT) {
-            return false;
+    public void assertMoveOrDuplicateSubtree(UUID nodeTreeUuid, UUID referenceNodeUuid) {
+        if (getNodeEntity(referenceNodeUuid).getType() == NodeType.ROOT) {
+            return;
         }
 
-        NetworkModificationNodeType referenceModType =
-                getNetworkModificationNodeInfoEntity(referenceNodeUuid).getNodeType();
-        boolean isConstruction = referenceModType == NetworkModificationNodeType.CONSTRUCTION;
-        boolean allSecurity = subtreeNodes.stream()
-                .allMatch(node -> node.getNodeType() == NetworkModificationNodeType.SECURITY);
+        NetworkModificationNodeType referenceNodeType = getNetworkModificationNodeInfoEntity(referenceNodeUuid).getNodeType();
+        if (referenceNodeType == NetworkModificationNodeType.CONSTRUCTION) {
+            return;
+        }
 
-        return !allSecurity && !isConstruction;
+        List<NetworkModificationNodeInfoEntity> subtreeNodes = networkModificationNodeInfoRepository.findAllById(getNodeTreeUuids(nodeTreeUuid));
+        if (subtreeNodes.stream().anyMatch(node -> node.getNodeType() == NetworkModificationNodeType.CONSTRUCTION)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
     }
 
     public List<NetworkModificationNodeInfoEntity> getAllNetworkModificationNodeInfoByParentNodeId(UUID nodeUuid, List<UUID> childrenUuids) {
