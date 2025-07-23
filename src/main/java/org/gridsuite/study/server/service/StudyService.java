@@ -1792,6 +1792,12 @@ public class StudyService {
         networkModificationTreeService.assertNodeCanBeDuplicatedOrCut(nodeToMoveUuid, referenceNodeUuid, insertMode);
     }
 
+    public void assertDuplicateOrMoveSubtree(List<NetworkModificationNodeInfoEntity> subtreeNodes, UUID referenceNodeUuid) {
+        if (networkModificationTreeService.isSubtreeDuplicationOrMoveForbidden(subtreeNodes, referenceNodeUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+    }
+
     @Transactional
     public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
         assertDuplicateStudyNode(sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
@@ -1836,9 +1842,8 @@ public class StudyService {
         List<UUID> allChildren = networkModificationTreeService.getChildrenUuids(parentNodeToCopyUuid);
 
         List<NetworkModificationNodeInfoEntity> subtreeNodes = networkModificationTreeService.getAllNetworkModificationNodeInfoByParentNodeId(parentNodeToCopyUuid, allChildren);
-        if (networkModificationTreeService.isSubtreeDuplicationOrMoveForbidden(subtreeNodes, referenceNodeUuid)) {
-            throw new StudyException(NOT_ALLOWED);
-        }
+        assertDuplicateOrMoveSubtree(subtreeNodes, referenceNodeUuid);
+
         StudyEntity studyEntity = studyRepository.findById(targetStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         StudyEntity sourceStudyEntity = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity, sourceStudyEntity, false);
@@ -1856,9 +1861,8 @@ public class StudyService {
             throw new StudyException(NOT_ALLOWED);
         }
         List<NetworkModificationNodeInfoEntity> subtreeNodes = networkModificationTreeService.getAllNetworkModificationNodeInfoByParentNodeId(parentNodeToMoveUuid, allChildren);
-        if (networkModificationTreeService.isSubtreeDuplicationOrMoveForbidden(subtreeNodes, referenceNodeUuid)) {
-            throw new StudyException(NOT_ALLOWED);
-        }
+        assertDuplicateOrMoveSubtree(subtreeNodes, referenceNodeUuid);
+
         networkModificationTreeService.moveStudySubtree(parentNodeToMoveUuid, referenceNodeUuid);
 
         getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
