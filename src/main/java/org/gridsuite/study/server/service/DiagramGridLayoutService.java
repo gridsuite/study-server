@@ -105,7 +105,7 @@ public class DiagramGridLayoutService {
     private List<UUID> extractNadConfigUuids(DiagramGridLayout layout) {
         if (layout != null && layout.getDiagramLayouts() != null) {
             return layout.getDiagramLayouts().stream()
-                .filter(diagramLayout -> diagramLayout instanceof NetworkAreaDiagramLayout)
+                .filter(NetworkAreaDiagramLayout.class::isInstance)
                 .map(diagramLayout -> ((NetworkAreaDiagramLayout) diagramLayout).getCurrentNadConfigUuid())
                 .filter(Objects::nonNull)
                 .toList();
