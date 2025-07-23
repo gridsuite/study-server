@@ -650,14 +650,21 @@ public class NetworkModificationTreeService {
     }
 
     public boolean isSubtreeDuplicationOrMoveForbidden(List<NetworkModificationNodeInfoEntity> subtreeNodes, UUID referenceNodeUuid) {
-        boolean allSecurityNodes = subtreeNodes.stream()
-                .allMatch(child -> child.getNodeType() == NetworkModificationNodeType.SECURITY);
 
-        if (allSecurityNodes) {
+        AbstractNode referenceNode = self.getNode(referenceNodeUuid, null);
+        NodeType referenceNodeType = referenceNode.getType();
+
+        if (referenceNodeType == NodeType.ROOT) {
             return false;
         }
 
-        return !self.getNode(referenceNodeUuid, null).getType().equals(NodeType.ROOT) && !getNetworkModificationNodeInfoEntity(referenceNodeUuid).getNodeType().equals(NetworkModificationNodeType.CONSTRUCTION);
+        NetworkModificationNodeType referenceModType =
+                getNetworkModificationNodeInfoEntity(referenceNodeUuid).getNodeType();
+        boolean isConstruction = referenceModType == NetworkModificationNodeType.CONSTRUCTION;
+        boolean allSecurity = subtreeNodes.stream()
+                .allMatch(node -> node.getNodeType() == NetworkModificationNodeType.SECURITY);
+
+        return !allSecurity && !isConstruction;
     }
 
     public List<NetworkModificationNodeInfoEntity> getAllNetworkModificationNodeInfoByParentNodeId(UUID nodeUuid, List<UUID> childrenUuids) {
