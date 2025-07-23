@@ -603,6 +603,42 @@ public class NetworkModificationTreeService {
         }
     }
 
+    private NetworkModificationNodeType getReferenceNodeType(NodeEntity referenceNode) {
+        return referenceNode.getType().equals(NodeType.ROOT)
+                ? null
+                : getNetworkModificationNodeInfoEntity(referenceNode.getIdNode()).getNodeType();
+    }
+
+    private boolean isConstructionUnderSecurityNode(NetworkModificationNodeType newNodeType, NetworkModificationNodeType referenceNodeType) {
+        return newNodeType == NetworkModificationNodeType.CONSTRUCTION &&
+                referenceNodeType == NetworkModificationNodeType.SECURITY;
+    }
+
+    private boolean isInvalidSecurityNodeInsertion(NetworkModificationNodeType newNodeType, InsertMode insertMode, NetworkModificationNodeType referenceNodeType) {
+        return newNodeType == NetworkModificationNodeType.SECURITY &&
+                insertMode != InsertMode.CHILD &&
+                referenceNodeType != NetworkModificationNodeType.SECURITY;
+    }
+
+    private void assertIsNetworkModificationInsertionAllowed(
+            NodeEntity nodeEntity,
+            NetworkModificationNodeType newNodeType,
+            InsertMode insertMode
+    ) {
+        NetworkModificationNodeType referenceNodeType = getReferenceNodeType(nodeEntity);
+
+        if (isConstructionUnderSecurityNode(newNodeType, referenceNodeType) ||
+                isInvalidSecurityNodeInsertion(newNodeType, insertMode, referenceNodeType)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+    }
+
+    public void assertIsNetworkModificationNodeCreationAllowed(UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode) {
+        NetworkModificationNodeType newNodeType = nodeInfo.getNodeType();
+        NodeEntity nodeEntity = getNodeEntity(nodeId);
+        assertIsNetworkModificationInsertionAllowed(nodeEntity, newNodeType, insertMode);
+    }
+
     public boolean isConstructionNode(UUID nodeUuid) {
         return getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType() == NetworkModificationNodeType.CONSTRUCTION;
     }

@@ -23,7 +23,6 @@ public record InvalidateNodeTreeParameters(
     public static InvalidateNodeTreeParameters ALL_WITH_BLOCK_NODES = new InvalidateNodeTreeParameters(InvalidationMode.ALL, true, ComputationsInvalidationMode.ALL);
     public static InvalidateNodeTreeParameters ONLY_CHILDREN = new InvalidateNodeTreeParameters(InvalidationMode.ONLY_CHILDREN, false, ComputationsInvalidationMode.ALL);
     public static InvalidateNodeTreeParameters ONLY_CHILDREN_BUILD_STATUS = new InvalidateNodeTreeParameters(InvalidationMode.ONLY_CHILDREN_BUILD_STATUS, false, ComputationsInvalidationMode.ALL);
-    public static InvalidateNodeTreeParameters DEFAULT = ALL;
 
     public enum InvalidationMode {
         ALL, ONLY_CHILDREN, ONLY_CHILDREN_BUILD_STATUS

@@ -1715,8 +1715,8 @@ class StudyTest {
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkUuid, node1.getId(), NETWORK_UUID)));
@@ -1731,8 +1731,8 @@ class StudyTest {
             .content(createLoadAttributes)
             .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkUuid, node2.getId(), NETWORK_UUID)));
@@ -2019,8 +2019,8 @@ class StudyTest {
                         .content(createTwoWindingsTransformerAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
@@ -2034,8 +2034,8 @@ class StudyTest {
                 .content(createLoadAttributes)
                 .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
@@ -2350,8 +2350,8 @@ class StudyTest {
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
@@ -2365,8 +2365,8 @@ class StudyTest {
                 .content(createLoadAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
@@ -2475,9 +2475,10 @@ class StudyTest {
                         .content(createTwoWindingsTransformerAttributes)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
+
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node3.getId()));
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
@@ -2497,8 +2498,8 @@ class StudyTest {
                         .content(createLoadAttributes)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
@@ -2616,8 +2617,8 @@ class StudyTest {
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
@@ -2631,8 +2632,8 @@ class StudyTest {
                 .content(createLoadAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
+        checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
