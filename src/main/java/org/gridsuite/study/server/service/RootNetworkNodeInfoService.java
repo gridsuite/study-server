@@ -240,8 +240,9 @@ public class RootNetworkNodeInfoService {
 
     public InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters) {
         boolean notOnlyChildrenBuildStatus = !invalidateTreeParameters.isOnlyChildrenBuildStatus();
+
         // Always update blocked build info
-        if (notOnlyChildrenBuildStatus && invalidateTreeParameters.withBlockedNodeBuild()) {
+        if (invalidateTreeParameters.withBlockedNodeBuild()) {
             rootNetworkNodeInfoEntity.setBlockedBuild(true);
         }
 
@@ -608,12 +609,6 @@ public class RootNetworkNodeInfoService {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
             type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
         return shortCircuitService.getShortCircuitAnalysisCsvResult(resultUuid, headerCsv);
-    }
-
-    @Transactional(readOnly = true)
-    public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
-        return voltageInitService.getVoltageInitResult(resultUuid);
     }
 
     @Transactional(readOnly = true)
