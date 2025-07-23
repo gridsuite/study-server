@@ -83,6 +83,8 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_STASHED = "stashed";
     public static final String QUERY_PARAM_ACTIVATED = "activated";
     public static final String PATH_PARAM_PARAMETERS = "parameters";
+    public static final String DYNA_FLOW_PROVIDER = "DynaFlow";
+
 
     public enum SldDisplayMode {
         FEEDER_POSITION,
