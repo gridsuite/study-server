@@ -14,7 +14,9 @@ import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.DiagramPosition;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NadVoltageLevelPositionInfos;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
+import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
 import org.gridsuite.study.server.service.SingleLineDiagramService;
+import org.gridsuite.study.server.service.DiagramGridLayoutService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -52,6 +54,8 @@ class DiagramGridLayoutTest {
     private StudyConfigService studyConfigService;
     @Autowired
     private SingleLineDiagramService singleLineDiagramService;
+    @Autowired
+    private DiagramGridLayoutService diagramGridLayoutService;
 
     private WireMockServer wireMockServer;
 
@@ -98,6 +102,13 @@ class DiagramGridLayoutTest {
         UUID existingDiagramGridLayoutUuid = UUID.randomUUID();
         UUID studyUuid = UUID.randomUUID();
         studyRepository.save(StudyEntity.builder().id(studyUuid).diagramGridLayoutUuid(existingDiagramGridLayoutUuid).build());
+
+        // Mock GET to retrieve existing layout (needed for cleanup logic)
+        wireMockServer.stubFor(WireMock.get(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + existingDiagramGridLayoutUuid)
+            .willReturn(WireMock.ok()
+                .withBody("{\"diagramLayouts\":[]}")
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            ));
 
         wireMockServer.stubFor(WireMock.put(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + existingDiagramGridLayoutUuid)
             .withRequestBody(equalTo(expectedPayload))
@@ -293,6 +304,248 @@ class DiagramGridLayoutTest {
 
         // Verify that the study-config-server was called with simplified NAD layout
         wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout")));
+    }
+
+    @Test
+    void testRemoveDiagramGridLayout() throws Exception {
+        UUID diagramGridLayoutUuid = UUID.randomUUID();
+        UUID nadConfigUuid1 = UUID.randomUUID();
+        UUID nadConfigUuid2 = UUID.randomUUID();
+
+        // Create proper diagram grid layout objects with NAD configs
+        NetworkAreaDiagramLayout nadLayout1 = NetworkAreaDiagramLayout.builder()
+            .currentNadConfigUuid(nadConfigUuid1)
+            .build();
+        NetworkAreaDiagramLayout nadLayout2 = NetworkAreaDiagramLayout.builder()
+            .currentNadConfigUuid(nadConfigUuid2)
+            .build();
+
+        DiagramGridLayout diagramGridLayout = DiagramGridLayout.builder()
+            .diagramLayouts(List.of(nadLayout1, nadLayout2))
+            .build();
+
+        String diagramGridLayoutJson = objectMapper.writeValueAsString(diagramGridLayout);
+
+        // Mock study-config-server get response
+        wireMockServer.stubFor(WireMock.get(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + diagramGridLayoutUuid)
+            .willReturn(WireMock.ok()
+                .withBody(diagramGridLayoutJson)
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            ));
+
+        // Mock single-line-diagram-server delete response for NAD configs
+        wireMockServer.stubFor(WireMock.delete(DELIMITER + "v1/network-area-diagram/configs")
+            .willReturn(WireMock.ok()));
+
+        // Mock study-config-server delete response
+        wireMockServer.stubFor(WireMock.delete(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + diagramGridLayoutUuid)
+            .willReturn(WireMock.ok()));
+
+        // Test the service method directly
+        diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
+
+        // Verify that NAD configs were deleted
+        wireMockServer.verify(1, WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(DELIMITER + "v1/network-area-diagram/configs")));
+
+        // Verify that the diagram grid layout was deleted
+        wireMockServer.verify(1, WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + diagramGridLayoutUuid)));
+    }
+
+    @Test
+    void testRemoveDiagramGridLayoutWithNullUuid() {
+        // Test the service method directly with null UUID
+        diagramGridLayoutService.removeDiagramGridLayout(null);
+
+        // Verify no external calls were made
+        wireMockServer.verify(0, WireMock.deleteRequestedFor(WireMock.urlMatching(".*")));
+        wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlMatching(".*")));
+    }
+
+    @Test
+    void testRemoveDiagramGridLayoutWithError() {
+        UUID diagramGridLayoutUuid = UUID.randomUUID();
+
+        // Mock study-config-server get to throw error
+        wireMockServer.stubFor(WireMock.get(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + diagramGridLayoutUuid)
+            .willReturn(WireMock.serverError()));
+
+        // Should not throw exception, just log error
+        diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
+
+        // Verify get was attempted but delete was not called due to error
+        wireMockServer.verify(1, WireMock.getRequestedFor(WireMock.urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + diagramGridLayoutUuid)));
+        wireMockServer.verify(0, WireMock.deleteRequestedFor(WireMock.urlMatching(".*")));
+    }
+
+    @Test
+    void testUpdateDiagramGridLayoutWithNadConfigCleanup() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        UUID existingDiagramGridLayoutUuid = UUID.randomUUID();
+        UUID oldNadConfigUuid1 = UUID.randomUUID();
+        UUID oldNadConfigUuid2 = UUID.randomUUID();
+        UUID newNadConfigUuid = UUID.randomUUID();
+
+        studyRepository.save(StudyEntity.builder().id(studyUuid).diagramGridLayoutUuid(existingDiagramGridLayoutUuid).build());
+
+        // Create new NAD layout details for update
+        NetworkAreaDiagramLayoutDetails nadLayoutDetails = NetworkAreaDiagramLayoutDetails.builder()
+            .diagramUuid(UUID.randomUUID())
+            .voltageLevelIds(Set.of("VL1"))
+            .positions(List.of(
+                NadVoltageLevelPositionInfos.builder()
+                    .voltageLevelId("VL1")
+                    .xPosition(100.0)
+                    .yPosition(200.0)
+                    .build()
+            ))
+            .build();
+
+        DiagramGridLayout updatePayload = DiagramGridLayout.builder()
+            .diagramLayouts(List.of(nadLayoutDetails))
+            .build();
+
+        // Create existing layout with old NAD configs
+        NetworkAreaDiagramLayout oldNadLayout1 = NetworkAreaDiagramLayout.builder()
+            .currentNadConfigUuid(oldNadConfigUuid1)
+            .build();
+        NetworkAreaDiagramLayout oldNadLayout2 = NetworkAreaDiagramLayout.builder()
+            .currentNadConfigUuid(oldNadConfigUuid2)
+            .build();
+
+        DiagramGridLayout existingLayout = DiagramGridLayout.builder()
+            .diagramLayouts(List.of(oldNadLayout1, oldNadLayout2))
+            .build();
+
+        String existingLayoutJson = objectMapper.writeValueAsString(existingLayout);
+
+        wireMockServer.stubFor(WireMock.get(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + existingDiagramGridLayoutUuid)
+            .willReturn(WireMock.ok()
+                .withBody(existingLayoutJson)
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            ));
+
+        // Mock single-line-diagram-server response for new NAD config creation
+        wireMockServer.stubFor(WireMock.post(DELIMITER + "v1/network-area-diagram/configs")
+            .willReturn(WireMock.ok()
+                .withBody(objectMapper.writeValueAsString(newNadConfigUuid))
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            ));
+
+        // Mock study-config-server update response
+        wireMockServer.stubFor(WireMock.put(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + existingDiagramGridLayoutUuid)
+            .willReturn(WireMock.ok()
+                .withBody(objectMapper.writeValueAsString(existingDiagramGridLayoutUuid))
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            ));
+
+        // Mock single-line-diagram-server delete response for old NAD configs cleanup
+        wireMockServer.stubFor(WireMock.delete(DELIMITER + "v1/network-area-diagram/configs")
+            .willReturn(WireMock.ok()));
+
+        String payload = objectMapper.writeValueAsString(updatePayload);
+
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/diagram-grid-layout", studyUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        UUID result = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
+        assertEquals(existingDiagramGridLayoutUuid, result);
+
+        // Verify get existing layout was called
+        wireMockServer.verify(1, WireMock.getRequestedFor(WireMock.urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + existingDiagramGridLayoutUuid)));
+
+        // Verify new NAD config was created
+        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo(DELIMITER + "v1/network-area-diagram/configs")));
+
+        // Verify layout was updated
+        wireMockServer.verify(1, WireMock.putRequestedFor(WireMock.urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + existingDiagramGridLayoutUuid)));
+
+        // Verify old NAD configs were cleaned up
+        wireMockServer.verify(1, WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(DELIMITER + "v1/network-area-diagram/configs")));
+    }
+
+    @Test
+    void testCleanupOldNadConfigsWithError() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        UUID existingDiagramGridLayoutUuid = UUID.randomUUID();
+        UUID oldNadConfigUuid = UUID.randomUUID();
+
+        studyRepository.save(StudyEntity.builder().id(studyUuid).diagramGridLayoutUuid(existingDiagramGridLayoutUuid).build());
+
+        // Create update payload with new NAD layout (this will trigger cleanup)
+        NetworkAreaDiagramLayoutDetails newNadLayoutDetails = NetworkAreaDiagramLayoutDetails.builder()
+            .diagramUuid(UUID.randomUUID())
+            .voltageLevelIds(Set.of("VL1"))
+            .positions(List.of(
+                NadVoltageLevelPositionInfos.builder()
+                    .voltageLevelId("VL1")
+                    .xPosition(100.0)
+                    .yPosition(200.0)
+                    .build()
+            ))
+            .build();
+
+        DiagramGridLayout updatePayload = DiagramGridLayout.builder()
+            .diagramLayouts(List.of(newNadLayoutDetails))
+            .build();
+
+        // Create existing layout with old NAD config
+        NetworkAreaDiagramLayout oldNadLayout = NetworkAreaDiagramLayout.builder()
+            .currentNadConfigUuid(oldNadConfigUuid)
+            .build();
+
+        DiagramGridLayout existingLayout = DiagramGridLayout.builder()
+            .diagramLayouts(List.of(oldNadLayout))
+            .build();
+
+        String existingLayoutJson = objectMapper.writeValueAsString(existingLayout);
+
+        wireMockServer.stubFor(WireMock.get(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + existingDiagramGridLayoutUuid)
+            .willReturn(WireMock.ok()
+                .withBody(existingLayoutJson)
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            ));
+
+        // Mock single-line-diagram-server response for new NAD config creation
+        UUID newNadConfigUuid = UUID.randomUUID();
+        wireMockServer.stubFor(WireMock.post(DELIMITER + "v1/network-area-diagram/configs")
+            .willReturn(WireMock.ok()
+                .withBody(objectMapper.writeValueAsString(newNadConfigUuid))
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            ));
+
+        // Mock study-config-server update response
+        wireMockServer.stubFor(WireMock.put(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + existingDiagramGridLayoutUuid)
+            .willReturn(WireMock.ok()
+                .withBody(objectMapper.writeValueAsString(existingDiagramGridLayoutUuid))
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            ));
+
+        // Mock single-line-diagram-server delete to return error
+        wireMockServer.stubFor(WireMock.delete(DELIMITER + "v1/network-area-diagram/configs")
+            .willReturn(WireMock.serverError()));
+
+        String payload = objectMapper.writeValueAsString(updatePayload);
+
+        // Should not throw exception, just log error
+        mockMvc.perform(post("/v1/studies/{studyUuid}/diagram-grid-layout", studyUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isOk());
+
+        // Verify that the GET was called to retrieve existing configs
+        wireMockServer.verify(1, WireMock.getRequestedFor(WireMock.urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + existingDiagramGridLayoutUuid)));
+
+        // Verify new NAD config was created
+        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo(DELIMITER + "v1/network-area-diagram/configs")));
+
+        // Verify update was called
+        wireMockServer.verify(1, WireMock.putRequestedFor(WireMock.urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + existingDiagramGridLayoutUuid)));
+
+        // Verify cleanup was attempted but failed gracefully
+        wireMockServer.verify(1, WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(DELIMITER + "v1/network-area-diagram/configs")));
     }
 
 }
