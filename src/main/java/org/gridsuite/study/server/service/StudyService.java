@@ -21,6 +21,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
+import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -129,6 +130,7 @@ public class StudyService {
     private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
+    private final DiagramGridLayoutService diagramGridLayoutService;
     private final FilterService filterService;
     private final ActionsService actionsService;
     private final CaseService caseService;
@@ -192,6 +194,7 @@ public class StudyService {
         VoltageInitService voltageInitService,
         DynamicSimulationEventService dynamicSimulationEventService,
         StudyConfigService studyConfigService,
+        DiagramGridLayoutService diagramGridLayoutService,
         FilterService filterService,
         StateEstimationService stateEstimationService,
         @Lazy StudyService studyService,
@@ -227,6 +230,7 @@ public class StudyService {
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
+        this.diagramGridLayoutService = diagramGridLayoutService;
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
         this.self = studyService;
@@ -560,7 +564,7 @@ public class StudyService {
                 removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
-                removeStudyLayout(s.getStudyLayoutUuid());
+                removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -2609,16 +2613,6 @@ public class StudyService {
         }
     }
 
-    private void removeStudyLayout(@Nullable UUID studyLayoutUuid) {
-        if (studyLayoutUuid != null) {
-            try {
-                studyConfigService.deleteStudyLayout(studyLayoutUuid);
-            } catch (Exception e) {
-                LOGGER.error("Could not remove study layout config with uuid:" + studyLayoutUuid, e);
-            }
-        }
-    }
-
     @Transactional
     public String updateSpreadsheetConfigCollection(UUID studyUuid, UUID sourceCollectionUuid, boolean appendMode) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
@@ -3400,27 +3394,28 @@ public class StudyService {
         notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
     }
 
-    public String getStudyLayout(UUID studyUuid) {
+    public DiagramGridLayout getDiagramGridLayout(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID studyLayoutUuid = studyEntity.getStudyLayoutUuid();
-        if (studyLayoutUuid == null) {
-            return null;
-        }
-
-        return studyConfigService.getStudyLayout(studyLayoutUuid);
+        UUID diagramGridLayoutUuid = studyEntity.getDiagramGridLayoutUuid();
+        return diagramGridLayoutService.getDiagramGridLayout(diagramGridLayoutUuid);
     }
 
     @Transactional
-    public UUID saveStudyLayout(UUID studyUuid, String studyLayout) {
+    public UUID saveDiagramGridLayout(UUID studyUuid, DiagramGridLayout diagramGridLayout) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        UUID existingStudyLayoutUuid = studyEntity.getStudyLayoutUuid();
-        if (existingStudyLayoutUuid == null) {
-            UUID newStudyLayoutUuid = studyConfigService.saveStudyLayout(studyLayout);
-            studyEntity.setStudyLayoutUuid(newStudyLayoutUuid);
-            return newStudyLayoutUuid;
-        }
 
-        studyConfigService.updateStudyLayout(existingStudyLayoutUuid, studyLayout);
-        return existingStudyLayoutUuid;
+        UUID existingDiagramGridLayoutUuid = studyEntity.getDiagramGridLayoutUuid();
+
+        if (existingDiagramGridLayoutUuid == null) {
+            UUID newDiagramGridLayoutUuid = diagramGridLayoutService.createDiagramGridLayout(diagramGridLayout);
+            studyEntity.setDiagramGridLayoutUuid(newDiagramGridLayoutUuid);
+            return newDiagramGridLayoutUuid;
+        } else {
+            return diagramGridLayoutService.updateDiagramGridLayout(existingDiagramGridLayoutUuid, diagramGridLayout);
+        }
+    }
+
+    private void removeDiagramGridLayout(@Nullable UUID diagramGridLayoutUuid) {
+        diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
     }
 }

@@ -17,7 +17,7 @@ public class StudyException extends RuntimeException {
         STUDY_ALREADY_EXISTS,
         ELEMENT_NOT_FOUND,
         STUDY_NOT_FOUND,
-        STUDY_LAYOUT_NOT_FOUND,
+        DIAGRAM_GRID_LAYOUT_NOT_FOUND,
         CASE_NOT_FOUND,
         LOADFLOW_NOT_RUNNABLE,
         LOADFLOW_RUNNING,

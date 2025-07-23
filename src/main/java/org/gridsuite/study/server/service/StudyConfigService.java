@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -47,8 +48,8 @@ public class StudyConfigService {
     private static final String SPREADSHEET_CONFIG_URI = "/spreadsheet-configs";
     private static final String SPREADSHEET_CONFIG_WITH_ID_URI = SPREADSHEET_CONFIG_URI + UUID_PARAM;
 
-    private static final String STUDY_LAYOUT_URI = "/study-layout";
-    private static final String STUDY_LAYOUT_WITH_ID_URI = STUDY_LAYOUT_URI + UUID_PARAM;
+    private static final String DIAGRAM_GRID_LAYOUT_URI = "/diagram-grid-layout";
+    private static final String DIAGRAM_GRID_LAYOUT_WITH_ID_URI = DIAGRAM_GRID_LAYOUT_URI + UUID_PARAM;
 
     private final RestTemplate restTemplate;
 
@@ -375,66 +376,66 @@ public class StudyConfigService {
         }
     }
 
-    public String getStudyLayout(UUID studyLayoutUuid) {
-        Objects.requireNonNull(studyLayoutUuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + STUDY_LAYOUT_WITH_ID_URI)
-            .buildAndExpand(studyLayoutUuid).toUriString();
+    public DiagramGridLayout getDiagramGridLayout(UUID diagramGridLayoutUuid) {
+        Objects.requireNonNull(diagramGridLayoutUuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_WITH_ID_URI)
+            .buildAndExpand(diagramGridLayoutUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
         HttpEntity<String> httpEntity = new HttpEntity<>(null, headers);
         try {
-            return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.GET, httpEntity, String.class).getBody();
+            return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.GET, httpEntity, DiagramGridLayout.class).getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(STUDY_LAYOUT_NOT_FOUND);
+                throw new StudyException(DIAGRAM_GRID_LAYOUT_NOT_FOUND);
             }
             throw e;
         }
     }
 
-    public void deleteStudyLayout(UUID studyLayoutUuid) {
-        Objects.requireNonNull(studyLayoutUuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + STUDY_LAYOUT_WITH_ID_URI)
-            .buildAndExpand(studyLayoutUuid).toUriString();
+    public void deleteDiagramGridLayout(UUID diagramGridLayoutUuid) {
+        Objects.requireNonNull(diagramGridLayoutUuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_WITH_ID_URI)
+            .buildAndExpand(diagramGridLayoutUuid).toUriString();
 
         try {
             restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.DELETE, null, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(STUDY_LAYOUT_NOT_FOUND);
+                throw new StudyException(DIAGRAM_GRID_LAYOUT_NOT_FOUND);
             }
             throw e;
         }
     }
 
-    public UUID saveStudyLayout(String studyLayout) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + STUDY_LAYOUT_URI).toUriString();
+    public UUID saveDiagramGridLayout(DiagramGridLayout diagramGridLayout) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_URI).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(studyLayout, headers);
+        HttpEntity<DiagramGridLayout> httpEntity = new HttpEntity<>(diagramGridLayout, headers);
         try {
             return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(STUDY_LAYOUT_NOT_FOUND);
+                throw new StudyException(DIAGRAM_GRID_LAYOUT_NOT_FOUND);
             }
             throw e;
         }
     }
 
-    public void updateStudyLayout(UUID studyLayoutUuid, String studyLayout) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + STUDY_LAYOUT_WITH_ID_URI)
-            .buildAndExpand(studyLayoutUuid).toUriString();
+    public void updateDiagramGridLayout(UUID diagramGridLayoutUuid, DiagramGridLayout diagramGridLayout) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_WITH_ID_URI)
+            .buildAndExpand(diagramGridLayoutUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(studyLayout, headers);
+        HttpEntity<DiagramGridLayout> httpEntity = new HttpEntity<>(diagramGridLayout, headers);
         try {
             restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(STUDY_LAYOUT_NOT_FOUND);
+                throw new StudyException(DIAGRAM_GRID_LAYOUT_NOT_FOUND);
             }
             throw e;
         }
