@@ -610,7 +610,7 @@ public class NetworkModificationTreeService {
     ) {
 
         if (getNodeEntity(parentNodeId).getType() == NodeType.ROOT) {
-            if (insertMode != InsertMode.CHILD) {
+            if (newNodeType == NetworkModificationNodeType.SECURITY && insertMode != InsertMode.CHILD) {
                 throw new StudyException(NOT_ALLOWED);
             }
             return;
