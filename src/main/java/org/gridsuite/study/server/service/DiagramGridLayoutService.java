@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import lombok.RequiredArgsConstructor;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.AbstractDiagramLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
@@ -29,6 +30,7 @@ import java.util.*;
 public class DiagramGridLayoutService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DiagramGridLayoutService.class);
+    private static final int MAX_NAD_CONFIGS_ALLOWED = 3;
 
     private final StudyConfigService studyConfigService;
     private final SingleLineDiagramService singleLineDiagramService;
@@ -42,6 +44,9 @@ public class DiagramGridLayoutService {
     }
 
     public UUID createDiagramGridLayout(DiagramGridLayout diagramGridLayout) {
+        // Validate NAD config count before processing
+        validateNadConfigCount(diagramGridLayout);
+
         // Process diagram layout and handle NAD layout details
         DiagramGridLayout processedDiagramLayout = processNADLayoutDetails(diagramGridLayout);
         return studyConfigService.saveDiagramGridLayout(processedDiagramLayout);
@@ -51,6 +56,9 @@ public class DiagramGridLayoutService {
      * Updates an existing diagram grid layout with proper cleanup of old NAD configurations.
      */
     public UUID updateDiagramGridLayout(UUID existingDiagramGridLayoutUuid, DiagramGridLayout diagramGridLayout) {
+        // Validate NAD config count before processing
+        validateNadConfigCount(diagramGridLayout);
+
         List<UUID> oldNadConfigUuidsToDelete = collectOldNadConfigUuids(existingDiagramGridLayoutUuid);
 
         // Process diagram layout and handle NAD layout details
@@ -122,6 +130,23 @@ public class DiagramGridLayoutService {
                 singleLineDiagramService.deleteMultipleDiagramConfigs(oldNadConfigUuidsToDelete);
             } catch (Exception e) {
                 LOGGER.error("Could not clean up old NAD configs: " + oldNadConfigUuidsToDelete, e);
+            }
+        }
+    }
+
+    /**
+     * Validates that the diagram grid layout does not exceed the maximum allowed NAD configurations.
+     */
+    private void validateNadConfigCount(DiagramGridLayout diagramGridLayout) {
+        if (diagramGridLayout != null && diagramGridLayout.getDiagramLayouts() != null) {
+            long nadConfigCount = diagramGridLayout.getDiagramLayouts().stream()
+                .filter(layout -> layout instanceof NetworkAreaDiagramLayoutDetails ||
+                                layout instanceof NetworkAreaDiagramLayout)
+                .count();
+
+            if (nadConfigCount > MAX_NAD_CONFIGS_ALLOWED) {
+                throw new StudyException(StudyException.Type.TOO_MANY_NAD_CONFIGS,
+                    "Maximum " + MAX_NAD_CONFIGS_ALLOWED + " NAD configurations allowed, but " + nadConfigCount + " provided");
             }
         }
     }

@@ -29,6 +29,7 @@ import java.util.UUID;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.ArrayList;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
@@ -546,6 +547,83 @@ class DiagramGridLayoutTest {
 
         // Verify cleanup was attempted but failed gracefully
         wireMockServer.verify(1, WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(DELIMITER + "v1/network-area-diagram/configs")));
+    }
+
+    @Test
+    void testCreateDiagramGridLayoutWithTooManyNads() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        studyRepository.save(StudyEntity.builder().id(studyUuid).build());
+
+        // Create 4 NAD layout details (exceeds the limit of 3)
+        List<NetworkAreaDiagramLayoutDetails> nadLayouts = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            nadLayouts.add(NetworkAreaDiagramLayoutDetails.builder()
+                .diagramUuid(UUID.randomUUID())
+                .voltageLevelIds(Set.of("VL" + i))
+                .positions(List.of(
+                    NadVoltageLevelPositionInfos.builder()
+                        .voltageLevelId("VL" + i)
+                        .xPosition(100.0 * i)
+                        .yPosition(200.0 * i)
+                        .build()
+                ))
+                .build());
+        }
+
+        DiagramGridLayout diagramGridLayout = DiagramGridLayout.builder()
+            .diagramLayouts(new ArrayList<>(nadLayouts))
+            .build();
+
+        String payload = objectMapper.writeValueAsString(diagramGridLayout);
+
+        // Should return forbidden due to too many NAD configs
+        mockMvc.perform(post("/v1/studies/{studyUuid}/diagram-grid-layout", studyUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isForbidden());
+
+        // Verify no external services were called since validation failed early
+        wireMockServer.verify(0, WireMock.postRequestedFor(WireMock.urlMatching(".*")));
+    }
+
+    @Test
+    void testUpdateDiagramGridLayoutWithTooManyNads() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        UUID existingDiagramGridLayoutUuid = UUID.randomUUID();
+        studyRepository.save(StudyEntity.builder().id(studyUuid).diagramGridLayoutUuid(existingDiagramGridLayoutUuid).build());
+
+        // Create 4 NAD layout details (exceeds the limit of 3)
+        List<NetworkAreaDiagramLayoutDetails> nadLayouts = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            nadLayouts.add(NetworkAreaDiagramLayoutDetails.builder()
+                .diagramUuid(UUID.randomUUID())
+                .voltageLevelIds(Set.of("VL" + i))
+                .positions(List.of(
+                    NadVoltageLevelPositionInfos.builder()
+                        .voltageLevelId("VL" + i)
+                        .xPosition(100.0 * i)
+                        .yPosition(200.0 * i)
+                        .build()
+                ))
+                .build());
+        }
+
+        DiagramGridLayout updatePayload = DiagramGridLayout.builder()
+            .diagramLayouts(new ArrayList<>(nadLayouts))
+            .build();
+
+        String payload = objectMapper.writeValueAsString(updatePayload);
+
+        // Should return forbidden due to too many NAD configs
+        mockMvc.perform(post("/v1/studies/{studyUuid}/diagram-grid-layout", studyUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isForbidden());
+
+        // Verify no external services were called since validation failed early
+        wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlMatching(".*")));
+        wireMockServer.verify(0, WireMock.postRequestedFor(WireMock.urlMatching(".*")));
+        wireMockServer.verify(0, WireMock.putRequestedFor(WireMock.urlMatching(".*")));
     }
 
 }

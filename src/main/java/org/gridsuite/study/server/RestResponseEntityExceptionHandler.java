@@ -69,7 +69,8 @@ public class RestResponseEntityExceptionHandler {
                     NODE_NAME_ALREADY_EXIST,
                     ROOT_NETWORK_DELETE_FORBIDDEN,
                     MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED,
-                    MAXIMUM_TAG_LENGTH_EXCEEDED
+                    MAXIMUM_TAG_LENGTH_EXCEEDED,
+                    TOO_MANY_NAD_CONFIGS
                     -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(exception.getMessage());
             case CANT_DELETE_ROOT_NODE -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             case CREATE_NETWORK_MODIFICATION_FAILED,
