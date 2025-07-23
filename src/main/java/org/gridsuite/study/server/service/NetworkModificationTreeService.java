@@ -608,7 +608,11 @@ public class NetworkModificationTreeService {
             NetworkModificationNodeType newNodeType,
             InsertMode insertMode
     ) {
+
         if (getNodeEntity(parentNodeId).getType() == NodeType.ROOT) {
+            if (insertMode != InsertMode.CHILD) {
+                throw new StudyException(NOT_ALLOWED);
+            }
             return;
         }
 
