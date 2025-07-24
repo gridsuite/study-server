@@ -56,6 +56,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
@@ -2405,5 +2406,11 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow provider is returned")})
     public ResponseEntity<String> getLoadFlowProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/network-area-diagram/upload-csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> parseCsv(@RequestParam("file") MultipartFile file, @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.uploadCSV(file, studyUuid);
+        return ResponseEntity.ok().build();
     }
 }

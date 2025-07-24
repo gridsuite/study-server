@@ -17,6 +17,7 @@ import static org.gridsuite.study.server.StudyConstants.SINGLE_LINE_DIAGRAM_API_
 import static org.gridsuite.study.server.StudyException.Type.SVG_NOT_FOUND;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
@@ -203,5 +204,19 @@ public class SingleLineDiagramService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
+    }
+
+    public UUID createDiagramConfig(String diagramConfig) {
+        Objects.requireNonNull(diagramConfig);
+        var path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
+                "/network-area-diagram/config").buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(diagramConfig, headers);
+
+        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 }

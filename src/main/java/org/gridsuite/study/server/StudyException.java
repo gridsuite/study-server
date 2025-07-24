@@ -153,7 +153,8 @@ public class StudyException extends RuntimeException {
         UPDATE_SPREADSHEET_CONFIG_COLLECTION_FAILED,
         UPDATE_SPREADSHEET_CONFIG_FAILED,
         NETWORK_EXPORT_FAILED,
-        GET_LOADFLOW_PROVIDER_FAILED
+        GET_LOADFLOW_PROVIDER_FAILED,
+        IMPORT_CSV_FAILED,
     }
 
     private final Type type;
