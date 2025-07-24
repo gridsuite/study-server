@@ -17,6 +17,8 @@ public class RootNetworkInfos {
 
     private String name;
 
+    private String description;
+
     private List<RootNetworkNodeInfo> rootNetworkNodeInfos;
 
     private NetworkInfos networkInfos;
@@ -32,17 +34,18 @@ public class RootNetworkInfos {
 
     public RootNetworkEntity toEntity() {
         RootNetworkEntity.RootNetworkEntityBuilder rootNetworkEntityBuilder = RootNetworkEntity.builder()
-            .id(id)
-            .name(name)
-            .networkUuid(networkInfos.getNetworkUuid())
-            .networkId(networkInfos.getNetworkId())
-            .caseUuid(caseInfos.getCaseUuid())
-            .originalCaseUuid(caseInfos.getOriginalCaseUuid())
-            .caseName(caseInfos.getCaseName())
-            .caseFormat(caseInfos.getCaseFormat())
-            .reportUuid(reportUuid)
-            .importParameters(importParameters)
-            .tag(tag);
+                .id(id)
+                .name(name)
+                .description(description)
+                .networkUuid(networkInfos.getNetworkUuid())
+                .networkId(networkInfos.getNetworkId())
+                .caseUuid(caseInfos.getCaseUuid())
+                .originalCaseUuid(caseInfos.getOriginalCaseUuid())
+                .caseName(caseInfos.getCaseName())
+                .caseFormat(caseInfos.getCaseFormat())
+                .reportUuid(reportUuid)
+                .importParameters(importParameters)
+                .tag(tag);
 
         if (rootNetworkNodeInfos != null) {
             rootNetworkEntityBuilder.rootNetworkNodeInfos(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::toEntity).toList());
