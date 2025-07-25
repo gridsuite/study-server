@@ -401,7 +401,7 @@ public class RootNetworkNodeInfoService {
 
     public void assertNoBlockedBuild(UUID rootNetworkUuid, List<UUID> nodesUuids) {
         if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndBlockedBuild(rootNetworkUuid, nodesUuids)) {
-            throw new StudyException(NOT_ALLOWED, "There is already a network modification in progress in this branch !");
+            throw new StudyException(NOT_ALLOWED, "Another action is in progress in this branch !");
         }
     }
 
