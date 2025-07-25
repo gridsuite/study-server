@@ -985,8 +985,9 @@ public class StudyController {
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                   @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
                                                                   @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                                                  @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
                                                                   Pageable pageable) {
-        String result = rootNetworkNodeInfoService.getSecurityAnalysisResult(nodeUuid, rootNetworkUuid, resultType, filters, pageable);
+        String result = rootNetworkNodeInfoService.getSecurityAnalysisResult(nodeUuid, rootNetworkUuid, resultType, filters, globalFilters, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
                ResponseEntity.noContent().build();
     }

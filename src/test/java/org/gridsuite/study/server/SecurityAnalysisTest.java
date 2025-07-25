@@ -29,7 +29,6 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -223,11 +222,11 @@ class SecurityAnalysisTest {
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/limit-types")
                         || ("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/limit-types").equals(path)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), limitTypeJson);
-                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*sort=.*")) {
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*globalFilters=.*sort=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_N_RESULT_JSON);
-                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*globalFilters=.*sort=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON);
-                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-constraints-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-constraints-result/paged\\?page=.*size=.*filters=.*globalFilters=.*sort=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON);
                 } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result/csv")) {
                     return new MockResponse.Builder().code(200).body(getBinaryAsBuffer(SECURITY_ANALYSIS_N_RESULT_CSV_ZIPPED))
@@ -256,11 +255,11 @@ class SecurityAnalysisTest {
                 } else if (path.matches("/v1/contingency-lists/count\\?ids=" + CONTINGENCY_LIST_NAME + "&networkUuid=" + NETWORK_UUID_STRING)
                         || path.matches("/v1/contingency-lists/count\\?ids=" + CONTINGENCY_LIST_NAME + "&networkUuid=" + NETWORK_UUID_STRING + "&variantId=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), CONTINGENCIES_COUNT);
-                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*sort=.*")) {
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result\\?page=.*size=.*filters=.*globalFilters=.*sort=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_N_RESULT_JSON);
-                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*globalFilters=.*sort=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON);
-                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-constraints-result/paged\\?page=.*size=.*filters=.*sort=.*")) {
+                } else if (path.matches("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/nmk-constraints-result/paged\\?page=.*size=.*filters=.*globalFilters=.*sort=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON);
                 } else if (("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/status").equals(path)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
@@ -528,25 +527,25 @@ class SecurityAnalysisTest {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + resultUuid + "/limit-types")));
 
         // get N security analysis result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&sort=random_sort", studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.N)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&globalFilters=random_globalfilters&sort=random_sort", studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.N)).andExpectAll(
                 status().isOk(),
                 content().string(SECURITY_ANALYSIS_N_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(String.format("/v1/results/%s/n-result\\?page=.*size=.*filters=.*sort=.*", resultUuid))));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(String.format("/v1/results/%s/n-result\\?page=.*size=.*filters=.*globalFilters=.*sort=.*", resultUuid))));
 
         // get NMK_CONTINGENCIES security analysis result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&sort=random_sort", studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_CONTINGENCIES)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&globalFilters=random_globalfilters&sort=random_sort", studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_CONTINGENCIES)).andExpectAll(
             status().isOk(),
             content().string(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(String.format("/v1/results/%s/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*sort=.*", resultUuid))));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(String.format("/v1/results/%s/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*globalFilters=.*sort=.*", resultUuid))));
 
         // get NMK_CONSTRAINTS security analysis result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&sort=random_sort", studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_LIMIT_VIOLATIONS)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&globalFilters=random_globalfilters&sort=random_sort", studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_LIMIT_VIOLATIONS)).andExpectAll(
             status().isOk(),
             content().string(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(String.format("/v1/results/%s/nmk-constraints-result/paged\\?page=.*size=.*filters=.*sort=.*", resultUuid))));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(String.format("/v1/results/%s/nmk-constraints-result/paged\\?page=.*size=.*filters=.*globalFilters=.*sort=.*", resultUuid))));
 
         // get security analysis status
         MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/status", studyUuid, rootNetworkUuid, nodeUuid)).andExpectAll(
