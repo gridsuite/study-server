@@ -23,6 +23,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
+import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -2447,5 +2448,26 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow provider is returned")})
     public ResponseEntity<String> getLoadFlowProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/diagram-grid-layout")
+    @Operation(summary = "Get diagram grid layout of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Diagram grid layout is returned"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<DiagramGridLayout> getDiagramGridLayout(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.assertIsStudyExist(studyUuid);
+        DiagramGridLayout diagramGridLayout = studyService.getDiagramGridLayout(studyUuid);
+        return diagramGridLayout != null ? ResponseEntity.ok().body(diagramGridLayout) : ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/diagram-grid-layout", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Save diagram grid layout of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Diagram grid layout is saved"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<UUID> saveDiagramGridLayout(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody DiagramGridLayout diagramGridLayout) {
+        studyService.assertIsStudyExist(studyUuid);
+
+        return ResponseEntity.ok().body(studyService.saveDiagramGridLayout(studyUuid, diagramGridLayout));
     }
 }

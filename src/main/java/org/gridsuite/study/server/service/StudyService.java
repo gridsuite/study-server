@@ -21,6 +21,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
+import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -127,6 +128,7 @@ public class StudyService {
     private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
+    private final DiagramGridLayoutService diagramGridLayoutService;
     private final FilterService filterService;
     private final ActionsService actionsService;
     private final CaseService caseService;
@@ -190,6 +192,7 @@ public class StudyService {
         VoltageInitService voltageInitService,
         DynamicSimulationEventService dynamicSimulationEventService,
         StudyConfigService studyConfigService,
+        DiagramGridLayoutService diagramGridLayoutService,
         FilterService filterService,
         StateEstimationService stateEstimationService,
         @Lazy StudyService studyService,
@@ -225,6 +228,7 @@ public class StudyService {
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
+        this.diagramGridLayoutService = diagramGridLayoutService;
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
         this.self = studyService;
@@ -558,6 +562,7 @@ public class StudyService {
                 removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
+                removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -3435,5 +3440,30 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         return voltageInitService.getVoltageInitResult(resultUuid, networkuuid, variantId, globalFilters);
+    }
+
+    public DiagramGridLayout getDiagramGridLayout(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID diagramGridLayoutUuid = studyEntity.getDiagramGridLayoutUuid();
+        return diagramGridLayoutService.getDiagramGridLayout(diagramGridLayoutUuid);
+    }
+
+    @Transactional
+    public UUID saveDiagramGridLayout(UUID studyUuid, DiagramGridLayout diagramGridLayout) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+
+        UUID existingDiagramGridLayoutUuid = studyEntity.getDiagramGridLayoutUuid();
+
+        if (existingDiagramGridLayoutUuid == null) {
+            UUID newDiagramGridLayoutUuid = diagramGridLayoutService.createDiagramGridLayout(diagramGridLayout);
+            studyEntity.setDiagramGridLayoutUuid(newDiagramGridLayoutUuid);
+            return newDiagramGridLayoutUuid;
+        } else {
+            return diagramGridLayoutService.updateDiagramGridLayout(existingDiagramGridLayoutUuid, diagramGridLayout);
+        }
+    }
+
+    private void removeDiagramGridLayout(@Nullable UUID diagramGridLayoutUuid) {
+        diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
     }
 }
