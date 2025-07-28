@@ -61,6 +61,9 @@ public class RootNetworkEntity {
     @Column(name = "caseUuid", nullable = false)
     private UUID caseUuid;
 
+    @Column(name = "originalCaseUuid")
+    private UUID originalCaseUuid;
+
     @Column(name = "caseName", nullable = false)
     private String caseName;
 
@@ -88,7 +91,7 @@ public class RootNetworkEntity {
             .name(this.name)
             .networkInfos(new NetworkInfos(this.networkUuid, this.networkId))
             .importParameters(this.importParameters)
-            .caseInfos(new CaseInfos(this.caseUuid, this.caseName, this.caseFormat))
+            .caseInfos(new CaseInfos(this.caseUuid, this.originalCaseUuid, this.caseName, this.caseFormat))
             .reportUuid(this.reportUuid)
             .tag(tag)
             .build();
@@ -99,6 +102,6 @@ public class RootNetworkEntity {
     }
 
     public BasicRootNetworkInfos toBasicDto() {
-        return new BasicRootNetworkInfos(getId(), getName(), getTag(), false);
+        return new BasicRootNetworkInfos(getId(), getOriginalCaseUuid(), getName(), getTag(), false);
     }
 }

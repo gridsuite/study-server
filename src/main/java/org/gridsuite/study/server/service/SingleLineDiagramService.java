@@ -16,18 +16,17 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyConstants.SINGLE_LINE_DIAGRAM_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.SVG_NOT_FOUND;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.DiagramParameters;
+import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
+import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -170,51 +169,71 @@ public class SingleLineDiagramService {
         return result;
     }
 
-    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, List<String> voltageLevelsIds, int depth, boolean withGeoData) {
+    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, String nadRequestInfos) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
-                "/network-area-diagram/{networkUuid}")
-                .queryParam(QUERY_PARAM_DEPTH, depth)
-                .queryParam(QUERY_PARAM_INIT_WITH_GEO_DATA, withGeoData);
+                "/network-area-diagram/{networkUuid}");
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         var path = uriComponentsBuilder
                 .buildAndExpand(networkUuid)
                 .toUriString();
-        String result;
+
+        var headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> request = new HttpEntity<>(nadRequestInfos, headers);
+
         try {
-            result = restTemplate.postForObject(singleLineDiagramServerBaseUri + path, voltageLevelsIds, String.class);
+            return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, request, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelsIds + NOT_FOUND);
+                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + NOT_FOUND);
             } else {
                 throw e;
             }
         }
-        return result;
     }
 
-    public String getNetworkAreaDiagram(UUID networkUuid, String variantId, String elementParams) {
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
-                "/network-area-diagram/{networkUuid}")
-                .queryParam(QUERY_PARAM_ELEMENT_PARAMS, URLEncoder.encode(elementParams, StandardCharsets.UTF_8));
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        var path = uriComponentsBuilder
-                .buildAndExpand(networkUuid)
+    public UUID createDiagramConfig(NetworkAreaDiagramLayoutDetails nadLayoutDetails) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/config")
+                .buildAndExpand()
                 .toUriString();
-        String result;
-        try {
-            result = restTemplate.getForObject(singleLineDiagramServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, ELEMENT + NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-        return result;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<NetworkAreaDiagramLayoutDetails> httpEntity = new HttpEntity<>(nadLayoutDetails, headers);
+
+        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+    }
+
+    public void createMultipleDiagramConfigs(List<NadConfigInfos> nadConfigs) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<NadConfigInfos>> httpEntity = new HttpEntity<>(nadConfigs, headers);
+
+        restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
+    }
+
+    public void deleteMultipleDiagramConfigs(List<UUID> configUuids) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(configUuids, headers);
+
+        restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.DELETE, httpEntity, Void.class);
     }
 
     public void setSingleLineDiagramServerBaseUri(String singleLineDiagramServerBaseUri) {

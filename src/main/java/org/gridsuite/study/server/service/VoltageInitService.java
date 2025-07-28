@@ -92,16 +92,22 @@ public class VoltageInitService extends AbstractComputationService {
         return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
-    private String getVoltageInitResultOrStatus(UUID resultUuid, String suffix) {
+    private String getVoltageInitResultOrStatus(UUID resultUuid, String suffix, UUID networkUuid, String variantId, String globalFilters) {
         String result;
 
         if (resultUuid == null) {
             return null;
         }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}" + suffix)
-            .buildAndExpand(resultUuid).toUriString();
-
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}" + suffix);
+        if (!StringUtils.isEmpty(globalFilters)) {
+            uriComponentsBuilder.queryParam("globalFilters", URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
+            uriComponentsBuilder.queryParam("networkUuid", networkUuid);
+            if (!StringUtils.isBlank(variantId)) {
+                uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+        }
+        String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
         try {
             result = restTemplate.getForObject(voltageInitServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
@@ -113,12 +119,12 @@ public class VoltageInitService extends AbstractComputationService {
         return result;
     }
 
-    public String getVoltageInitResult(UUID resultUuid) {
-        return getVoltageInitResultOrStatus(resultUuid, "");
+    public String getVoltageInitResult(UUID resultUuid, UUID networkUuid, String variantId, String globalFilters) {
+        return getVoltageInitResultOrStatus(resultUuid, "", networkUuid, variantId, globalFilters);
     }
 
     public String getVoltageInitStatus(UUID resultUuid) {
-        return getVoltageInitResultOrStatus(resultUuid, "/status");
+        return getVoltageInitResultOrStatus(resultUuid, "/status", null, null, null);
     }
 
     public VoltageInitParametersInfos getVoltageInitParameters(UUID parametersUuid) {
@@ -255,10 +261,6 @@ public class VoltageInitService extends AbstractComputationService {
     }
 
     public UUID getModificationsGroupUuid(UUID nodeUuid, UUID resultUuid) {
-        if (resultUuid == null) {
-            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init results");
-        }
-
         UUID modificationsGroupUuid;
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
             .buildAndExpand(resultUuid).toUriString();
@@ -283,10 +285,7 @@ public class VoltageInitService extends AbstractComputationService {
         }
     }
 
-    public void resetModificationsGroupUuid(UUID nodeUuid, UUID resultUuid) {
-        if (resultUuid == null) {
-            throw new StudyException(NO_VOLTAGE_INIT_RESULTS_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init results");
-        }
+    public void resetModificationsGroupUuid(UUID resultUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
             .buildAndExpand(resultUuid).toUriString();
 

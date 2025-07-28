@@ -362,6 +362,12 @@ public class WireMockUtils {
         return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(responseBody))).getId();
     }
 
+    public UUID stubLoadFlowProvider(UUID parametersUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid + "/provider"))
+                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(responseBody))
+        ).getId();
+    }
+
     public void verifyRunLoadflow(UUID stubUuid, UUID networkUuid, boolean withRatioTapChangers, UUID loadFlowResultUuid) {
         HashMap<String, StringValuePattern> params = new HashMap<>();
         params.put(QUERY_WITH_TAP_CHANGER, WireMock.equalTo(withRatioTapChangers ? "true" : "false"));
@@ -372,6 +378,10 @@ public class WireMockUtils {
         }
 
         verifyPostRequest(stubUuid, "/v1/networks/" + networkUuid + "/run-and-save", params);
+    }
+
+    public void verifyLoadFlowProviderGet(UUID loadFlowProviderStubUuid, UUID loadFlowParametersUuid) {
+        verifyGetRequest(loadFlowProviderStubUuid, "/v1/parameters/" + loadFlowParametersUuid + "/provider", Map.of());
     }
 
     public UUID stubDeleteLoadFlowResults(List<UUID> loadFlowResultUuids) {

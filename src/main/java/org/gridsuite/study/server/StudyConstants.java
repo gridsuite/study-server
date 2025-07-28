@@ -50,7 +50,6 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_INFO_TYPE = "infoType";
     public static final String QUERY_PARAM_OPTIONAL_PARAMS = "optionalParameters";
     public static final String QUERY_FORMAT_OPTIONAL_PARAMS = QUERY_PARAM_OPTIONAL_PARAMS + "[%s]";
-    public static final String QUERY_PARAM_SUBSTATIONS_IDS = "substationsIds";
     public static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
     public static final String QUERY_PARAM_RESULTS_UUIDS = "resultsUuids";
     public static final String QUERY_PARAM_RESULT_UUID = "resultUuid";
@@ -85,6 +84,8 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_STASHED = "stashed";
     public static final String QUERY_PARAM_ACTIVATED = "activated";
     public static final String PATH_PARAM_PARAMETERS = "parameters";
+    public static final String DYNA_FLOW_PROVIDER = "DynaFlow";
+
 
     public enum SldDisplayMode {
         FEEDER_POSITION,

@@ -59,6 +59,8 @@ class LoadFLowUnitTest {
     @MockBean
     private NetworkModificationService networkModificationService;
     @MockBean
+    private LoadFlowService loadFlowService;
+    @MockBean
     private NetworkService networkService;
     @MockBean
     private UserAdminService userAdminService;
@@ -68,17 +70,19 @@ class LoadFLowUnitTest {
     @Test
     void testRunLoadFlow() {
         when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(null);
-        doReturn(loadflowResultUuid).when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
-
+        doReturn(loadflowResultUuid).when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyBoolean(), anyString());
+        doNothing().when(studyService).assertCanRunLoadFLow(any(), any());
         controller.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId);
 
-        verify(studyService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
+        verify(studyService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyBoolean(), anyString());
+        verify(studyService, times(1)).assertCanRunLoadFLow(any(), any());
     }
 
     @Test
     void testRunLoadFlowWithExistingResult() {
         UUID previousResultUuid = UUID.randomUUID();
         when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(previousResultUuid);
+        doNothing().when(studyService).assertCanRunLoadFLow(studyUuid, nodeUuid);
 
         doNothing().when(studyService).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
 
@@ -90,6 +94,8 @@ class LoadFLowUnitTest {
         verify(studyService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
         verify(studyService, times(1)).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
         verify(studyService, times(1)).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
+        verify(studyService, times(1)).assertCanRunLoadFLow(studyUuid, nodeUuid);
+
     }
 
     @Test
@@ -98,6 +104,7 @@ class LoadFLowUnitTest {
         InvalidateNodeTreeParameters expectedInvalidationParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
             .computationsInvalidationMode(InvalidateNodeTreeParameters.ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
+            .withBlockedNodeBuild(true)
             .build();
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         UUID groupUuidToInvalidate = UUID.randomUUID();
@@ -115,6 +122,7 @@ class LoadFLowUnitTest {
         when(networkModificationTreeService.invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters)).thenReturn(invalidateNodeInfos);
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
         when(networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid)).thenReturn(buildInfos);
+        doReturn(loadflowResultUuid).when(loadFlowService).createRunningStatus();
 
         // execute loadflow rerun
         assertEquals(loadflowResultUuid, studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId));

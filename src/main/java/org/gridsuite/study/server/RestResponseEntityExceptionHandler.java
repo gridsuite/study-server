@@ -69,7 +69,8 @@ public class RestResponseEntityExceptionHandler {
                     NODE_NAME_ALREADY_EXIST,
                     ROOT_NETWORK_DELETE_FORBIDDEN,
                     MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED,
-                    MAXIMUM_TAG_LENGTH_EXCEEDED
+                    MAXIMUM_TAG_LENGTH_EXCEEDED,
+                    TOO_MANY_NAD_CONFIGS
                     -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(exception.getMessage());
             case CANT_DELETE_ROOT_NODE -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             case CREATE_NETWORK_MODIFICATION_FAILED,
@@ -122,7 +123,8 @@ public class RestResponseEntityExceptionHandler {
                     RUN_DYNAMIC_SECURITY_ANALYSIS_FAILED,
                     INVALIDATE_DYNAMIC_SECURITY_ANALYSIS_FAILED,
                     UPDATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED,
-                    DUPLICATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED
+                    DUPLICATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED,
+                    UPDATE_SPREADSHEET_CONFIG_FAILED
                     -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
             case SVG_NOT_FOUND,
                     NO_VOLTAGE_INIT_RESULTS_FOR_NODE,
@@ -134,6 +136,7 @@ public class RestResponseEntityExceptionHandler {
                     -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getType());
             case NOT_IMPLEMENTED -> ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(exception.getMessage());
             case MAX_NODE_BUILDS_EXCEEDED -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(StudyException.Type.MAX_NODE_BUILDS_EXCEEDED + " " + exception.getMessage());
+            case DIAGRAM_GRID_LAYOUT_NOT_FOUND -> ResponseEntity.noContent().build();
             default -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         };
     }

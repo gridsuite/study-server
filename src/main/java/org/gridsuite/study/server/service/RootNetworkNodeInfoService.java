@@ -133,6 +133,7 @@ public class RootNetworkNodeInfoService {
             .variantId(UUID.randomUUID().toString())
             .modificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())))
             .modificationsUuidsToExclude(modificationsToExclude)
+            .blockedBuild(false)
             .build();
     }
 
@@ -234,15 +235,25 @@ public class RootNetworkNodeInfoService {
 
     public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        return invalidateRootNetworkNode(rootNetworkNodeInfoEntity, invalidateTreeParameters);
+    }
 
-        // No need to invalidate a node with a status different of "BUILT"
+    public InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters) {
+        boolean notOnlyChildrenBuildStatus = !invalidateTreeParameters.isOnlyChildrenBuildStatus();
+
+        // Always update blocked build info
+        if (invalidateTreeParameters.withBlockedNodeBuild()) {
+            rootNetworkNodeInfoEntity.setBlockedBuild(true);
+        }
+
+        // No need to delete node results with a status different of "BUILT"
         if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
             return new InvalidateNodeInfos();
         }
 
         InvalidateNodeInfos invalidateNodeInfos = getInvalidationComputationInfos(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
 
-        if (!invalidateTreeParameters.isOnlyChildrenBuildStatusMode()) {
+        if (notOnlyChildrenBuildStatus) {
             rootNetworkNodeInfoEntity.getModificationReports().forEach((key, value) -> invalidateNodeInfos.addReportUuid(value));
             invalidateNodeInfos.addVariantId(rootNetworkNodeInfoEntity.getVariantId());
             invalidateBuildStatus(rootNetworkNodeInfoEntity, invalidateNodeInfos);
@@ -251,6 +262,14 @@ public class RootNetworkNodeInfoService {
         invalidateComputationResults(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
 
         return invalidateNodeInfos;
+    }
+
+    private static void invalidateBuildStatus(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos) {
+        rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
+        rootNetworkNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
+        rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(rootNetworkNodeInfoEntity.getNodeInfo().getId(), UUID.randomUUID())));
+
+        invalidateNodeInfos.addNodeUuid(rootNetworkNodeInfoEntity.getNodeInfo().getIdNode());
     }
 
     private static void invalidateComputationResults(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ComputationsInvalidationMode computationsInvalidationMode) {
@@ -358,6 +377,10 @@ public class RootNetworkNodeInfoService {
             .toList();
     }
 
+    public List<RootNetworkNodeInfoEntity> getRootNetworkNodes(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        return rootNetworkNodeInfoRepository.getAllByRootNetworkIdAndNodeInfoIdIn(rootNetworkUuid, nodesUuids);
+    }
+
     public List<RootNetworkNodeInfoEntity> getAllByStudyUuidWithLoadFlowResultsNotNull(UUID studyUuid) {
         return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyIdAndLoadFlowResultUuidNotNull(studyUuid);
     }
@@ -375,18 +398,20 @@ public class RootNetworkNodeInfoService {
         }
     }
 
+    public void assertNoBlockedBuild(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndBlockedBuild(rootNetworkUuid, nodesUuids)) {
+            throw new StudyException(NOT_ALLOWED, "Another action is in progress in this branch !");
+        }
+    }
+
+    public void invalidateBlockedBuild(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        getRootNetworkNodes(rootNetworkUuid, nodesUuids).stream().forEach(rnn -> rnn.setBlockedBuild(false));
+    }
+
     private void addLink(NetworkModificationNodeInfoEntity nodeInfoEntity, RootNetworkEntity rootNetworkEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         nodeInfoEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
-    }
-
-    private static void invalidateBuildStatus(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos) {
-        rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
-        rootNetworkNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
-        rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(rootNetworkNodeInfoEntity.getNodeInfo().getId(), UUID.randomUUID())));
-
-        invalidateNodeInfos.addNodeUuid(rootNetworkNodeInfoEntity.getNodeInfo().getIdNode());
     }
 
     public void updateModificationsToExclude(UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationUuids, boolean activated) {
@@ -516,9 +541,13 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public String getSecurityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
+    public String getSecurityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String filters, String globalFilters, Pageable pageable) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(()
+                -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        String variantId = rootNetworkNodeInfoEntity.getVariantId();
+        UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
-        return securityAnalysisService.getSecurityAnalysisResult(resultUuid, resultType, filters, pageable);
+        return securityAnalysisService.getSecurityAnalysisResult(resultUuid, networkUuid, variantId, resultType, filters, globalFilters, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -546,9 +575,12 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public String getSensitivityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, String selector, String filters) {
+    public String getSensitivityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, String selector, String filters, String globalFilters) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        String variantId = rootNetworkNodeInfoEntity.getVariantId();
+        UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
-        return sensitivityAnalysisService.getSensitivityAnalysisResult(resultUuid, selector, filters);
+        return sensitivityAnalysisService.getSensitivityAnalysisResult(resultUuid, networkUuid, variantId, selector, filters, globalFilters);
     }
 
     @Transactional(readOnly = true)
@@ -581,12 +613,6 @@ public class RootNetworkNodeInfoService {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
             type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
         return shortCircuitService.getShortCircuitAnalysisCsvResult(resultUuid, headerCsv);
-    }
-
-    @Transactional(readOnly = true)
-    public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
-        return voltageInitService.getVoltageInitResult(resultUuid);
     }
 
     @Transactional(readOnly = true)

@@ -29,21 +29,32 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
     List<NodeEntity> findAllByStudyIdAndTypeAndStashed(UUID id, NodeType type, boolean stashed);
 
     @Query(nativeQuery = true, value =
-        "WITH RECURSIVE NodeHierarchy (id_node, depth) AS ( " +
-            "  SELECT n0.id_node, 0 AS depth" +
+        "WITH RECURSIVE NodeHierarchy (id_node) AS ( " +
+            "  SELECT n0.id_node" +
             "  FROM NODE n0 " +
             "  WHERE id_node = :nodeUuid " +
             "  UNION ALL " +
-            "  SELECT n.id_node, nh.depth + 1 as depth" +
+            "  SELECT n.id_node" +
             "  FROM NODE n " +
             "  INNER JOIN NodeHierarchy nh ON n.parent_node = nh.id_node " +
             ") " +
-            "SELECT nh.id_node::text " +
-            "FROM NodeHierarchy nh " +
-            "ORDER BY nh.depth DESC")
-    List<String> findAllDescendants(UUID nodeUuid);
+        "SELECT cast(nh.id_node AS VARCHAR) " +
+        "FROM NodeHierarchy nh where nh.id_node != :nodeUuid ")
+    List<UUID> findAllChildrenUuids(UUID nodeUuid);
 
-    List<NodeEntity> findAllByIdNodeIn(List<UUID> uuids);
+    @Query(nativeQuery = true, value =
+        "WITH RECURSIVE NodeHierarchy (id_node) AS ( " +
+            "  SELECT n0.id_node" +
+            "  FROM NODE n0 " +
+            "  WHERE id_node = :nodeUuid " +
+            "  UNION ALL " +
+            "  SELECT n.id_node" +
+            "  FROM NODE n " +
+            "  INNER JOIN NodeHierarchy nh ON n.parent_node = nh.id_node " +
+            ") " +
+            "SELECT * FROM NODE n " +
+            "WHERE n.id_node IN (SELECT nh.id_node FROM NodeHierarchy nh) AND n.id_node != :nodeUuid")
+    List<NodeEntity> findAllChildren(UUID nodeUuid);
 
     List<NodeEntity> findAllByStudyIdAndStashedAndParentNodeIdNodeOrderByStashDateDesc(UUID id, boolean stashed, UUID parentNode);
 
