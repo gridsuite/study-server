@@ -16,6 +16,6 @@
     "componentLibrary": ""
   },
   "networkAreaDiagramParameters": {
-    "initNadWithGeoData": true
+    "nadConfigUuid": "5218bc26-1196-4ac5-a860-d7342359bca7"
   }
 }

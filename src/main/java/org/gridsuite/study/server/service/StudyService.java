@@ -3427,14 +3427,16 @@ public class StudyService {
             Map<String, Object> result = new HashMap<>();
             result.put("positions", positions);
             String jsonResult = objectMapper.writeValueAsString(result);
-
+            //Store the csv positions in a nad config
             UUID nadConfigUuid = singleLineDiagramService.createDiagramConfig(jsonResult);
             String params = self.getNetworkVisualizationParametersValues(studyUuid);
 
             String updatedParameters = updateNadConfigUuid(params, nadConfigUuid);
 
             StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+            //update the network visualization params with the created nad config
             createOrUpdateNetworkVisualizationParameters(studyEntity, updatedParameters);
+            notificationService.emitNetworkVisualizationParamsChanged(studyUuid);
 
         } catch (Exception e) {
             throw new StudyException(IMPORT_CSV_FAILED, e.getMessage());
