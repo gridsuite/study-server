@@ -400,7 +400,7 @@ public class RootNetworkNodeInfoService {
 
     public void assertNoBlockedBuild(UUID rootNetworkUuid, List<UUID> nodesUuids) {
         if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndBlockedBuild(rootNetworkUuid, nodesUuids)) {
-            throw new StudyException(NOT_ALLOWED, "There is already a network modification in progress in this branch !");
+            throw new StudyException(NOT_ALLOWED, "Another action is in progress in this branch !");
         }
     }
 
@@ -541,9 +541,13 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public String getSecurityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String filters, Pageable pageable) {
+    public String getSecurityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String filters, String globalFilters, Pageable pageable) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(()
+                -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        String variantId = rootNetworkNodeInfoEntity.getVariantId();
+        UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
-        return securityAnalysisService.getSecurityAnalysisResult(resultUuid, resultType, filters, pageable);
+        return securityAnalysisService.getSecurityAnalysisResult(resultUuid, networkUuid, variantId, resultType, filters, globalFilters, pageable);
     }
 
     @Transactional(readOnly = true)
