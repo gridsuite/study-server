@@ -891,11 +891,14 @@ public class StudyService {
 
     @Transactional
     public UUID rerunLoadflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, Boolean withRatioTapChangers, String userId) {
-        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
-            .invalidationMode(InvalidationMode.ALL)
-            .withBlockedNodeBuild(true)
-            .computationsInvalidationMode(ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
-            .build());
+        boolean isSecurityNode = networkModificationTreeService.isSecurityNode(nodeUuid);
+        if (isSecurityNode) {
+            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
+                .invalidationMode(InvalidationMode.ALL)
+                .withBlockedNodeBuild(true)
+                .computationsInvalidationMode(ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
+                .build());
+        }
 
         buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, RerunLoadFlowInfos.builder()
             .loadflowResultUuid(loadflowResultUuid)
@@ -923,8 +926,9 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID sendLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, boolean invalidateNodeTree, String userId) {
-        if (invalidateNodeTree) {
+    public void sendLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, boolean invalidateNodeTree, String userId) {
+        boolean isSecurityNode = networkModificationTreeService.isSecurityNode(nodeUuid);
+        if (isSecurityNode && invalidateNodeTree) {
             invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
                 .invalidationMode(InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
                 .withBlockedNodeBuild(true)
@@ -939,12 +943,10 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
 
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
-        UUID result = loadflowService.runLoadFlow(new NodeReceiver(nodeUuid, rootNetworkUuid), loadflowResultUuid, new VariantInfos(networkUuid, variantId), lfParametersUuid, withRatioTapChangers, lfReportUuid, userId);
+        UUID result = loadflowService.runLoadFlow(new NodeReceiver(nodeUuid, rootNetworkUuid), loadflowResultUuid, new VariantInfos(networkUuid, variantId), lfParametersUuid, withRatioTapChangers, isSecurityNode, lfReportUuid, userId);
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
 
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
-
-        return result;
     }
 
     public void exportNetwork(UUID nodeUuid, UUID rootNetworkUuid, String format, String parametersJson, String fileName, HttpServletResponse exportNetworkResponse) {

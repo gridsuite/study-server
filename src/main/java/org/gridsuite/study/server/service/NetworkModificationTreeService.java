@@ -635,6 +635,10 @@ public class NetworkModificationTreeService {
         return getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType() == NetworkModificationNodeType.CONSTRUCTION;
     }
 
+    public boolean isSecurityNode(UUID nodeUuid) {
+        return getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType() == NetworkModificationNodeType.SECURITY;
+    }
+
     public void assertCreateNode(UUID parentNodeId, NetworkModificationNodeType newNodeType, InsertMode insertMode) {
         assertInsertNode(parentNodeId, newNodeType, insertMode);
     }

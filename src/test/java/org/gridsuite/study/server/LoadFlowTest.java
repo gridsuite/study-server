@@ -27,6 +27,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -250,9 +251,9 @@ class LoadFlowTest {
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = Objects.requireNonNull(request.getMethod());
-                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + ".*")) {
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&isModeSecurity=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + ".*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), loadFlowResultUuidStr);
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&isModeSecurity=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), LOADFLOW_FAILED_DESTINATION);
@@ -343,8 +344,10 @@ class LoadFlowTest {
         assertEquals(isNodeBlocked, networkNodeInfoEntity.get().getBlockedBuild());
     }
 
-    private void consumeLoadFlowResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) throws JsonProcessingException {
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
+    private void consumeLoadFlowResult(UUID studyUuid, UUID rootNetworkUuid, NetworkModificationNode modificationNode) throws JsonProcessingException {
+        UUID nodeUuid = modificationNode.getId();
+
+        assertNodeBlocked(nodeUuid, rootNetworkUuid, modificationNode.isNodeSecurity());
 
         // consume loadflow result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
@@ -358,84 +361,106 @@ class LoadFlowTest {
 
     @Test
     void testLoadFlow(final MockWebServer server) throws Exception {
-        MvcResult mvcResult;
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
-                UUID.randomUUID(), VARIANT_ID, "node 1");
+            UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
+            modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
         NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
-        UUID modificationNode3Uuid = modificationNode3.getId();
+            modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
+
+        NetworkModificationNode modificationNode4 = createNetworkModificationNode(studyNameUserIdUuid,
+            modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 4", NetworkModificationNodeType.SECURITY);
 
         // run a loadflow on root node (not allowed)
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, UUID.randomUUID(), rootNodeUuid)
-                        .header("userId", "userId"))
-                .andExpect(status().isForbidden());
+                .header("userId", "userId"))
+            .andExpect(status().isForbidden());
 
-        //run a loadflow
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
-                        .header("userId", "userId"))
-                .andExpect(status().isOk());
+        // run LF with failed status
+        testLoadFlowFailed(server, studyNameUserIdUuid, modificationNode2.getId());
 
-        // running loadflow now invalidate node children and their computations
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid);
+        // run LF with construction node
+        testLoadFlow(server, studyNameUserIdUuid, modificationNode3);
+
+        // run LF with security node
+        testLoadFlow(server, studyNameUserIdUuid, modificationNode4);
+    }
+
+    private void testLoadFlow(final MockWebServer server, UUID studyNameUserIdUuid, NetworkModificationNode modificationNode) throws Exception {
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
+        UUID modificationNodeUuid = modificationNode.getId();
+
+        // run a loadflow
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
+                .header("userId", "userId"))
+            .andExpect(status().isOk());
+
+        // running loadflow invalidate node children and their computations
+        if (modificationNode.isNodeSecurity()) {
+            checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+        }
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
 
-        assertRequestsDone(server, List.of("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2, "/v1/parameters/" + LOADFLOW_PARAMETERS_UUID + "/provider"));
+        List<String> expectedRequestsPatterns = new ArrayList<>();
+        expectedRequestsPatterns.add("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2);
+        if (!modificationNode.isNodeSecurity()) {
+            expectedRequestsPatterns.add("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID + "/provider");
+        }
+        assertRequestsDone(server, expectedRequestsPatterns);
 
-        consumeLoadFlowResult(studyNameUserIdUuid, modificationNode3Uuid, firstRootNetworkUuid);
+        consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode);
 
         // get loadflow result
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/result", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)).andExpectAll(
-                status().isOk()).andReturn();
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/result", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)).andExpectAll(
+            status().isOk()).andReturn();
 
         assertEquals(TestUtils.resourceToString("/loadflow-result.json"), mvcResult.getResponse().getContentAsString());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID)));
 
         // get loadflow status
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/status?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, false))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/status?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, false))
             .andExpect(status().isOk())
             .andReturn();
         assertEquals(LoadFlowStatus.CONVERGED.name(), mvcResult.getResponse().getContentAsString());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/status")));
 
-        // stop loadflow analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/stop?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, false)
+        // stop loadflow
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/stop?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, false)
                 .header(HEADER_USER_ID, "userId"))
-                .andExpect(status().isOk());
+            .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/stop\\?receiver=.*nodeUuid.*")));
+    }
+
+    private void testLoadFlowFailed(final MockWebServer server, UUID studyNameUserIdUuid, UUID modificationNodeUuid) throws Exception {
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
 
         // loadflow failed
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_FAILED);
-
-        // running loadflow now invalidate node children and their computations
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode2Uuid);
-
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+
         assertRequestsDone(server, List.of("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID + "/provider", "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID));
     }
 
     private static void assertRequestsDone(MockWebServer server, List<String> expectedPatterns) {
-        var requests = TestUtils.getRequestsDone(2, server);
+        var requests = TestUtils.getRequestsDone(expectedPatterns.size(), server);
         for (String pattern : expectedPatterns) {
             assertTrue(requests.stream().anyMatch(r -> r.matches(pattern)));
         }
@@ -448,7 +473,7 @@ class LoadFlowTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID_2, "node 1");
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID_2, "node 1", NetworkModificationNodeType.SECURITY);
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         //run a loadflow
@@ -457,13 +482,13 @@ class LoadFlowTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        // running loadflow now invalidate node children and their computations
+        // running loadflow ()(with security node) invalidate node children and their computations
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        assertRequestsDone(server, List.of("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID + "/provider", "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
+        assertRequestsDone(server, List.of("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
 
-        consumeLoadFlowResult(studyNameUserIdUuid, modificationNode1Uuid, firstRootNetworkUuid);
+        consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1);
 
         // get computing status
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
@@ -485,7 +510,7 @@ class LoadFlowTest {
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/limit-violations")));
 
-        // get limit violations with filters , globalFilters and sort
+        // get limit violations with filters, globalFilters and sort
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/limit-violations?filters=lineId2&sort=subjectId,ASC&globalFilters=ss", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(LIMIT_VIOLATIONS_JSON));
@@ -504,27 +529,28 @@ class LoadFlowTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID_2, "node 1");
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID_2, "node 1", NetworkModificationNodeType.SECURITY);
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        //run a loadflow
+        // run a loadflow
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        // running loadflow now invalidate children and their computations
+        // running loadflow (with security node) invalidate children and their computations
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        assertRequestsDone(server, List.of("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID + "/provider", "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
+        assertRequestsDone(server, List.of("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
 
-        consumeLoadFlowResult(studyNameUserIdUuid, modificationNode1Uuid, firstRootNetworkUuid);
+        consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1);
 
         // invalidate status
         mockMvc.perform(put("/v1/studies/{studyUuid}/loadflow/invalidate-status", studyNameUserIdUuid)
                 .header("userId", "userId")).andExpect(status().isOk());
-        // invalidating loadflow now invalidate node, their children and their computations
+
+        // invalidating loadflow (with security node) invalidate node, their children and their computations
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
     }
@@ -545,7 +571,7 @@ class LoadFlowTest {
         UUID modificationNode2Uuid = modificationNode2.getId();
 
         NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
-                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
+                modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3", NetworkModificationNodeType.SECURITY);
         UUID modificationNode3Uuid = modificationNode3.getId();
 
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity3 = rootNetworkNodeInfoService.getRootNetworkNodeInfo(modificationNode3Uuid, firstRootNetworkUuid).orElseThrow();
@@ -557,13 +583,13 @@ class LoadFlowTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        // running loadflow now invalidate node children and their computations
+        // running loadflow ((with security node)) invalidate node children and their computations
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        assertRequestsDone(server, List.of("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID + "/provider", "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
+        assertRequestsDone(server, List.of("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
 
-        consumeLoadFlowResult(studyNameUserIdUuid, modificationNode3Uuid, firstRootNetworkUuid);
+        consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3);
 
         //Test result count
         testResultCount(server);
@@ -959,7 +985,12 @@ class LoadFlowTest {
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
-        NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
+        return createNetworkModificationNode(studyUuid, parentNodeUuid, modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION);
+    }
+
+    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid, UUID modificationGroupUuid, String variantId,
+                                                                  String nodeName, NetworkModificationNodeType nodeType) throws Exception {
+        NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName).nodeType(nodeType)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
                 .children(Collections.emptyList()).build();
 
