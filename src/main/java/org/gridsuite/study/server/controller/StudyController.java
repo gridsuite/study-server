@@ -23,6 +23,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
+import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -638,9 +639,18 @@ public class StudyController {
                                                         @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
                                                         @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
-        studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
-        studyService.moveNetworkModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, userId);
+        handleMoveNetworkModification(studyUuid, nodeUuid, modificationUuid, beforeUuid, userId);
         return ResponseEntity.ok().build();
+    }
+
+    private void handleMoveNetworkModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid, String userId) {
+        studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
+        studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
+        try {
+            studyService.moveNetworkModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, false, userId);
+        } finally {
+            studyService.invalidateBlockedBuildNodeTree(studyUuid, nodeUuid);
+        }
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -654,22 +664,45 @@ public class StudyController {
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
-        studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
         if (originNodeUuid != null) {
             studyService.assertIsNodeExist(studyUuid, originNodeUuid);
             studyService.assertCanUpdateModifications(studyUuid, originNodeUuid);
         }
         switch (action) {
             case COPY, INSERT:
-                studyService.duplicateOrInsertNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
+                handleDuplicateOrInsertNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
                 break;
             case MOVE:
-                studyService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, null, userId);
+                handleMoveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
             default:
                 throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
         }
         return ResponseEntity.ok().build();
+    }
+
+    private void handleDuplicateOrInsertNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId, ModificationsActionType action) {
+        studyService.assertNoBlockedBuildInStudy(studyUuid, targetNodeUuid);
+        studyService.invalidateNodeTreeWithLF(studyUuid, targetNodeUuid);
+        try {
+            studyService.duplicateOrInsertNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
+        } finally {
+            studyService.invalidateBlockedBuildNodeTree(studyUuid, targetNodeUuid);
+        }
+    }
+
+    private void handleMoveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
+        studyService.assertNoBlockedBuildInStudy(studyUuid, originNodeUuid);
+        studyService.assertNoBlockedBuildInStudy(studyUuid, targetNodeUuid);
+        boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
+        try {
+            studyService.moveNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, null, isTargetInDifferentNodeTree, userId);
+        } finally {
+            studyService.invalidateBlockedBuildNodeTree(studyUuid, originNodeUuid);
+            if (isTargetInDifferentNodeTree) {
+                studyService.invalidateBlockedBuildNodeTree(studyUuid, targetNodeUuid);
+            }
+        }
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run")
@@ -952,8 +985,9 @@ public class StudyController {
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                   @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
                                                                   @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                                                  @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
                                                                   Pageable pageable) {
-        String result = rootNetworkNodeInfoService.getSecurityAnalysisResult(nodeUuid, rootNetworkUuid, resultType, filters, pageable);
+        String result = rootNetworkNodeInfoService.getSecurityAnalysisResult(nodeUuid, rootNetworkUuid, resultType, filters, globalFilters, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
                ResponseEntity.noContent().build();
     }
@@ -1303,8 +1337,17 @@ public class StudyController {
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.assertNoBlockedBuildInStudy(studyUuid, nodeUuid);
-        studyService.createNetworkModification(studyUuid, modificationAttributes, nodeUuid, userId);
+        handleCreateNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
         return ResponseEntity.ok().build();
+    }
+
+    private void handleCreateNetworkModification(UUID studyUuid, UUID nodeUuid, String modificationAttributes, String userId) {
+        studyService.invalidateNodeTreeWithLF(studyUuid, nodeUuid);
+        try {
+            studyService.createNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
+        } finally {
+            studyService.invalidateBlockedBuildNodeTree(studyUuid, nodeUuid);
+        }
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/{uuid}")
@@ -2406,6 +2449,27 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow provider is returned")})
     public ResponseEntity<String> getLoadFlowProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/diagram-grid-layout")
+    @Operation(summary = "Get diagram grid layout of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Diagram grid layout is returned"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<DiagramGridLayout> getDiagramGridLayout(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.assertIsStudyExist(studyUuid);
+        DiagramGridLayout diagramGridLayout = studyService.getDiagramGridLayout(studyUuid);
+        return diagramGridLayout != null ? ResponseEntity.ok().body(diagramGridLayout) : ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/diagram-grid-layout", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Save diagram grid layout of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Diagram grid layout is saved"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<UUID> saveDiagramGridLayout(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody DiagramGridLayout diagramGridLayout) {
+        studyService.assertIsStudyExist(studyUuid);
+
+        return ResponseEntity.ok().body(studyService.saveDiagramGridLayout(studyUuid, diagramGridLayout));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/network-area-diagram/upload-csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

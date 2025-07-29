@@ -414,6 +414,93 @@ class NetworkModificationTreeTest {
         deleteNode(root.getStudyId(), children, false, Set.of(children.get(0)), userId);
     }
 
+    private void assertForbiddenNodeInsertions(UUID studyId, String userId,
+                                               NetworkModificationNode construction2,
+                                               NetworkModificationNode construction1,
+                                               NetworkModificationNode security1,
+                                               NetworkModificationNode security2) throws Exception {
+        // Construction node cannot be inserted before a security node
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+                        studyId, construction2.getId(), security1.getId(), InsertMode.BEFORE)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+
+        // Security node cannot be inserted before a construction node (not a NEW_BRANCH)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+                        studyId, security2.getId(), construction2.getId(), InsertMode.BEFORE)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+
+        // Security node cannot be inserted before another construction node at root level
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
+                        studyId, security2.getId(), construction1.getId(), InsertMode.BEFORE)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+    }
+
+    private void assertForbiddenSubtreeInsertions(UUID studyId, String userId,
+                                                  NetworkModificationNode subtreeRoot,
+                                                  NetworkModificationNode targetNode) throws Exception {
+        // Construction subtree cannot be inserted as a child of a security node
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={subtreeRoot}&referenceNodeUuid={targetNodeUuid}&insertMode={mode}",
+                        studyId, subtreeRoot.getId(), targetNode.getId(), InsertMode.CHILD)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+
+        // Mixed subtree (construction + security) cannot be inserted into a security node
+        mockMvc.perform(post("/v1/studies/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={subtreeRoot}&referenceNodeUuid={targetNodeUuid}&insertMode={mode}",
+                        studyId, subtreeRoot.getId(), targetNode.getId(), InsertMode.CHILD)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testNodeAndSubtreeInsertionRules() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        UUID studyId = root.getStudyId();
+
+        // Create tree structure
+        final NetworkModificationNode construction1 = buildNetworkModificationConstructionNode(
+                "construction1", "n1", UUID.randomUUID(), "variant1",
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, root, construction1, userId);
+
+        final NetworkModificationNode construction2 = buildNetworkModificationConstructionNode(
+                "construction2", "n2", UUID.randomUUID(), "variant2",
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, construction1, construction2, userId);
+
+        final NetworkModificationNode security1 = buildNetworkModificationSecurityNode(
+                "security1", "sec1", UUID.randomUUID(), VARIANT_ID,
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, root, security1, userId);
+
+        final NetworkModificationNode security2 = buildNetworkModificationSecurityNode(
+                "security2", "sec2", UUID.randomUUID(), VARIANT_ID,
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, root, security2, userId);
+
+        final NetworkModificationNode security3 = buildNetworkModificationSecurityNode(
+                "security3", "sec3", UUID.randomUUID(), VARIANT_ID,
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, security2, security3, userId);
+
+        final NetworkModificationNode security4 = buildNetworkModificationSecurityNode(
+                "security4", "sec4", UUID.randomUUID(), "variant2",
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.NOT_BUILT);
+        createNode(studyId, construction2, security4, userId); // Creates a mixed subtree
+
+        assertForbiddenNodeInsertions(studyId, userId, construction2, construction1, security1, security2);
+        assertForbiddenSubtreeInsertions(studyId, userId, construction1, security1);
+    }
+
     @Test
     void testNodeCreationRules() throws Exception {
         RootNode root = createRoot();

@@ -25,6 +25,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
+import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -134,6 +135,7 @@ public class StudyService {
     private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
+    private final DiagramGridLayoutService diagramGridLayoutService;
     private final FilterService filterService;
     private final ActionsService actionsService;
     private final CaseService caseService;
@@ -197,6 +199,7 @@ public class StudyService {
         VoltageInitService voltageInitService,
         DynamicSimulationEventService dynamicSimulationEventService,
         StudyConfigService studyConfigService,
+        DiagramGridLayoutService diagramGridLayoutService,
         FilterService filterService,
         StateEstimationService stateEstimationService,
         @Lazy StudyService studyService,
@@ -232,6 +235,7 @@ public class StudyService {
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
+        this.diagramGridLayoutService = diagramGridLayoutService;
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
         this.self = studyService;
@@ -565,6 +569,7 @@ public class StudyService {
                 removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
+                removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -928,7 +933,7 @@ public class StudyService {
     public UUID sendLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, boolean invalidateNodeTree, String userId) {
         if (invalidateNodeTree) {
             invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
-                .invalidationMode(InvalidationMode.ONLY_CHILDREN)
+                .invalidationMode(InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
                 .withBlockedNodeBuild(true)
                 .computationsInvalidationMode(ComputationsInvalidationMode.ALL)
                 .build());
@@ -1015,6 +1020,9 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public void assertNoBlockedBuildInStudy(UUID studyUuid, UUID nodeUuid) {
+        if (nodeUuid == null) {
+            throw new StudyException(MISSING_PARAMETER, "The parameter 'nodeUuid' must be defined !");
+        }
         List<UUID> nodesUuids = networkModificationTreeService.getNodeTreeUuids(nodeUuid);
         getStudyRootNetworks(studyUuid).stream().forEach(rootNetwork ->
             rootNetworkNodeInfoService.assertNoBlockedBuild(rootNetwork.getId(), nodesUuids)
@@ -1652,12 +1660,10 @@ public class StudyService {
     }
 
     @Transactional
-    public void createNetworkModification(UUID studyUuid, String createModificationAttributes, UUID nodeUuid, String userId) {
+    public void createNetworkModification(UUID studyUuid, UUID nodeUuid, String createModificationAttributes, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
-            invalidateNodeTreeWithLF(studyUuid, nodeUuid, ComputationsInvalidationMode.ALL);
-
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(studyUuid);
 
@@ -1678,7 +1684,6 @@ public class StudyService {
                 }
             }
         } finally {
-            invalidateBlockedBuildNodeTree(studyUuid, nodeUuid);
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -1787,11 +1792,22 @@ public class StudyService {
         networkModificationService.stopBuild(nodeUuid, rootNetworkUuid);
     }
 
-    @Transactional
-    public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
+    private void assertDuplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) {
         checkStudyContainsNode(sourceStudyUuid, nodeToCopyUuid);
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
-        networkModificationTreeService.assertIsRootOrConstructionNode(referenceNodeUuid);
+        networkModificationTreeService.assertMoveOrDuplicateNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
+    }
+
+    private void assertMoveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode) {
+        checkStudyContainsNode(studyUuid, nodeToMoveUuid);
+        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+        networkModificationTreeService.assertMoveOrDuplicateNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
+    }
+
+    @Transactional
+    public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
+        assertDuplicateStudyNode(sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
+
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
         if (invalidateBuild) {
@@ -1802,10 +1818,9 @@ public class StudyService {
 
     @Transactional
     public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
+        assertMoveStudyNode(studyUuid, nodeToMoveUuid, referenceNodeUuid, insertMode);
+
         List<NodeEntity> oldChildren = null;
-        checkStudyContainsNode(studyUuid, nodeToMoveUuid);
-        checkStudyContainsNode(studyUuid, referenceNodeUuid);
-        networkModificationTreeService.assertIsRootOrConstructionNode(referenceNodeUuid);
         boolean shouldUnbuildChildren = networkModificationTreeService.hasModifications(nodeToMoveUuid, false);
 
         //Unbuild previous children if necessary
@@ -1825,30 +1840,38 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
-    public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
+    private void assertDuplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid) {
         checkStudyContainsNode(sourceStudyUuid, parentNodeToCopyUuid);
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
-        networkModificationTreeService.assertIsRootOrConstructionNode(referenceNodeUuid);
+        networkModificationTreeService.assertMoveOrDuplicateSubtree(parentNodeToCopyUuid, referenceNodeUuid);
+    }
 
+    @Transactional
+    public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
+        assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
+        AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         StudyEntity studyEntity = studyRepository.findById(targetStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         StudyEntity sourceStudyEntity = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity, sourceStudyEntity, false);
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
 
-    @Transactional
-    public void moveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID referenceNodeUuid, String userId) {
+    private void assertMoveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID referenceNodeUuid) {
         checkStudyContainsNode(studyUuid, parentNodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
-        networkModificationTreeService.assertIsRootOrConstructionNode(referenceNodeUuid);
+        networkModificationTreeService.assertMoveOrDuplicateSubtree(parentNodeToMoveUuid, referenceNodeUuid);
+    }
+
+    @Transactional
+    public void moveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID referenceNodeUuid, String userId) {
+        assertMoveStudySubtree(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
 
         List<UUID> allChildren = networkModificationTreeService.getChildrenUuids(parentNodeToMoveUuid);
         if (allChildren.contains(referenceNodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
+
         networkModificationTreeService.moveStudySubtree(parentNodeToMoveUuid, referenceNodeUuid);
 
         getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
@@ -1881,7 +1904,6 @@ public class StudyService {
                 TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
     }
-    // Invalidate only one node
 
     private void invalidateNode(UUID studyUuid, UUID nodeUuid) {
         getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
@@ -1889,12 +1911,36 @@ public class StudyService {
     }
 
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid) {
-        invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.DEFAULT);
+        invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ALL);
     }
 
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
         getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
             invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), invalidateTreeParameters));
+    }
+
+    @Transactional
+    public void invalidateNodeTreeWhenMoveModification(UUID studyUuid, UUID nodeUuid) {
+        invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ALL);
+    }
+
+    @Transactional
+    public boolean invalidateNodeTreeWhenMoveModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid) {
+        boolean isTargetInDifferentNodeTree = !targetNodeUuid.equals(originNodeUuid)
+            && !networkModificationTreeService.isAChild(originNodeUuid, targetNodeUuid);
+
+        invalidateNodeTree(studyUuid, originNodeUuid);
+
+        if (isTargetInDifferentNodeTree) {
+            invalidateNodeTreeWithLF(studyUuid, targetNodeUuid, ComputationsInvalidationMode.ALL);
+        }
+
+        return isTargetInDifferentNodeTree;
+    }
+
+    @Transactional
+    public void invalidateNodeTreeWithLF(UUID studyUuid, UUID nodeUuid) {
+        invalidateNodeTreeWithLF(studyUuid, nodeUuid, ComputationsInvalidationMode.ALL);
     }
 
     private void invalidateNodeTreeWithLF(UUID studyUuid, UUID nodeUuid, ComputationsInvalidationMode computationsInvalidationMode) {
@@ -1914,7 +1960,7 @@ public class StudyService {
     }
 
     public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
-        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.DEFAULT);
+        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL);
     }
 
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
@@ -1934,7 +1980,8 @@ public class StudyService {
         }
     }
 
-    private void invalidateBlockedBuildNodeTree(UUID studyUuid, UUID nodeUuid) {
+    @Transactional
+    public void invalidateBlockedBuildNodeTree(UUID studyUuid, UUID nodeUuid) {
         getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
             networkModificationTreeService.invalidateBlockedBuildNodeTree(rootNetworkEntity.getId(), nodeUuid)
         );
@@ -2197,17 +2244,12 @@ public class StudyService {
     }
 
     @Transactional
-    public void moveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, String userId) {
+    public void moveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, boolean isTargetInDifferentNodeTree, String userId) {
         if (originNodeUuid == null) {
             throw new StudyException(MISSING_PARAMETER, "The parameter 'originNodeUuid' must be defined when moving modifications");
         }
 
         boolean isTargetDifferentNode = !targetNodeUuid.equals(originNodeUuid);
-        // Target node must not be built (incremental mode) when:
-        // - the move is a cut & paste or a position change inside the same node
-        // - the move is a cut & paste between 2 nodes and the target node belongs to the source node subtree
-        boolean isTargetChildNode = networkModificationTreeService.isAChild(originNodeUuid, targetNodeUuid);
-        boolean isTargetInDifferentNodeTree = isTargetDifferentNode && !isTargetChildNode;
 
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         List<UUID> originNodeChildrenUuids = new ArrayList<>();
@@ -2218,11 +2260,6 @@ public class StudyService {
         }
         try {
             checkStudyContainsNode(studyUuid, targetNodeUuid);
-
-            invalidateNodeTree(studyUuid, originNodeUuid);
-            if (isTargetInDifferentNodeTree) {
-                invalidateNodeTreeWithLF(studyUuid, targetNodeUuid, ComputationsInvalidationMode.ALL);
-            }
 
             StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
             List<RootNetworkEntity> studyRootNetworkEntities = studyEntity.getRootNetworks();
@@ -2241,10 +2278,6 @@ public class StudyService {
                 emitNetworkModificationImpactsForAllRootNetworks(networkModificationsResult.modificationResults(), studyEntity, targetNodeUuid);
             }
         } finally {
-            invalidateBlockedBuildNodeTree(studyUuid, originNodeUuid);
-            if (isTargetInDifferentNodeTree) {
-                invalidateBlockedBuildNodeTree(studyUuid, targetNodeUuid);
-            }
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
             if (isTargetDifferentNode) {
                 notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids);
@@ -2271,8 +2304,6 @@ public class StudyService {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(studyUuid, targetNodeUuid);
-
-            invalidateNodeTreeWithLF(studyUuid, targetNodeUuid, ComputationsInvalidationMode.ALL);
 
             List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(studyUuid);
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
@@ -2302,7 +2333,6 @@ public class StudyService {
             }
 
         } finally {
-            invalidateBlockedBuildNodeTree(studyUuid, targetNodeUuid);
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -3260,7 +3290,7 @@ public class StudyService {
     @Transactional
     public NetworkModificationNode createNode(UUID studyUuid, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        networkModificationTreeService.assertIsNetworkModificationNodeCreationAllowed(nodeId, nodeInfo, insertMode);
+        networkModificationTreeService.assertCreateNode(nodeId, nodeInfo.getNodeType(), insertMode);
         NetworkModificationNode newNode = networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
 
         UUID parentUuid = networkModificationTreeService.getParentNodeUuid(newNode.getId()).orElse(null);
@@ -3417,6 +3447,31 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         return voltageInitService.getVoltageInitResult(resultUuid, networkuuid, variantId, globalFilters);
+    }
+
+    public DiagramGridLayout getDiagramGridLayout(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID diagramGridLayoutUuid = studyEntity.getDiagramGridLayoutUuid();
+        return diagramGridLayoutService.getDiagramGridLayout(diagramGridLayoutUuid);
+    }
+
+    @Transactional
+    public UUID saveDiagramGridLayout(UUID studyUuid, DiagramGridLayout diagramGridLayout) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+
+        UUID existingDiagramGridLayoutUuid = studyEntity.getDiagramGridLayoutUuid();
+
+        if (existingDiagramGridLayoutUuid == null) {
+            UUID newDiagramGridLayoutUuid = diagramGridLayoutService.createDiagramGridLayout(diagramGridLayout);
+            studyEntity.setDiagramGridLayoutUuid(newDiagramGridLayoutUuid);
+            return newDiagramGridLayoutUuid;
+        } else {
+            return diagramGridLayoutService.updateDiagramGridLayout(existingDiagramGridLayoutUuid, diagramGridLayout);
+        }
+    }
+
+    private void removeDiagramGridLayout(@Nullable UUID diagramGridLayoutUuid) {
+        diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
     }
 
     public void uploadCSV(MultipartFile file, UUID studyUuid) {

@@ -19,7 +19,7 @@
 
     <groupId>org.gridsuite</groupId>
     <artifactId>gridsuite-study-server</artifactId>
-    <version>2.21.0-SNAPSHOT</version>
+    <version>2.22.0-SNAPSHOT</version>
 
     <packaging>jar</packaging>
     <name>Study Server</name>
@@ -42,9 +42,8 @@
     </developers>
 
     <properties>
-        <!-- FIXME to remove at next upgrade of powsybl-ws-dependencies -->
-        <powsybl-network-store.version>1.28.0</powsybl-network-store.version>
-        <gridsuite-dependencies.version>41.0.0</gridsuite-dependencies.version>
+
+        <gridsuite-dependencies.version>42.0.0</gridsuite-dependencies.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
         <mockwebserver3.version>5.0.0-alpha.14</mockwebserver3.version>
          <db-util.version>1.0.5</db-util.version>
@@ -84,25 +83,7 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- overrides of imports -->
-            <!-- FIXME to remove at next upgrade of powsybl-ws-dependencies -->
-            <dependency>
-                <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-network-store-model</artifactId>
-                <version>${powsybl-network-store.version}</version>
-            </dependency>
-            <!-- FIXME to remove at next upgrade of powsybl-ws-dependencies -->
-            <dependency>
-                <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-network-store-iidm-impl</artifactId>
-                <version>${powsybl-network-store.version}</version>
-            </dependency>
-            <!-- FIXME to remove at next upgrade of powsybl-ws-dependencies -->
-            <dependency>
-                <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-network-store-client</artifactId>
-                <version>${powsybl-network-store.version}</version>
-            </dependency>
+
             <dependency><!-- To remove when integrate in next release of gridsuite-dependencies or powsybl-ws-dependencies -->
                 <groupId>com.squareup.okhttp3</groupId>
                 <artifactId>okhttp-bom</artifactId>
