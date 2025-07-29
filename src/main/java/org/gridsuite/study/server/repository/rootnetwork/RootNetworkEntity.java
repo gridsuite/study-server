@@ -37,6 +37,9 @@ public class RootNetworkEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
+    @Column(name = "description", columnDefinition = "CLOB")
+    private String description;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "studyUuid", foreignKey = @ForeignKey(name = "rootNetwork_study_id_fk_constraint"))
     private StudyEntity study;
@@ -102,6 +105,6 @@ public class RootNetworkEntity {
     }
 
     public BasicRootNetworkInfos toBasicDto() {
-        return new BasicRootNetworkInfos(getId(), getOriginalCaseUuid(), getName(), getTag(), false);
+        return new BasicRootNetworkInfos(getId(), getOriginalCaseUuid(), getName(), getTag(), getDescription(), false);
     }
 }
