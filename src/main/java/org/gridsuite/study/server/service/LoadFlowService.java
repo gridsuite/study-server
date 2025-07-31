@@ -50,6 +50,13 @@ public class LoadFlowService extends AbstractComputationService {
     private final RestTemplate restTemplate;
     private String loadFlowServerBaseUri;
 
+    public record ParametersInfos(
+        UUID parametersUuid,
+        boolean withRatioTapChangers,
+        boolean isModeSecurity
+    ) {
+    }
+
     @Autowired
     public LoadFlowService(RemoteServicesProperties remoteServicesProperties,
                            ObjectMapper objectMapper,
@@ -60,8 +67,7 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     public UUID runLoadFlow(NodeReceiver nodeReceiver, UUID loadflowResultUuid,
-                            VariantInfos variantInfos, UUID parametersUuid,
-                            boolean withRatioTapChangers, boolean isModeSecurity, UUID reportUuid, String userId) {
+                            VariantInfos variantInfos, ParametersInfos parametersInfos, UUID reportUuid, String userId) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(nodeReceiver), StandardCharsets.UTF_8);
@@ -71,8 +77,8 @@ public class LoadFlowService extends AbstractComputationService {
 
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run-and-save")
-                .queryParam(QUERY_WITH_TAP_CHANGER, withRatioTapChangers)
-                .queryParam(QUERY_PARAM_IS_SECURITY_MODE, isModeSecurity)
+                .queryParam(QUERY_WITH_TAP_CHANGER, parametersInfos.withRatioTapChangers)
+                .queryParam(QUERY_PARAM_IS_SECURITY_MODE, parametersInfos.isModeSecurity)
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
                 .queryParam(QUERY_PARAM_REPORTER_ID, nodeReceiver.getNodeUuid().toString())
@@ -81,8 +87,8 @@ public class LoadFlowService extends AbstractComputationService {
         if (loadflowResultUuid != null) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_RESULT_UUID, loadflowResultUuid);
         }
-        if (parametersUuid != null) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_PARAMETERS_UUID, parametersUuid.toString());
+        if (parametersInfos.parametersUuid != null) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_PARAMETERS_UUID, parametersInfos.parametersUuid.toString());
         }
         if (!StringUtils.isBlank(variantInfos.getVariantId())) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantInfos.getVariantId());
