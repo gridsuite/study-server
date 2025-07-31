@@ -21,6 +21,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
+import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -127,6 +128,7 @@ public class StudyService {
     private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
+    private final DiagramGridLayoutService diagramGridLayoutService;
     private final FilterService filterService;
     private final ActionsService actionsService;
     private final CaseService caseService;
@@ -190,6 +192,7 @@ public class StudyService {
         VoltageInitService voltageInitService,
         DynamicSimulationEventService dynamicSimulationEventService,
         StudyConfigService studyConfigService,
+        DiagramGridLayoutService diagramGridLayoutService,
         FilterService filterService,
         StateEstimationService stateEstimationService,
         @Lazy StudyService studyService,
@@ -225,6 +228,7 @@ public class StudyService {
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
+        this.diagramGridLayoutService = diagramGridLayoutService;
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
         this.self = studyService;
@@ -558,6 +562,7 @@ public class StudyService {
                 removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
+                removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -1780,11 +1785,22 @@ public class StudyService {
         networkModificationService.stopBuild(nodeUuid, rootNetworkUuid);
     }
 
-    @Transactional
-    public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
+    private void assertDuplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode) {
         checkStudyContainsNode(sourceStudyUuid, nodeToCopyUuid);
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
-        networkModificationTreeService.assertIsRootOrConstructionNode(referenceNodeUuid);
+        networkModificationTreeService.assertMoveOrDuplicateNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
+    }
+
+    private void assertMoveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode) {
+        checkStudyContainsNode(studyUuid, nodeToMoveUuid);
+        checkStudyContainsNode(studyUuid, referenceNodeUuid);
+        networkModificationTreeService.assertMoveOrDuplicateNode(nodeToMoveUuid, referenceNodeUuid, insertMode);
+    }
+
+    @Transactional
+    public void duplicateStudyNode(UUID sourceStudyUuid, UUID targetStudyUuid, UUID nodeToCopyUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
+        assertDuplicateStudyNode(sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode);
+
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeToCopyUuid, referenceNodeUuid, insertMode);
         boolean invalidateBuild = networkModificationTreeService.hasModifications(nodeToCopyUuid, false);
         if (invalidateBuild) {
@@ -1795,10 +1811,9 @@ public class StudyService {
 
     @Transactional
     public void moveStudyNode(UUID studyUuid, UUID nodeToMoveUuid, UUID referenceNodeUuid, InsertMode insertMode, String userId) {
+        assertMoveStudyNode(studyUuid, nodeToMoveUuid, referenceNodeUuid, insertMode);
+
         List<NodeEntity> oldChildren = null;
-        checkStudyContainsNode(studyUuid, nodeToMoveUuid);
-        checkStudyContainsNode(studyUuid, referenceNodeUuid);
-        networkModificationTreeService.assertIsRootOrConstructionNode(referenceNodeUuid);
         boolean shouldUnbuildChildren = networkModificationTreeService.hasModifications(nodeToMoveUuid, false);
 
         //Unbuild previous children if necessary
@@ -1818,30 +1833,38 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
-    public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
+    private void assertDuplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid) {
         checkStudyContainsNode(sourceStudyUuid, parentNodeToCopyUuid);
         checkStudyContainsNode(targetStudyUuid, referenceNodeUuid);
-        networkModificationTreeService.assertIsRootOrConstructionNode(referenceNodeUuid);
+        networkModificationTreeService.assertMoveOrDuplicateSubtree(parentNodeToCopyUuid, referenceNodeUuid);
+    }
 
+    @Transactional
+    public void duplicateStudySubtree(UUID sourceStudyUuid, UUID targetStudyUuid, UUID parentNodeToCopyUuid, UUID referenceNodeUuid, String userId) {
+        assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
+        AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         StudyEntity studyEntity = studyRepository.findById(targetStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         StudyEntity sourceStudyEntity = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity, sourceStudyEntity, false);
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
 
-    @Transactional
-    public void moveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID referenceNodeUuid, String userId) {
+    private void assertMoveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID referenceNodeUuid) {
         checkStudyContainsNode(studyUuid, parentNodeToMoveUuid);
         checkStudyContainsNode(studyUuid, referenceNodeUuid);
-        networkModificationTreeService.assertIsRootOrConstructionNode(referenceNodeUuid);
+        networkModificationTreeService.assertMoveOrDuplicateSubtree(parentNodeToMoveUuid, referenceNodeUuid);
+    }
+
+    @Transactional
+    public void moveStudySubtree(UUID studyUuid, UUID parentNodeToMoveUuid, UUID referenceNodeUuid, String userId) {
+        assertMoveStudySubtree(studyUuid, parentNodeToMoveUuid, referenceNodeUuid);
 
         List<UUID> allChildren = networkModificationTreeService.getChildrenUuids(parentNodeToMoveUuid);
         if (allChildren.contains(referenceNodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
+
         networkModificationTreeService.moveStudySubtree(parentNodeToMoveUuid, referenceNodeUuid);
 
         getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity -> {
@@ -2761,7 +2784,8 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, DynamicSimulationParametersInfos parameters, String userId) {
+    public UUID runDynamicSimulation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, DynamicSimulationParametersInfos parameters,
+                                     String userId, boolean debug) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -2801,7 +2825,8 @@ public class StudyService {
         // launch dynamic simulation
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID dynamicSimulationResultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyEntity), nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, mergeParameters, userId);
+        UUID dynamicSimulationResultUuid = dynamicSimulationService.runDynamicSimulation(getDynamicSimulationProvider(studyEntity),
+                nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, mergeParameters, userId, debug);
 
         // update result uuid and notification
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSimulationResultUuid, DYNAMIC_SIMULATION);
@@ -2878,7 +2903,7 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runDynamicSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+    public UUID runDynamicSecurityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
 
@@ -2911,7 +2936,7 @@ public class StudyService {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID dynamicSecurityAnalysisResultUuid = dynamicSecurityAnalysisService.runDynamicSecurityAnalysis(getDynamicSimulationProvider(studyUuid),
-            nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, dynamicSimulationResultUuid, dynamicSecurityAnalysisParametersUuid, userId);
+            nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, dynamicSimulationResultUuid, dynamicSecurityAnalysisParametersUuid, userId, debug);
 
         // update result uuid and notification
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSecurityAnalysisResultUuid, DYNAMIC_SECURITY_ANALYSIS);
@@ -3260,7 +3285,7 @@ public class StudyService {
     @Transactional
     public NetworkModificationNode createNode(UUID studyUuid, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
         StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        networkModificationTreeService.assertIsNetworkModificationNodeCreationAllowed(nodeId, nodeInfo, insertMode);
+        networkModificationTreeService.assertCreateNode(nodeId, nodeInfo.getNodeType(), insertMode);
         NetworkModificationNode newNode = networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
 
         UUID parentUuid = networkModificationTreeService.getParentNodeUuid(newNode.getId()).orElse(null);
@@ -3417,5 +3442,30 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         return voltageInitService.getVoltageInitResult(resultUuid, networkuuid, variantId, globalFilters);
+    }
+
+    public DiagramGridLayout getDiagramGridLayout(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        UUID diagramGridLayoutUuid = studyEntity.getDiagramGridLayoutUuid();
+        return diagramGridLayoutService.getDiagramGridLayout(diagramGridLayoutUuid);
+    }
+
+    @Transactional
+    public UUID saveDiagramGridLayout(UUID studyUuid, DiagramGridLayout diagramGridLayout) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+
+        UUID existingDiagramGridLayoutUuid = studyEntity.getDiagramGridLayoutUuid();
+
+        if (existingDiagramGridLayoutUuid == null) {
+            UUID newDiagramGridLayoutUuid = diagramGridLayoutService.createDiagramGridLayout(diagramGridLayout);
+            studyEntity.setDiagramGridLayoutUuid(newDiagramGridLayoutUuid);
+            return newDiagramGridLayoutUuid;
+        } else {
+            return diagramGridLayoutService.updateDiagramGridLayout(existingDiagramGridLayoutUuid, diagramGridLayout);
+        }
+    }
+
+    private void removeDiagramGridLayout(@Nullable UUID diagramGridLayoutUuid) {
+        diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
     }
 }

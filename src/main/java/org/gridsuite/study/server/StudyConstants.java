@@ -50,7 +50,6 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_INFO_TYPE = "infoType";
     public static final String QUERY_PARAM_OPTIONAL_PARAMS = "optionalParameters";
     public static final String QUERY_FORMAT_OPTIONAL_PARAMS = QUERY_PARAM_OPTIONAL_PARAMS + "[%s]";
-    public static final String QUERY_PARAM_SUBSTATIONS_IDS = "substationsIds";
     public static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
     public static final String QUERY_PARAM_RESULTS_UUIDS = "resultsUuids";
     public static final String QUERY_PARAM_RESULT_UUID = "resultUuid";
@@ -64,6 +63,7 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_REPORT_SEVERITY_LEVEL = "severityLevels";
     public static final String QUERY_PARAM_MESSAGE_FILTER = "message";
 
+    public static final String QUERY_PARAM_DEBUG = "debug";
     public static final String QUERY_PARAM_RECEIVER = "receiver";
     public static final String QUERY_PARAM_WORKFLOW_TYPE = "workflowType";
     public static final String QUERY_PARAM_WORKFLOW_INFOS = "workflowInfos";

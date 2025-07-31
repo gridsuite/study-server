@@ -22,6 +22,8 @@ import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.DiagramParameters;
+import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
+import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -190,6 +192,48 @@ public class SingleLineDiagramService {
                 throw e;
             }
         }
+    }
+
+    public UUID createDiagramConfig(NetworkAreaDiagramLayoutDetails nadLayoutDetails) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/config")
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<NetworkAreaDiagramLayoutDetails> httpEntity = new HttpEntity<>(nadLayoutDetails, headers);
+
+        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+    }
+
+    public void createMultipleDiagramConfigs(List<NadConfigInfos> nadConfigs) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<NadConfigInfos>> httpEntity = new HttpEntity<>(nadConfigs, headers);
+
+        restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
+    }
+
+    public void deleteMultipleDiagramConfigs(List<UUID> configUuids) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(configUuids, headers);
+
+        restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.DELETE, httpEntity, Void.class);
     }
 
     public void setSingleLineDiagramServerBaseUri(String singleLineDiagramServerBaseUri) {

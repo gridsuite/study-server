@@ -23,6 +23,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
+import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -983,8 +984,9 @@ public class StudyController {
                                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                   @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
                                                                   @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                                                  @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
                                                                   Pageable pageable) {
-        String result = rootNetworkNodeInfoService.getSecurityAnalysisResult(nodeUuid, rootNetworkUuid, resultType, filters, pageable);
+        String result = rootNetworkNodeInfoService.getSecurityAnalysisResult(nodeUuid, rootNetworkUuid, resultType, filters, globalFilters, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
                ResponseEntity.noContent().build();
     }
@@ -1926,10 +1928,11 @@ public class StudyController {
     public ResponseEntity<Void> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId);
+        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 
@@ -2016,9 +2019,10 @@ public class StudyController {
     public ResponseEntity<Void> runDynamicSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        studyService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 
@@ -2446,5 +2450,26 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow provider is returned")})
     public ResponseEntity<String> getLoadFlowProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/diagram-grid-layout")
+    @Operation(summary = "Get diagram grid layout of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Diagram grid layout is returned"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<DiagramGridLayout> getDiagramGridLayout(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.assertIsStudyExist(studyUuid);
+        DiagramGridLayout diagramGridLayout = studyService.getDiagramGridLayout(studyUuid);
+        return diagramGridLayout != null ? ResponseEntity.ok().body(diagramGridLayout) : ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/diagram-grid-layout", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Save diagram grid layout of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Diagram grid layout is saved"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<UUID> saveDiagramGridLayout(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody DiagramGridLayout diagramGridLayout) {
+        studyService.assertIsStudyExist(studyUuid);
+
+        return ResponseEntity.ok().body(studyService.saveDiagramGridLayout(studyUuid, diagramGridLayout));
     }
 }
