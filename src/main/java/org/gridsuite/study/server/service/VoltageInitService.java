@@ -60,7 +60,7 @@ public class VoltageInitService extends AbstractComputationService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
 
         String receiver;
         try {
@@ -83,6 +83,11 @@ public class VoltageInitService extends AbstractComputationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
+
+        if (debug) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, true);
+        }
+
         var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
