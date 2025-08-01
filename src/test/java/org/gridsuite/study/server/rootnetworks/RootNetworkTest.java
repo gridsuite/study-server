@@ -60,6 +60,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.gridsuite.study.server.StudyException.Type.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
 
 @AutoConfigureMockMvc
 @SpringBootTest
@@ -279,12 +280,13 @@ class RootNetworkTest {
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
         MvcResult result = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkName5", "rn5")
-                .header("userId", USER_ID)
-                .header("content-type", "application/json"))
-            .andExpect(status().isForbidden())
-            .andReturn();
+                        .header("userId", USER_ID)
+                        .header("content-type", "application/json"))
+                .andExpect(status().isForbidden())
+                .andReturn();
 
-        assertTrue(result.getResponse().getContentAsString().equalsIgnoreCase("MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED"));
+        assertTrue(result.getResponse().getContentAsString().equalsIgnoreCase(MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED.name()
+        ));
 
         assertEquals(1, rootNetworkRequestRepository.countAllByStudyUuid(studyEntity.getId()));
         assertEquals(3, rootNetworkRepository.countAllByStudyId(studyEntity.getId()));
