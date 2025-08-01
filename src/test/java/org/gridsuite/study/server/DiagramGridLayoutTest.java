@@ -11,7 +11,9 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
+import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.AbstractDiagramLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.DiagramPosition;
+import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.MapLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NadVoltageLevelPositionInfos;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
@@ -216,6 +218,30 @@ class DiagramGridLayoutTest {
 
         assertThrows(Exception.class, () -> {
             studyConfigService.saveDiagramGridLayout(diagramGridLayout);
+        });
+
+        // Check number of NAD configs
+        List<AbstractDiagramLayout> nadLayouts = new ArrayList<>();
+        for (int i = 0; i < DiagramGridLayoutService.MAX_NAD_CONFIGS_ALLOWED + 1; i++) {
+            nadLayouts.add(NetworkAreaDiagramLayout.builder().currentNadConfigUuid(UUID.randomUUID()).build());
+        }
+
+        DiagramGridLayout diagramGridLayoutWithTooMuchNads = DiagramGridLayout.builder().diagramLayouts(nadLayouts).build();
+
+        assertThrows(Exception.class, () -> {
+            studyConfigService.saveDiagramGridLayout(diagramGridLayoutWithTooMuchNads);
+        });
+
+        // Check number of map cards
+        List<AbstractDiagramLayout> mapLayouts = new ArrayList<>();
+        for (int i = 0; i < DiagramGridLayoutService.MAX_MAP_CARD_ALLOWED + 1; i++) {
+            mapLayouts.add(MapLayout.builder().build());
+        }
+
+        DiagramGridLayout diagramGridLayoutWithTooMuchMap = DiagramGridLayout.builder().diagramLayouts(mapLayouts).build();
+
+        assertThrows(Exception.class, () -> {
+            studyConfigService.saveDiagramGridLayout(diagramGridLayoutWithTooMuchMap);
         });
     }
 

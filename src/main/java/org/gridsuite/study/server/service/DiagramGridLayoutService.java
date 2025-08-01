@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.AbstractDiagramLayout;
+import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.MapLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
 import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
@@ -30,7 +31,8 @@ import java.util.*;
 public class DiagramGridLayoutService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DiagramGridLayoutService.class);
-    private static final int MAX_NAD_CONFIGS_ALLOWED = 3;
+    public static final int MAX_NAD_CONFIGS_ALLOWED = 3;
+    public static final int MAX_MAP_CARD_ALLOWED = 1;
 
     private final StudyConfigService studyConfigService;
     private final SingleLineDiagramService singleLineDiagramService;
@@ -47,6 +49,9 @@ public class DiagramGridLayoutService {
         // Validate NAD config count before processing
         validateNadConfigCount(diagramGridLayout);
 
+        // Validate map card count
+        validateMapCardCount(diagramGridLayout);
+
         // Process diagram layout and handle NAD layout details
         DiagramGridLayout processedDiagramLayout = processNADLayoutDetails(diagramGridLayout);
         return studyConfigService.saveDiagramGridLayout(processedDiagramLayout);
@@ -58,6 +63,9 @@ public class DiagramGridLayoutService {
     public UUID updateDiagramGridLayout(UUID existingDiagramGridLayoutUuid, DiagramGridLayout diagramGridLayout) {
         // Validate NAD config count before processing
         validateNadConfigCount(diagramGridLayout);
+
+        // Validate map card count
+        validateMapCardCount(diagramGridLayout);
 
         List<UUID> oldNadConfigUuidsToDelete = collectOldNadConfigUuids(existingDiagramGridLayoutUuid);
 
@@ -130,6 +138,22 @@ public class DiagramGridLayoutService {
                 singleLineDiagramService.deleteMultipleDiagramConfigs(oldNadConfigUuidsToDelete);
             } catch (Exception e) {
                 LOGGER.error("Could not clean up old NAD configs: " + oldNadConfigUuidsToDelete, e);
+            }
+        }
+    }
+
+    /**
+     * Validates that the diagram grid layout does not contain more than one map card.
+     */
+    private void validateMapCardCount(DiagramGridLayout diagramGridLayout) {
+        if (diagramGridLayout != null && diagramGridLayout.getDiagramLayouts() != null) {
+            long mapCardsCount = diagramGridLayout.getDiagramLayouts().stream()
+                .filter(MapLayout.class::isInstance)
+                .count();
+
+            if (mapCardsCount > 1) {
+                throw new StudyException(StudyException.Type.TOO_MANY_MAP_CARDS,
+                    "Maximum " + MAX_MAP_CARD_ALLOWED + " map card allowed, but " + mapCardsCount + " provided");
             }
         }
     }
