@@ -88,7 +88,7 @@ public class NetworkModificationNode extends AbstractNode {
         return NodeType.NETWORK_MODIFICATION;
     }
 
-    public boolean isNodeSecurity() {
+    public boolean isSecurityNode() {
         return nodeType == NetworkModificationNodeType.SECURITY;
     }
 }

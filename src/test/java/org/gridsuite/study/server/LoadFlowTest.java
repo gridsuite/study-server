@@ -251,9 +251,9 @@ class LoadFlowTest {
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = Objects.requireNonNull(request.getMethod());
-                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&isModeSecurity=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + ".*")) {
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&isSecurityNode=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + ".*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), loadFlowResultUuidStr);
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&isModeSecurity=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&isSecurityNode=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                             .build(), LOADFLOW_FAILED_DESTINATION);
@@ -347,7 +347,7 @@ class LoadFlowTest {
     private void consumeLoadFlowResult(UUID studyUuid, UUID rootNetworkUuid, NetworkModificationNode modificationNode) throws JsonProcessingException {
         UUID nodeUuid = modificationNode.getId();
 
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, modificationNode.isNodeSecurity());
+        assertNodeBlocked(nodeUuid, rootNetworkUuid, modificationNode.isSecurityNode());
 
         // consume loadflow result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
@@ -404,7 +404,7 @@ class LoadFlowTest {
             .andExpect(status().isOk());
 
         // running loadflow invalidate node children and their computations
-        if (modificationNode.isNodeSecurity()) {
+        if (modificationNode.isSecurityNode()) {
             checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         }
 
@@ -412,7 +412,7 @@ class LoadFlowTest {
 
         List<String> expectedRequestsPatterns = new ArrayList<>();
         expectedRequestsPatterns.add("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2);
-        if (!modificationNode.isNodeSecurity()) {
+        if (!modificationNode.isSecurityNode()) {
             expectedRequestsPatterns.add("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID + "/provider");
         }
         assertRequestsDone(server, expectedRequestsPatterns);
