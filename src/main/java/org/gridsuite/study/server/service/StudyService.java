@@ -3468,4 +3468,9 @@ public class StudyService {
     private void removeDiagramGridLayout(@Nullable UUID diagramGridLayoutUuid) {
         diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
     }
+
+    public void resetFilters(UUID studyUuid, UUID configUuid) {
+        studyConfigService.resetFilters(configUuid);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
 }

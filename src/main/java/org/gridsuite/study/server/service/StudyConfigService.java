@@ -453,4 +453,10 @@ public class StudyConfigService {
             throw e;
         }
     }
+
+    public void resetFilters(UUID configUuid) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/filters");
+        String path = uriBuilder.buildAndExpand(configUuid).toUriString();
+        restTemplate.delete(studyConfigServerBaseUri + path);
+    }
 }
