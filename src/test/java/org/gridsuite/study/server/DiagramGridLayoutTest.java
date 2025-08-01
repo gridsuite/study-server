@@ -11,7 +11,9 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
+import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.AbstractDiagramLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.DiagramPosition;
+import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.MapLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NadVoltageLevelPositionInfos;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
@@ -592,9 +594,9 @@ class DiagramGridLayoutTest {
         UUID existingDiagramGridLayoutUuid = UUID.randomUUID();
         studyRepository.save(StudyEntity.builder().id(studyUuid).diagramGridLayoutUuid(existingDiagramGridLayoutUuid).build());
 
-        // Create 4 NAD layout details (exceeds the limit of 3)
+        // Create more than MAX_NAD_CONFIGS_ALLOWED NAD layout details
         List<NetworkAreaDiagramLayoutDetails> nadLayouts = new ArrayList<>();
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < DiagramGridLayoutService.MAX_NAD_CONFIGS_ALLOWED + 1; i++) {
             nadLayouts.add(NetworkAreaDiagramLayoutDetails.builder()
                 .diagramUuid(UUID.randomUUID())
                 .voltageLevelIds(Set.of("VL" + i))
@@ -615,6 +617,61 @@ class DiagramGridLayoutTest {
         String payload = objectMapper.writeValueAsString(updatePayload);
 
         // Should return forbidden due to too many NAD configs
+        mockMvc.perform(post("/v1/studies/{studyUuid}/diagram-grid-layout", studyUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isForbidden());
+
+        // Verify no external services were called since validation failed early
+        wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlMatching(".*")));
+        wireMockServer.verify(0, WireMock.postRequestedFor(WireMock.urlMatching(".*")));
+        wireMockServer.verify(0, WireMock.putRequestedFor(WireMock.urlMatching(".*")));
+    }
+
+    @Test
+    void testCreateDiagramGridLayoutWithTooManyMapCards() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        studyRepository.save(StudyEntity.builder().id(studyUuid).build());
+
+        // Create more than MAX_MAP_CARDS_ALLOWED Map Cards
+        List<AbstractDiagramLayout> mapLayouts = new ArrayList<>();
+        for (int i = 0; i < DiagramGridLayoutService.MAX_MAP_CARDS_ALLOWED + 1; i++) {
+            mapLayouts.add(MapLayout.builder().diagramUuid(UUID.randomUUID()).build());
+        }
+
+        DiagramGridLayout diagramGridLayoutWithTooMuchMapCards = DiagramGridLayout.builder().diagramLayouts(mapLayouts).build();
+
+        String payload = objectMapper.writeValueAsString(diagramGridLayoutWithTooMuchMapCards);
+
+        // Should return forbidden due to too many Map Cards
+        mockMvc.perform(post("/v1/studies/{studyUuid}/diagram-grid-layout", studyUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isForbidden());
+
+        // Verify no external services were called since validation failed early
+        wireMockServer.verify(0, WireMock.postRequestedFor(WireMock.urlMatching(".*")));
+    }
+
+    @Test
+    void testUpdateDiagramGridLayoutWithTooManyMapCards() throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        UUID existingDiagramGridLayoutUuid = UUID.randomUUID();
+        studyRepository.save(StudyEntity.builder().id(studyUuid).diagramGridLayoutUuid(existingDiagramGridLayoutUuid).build());
+
+        // Create more than MAX_MAP_CARDS_ALLOWED Map Cards
+        List<AbstractDiagramLayout> mapLayouts = new ArrayList<>();
+        for (int i = 0; i < DiagramGridLayoutService.MAX_MAP_CARDS_ALLOWED + 1; i++) {
+            mapLayouts.add(MapLayout.builder().diagramUuid(UUID.randomUUID()).build());
+        }
+
+        DiagramGridLayout updatePayload = DiagramGridLayout.builder()
+            .diagramLayouts(new ArrayList<>(mapLayouts))
+            .build();
+
+        String payload = objectMapper.writeValueAsString(updatePayload);
+
+        // Should return forbidden due to too many Map Cards
         mockMvc.perform(post("/v1/studies/{studyUuid}/diagram-grid-layout", studyUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
