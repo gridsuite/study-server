@@ -130,4 +130,16 @@ public class SpreadsheetConfigController {
         studyService.renameSpreadsheetConfig(studyUuid, id, name);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{id}/columns/filters")
+    @Operation(summary = "Reset global and column filters",
+            description = "Reset all columns filters in a spreadsheet configuration as well as the global filter")
+    @ApiResponse(responseCode = "204", description = "Filters reset successfully")
+    @ApiResponse(responseCode = "404", description = "Spreadsheet configuration not found")
+    public ResponseEntity<Void> resetFilters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "ID of the spreadsheet config") @PathVariable UUID id){
+        studyService.resetFilters(studyUuid, id);
+        return ResponseEntity.noContent().build();
+    }
 }
