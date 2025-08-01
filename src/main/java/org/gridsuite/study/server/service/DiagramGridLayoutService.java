@@ -32,7 +32,7 @@ public class DiagramGridLayoutService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DiagramGridLayoutService.class);
     public static final int MAX_NAD_CONFIGS_ALLOWED = 3;
-    public static final int MAX_MAP_CARD_ALLOWED = 1;
+    public static final int MAX_MAP_CARDS_ALLOWED = 1;
 
     private final StudyConfigService studyConfigService;
     private final SingleLineDiagramService singleLineDiagramService;
@@ -151,9 +151,9 @@ public class DiagramGridLayoutService {
                 .filter(MapLayout.class::isInstance)
                 .count();
 
-            if (mapCardsCount > 1) {
+            if (mapCardsCount > MAX_MAP_CARDS_ALLOWED) {
                 throw new StudyException(StudyException.Type.TOO_MANY_MAP_CARDS,
-                    "Maximum " + MAX_MAP_CARD_ALLOWED + " map card allowed, but " + mapCardsCount + " provided");
+                    "Maximum " + MAX_MAP_CARDS_ALLOWED + " map card allowed, but " + mapCardsCount + " provided");
             }
         }
     }
