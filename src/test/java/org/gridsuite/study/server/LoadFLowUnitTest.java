@@ -70,7 +70,7 @@ class LoadFLowUnitTest {
     @Test
     void testRunLoadFlow() {
         when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(null);
-        doReturn(loadflowResultUuid).when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyBoolean(), anyString());
+        doNothing().when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyBoolean(), anyString());
         doNothing().when(studyService).assertCanRunLoadFLow(any(), any());
         controller.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId);
 
@@ -100,7 +100,15 @@ class LoadFLowUnitTest {
 
     @Test
     void testRerunLoadFlow() {
-        boolean withRatioTapChangers = false;
+        testRerunLoadFlow(false, false);
+        testRerunLoadFlow(false, true);
+        testRerunLoadFlow(true, false);
+        testRerunLoadFlow(true, true);
+    }
+
+    private void testRerunLoadFlow(boolean withRatioTapChangers, boolean isSecurityNode) {
+        reset(networkModificationTreeService, networkModificationService, notificationService);
+
         InvalidateNodeTreeParameters expectedInvalidationParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
             .computationsInvalidationMode(InvalidateNodeTreeParameters.ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
@@ -119,6 +127,7 @@ class LoadFLowUnitTest {
             .build();
 
         // mock call returning values
+        when(networkModificationTreeService.isSecurityNode(nodeUuid)).thenReturn(isSecurityNode);
         when(networkModificationTreeService.invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters)).thenReturn(invalidateNodeInfos);
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
         when(networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid)).thenReturn(buildInfos);
@@ -128,9 +137,9 @@ class LoadFLowUnitTest {
         assertEquals(loadflowResultUuid, studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId));
 
         // node invalidation
-        verify(networkModificationTreeService, times(1)).invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters);
-        verify(networkModificationService, times(1)).deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), networkUuid);
-        verify(notificationService, times(9)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
+        verify(networkModificationTreeService, times(isSecurityNode ? 1 : 0)).invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters);
+        verify(networkModificationService, times(isSecurityNode ? 1 : 0)).deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), networkUuid);
+        verify(notificationService, times(isSecurityNode ? 9 : 0)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
 
         // node build
         ArgumentCaptor<RerunLoadFlowInfos> rerunLoadFlowWorkflowInfosArgumentCaptor = ArgumentCaptor.forClass(RerunLoadFlowInfos.class);
