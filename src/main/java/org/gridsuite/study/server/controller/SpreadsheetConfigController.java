@@ -138,7 +138,7 @@ public class SpreadsheetConfigController {
     @ApiResponse(responseCode = "404", description = "Spreadsheet configuration not found")
     public ResponseEntity<Void> resetFilters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @Parameter(description = "ID of the spreadsheet config") @PathVariable UUID id){
+            @Parameter(description = "ID of the spreadsheet config") @PathVariable UUID id) {
         studyService.resetFilters(studyUuid, id);
         return ResponseEntity.noContent().build();
     }
