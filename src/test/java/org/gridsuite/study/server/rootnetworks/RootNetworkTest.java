@@ -47,6 +47,7 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -59,6 +60,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.gridsuite.study.server.StudyException.Type.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
 
 @AutoConfigureMockMvc
 @SpringBootTest
@@ -266,23 +268,28 @@ class RootNetworkTest {
         // create study with first root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         // create another dummy root networks for the same entity
-        createDummyRootNetwork(studyEntity, "dummyRootNetwork");
+        createDummyRootNetwork(studyEntity, "secondRootNetwork");
+        createDummyRootNetwork(studyEntity, "thirdRootNetwork");
 
         studyRepository.save(studyEntity);
 
         // insert a creation request for the same study entity
-        rootNetworkService.insertCreationRequest(UUID.randomUUID(), studyEntity.getId(), "rootNetworkName", "rn1", USER_ID);
+        rootNetworkService.insertCreationRequest(UUID.randomUUID(), studyEntity.getId(), "rootNetworkName4", "rn4", USER_ID);
 
         // request execution - fails since there is already too many root networks + root network creation requests for this study
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkName", "rn1")
-                .header("userId", USER_ID)
-                .header("content-type", "application/json"))
-            .andExpect(status().isForbidden());
+        MvcResult result = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkName5", "rn5")
+                        .header("userId", USER_ID)
+                        .header("content-type", "application/json"))
+                .andExpect(status().isForbidden())
+                .andReturn();
+
+        assertTrue(result.getResponse().getContentAsString().equalsIgnoreCase(MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED.name()
+        ));
 
         assertEquals(1, rootNetworkRequestRepository.countAllByStudyUuid(studyEntity.getId()));
-        assertEquals(2, rootNetworkRepository.countAllByStudyId(studyEntity.getId()));
+        assertEquals(3, rootNetworkRepository.countAllByStudyId(studyEntity.getId()));
     }
 
     @Test
