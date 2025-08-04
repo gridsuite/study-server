@@ -84,14 +84,8 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_ACTIVATED = "activated";
     public static final String PATH_PARAM_PARAMETERS = "parameters";
     public static final String DYNA_FLOW_PROVIDER = "DynaFlow";
-    public static final String VOLTAGE_LEVEL_ID = "voltageLevelId";
-    public static final String EQUIPMENT_TYPE = "equipmentType";
-    public static final String X_POSITION = "xPosition";
-    public static final String Y_POSITION = "yPosition";
-    public static final String X_LABEL_POSITION = "xLabelPosition";
-    public static final String Y_LABEL_POSITION = "yLabelPosition";
     public static final String NETWORK_AREA_DIAGRAM_PARAMETERS = "networkAreaDiagramParameters";
-    public static final String NAD_CONFIG_UUID = "nadConfigUuid";
+    public static final String POSITIONS_CONFIG_UUID = "positionsConfigUuid";
 
     public enum SldDisplayMode {
         FEEDER_POSITION,

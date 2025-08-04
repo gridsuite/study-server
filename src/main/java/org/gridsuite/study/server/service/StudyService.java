@@ -17,8 +17,6 @@ import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVRecord;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
@@ -73,8 +71,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -3474,55 +3471,17 @@ public class StudyService {
         diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
     }
 
-    public void uploadCSV(MultipartFile file, UUID studyUuid) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+    public void createPositionsFromCsv(MultipartFile file, UUID studyUuid) throws IOException {
 
-            List<Map<String, Object>> positions = parsePositions(createCSVFormat().parse(reader));
+        UUID nadPositionsConfigUuid = singleLineDiagramService.createPositionsFromCsv(file);
+        String params = self.getNetworkVisualizationParametersValues(studyUuid);
+        //TODO: may be use an endpoint instead of this!!
+        String updatedParameters = updateNadConfigUuid(params, nadPositionsConfigUuid);
 
-            Map<String, Object> result = new HashMap<>();
-            result.put("positions", positions);
-            String jsonResult = objectMapper.writeValueAsString(result);
-            //Store the csv positions in a nad config
-            UUID nadConfigUuid = singleLineDiagramService.createDiagramConfig(jsonResult);
-            String params = self.getNetworkVisualizationParametersValues(studyUuid);
-
-            String updatedParameters = updateNadConfigUuid(params, nadConfigUuid);
-
-            StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-            //update the network visualization params with the created nad config
-            createOrUpdateNetworkVisualizationParameters(studyEntity, updatedParameters);
-            notificationService.emitNetworkVisualizationParamsChanged(studyUuid);
-
-        } catch (Exception e) {
-            throw new StudyException(IMPORT_CSV_FAILED, e.getMessage());
-
-        }
-    }
-
-    private CSVFormat createCSVFormat() {
-        String[] headers = {VOLTAGE_LEVEL_ID, EQUIPMENT_TYPE, X_POSITION, Y_POSITION, X_LABEL_POSITION, Y_LABEL_POSITION};
-        return CSVFormat.Builder.create()
-                .setHeader(headers)
-                .setSkipHeaderRecord(true)
-                .setIgnoreEmptyLines(true)
-                .setIgnoreSurroundingSpaces(true)
-                .build();
-    }
-
-    private List<Map<String, Object>> parsePositions(Iterable<CSVRecord> records) {
-        List<Map<String, Object>> positions = new ArrayList<>();
-
-        for (CSVRecord row : records) {
-            Map<String, Object> position = new HashMap<>();
-            position.put(VOLTAGE_LEVEL_ID, row.get(VOLTAGE_LEVEL_ID).trim());
-            position.put(X_POSITION, row.get(X_POSITION).trim());
-            position.put(Y_POSITION, row.get(Y_POSITION).trim());
-            position.put(X_LABEL_POSITION, row.get(X_LABEL_POSITION).trim());
-            position.put(Y_LABEL_POSITION, row.get(Y_LABEL_POSITION).trim());
-            positions.add(position);
-        }
-
-        return positions;
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        //update the network visualization params with the created nad positions config
+        createOrUpdateNetworkVisualizationParameters(studyEntity, updatedParameters);
+        notificationService.emitNetworkVisualizationParamsChanged(studyUuid);
     }
 
     private String updateNadConfigUuid(String paramsJson, UUID nadConfigUuid) throws JsonProcessingException {
@@ -3530,7 +3489,7 @@ public class StudyService {
         JsonNode nadParams = root.get(NETWORK_AREA_DIAGRAM_PARAMETERS);
 
         if (nadParams != null && nadParams.isObject()) {
-            ((ObjectNode) nadParams).put(NAD_CONFIG_UUID, nadConfigUuid.toString());
+            ((ObjectNode) nadParams).put(POSITIONS_CONFIG_UUID, nadConfigUuid.toString());
         }
 
         return objectMapper.writeValueAsString(root);

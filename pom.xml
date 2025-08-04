@@ -279,11 +279,5 @@
             <artifactId>db-util</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Apache Commons CSV -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-csv</artifactId>
-            <version>1.10.0</version>
-        </dependency>
     </dependencies>
 </project>

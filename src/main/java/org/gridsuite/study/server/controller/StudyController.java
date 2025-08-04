@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.timeseries.DoubleTimeSeries;
@@ -61,6 +62,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
+import java.io.IOException;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -2472,9 +2474,9 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.saveDiagramGridLayout(studyUuid, diagramGridLayout));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/network-area-diagram/upload-csv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> parseCsv(@RequestParam("file") MultipartFile file, @PathVariable("studyUuid") UUID studyUuid) {
-        studyService.uploadCSV(file, studyUuid);
+    @PostMapping(value = "/studies/{studyUuid}/network-area-diagram/positions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> createPositionsFromCsv(@RequestParam("file") MultipartFile file, @PathVariable("studyUuid") UUID studyUuid) throws IOException {
+        studyService.createPositionsFromCsv(file, studyUuid);
         return ResponseEntity.ok().build();
     }
 }

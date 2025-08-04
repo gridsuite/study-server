@@ -16,8 +16,8 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyConstants.SINGLE_LINE_DIAGRAM_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.SVG_NOT_FOUND;
 
+import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
@@ -29,8 +29,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
@@ -195,7 +198,7 @@ public class SingleLineDiagramService {
         }
     }
 
-    public UUID createDiagramConfig(NetworkAreaDiagramLayoutDetails nadLayoutDetails) {
+    public UUID createPositionsFromCsv(NetworkAreaDiagramLayoutDetails nadLayoutDetails) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/config")
                 .buildAndExpand()
@@ -250,17 +253,20 @@ public class SingleLineDiagramService {
         }
     }
 
-    public UUID createDiagramConfig(String diagramConfig) {
-        Objects.requireNonNull(diagramConfig);
+    public UUID createPositionsFromCsv(MultipartFile file) throws IOException {
         var path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
-                "/network-area-diagram/config").buildAndExpand()
+                "/network-area-diagram/config/positions").buildAndExpand()
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        // Prepare the body
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file_name", file.getOriginalFilename());
+        body.add("file", file.getResource());
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(diagramConfig, headers);
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, requestEntity, UUID.class).getBody();
     }
 }
