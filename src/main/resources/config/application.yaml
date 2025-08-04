@@ -12,7 +12,7 @@ spring:
       consumeCaseImportSucceeded;consumeCaseImportFailed;\
       consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeSensitivityAnalysisCancelFailed;\
       consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeShortCircuitAnalysisCancelFailed;\
-      consumeVoltageInitDebug:consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeVoltageInitCancelFailed;\
+      consumeVoltageInitDebug;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeVoltageInitCancelFailed;\
       consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;consumeLoadFlowCancelFailed;\
       consumeNonEvacuatedEnergyResult;consumeNonEvacuatedEnergyStopped;consumeNonEvacuatedEnergyFailed;consumeNonEvacuatedEnergyCancelFailed;\
       consumeStateEstimationResult;consumeStateEstimationStopped;consumeStateEstimationFailed"
@@ -121,6 +121,9 @@ spring:
         consumeShortCircuitAnalysisCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.cancelfailed
           group: studyShortCircuitAnalysisCancelFailedGroup
+        consumeVoltageInitDebug-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.debug
+          group: studyVoltageInitDebugGroup
         consumeVoltageInitResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}voltageinit.result
           group: studyVoltageInitResultGroup
