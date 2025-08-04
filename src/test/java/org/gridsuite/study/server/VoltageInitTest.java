@@ -33,11 +33,7 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.voltageinit.parameters.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.AlertLevel;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
@@ -94,6 +90,7 @@ import static org.gridsuite.study.server.utils.ImpactUtils.createModificationRes
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -944,7 +941,7 @@ class VoltageInitTest {
                     .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
                 .build(), voltageInitFailedDestination);
             return resultUuid;
-        }).when(mockStudyService).runVoltageInit(any(), any(), any(), any(), any());
+        }).when(mockStudyService).runVoltageInit(any(), any(), any(), any(), anyBoolean());
         mockStudyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "", false);
 
         // Test doesn't reset uuid result in the database
