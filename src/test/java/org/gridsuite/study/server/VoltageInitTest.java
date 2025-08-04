@@ -942,7 +942,7 @@ class VoltageInitTest {
                 .build(), voltageInitFailedDestination);
             return resultUuid;
         }).when(mockStudyService).runVoltageInit(any(), any(), any(), any(), anyBoolean());
-        mockStudyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "", false);
+        mockStudyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "", true);
 
         // Test doesn't reset uuid result in the database
         assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION).toString());
