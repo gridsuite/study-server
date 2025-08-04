@@ -53,7 +53,7 @@ public class RootNetworkService {
     private final NetworkStoreService networkStoreService;
 
     @Value("${study.max-root-network-by-study}")
-    private int maximumRootNetworkByStudy = 3;
+    private int maximumRootNetworkByStudy = 4;
 
     public RootNetworkService(RootNetworkRepository rootNetworkRepository,
                               RootNetworkRequestRepository rootNetworkRequestRepository,

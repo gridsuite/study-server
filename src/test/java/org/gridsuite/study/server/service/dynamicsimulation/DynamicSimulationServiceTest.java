@@ -142,10 +142,10 @@ class DynamicSimulationServiceTest {
         given(networkModificationTreeService.getReportUuid(NODE_UUID, ROOTNETWORK_UUID)).willReturn(REPORT_UUID);
 
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, NODE_UUID)), any(), any())).willReturn(RESULT_UUID);
+        given(dynamicSimulationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, NODE_UUID)), any(), any(), eq(false))).willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", NODE_UUID, ROOTNETWORK_UUID, NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, null, "testUserId");
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", NODE_UUID, ROOTNETWORK_UUID, NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, null, "testUserId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);

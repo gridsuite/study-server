@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.service.client.dynamicsecurityanalysis;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ReportInfos;
@@ -235,7 +236,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
     public UUID run(String provider, @NonNull String receiver, @NonNull UUID networkUuid, String variantId,
                     @NonNull ReportInfos reportInfos, @NonNull UUID dynamicSimulationResultUuid,
-                    @NonNull UUID parametersUuid, String userId) {
+                    @NonNull UUID parametersUuid, String userId, boolean debug) {
         Objects.requireNonNull(receiver);
         Objects.requireNonNull(networkUuid);
         Objects.requireNonNull(reportInfos);
@@ -245,11 +246,14 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         String runBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN);
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(runBaseUrl + "/{networkUuid}/run");
-        if (variantId != null && !variantId.isBlank()) {
+        if (StringUtils.isNotBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        if (provider != null && !provider.isBlank()) {
+        if (StringUtils.isNotBlank(provider)) {
             uriComponentsBuilder.queryParam("provider", provider);
+        }
+        if (debug) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, true);
         }
         uriComponentsBuilder
                 .queryParam("dynamicSimulationResultUuid", dynamicSimulationResultUuid)
@@ -316,12 +320,12 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         }
     }
 
-    public void deleteResults(List<UUID> resultsUuids) {
-        if (resultsUuids != null && resultsUuids.isEmpty()) {
+    public void deleteResults(List<UUID> resultUuids) {
+        if (CollectionUtils.isEmpty(resultUuids)) {
             return;
         }
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(resultBaseUrl).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultsUuids);
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(resultBaseUrl).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultUuids);
         String path = uriComponentsBuilder.build().toUriString();
         // call dynamic-security-analysis REST API
         getRestTemplate().delete(path);

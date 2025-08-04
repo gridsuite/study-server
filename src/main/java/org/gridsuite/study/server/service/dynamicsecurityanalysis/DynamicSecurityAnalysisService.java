@@ -67,7 +67,7 @@ public class DynamicSecurityAnalysisService {
     }
 
     public UUID runDynamicSecurityAnalysis(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
-        String variantId, UUID reportUuid, UUID dynamicSimulationResultUuid, UUID parametersUuid, String userId) {
+        String variantId, UUID reportUuid, UUID dynamicSimulationResultUuid, UUID parametersUuid, String userId, boolean debug) {
 
         // create receiver for getting back the notification in rabbitmq
         String receiver;
@@ -79,7 +79,7 @@ public class DynamicSecurityAnalysisService {
             throw new UncheckedIOException(e);
         }
 
-        return dynamicSecurityAnalysisClient.run(provider, receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), dynamicSimulationResultUuid, parametersUuid, userId);
+        return dynamicSecurityAnalysisClient.run(provider, receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), dynamicSimulationResultUuid, parametersUuid, userId, debug);
     }
 
     public DynamicSecurityAnalysisStatus getStatus(UUID resultUuid) {
@@ -92,8 +92,8 @@ public class DynamicSecurityAnalysisService {
         }
     }
 
-    public void deleteResults(List<UUID> resultsUuids) {
-        dynamicSecurityAnalysisClient.deleteResults(resultsUuids);
+    public void deleteResults(List<UUID> resultUuids) {
+        dynamicSecurityAnalysisClient.deleteResults(resultUuids);
     }
 
     public void deleteAllResults() {
