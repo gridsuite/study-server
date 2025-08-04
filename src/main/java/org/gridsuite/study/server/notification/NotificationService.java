@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.integration.support.MessageBuilder;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
@@ -41,6 +42,7 @@ public class NotificationService {
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String HEADER_COMPUTATION_TYPE = "computationType";
+    public static final String HEADER_RESULT_UUID = "resultUuid";
     public static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
     public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
@@ -130,6 +132,7 @@ public class NotificationService {
     public static final String ROOT_NETWORKS_UPDATE_FAILED = "rootNetworksUpdateFailed";
 
     public static final String STUDY_ALERT = "STUDY_ALERT";
+    public static final String COMPUTATION_DEBUG_FILE_STATUS = "computationDebugFileStatus";
 
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
 
@@ -410,6 +413,18 @@ public class NotificationService {
         } catch (JsonProcessingException e) {
             LOGGER.error("Unable to notify on study alert", e);
         }
+    }
+
+    @PostCompletion
+    public void emitComputationDebugFileStatus(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType, String userId, UUID resultUuid, @Nullable String error) {
+        sendStudyUpdateMessage(studyUuid, COMPUTATION_DEBUG_FILE_STATUS, MessageBuilder.withPayload("")
+            .setHeader(HEADER_NODE, nodeUuid)
+            .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
+            .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
+            .setHeader(HEADER_USER_ID, userId)
+            .setHeader(HEADER_RESULT_UUID, resultUuid)
+            .setHeader(HEADER_ERROR, error)
+        );
     }
 
     private void emitRootNetworksUpdated(UUID studyUuid, List<UUID> rootNetworksUuids) {

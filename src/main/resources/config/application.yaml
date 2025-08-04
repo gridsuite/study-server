@@ -6,8 +6,8 @@ spring:
   cloud:
     function:
       definition: "consumeSaResult;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;\
-      consumeDsResult;consumeDsStopped;consumeDsFailed;consumeDsCancelFailed;\
-      consumeDsaResult;consumeDsaStopped;consumeDsaFailed;consumeDsaCancelFailed;\
+      consumeDsDebug;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeDsCancelFailed;\
+      consumeDsaDebug;consumeDsaResult;consumeDsaStopped;consumeDsaFailed;consumeDsaCancelFailed;\
       consumeBuildResult;consumeBuildStopped;consumeBuildFailed;\
       consumeCaseImportSucceeded;consumeCaseImportFailed;\
       consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeSensitivityAnalysisCancelFailed;\
@@ -34,6 +34,9 @@ spring:
         consumeSaFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.run.dlx
           group: dlq
+        consumeDsDebug-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.debug
+          group: studyDsDebugGroup
         consumeDsResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.result
           group: studyDsResultGroup
@@ -46,6 +49,9 @@ spring:
         consumeDsFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.run.dlx
           group: dlq
+        consumeDsaDebug-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}dsa.debug
+          group: studyDsaDebugGroup
         consumeDsaResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}dsa.result
           group: studyDsaResultGroup
@@ -217,4 +223,4 @@ gridsuite:
       base-uri: http://study-config-server/
 
 study:
-  max-root-network-by-study: 3
+  max-root-network-by-study: 4
