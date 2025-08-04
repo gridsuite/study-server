@@ -1774,9 +1774,14 @@ public class StudyService {
 
     @Transactional
     public void unbuildStudyNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
-        // if loadflow was run on this node, all children node might have been impacted with loadflow modifications
+        if (networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isNotBuilt()) {
+            return;
+        }
+
+        // if loadflow was run on a security node, all children node might have been impacted with loadflow modifications
         // we need to invalidate them all
-        if (rootNetworkNodeInfoService.isLoadflowDone(nodeUuid, rootNetworkUuid)) {
+        boolean invalidateAll = networkModificationTreeService.isSecurityNode(nodeUuid) && rootNetworkNodeInfoService.isLoadflowDone(nodeUuid, rootNetworkUuid);
+        if (invalidateAll) {
             invalidateNodeTree(studyUuid, nodeUuid);
         } else {
             invalidateNode(studyUuid, nodeUuid, rootNetworkUuid);
@@ -1945,12 +1950,11 @@ public class StudyService {
     }
 
     private void invalidateNodeTreeWithLF(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationsInvalidationMode computationsInvalidationMode) {
-        boolean isSecurityNode = networkModificationTreeService.isSecurityNode(nodeUuid);
-        boolean isLFDone = rootNetworkNodeInfoService.isLoadflowDone(nodeUuid, rootNetworkUuid);
+        boolean invalidateAll = networkModificationTreeService.isSecurityNode(nodeUuid) && rootNetworkNodeInfoService.isLoadflowDone(nodeUuid, rootNetworkUuid);
         InvalidateNodeTreeParameters invalidateNodeTreeParameters = InvalidateNodeTreeParameters.builder()
-            .invalidationMode(isLFDone && isSecurityNode ? InvalidationMode.ALL : InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
+            .invalidationMode(invalidateAll ? InvalidationMode.ALL : InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
             .withBlockedNodeBuild(true)
-            .computationsInvalidationMode(isLFDone && isSecurityNode ? ComputationsInvalidationMode.ALL : computationsInvalidationMode)
+            .computationsInvalidationMode(invalidateAll ? ComputationsInvalidationMode.ALL : computationsInvalidationMode)
             .build();
         invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, invalidateNodeTreeParameters);
     }
