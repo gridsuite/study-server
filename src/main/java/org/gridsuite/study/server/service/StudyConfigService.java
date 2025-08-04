@@ -389,6 +389,16 @@ public class StudyConfigService {
         }
     }
 
+    public void resetFilters(UUID configUuid) {
+        String path  = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/filters")
+                .buildAndExpand(configUuid).toUriString();
+        try {
+            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.DELETE, null, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
+        }
+    }
+
     public DiagramGridLayout getDiagramGridLayout(UUID diagramGridLayoutUuid) {
         Objects.requireNonNull(diagramGridLayoutUuid);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_WITH_ID_URI)
@@ -452,11 +462,5 @@ public class StudyConfigService {
             }
             throw e;
         }
-    }
-
-    public void resetFilters(UUID configUuid) {
-        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/filters");
-        String path = uriBuilder.buildAndExpand(configUuid).toUriString();
-        restTemplate.delete(studyConfigServerBaseUri + path);
     }
 }
