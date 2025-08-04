@@ -390,7 +390,7 @@ public class StudyConfigService {
     }
 
     public void resetFilters(UUID configUuid) {
-        String path  = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/filters")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/columns/filters")
                 .buildAndExpand(configUuid).toUriString();
         try {
             restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.DELETE, null, UUID.class);
