@@ -96,7 +96,7 @@ public class RootNetworkNodeInfoService {
     public void createRootNetworkLinks(@NonNull UUID studyUuid, @NonNull RootNetworkEntity rootNetworkEntity) {
         // For each network modification node (nodeInfoEntity) create a link with the root network
         networkModificationNodeInfoRepository.findAllByNodeStudyId(studyUuid).forEach(networkModificationNodeEntity -> {
-            RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(networkModificationNodeEntity.getId());
+            RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity();
             addLink(networkModificationNodeEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
         });
     }
@@ -104,7 +104,7 @@ public class RootNetworkNodeInfoService {
     public void createNodeLinks(@NonNull StudyEntity studyEntity, @NonNull NetworkModificationNodeInfoEntity modificationNodeInfoEntity) {
         // For each root network create a link with the node
         studyEntity.getRootNetworks().forEach(rootNetworkEntity -> {
-            RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(modificationNodeInfoEntity.getId());
+            RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity();
             addLink(modificationNodeInfoEntity, rootNetworkEntity, newRootNetworkNodeInfoEntity);
         });
     }
@@ -115,18 +115,17 @@ public class RootNetworkNodeInfoService {
             // when duplicating a rootNetworkNodeInfoEntity, we need to keep modificationsToExclude
             // use correspondence map to use duplicate modification uuids
             RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(
-                destinationNodeInfoEntity.getId(),
                 nodeLink.getModificationsUuidsToExclude().stream().map(originToDuplicateModificationUuidMap::get).collect(Collectors.toSet())
             );
             addLink(destinationNodeInfoEntity, originToDuplicateRootNetworkMap.get(nodeLink.getRootNetwork()), newRootNetworkNodeInfoEntity);
         });
     }
 
-    private static RootNetworkNodeInfoEntity createDefaultEntity(UUID nodeUuid) {
-        return createDefaultEntity(nodeUuid, new HashSet<>());
+    private static RootNetworkNodeInfoEntity createDefaultEntity() {
+        return createDefaultEntity(new HashSet<>());
     }
 
-    private static RootNetworkNodeInfoEntity createDefaultEntity(UUID nodeUuid, Set<UUID> modificationsToExclude) {
+    private static RootNetworkNodeInfoEntity createDefaultEntity(Set<UUID> modificationsToExclude) {
         return RootNetworkNodeInfoEntity.builder()
             .nodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT))
             .variantId(UUID.randomUUID().toString())
