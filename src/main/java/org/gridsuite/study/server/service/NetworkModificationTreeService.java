@@ -498,12 +498,11 @@ public class NetworkModificationTreeService {
                     .withAllResourceBundlesFromClasspath()
                     .withMessageTemplate("study.server.modificationNodeId")
                     .withUntypedValue("modificationNodeId", modificationNode.getId().toString()).build();
-        reportService.sendReport(getModificationReportUuid(networkModificationNode.getId(), firstRootNetworkUuid, networkModificationNode.getId()), reportNode);
+        UUID modificationReportUuid = UUID.randomUUID();
+        reportService.sendReport(modificationReportUuid, reportNode);
 
-        BuildInfos buildInfos = getBuildInfos(modificationNode.getId(), firstRootNetworkUuid);
-        Map<UUID, UUID> nodeUuidToReportUuid = buildInfos.getReportsInfos().stream().collect(Collectors.toMap(ReportInfos::nodeUuid, ReportInfos::reportUuid));
         rootNetworkNodeInfoService.updateRootNetworkNode(networkModificationNode.getId(), firstRootNetworkUuid,
-            RootNetworkNodeInfo.builder().variantId(FIRST_VARIANT_ID).nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).modificationReports(nodeUuidToReportUuid).build());
+            RootNetworkNodeInfo.builder().variantId(FIRST_VARIANT_ID).nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).modificationReportUuid(modificationReportUuid).build());
     }
 
     @Transactional
@@ -746,7 +745,7 @@ public class NetworkModificationTreeService {
         if (nodeEntity.getType().equals(NodeType.ROOT)) {
             return rootNetworkService.getRootReportUuid(rootNetworkUuid);
         } else {
-            return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getModificationReports().get(nodeUuid);
+            return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getModificationReportUuid();
         }
     }
 
@@ -811,16 +810,6 @@ public class NetworkModificationTreeService {
         return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND)).getComputationReports();
     }
 
-    @Transactional
-    public void setModificationReports(UUID nodeUuid, UUID rootNetworkUuid, Map<UUID, UUID> modificationReports) {
-        rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).ifPresent(tpNodeInfo -> tpNodeInfo.setModificationReports(modificationReports));
-    }
-
-    @Transactional
-    public Map<UUID, UUID> getModificationReports(UUID nodeUuid, UUID rootNetworkUuid) {
-        return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND)).getModificationReports();
-    }
-
     private void restoreNodeChildren(UUID studyId, UUID parentNodeId) {
         getChildren(parentNodeId).forEach(nodeEntity -> {
             NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeEntity.getIdNode()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
@@ -840,19 +829,14 @@ public class NetworkModificationTreeService {
         return nodesRepository.findAllByStudyId(studyUuid);
     }
 
-    private UUID getModificationReportUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID nodeToBuildUuid) {
-        return self.getModificationReports(nodeToBuildUuid, rootNetworkUuid).getOrDefault(nodeUuid, UUID.randomUUID());
-    }
-
-    private void getBuildInfos(NodeEntity nodeEntity, UUID rootNetworkUuid, BuildInfos buildInfos, UUID nodeToBuildUuid) {
+    private void getBuildInfos(NodeEntity nodeEntity, UUID rootNetworkUuid, BuildInfos buildInfos) {
         AbstractNode node = getSimpleNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeEntity.getIdNode(), rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
             if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
-                UUID reportUuid = getModificationReportUuid(nodeEntity.getIdNode(), rootNetworkUuid, nodeToBuildUuid);
-                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), rootNetworkNodeInfoEntity.getModificationsUuidsToExclude(), new ReportInfos(reportUuid, modificationNode.getId()));
-                getBuildInfos(nodeEntity.getParentNode(), rootNetworkUuid, buildInfos, nodeToBuildUuid);
+                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), rootNetworkNodeInfoEntity.getModificationsUuidsToExclude(), new ReportInfos(rootNetworkNodeInfoEntity.getModificationReportUuid(), modificationNode.getId()));
+                getBuildInfos(nodeEntity.getParentNode(), rootNetworkUuid, buildInfos);
             } else {
                 buildInfos.setOriginVariantId(self.getVariantId(nodeEntity.getIdNode(), rootNetworkUuid));
             }
@@ -868,7 +852,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
                 buildInfos.setDestinationVariantId(self.getVariantId(nodeUuid, rootNetworkUuid));
-                getBuildInfos(entity, rootNetworkUuid, buildInfos, nodeUuid);
+                getBuildInfos(entity, rootNetworkUuid, buildInfos);
             }
         }, () -> {
             throw new StudyException(ELEMENT_NOT_FOUND);

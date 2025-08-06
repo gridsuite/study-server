@@ -39,7 +39,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -131,7 +130,7 @@ public class RootNetworkNodeInfoService {
         return RootNetworkNodeInfoEntity.builder()
             .nodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT))
             .variantId(UUID.randomUUID().toString())
-            .modificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())))
+            .modificationReportUuid(UUID.randomUUID())
             .modificationsUuidsToExclude(modificationsToExclude)
             .blockedBuild(false)
             .build();
@@ -172,7 +171,7 @@ public class RootNetworkNodeInfoService {
         //get all rootnetworknodeinfo info linked to node
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllWithRootNetworkByNodeInfoId(nodeUuid);
         rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfoEntity -> {
-            rootNetworkNodeInfoEntity.getModificationReports().forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
+            deleteNodeInfos.addReportUuid(rootNetworkNodeInfoEntity.getModificationReportUuid());
             rootNetworkNodeInfoEntity.getComputationReports().forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
 
             String variantId = rootNetworkNodeInfoEntity.getVariantId();
@@ -254,7 +253,6 @@ public class RootNetworkNodeInfoService {
         InvalidateNodeInfos invalidateNodeInfos = getInvalidationComputationInfos(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
 
         if (notOnlyChildrenBuildStatus) {
-            rootNetworkNodeInfoEntity.getModificationReports().forEach((key, value) -> invalidateNodeInfos.addReportUuid(value));
             invalidateNodeInfos.addVariantId(rootNetworkNodeInfoEntity.getVariantId());
             invalidateBuildStatus(rootNetworkNodeInfoEntity, invalidateNodeInfos);
         }
@@ -267,7 +265,6 @@ public class RootNetworkNodeInfoService {
     private static void invalidateBuildStatus(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos) {
         rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
         rootNetworkNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
-        rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(rootNetworkNodeInfoEntity.getNodeInfo().getId(), UUID.randomUUID())));
 
         invalidateNodeInfos.addNodeUuid(rootNetworkNodeInfoEntity.getNodeInfo().getIdNode());
     }
@@ -481,8 +478,8 @@ public class RootNetworkNodeInfoService {
         if (rootNetworkNodeInfo.getVoltageInitResultUuid() != null) {
             rootNetworkNodeInfoEntity.setVoltageInitResultUuid(rootNetworkNodeInfo.getVoltageInitResultUuid());
         }
-        if (rootNetworkNodeInfo.getModificationReports() != null) {
-            rootNetworkNodeInfoEntity.setModificationReports(rootNetworkNodeInfo.getModificationReports());
+        if (rootNetworkNodeInfo.getModificationReportUuid() != null) {
+            rootNetworkNodeInfoEntity.setModificationReportUuid(rootNetworkNodeInfo.getModificationReportUuid());
         }
     }
 
@@ -507,15 +504,14 @@ public class RootNetworkNodeInfoService {
     public ModificationApplicationContext getNetworkModificationApplicationContext(UUID rootNetworkUuid, UUID nodeUuid, UUID networkUuid) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
-        UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
+        UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReportUuid();
         return new ModificationApplicationContext(networkUuid, variantId, reportUuid, nodeUuid, rootNetworkNodeInfoEntity.getModificationsUuidsToExclude());
     }
 
     private List<UUID> getReportUuids(RootNetworkNodeInfo rootNetworkNodeInfo) {
-        return Stream.of(
-            rootNetworkNodeInfo.getModificationReports().values().stream(),
+        return Stream.concat(
+            Stream.of(rootNetworkNodeInfo.getModificationReportUuid()),
             rootNetworkNodeInfo.getComputationReports().values().stream())
-            .flatMap(Function.identity())
             .toList();
     }
 
