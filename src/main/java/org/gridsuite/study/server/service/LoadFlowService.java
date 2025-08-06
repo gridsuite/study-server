@@ -42,7 +42,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  */
 @Service
 public class LoadFlowService extends AbstractComputationService {
-    private static final String QUERY_PARAM_IS_SECURITY_MODE = "isSecurityMode";
+    private static final String QUERY_PARAM_APPLY_SOLVED_VALUES = "applySolvedValues";
     private static final String RESULT_UUID = "resultUuid";
 
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
@@ -53,7 +53,7 @@ public class LoadFlowService extends AbstractComputationService {
     public record ParametersInfos(
         UUID parametersUuid,
         boolean withRatioTapChangers,
-        boolean isSecurityMode
+        boolean applySolvedValues
     ) {
     }
 
@@ -78,7 +78,7 @@ public class LoadFlowService extends AbstractComputationService {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam(QUERY_WITH_TAP_CHANGER, parametersInfos.withRatioTapChangers)
-                .queryParam(QUERY_PARAM_IS_SECURITY_MODE, parametersInfos.isSecurityMode)
+                .queryParam(QUERY_PARAM_APPLY_SOLVED_VALUES, parametersInfos.applySolvedValues)
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
                 .queryParam(QUERY_PARAM_REPORTER_ID, nodeReceiver.getNodeUuid().toString())
