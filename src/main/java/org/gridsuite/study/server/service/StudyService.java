@@ -7,9 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
@@ -3476,24 +3474,11 @@ public class StudyService {
     public void createPositionsFromCsv(MultipartFile file, UUID studyUuid) throws IOException {
 
         UUID nadPositionsConfigUuid = singleLineDiagramService.createPositionsFromCsv(file);
-        String params = self.getNetworkVisualizationParametersValues(studyUuid);
-        //TODO: may be use an endpoint instead of this!!
-        String updatedParameters = updateNadConfigUuid(params, nadPositionsConfigUuid);
 
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        //update the network visualization params with the created nad positions config
-        createOrUpdateNetworkVisualizationParameters(studyEntity, updatedParameters);
+        UUID networkVisualizationParametersUuid = studyConfigService.getNetworkVisualizationParametersUuidOrElseCreateDefaults(studyEntity);
+        // update the network visualization study params with the new nadPositionsConfigUuid.
+        studyConfigService.updateNetworkVisualizationPositionsConfigUuidParameter(networkVisualizationParametersUuid, nadPositionsConfigUuid);
         notificationService.emitNetworkVisualizationParamsChanged(studyUuid);
-    }
-
-    private String updateNadConfigUuid(String paramsJson, UUID nadConfigUuid) throws JsonProcessingException {
-        JsonNode root = objectMapper.readTree(paramsJson);
-        JsonNode nadParams = root.get(NETWORK_AREA_DIAGRAM_PARAMETERS);
-
-        if (nadParams != null && nadParams.isObject()) {
-            ((ObjectNode) nadParams).put(POSITIONS_CONFIG_UUID, nadConfigUuid.toString());
-        }
-
-        return objectMapper.writeValueAsString(root);
     }
 }
