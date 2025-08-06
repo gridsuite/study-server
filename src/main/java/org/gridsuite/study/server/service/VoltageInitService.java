@@ -13,6 +13,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.ReportInfos;
+import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
@@ -60,11 +62,11 @@ public class VoltageInitService extends AbstractComputationService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runVoltageInit(UUID networkUuid, String variantId, UUID parametersUuid, UUID reportUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+    public UUID runVoltageInit(VariantInfos variantInfos, UUID parametersUuid, ReportInfos reportInfos, UUID rootNetworkUuid, String userId, boolean debug) {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(reportInfos.nodeUuid(), rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -72,18 +74,23 @@ public class VoltageInitService extends AbstractComputationService {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
-                .queryParam("reportUuid", reportUuid.toString())
-                .queryParam("reporterId", nodeUuid.toString())
+                .queryParam("reportUuid", reportInfos.reportUuid().toString())
+                .queryParam("reporterId", reportInfos.nodeUuid().toString())
                 .queryParam("reportType", StudyService.ReportType.VOLTAGE_INITIALIZATION.reportKey);
 
         if (parametersUuid != null) {
             uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
         }
 
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        if (!StringUtils.isBlank(variantInfos.getVariantId())) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantInfos.getVariantId());
         }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
+
+        if (debug) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, true);
+        }
+
+        var path = uriComponentsBuilder.buildAndExpand(variantInfos.getNetworkUuid()).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
