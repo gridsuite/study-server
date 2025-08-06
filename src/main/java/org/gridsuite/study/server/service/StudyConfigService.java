@@ -79,7 +79,7 @@ public class StudyConfigService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<UUID> httpEntity = new HttpEntity<>(positionsConfigUuid, headers);
         try {
-            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
+            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_NETWORK_VISUALIZATION_PARAMETERS_FAILED);
         }
