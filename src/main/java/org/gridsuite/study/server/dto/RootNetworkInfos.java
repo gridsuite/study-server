@@ -30,6 +30,8 @@ public class RootNetworkInfos {
 
     private Map<String, String> importParameters;
 
+    private Map<String, Object> importParametersRaw;
+
     private String tag;
 
     public RootNetworkEntity toEntity() {

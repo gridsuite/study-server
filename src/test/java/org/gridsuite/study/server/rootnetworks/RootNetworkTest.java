@@ -188,20 +188,20 @@ class RootNetworkTest {
         // prepare headers for 2nd root network creation request
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
-        Map<String, String> importParameters = new HashMap<>();
+        Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "value1");
         importParameters.put("param2", "value2");
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
             .willReturn(WireMock.ok())).getId();
         Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(caseUuid, true);
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().name("rootNetworkName2").tag("rn2").caseInfos(new CaseInfos(null, caseUuid, null, caseFormat)).importParametersRaw(importParameters).build();
 
         // request execution - returns RootNetworkRequestInfos
-        String response = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkName2", "rn2")
-                .header("userId", USER_ID)
-                .header("content-type", "application/json")
-                .content(objectMapper.writeValueAsString(importParameters)))
-            .andExpect(status().isOk())
-            .andReturn().getResponse().getContentAsString();
+        String response = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
+                        .header("userId", USER_ID).content(objectMapper.writeValueAsString(rootNetworkInfos))
+                        .header("content-type", "application/json"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
         RootNetworkRequestInfos result = objectMapper.readValue(response, RootNetworkRequestInfos.class);
 
         wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
@@ -222,10 +222,13 @@ class RootNetworkTest {
     void testCreateRootNetworkRequestOnNotExistingStudy() throws Exception {
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().name("rootNetworkName").tag("rn1").caseInfos(new CaseInfos(null, caseUuid, null, caseFormat)).build();
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", UUID.randomUUID(), caseUuid, caseFormat, "rootNetworkName", "rn1")
-                .header("userId", "userId"))
-            .andExpect(status().isNotFound());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks", UUID.randomUUID())
+                        .header("userId", USER_ID)
+                        .content(objectMapper.writeValueAsString(rootNetworkInfos))
+                        .header("content-type", "application/json"))
+                .andExpect(status().isNotFound());
 
         // check no rootNetworkRequest has been saved
         assertEquals(0, rootNetworkRequestRepository.count());
@@ -243,11 +246,13 @@ class RootNetworkTest {
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
             .willReturn(WireMock.serverError().withBody("Error when creating root network"))).getId();
         Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(caseUuid, true);
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().name("rootNetworkName2").tag("rn2").caseInfos(new CaseInfos(null, caseUuid, null, caseFormat)).build();
 
-        // request execution - returns RootNetworkRequestInfos
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkName2", "rn2")
+         // request execution - returns RootNetworkRequestInfos
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
                 .header("userId", USER_ID)
-                .header("content-type", "application/json"))
+               .content(objectMapper.writeValueAsString(rootNetworkInfos))
+               .header("content-type", "application/json"))
             .andExpect(status().isInternalServerError());
 
         wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
@@ -275,11 +280,15 @@ class RootNetworkTest {
 
         // insert a creation request for the same study entity
         rootNetworkService.insertCreationRequest(UUID.randomUUID(), studyEntity.getId(), "rootNetworkName4", "rn4", "rn4 description", USER_ID);
-         // request execution - fails since there is already too many root networks + root network creation requests for this study
+        // request execution - fails since there is already too many root networks + root network creation requests for this study
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
-        MvcResult result = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkName5", "rn5")
+
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().name("rootNetworkName5").tag("rn5").caseInfos(new CaseInfos(null, caseUuid, null, caseFormat)).build();
+
+        MvcResult result = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
                         .header("userId", USER_ID)
+                        .content(objectMapper.writeValueAsString(rootNetworkInfos))
                         .header("content-type", "application/json"))
                 .andExpect(status().isForbidden())
                 .andReturn();
@@ -305,8 +314,10 @@ class RootNetworkTest {
         // execute request to create root network with name "rootNetworkName" - should fail since this name already exists within the same study
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkName", "rn1")
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().name("rootNetworkName").tag("rn1").caseInfos(new CaseInfos(null, caseUuid, null, caseFormat)).build();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
                 .header("userId", USER_ID)
+                .content(objectMapper.writeValueAsString(rootNetworkInfos))
                 .header("content-type", "application/json"))
             .andExpect(status().isForbidden());
 
@@ -331,13 +342,18 @@ class RootNetworkTest {
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
         String tag = "dum"; // dummy Study default tag
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkNewName", tag)
-                .header("userId", USER_ID)
-                .header("content-type", "application/json"))
-            .andExpect(status().isForbidden());
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().name("rootNetworkNewName").tag(tag).caseInfos(new CaseInfos(null, caseUuid, null, caseFormat)).build();
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
+                        .header("userId", USER_ID)
+                        .content(objectMapper.writeValueAsString(rootNetworkInfos))
+                        .header("content-type", "application/json"))
+                .andExpect(status().isForbidden());
+
         tag = "thisisatagName"; // forbidden size tag
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks?caseUuid={caseUuid}&caseFormat={caseFormat}&name={rootNetworkName}&tag={rootNetworkTag}", studyEntity.getId(), caseUuid, caseFormat, "rootNetworkNewName", tag)
+        rootNetworkInfos.setTag(tag);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
             .header("userId", USER_ID)
+            .content(objectMapper.writeValueAsString(rootNetworkInfos))
             .header("content-type", "application/json"))
             .andExpect(status().isForbidden());
 
@@ -584,20 +600,19 @@ class RootNetworkTest {
         final UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         final String newRootNetworkName = "newRootNetworkName";
         final String newRootNetworkTag = "newT";
+        RootNetworkInfos updatedRootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).tag(newRootNetworkTag).name(newRootNetworkName).build();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}",
                 studyEntity.getId(), rootNetworkUuid)
                 .contentType(APPLICATION_JSON)
-                .param("name", newRootNetworkName)
-                .param("tag", newRootNetworkTag)
                 .header("userId", USER_ID)
+                .content(objectMapper.writeValueAsString(updatedRootNetworkInfos))
         ).andExpect(status().isOk());
 
         RootNetworkEntity updatedRootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElse(null);
         assertNotNull(updatedRootNetwork);
         assertEquals(newRootNetworkName, updatedRootNetwork.getName());
         assertEquals(newRootNetworkTag, updatedRootNetwork.getTag());
-
     }
 
     @Test
@@ -608,11 +623,12 @@ class RootNetworkTest {
         networkModificationTreeService.createRoot(studyEntity);
         final UUID rootNetworkUuid = firstRootNetwork.getId();
         final String newRootNetworkTag = "tag1";
+        RootNetworkInfos updatedRootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).tag(newRootNetworkTag).build();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}",
                 studyEntity.getId(), rootNetworkUuid)
                 .contentType(APPLICATION_JSON)
-                .param("tag", newRootNetworkTag)
+                .content(objectMapper.writeValueAsString(updatedRootNetworkInfos))
                 .header("userId", USER_ID)
         ).andExpect(status().isOk());
 
@@ -631,11 +647,12 @@ class RootNetworkTest {
         RootNetworkEntity firstRootNetwork = studyEntity.getFirstRootNetwork();
         final UUID rootNetworkUuid = firstRootNetwork.getId();
         final String newRootNetworkNameToUpdate = "nameToUpdate";
+        RootNetworkInfos updatedRootNetworkInfos = RootNetworkInfos.builder().id(rootNetworkUuid).name(newRootNetworkNameToUpdate).build();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}",
                 studyEntity.getId(), rootNetworkUuid)
                 .contentType(APPLICATION_JSON)
-                .param("name", newRootNetworkNameToUpdate)
+                .content(objectMapper.writeValueAsString(updatedRootNetworkInfos))
                 .header("userId", USER_ID)
         ).andExpect(status().isOk());
 
@@ -651,10 +668,11 @@ class RootNetworkTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         // create a second root network
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(UUID.randomUUID()).tag("oldT").name("oldName")
-            .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), "oldCaseName", "oldCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "oldNetworkId"))
-            .importParameters(Map.of("param1", "oldValue1", "param2", "oldValue2"))
-            .reportUuid(UUID.randomUUID())
-            .build();
+                .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), "oldCaseName", "oldCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "oldNetworkId"))
+                .importParametersRaw(Map.of("param1", "oldValue1", "param2", "oldValue2"))
+                .importParameters(Map.of("param1", "oldValue1", "param2", "oldValue2"))
+                .reportUuid(UUID.randomUUID())
+                .build();
         createDummyRootNetwork(studyEntity, rootNetworkInfos);
         studyRepository.save(studyEntity);
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
@@ -664,13 +682,14 @@ class RootNetworkTest {
         assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), false);
 
         // update root network
+        final UUID newCaseUuid = UUID.randomUUID();
         RootNetworkInfos rootNetworkUpdateInfos = RootNetworkInfos.builder().id(rootNetworkInfos.getId()).name("newRootNetworkName").tag("newT")
-            .caseInfos(new CaseInfos(DUPLICATE_CASE_UUID, CASE_UUID, "newCaseName", "newCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "newNetworkId"))
+            .caseInfos(new CaseInfos(null, newCaseUuid, "newCaseName", "newCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "newNetworkId"))
+            .importParametersRaw(Map.of("param1", "newValue1", "param2", "newValue2", "param3", "value3"))
             .importParameters(Map.of("param1", "newValue1", "param2", "newValue2", "param3", "value3"))
             .reportUuid(UUID.randomUUID())
             .build();
 
-        final UUID newCaseUuid = UUID.randomUUID();
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
                 .willReturn(WireMock.ok())).getId();
         Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(newCaseUuid, true);
@@ -678,11 +697,7 @@ class RootNetworkTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}",
                 studyEntity.getId(), rootNetworkInfos.getId())
                 .contentType(APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new HashMap<>()))
-                .param("caseUuid", newCaseUuid.toString())
-                .param("caseFormat", rootNetworkUpdateInfos.getCaseInfos().getCaseFormat())
-                .param("name", rootNetworkUpdateInfos.getName())
-                .param("tag", rootNetworkUpdateInfos.getTag())
+                 .content(objectMapper.writeValueAsString(rootNetworkUpdateInfos))
                 .header("userId", USER_ID)
         ).andExpect(status().isOk());
 
@@ -690,10 +705,10 @@ class RootNetworkTest {
         wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
                 false,
                 Map.of(
-                        "caseUuid", WireMock.equalTo(rootNetworkUpdateInfos.getCaseInfos().getCaseUuid().toString()),
+                        "caseUuid", WireMock.equalTo(DUPLICATE_CASE_UUID.toString()),
                         "caseFormat", WireMock.equalTo(rootNetworkUpdateInfos.getCaseInfos().getCaseFormat())
                 ),
-                objectMapper.writeValueAsString(new HashMap<>())
+                objectMapper.writeValueAsString(rootNetworkUpdateInfos.getImportParametersRaw())
         );
 
         // verify that the node is blocked
@@ -705,7 +720,7 @@ class RootNetworkTest {
         rootNetworkService.insertModificationRequest(rootNetworkInfos.getId(), studyEntity.getId(), rootNetworkUpdateInfos.getName(), rootNetworkUpdateInfos.getTag(), rootNetworkUpdateInfos.getDescription(), USER_ID);
         createAndConsumeMessageCaseImport(studyEntity.getId(), rootNetworkUpdateInfos, CaseImportAction.ROOT_NETWORK_MODIFICATION);
 
-        assertEqualsRootNetworkInDB(rootNetworkUpdateInfos);
+        assertEqualsRootNetworkInDB(rootNetworkInfos);
         assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), false);
     }
 
@@ -725,7 +740,7 @@ class RootNetworkTest {
         assertEquals(rootNetworkInfos.getCaseInfos().getCaseUuid(), rootNetworkEntity.getCaseUuid());
         assertEquals(rootNetworkInfos.getCaseInfos().getCaseFormat(), rootNetworkEntity.getCaseFormat());
         assertEquals(rootNetworkInfos.getReportUuid(), rootNetworkEntity.getReportUuid());
-        assertEquals(rootNetworkInfos.getImportParameters(), rootNetworkService.getImportParameters(rootNetworkInfos.getId()));
+        assertEquals(rootNetworkInfos.getImportParametersRaw(), rootNetworkService.getImportParameters(rootNetworkInfos.getId()));
     }
 
     @Test

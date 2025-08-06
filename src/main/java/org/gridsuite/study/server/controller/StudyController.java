@@ -199,14 +199,9 @@ public class StudyController {
     @Operation(summary = "Create root network for study")
     @ApiResponse(responseCode = "200", description = "Root network created")
     public ResponseEntity<RootNetworkRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
-                                                                     @RequestParam(value = "name") String name,
-                                                                     @RequestParam(value = "tag") String tag,
-                                                                     @RequestParam(value = "description", required = false) String description,
-                                                                     @RequestParam(value = CASE_UUID) UUID caseUuid,
-                                                                     @RequestParam(value = CASE_FORMAT) String caseFormat,
-                                                                     @RequestBody(required = false) Map<String, Object> importParameters,
+                                                                     @RequestBody RootNetworkInfos rootNetworkInfos,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, name, tag, description, caseUuid, caseFormat, importParameters, userId));
+        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
@@ -214,25 +209,16 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The case is updated for a root network")})
     public ResponseEntity<Void> updateRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                   @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                  @RequestParam(value = CASE_UUID, required = false) UUID caseUuid,
-                                                  @RequestParam(value = "name", required = false) String name,
-                                                  @RequestParam(value = "tag", required = false) String tag,
-                                                  @RequestParam(value = "description", required = false) String description,
-                                                  @RequestParam(value = CASE_FORMAT, required = false) String caseFormat,
-                                                  @RequestBody(required = false) Map<String, Object> importParameters,
+                                                  @RequestBody RootNetworkInfos rootNetworkInfos,
                                                   @RequestHeader(HEADER_USER_ID) String userId) {
-        caseService.assertCaseExists(caseUuid);
+
+        if (rootNetworkInfos.getCaseInfos() != null) {
+            caseService.assertCaseExists(rootNetworkInfos.getCaseInfos().getOriginalCaseUuid());
+        }
         studyService.assertNoBlockedBuildInNodeTree(networkModificationTreeService.getStudyRootNodeUuid(studyUuid), rootNetworkUuid);
-        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder()
-                .id(rootNetworkUuid)
-                .name(name)
-                // .importParameters(importParameters) CANNOT BE PLACED IN DTO (not same type)
-                .caseInfos(new CaseInfos(caseUuid, null, null, caseFormat))
-                .tag(tag)
-                .description(description)
-                .build();
+
         // then pass importParameters separately
-        studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, importParameters, userId);
+        studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId);
         return ResponseEntity.ok().build();
     }
 
