@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.timeseries.DoubleTimeSeries;
