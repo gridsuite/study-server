@@ -156,7 +156,8 @@ public class StudyException extends RuntimeException {
         UPDATE_SPREADSHEET_CONFIG_FAILED,
         NETWORK_EXPORT_FAILED,
         GET_LOADFLOW_PROVIDER_FAILED,
-        TOO_MANY_NAD_CONFIGS
+        TOO_MANY_NAD_CONFIGS,
+        TOO_MANY_MAP_CARDS
     }
 
     private final Type type;

@@ -803,6 +803,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeVoltageInitDebug() {
+        return message -> consumeCalculationDebug(message, VOLTAGE_INITIALIZATION);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeVoltageInitStopped() {
         return message -> consumeCalculationStopped(message, VOLTAGE_INITIALIZATION);
     }
