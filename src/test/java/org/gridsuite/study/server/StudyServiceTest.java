@@ -40,7 +40,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -101,15 +100,7 @@ class StudyServiceTest {
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
     private static final UUID SHORTCIRCUIT_PARAMETERS_UUID = UUID.fromString("00000000-bd22-4a75-83d3-9e530245c7f4");
     private static final UUID SPREADSHEET_CONFIG_COLLECTION_UUID = UUID.fromString("77700000-bd22-4a75-83d3-9e530245c7f4");
-    private static final String NETWORK_VISU_DEFAULT_PARAMETERS_JSON;
-
-    static {
-        try {
-            NETWORK_VISU_DEFAULT_PARAMETERS_JSON = TestUtils.resourceToString("/network-visulization-default-parameters.json");
-        } catch (IOException e) {
-            throw new ExceptionInInitializerError(e);
-        }
-    }
+    private static final UUID NETWORK_VISUALIZATION_UUID = UUID.fromString("77700000-bd22-4a75-83d3-9e530245c7f5");
 
     @Autowired
     private StudyRepository studyRepository;
@@ -129,10 +120,10 @@ class StudyServiceTest {
     @MockBean
     private ShortCircuitService shortCircuitService;
 
-    @MockBean
+    @Autowired
     private StudyConfigService studyConfigService;
     @Autowired
-    private StudyService studyService;
+    private SingleLineDiagramService singleLineDiagramService;
 
     @BeforeEach
     void setup() {
@@ -147,6 +138,8 @@ class StudyServiceTest {
         caseService.setCaseServerBaseUri(wireMockServer.baseUrl());
         networkConversionService.setNetworkConversionServerBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
+        singleLineDiagramService.setSingleLineDiagramServerBaseUri(wireMockServer.baseUrl());
+        studyConfigService.setStudyConfigServerBaseUri(wireMockServer.baseUrl());
 
     }
 
@@ -288,21 +281,25 @@ class StudyServiceTest {
         String userId = "userId";
         Map<String, Object> importParameters = new HashMap<>();
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
-        when(studyConfigService.createDefaultSpreadsheetConfigCollection()).thenReturn(SPREADSHEET_CONFIG_COLLECTION_UUID);
         // Prepare CSV content
-        String csvContent = "voltageLevelId,equipmentType,xPosition,yPosition,xLabelPosition,yLabelPosition\n" +
-                "VL1,Transformer,100,200,110,210";
+        String csvContent = "voltageLevelId;equipmentType;xPosition;yPosition;xLabelPosition;yLabelPosition\n" +
+                "VL1;4;100;200;110;210";
 
         MockMultipartFile file = new MockMultipartFile(
                 "file", "positions.csv", "text/csv", csvContent.getBytes(StandardCharsets.UTF_8)
         );
-        when(studyService.getNetworkVisualizationParametersValues(studyUuid)).thenReturn(NETWORK_VISU_DEFAULT_PARAMETERS_JSON);
+        UUID positionsConfigUuid = UUID.randomUUID();
+        UUID positionsFromCsvUuid = wireMockUtils.stubCreatePositionsFromCsv(positionsConfigUuid);
+        UUID updateNetworkVisualizationPositionsConfigUuidParameterUuid = wireMockUtils.stubUpdateNetworkVisualizationPositionsConfigUuidParameter(NETWORK_VISUALIZATION_UUID, positionsConfigUuid);
 
-        mockMvc.perform(MockMvcRequestBuilders.multipart("/v1/studies/{studyUuid}/network-area-diagram/upload-csv", studyUuid)
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/v1/studies/{studyUuid}/network-area-diagram/positions", studyUuid)
                         .file(file)
                         .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
                 .andExpect(status().isOk());
-        // check update notification on visu params
+
+        // assert API calls have been made
+        wireMockUtils.verifyStubCreatePositionsFromCsv(positionsFromCsvUuid);
+        wireMockUtils.verifyStubUpdateNetworkVisualizationPositionsConfigUuidParameter(updateNetworkVisualizationPositionsConfigUuidParameterUuid, NETWORK_VISUALIZATION_UUID);
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
@@ -318,8 +315,8 @@ class StudyServiceTest {
         UUID sendReportStubId = wireMockUtils.stubSendReport();
         when(loadFlowService.createDefaultLoadFlowParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
-        when(studyConfigService.createDefaultSpreadsheetConfigCollection()).thenReturn(SPREADSHEET_CONFIG_COLLECTION_UUID);
-
+        UUID spreadsheetConfigCollectionUuid = wireMockUtils.stubCreateDefaultSpreadsheetConfigCollection(SPREADSHEET_CONFIG_COLLECTION_UUID);
+        UUID createDefaultNetworkVisualizationParameters = wireMockUtils.stubCreateDefaultNetworkVisualizationParameters(NETWORK_VISUALIZATION_UUID);
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                 .header("userId", userId)
                 .param(CASE_FORMAT_PARAM, "UCTE")
@@ -339,6 +336,8 @@ class StudyServiceTest {
         wireMockUtils.verifyImportNetwork(postNetworkStubId, caseUuid.toString(), WireMockUtils.FIRST_VARIANT_ID);
         wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, caseUuid.toString());
         wireMockUtils.verifySendReport(sendReportStubId);
+        wireMockUtils.verifyCreateDefaultSpreadsheetConfigCollection(spreadsheetConfigCollectionUuid);
+        wireMockUtils.verifyCreateDefaultNetworkVisualizationParameters(createDefaultNetworkVisualizationParameters);
 
         return studyUuid;
     }

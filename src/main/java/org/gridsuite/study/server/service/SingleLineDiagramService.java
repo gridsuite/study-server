@@ -16,7 +16,6 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyConstants.SINGLE_LINE_DIAGRAM_API_VERSION;
 import static org.gridsuite.study.server.StudyException.Type.SVG_NOT_FOUND;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -253,7 +252,7 @@ public class SingleLineDiagramService {
         }
     }
 
-    public UUID createPositionsFromCsv(MultipartFile file) throws IOException {
+    public UUID createPositionsFromCsv(MultipartFile file) {
         var path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
                 "/network-area-diagram/config/positions").buildAndExpand()
                 .toUriString();
