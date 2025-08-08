@@ -91,8 +91,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -691,35 +690,16 @@ class VoltageInitTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1", NetworkModificationNodeType.CONSTRUCTION, BuildStatus.BUILT);
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 2", NetworkModificationNodeType.CONSTRUCTION, BuildStatus.BUILT);
         UUID modificationNode2Uuid = modificationNode2.getId();
-        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3", BuildStatus.BUILT);
+        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3", NetworkModificationNodeType.SECURITY, BuildStatus.BUILT);
         UUID modificationNode3Uuid = modificationNode3.getId();
 
-        // run a voltage init analysis
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
-                .header("userId", "userId"))
-            .andExpect(status().isOk());
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
-        checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
-        checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(studyNameUserIdUuid);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
-
-        // just retrieve modifications list from modificationNode3Uuid
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
-                .header("userId", "userId")).andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(2, server).stream().allMatch(r ->
-                r.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=false") ||
-                r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")
-        ));
-
-        assertTrue(networkModificationTreeService.getNodeBuildStatus(modificationNode3Uuid, firstRootNetworkUuid).isBuilt());
+        // run a voltage init analysis on a security node (modificationNode2Uuid)
+        runVoltageInit(studyNameUserIdUuid, modificationNode3Uuid, firstRootNetworkUuid, server);
 
         // clone and insert voltage-init modification to modificationNode3Uuid
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
@@ -730,9 +710,10 @@ class VoltageInitTest {
                 r.matches("/v1/groups/.*\\?action=COPY&originGroupUuid=.*")
         ));
 
+        // Invalidate only children
         checkInsertVoltageInitModifications(studyNameUserIdUuid, modificationNode3Uuid, firstRootNetworkUuid, true);
 
-        // insert again voltage-init modification to modificationNode3Uuid, with LF result -> node is invalidated
+        // clone and insert again voltage-init modification to modificationNode3Uuid, with LF result -> node is invalidated
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         when(networkModificationService.duplicateModificationsFromGroup(any(), any(), any())).thenReturn(null);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
@@ -746,7 +727,63 @@ class VoltageInitTest {
                 r.matches("/v1/reports")
         ));
 
+        // Invalidate all tree
         checkInsertVoltageInitModifications(studyNameUserIdUuid, modificationNode3Uuid, firstRootNetworkUuid, false);
+
+        // run a voltage init analysis on a construction node (modificationNode2Uuid)
+        runVoltageInit(studyNameUserIdUuid, modificationNode2Uuid, firstRootNetworkUuid, server);
+
+        // clone and insert voltage-init modification in a construction node (modificationNode2Uuid) -> invalidate only children (modificationNode3Uuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid)
+            .header("userId", "userId")).andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(5, server).stream().allMatch(r ->
+            r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
+                r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
+                r.matches("/v1/groups/.*\\?action=COPY&originGroupUuid=.*") ||
+                r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*")
+        ));
+
+        // Invalidate only children
+        checkInsertVoltageInitModifications(studyNameUserIdUuid, modificationNode2Uuid, firstRootNetworkUuid, true);
+
+        // clone and insert again voltage-init modification to modificationNode2Uuid, with LF result-> invalidate only children (construction node)
+        when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid)
+            .header("userId", "userId")).andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(5, server).stream().allMatch(r ->
+            r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
+                r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
+                r.matches("/v1/groups/.*\\?action=COPY.*") ||
+                r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*")
+        ));
+
+        // Invalidate only children
+        checkInsertVoltageInitModifications(studyNameUserIdUuid, modificationNode2Uuid, firstRootNetworkUuid, true);
+    }
+
+    private void runVoltageInit(UUID studyUuid, UUID nodeUuuid, UUID rootNetworkUuid, final MockWebServer server) throws Exception {
+        // run a voltage init analysis
+        reset(loadFlowService);
+        reset(networkModificationService);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run", studyUuid, rootNetworkUuid, nodeUuuid)
+                .header("userId", "userId"))
+            .andExpect(status().isOk());
+        assertTrue(networkModificationTreeService.getNodeBuildStatus(nodeUuuid, rootNetworkUuid).isBuilt());
+
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
+        checkReactiveSlacksAlertMessagesReceived(studyUuid, 10.);
+        checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(studyUuid);
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+
+        // just retrieve modifications list from modificationNode3Uuid
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyUuid, rootNetworkUuid, nodeUuuid)
+            .header("userId", "userId")).andExpect(status().isOk());
+        assertTrue(TestUtils.getRequestsDone(2, server).stream().allMatch(r ->
+            r.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=false") ||
+                r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")
+        ));
     }
 
     @Test
@@ -837,7 +874,7 @@ class VoltageInitTest {
     private NodeEntity insertNode(StudyEntity study, NodeEntity parentNode, String firstVariantId, String secondVariantId,
                                   RootNetworkEntity firstRootNetworkEntity, RootNetworkEntity secondRootNetworkEntity) {
         NodeEntity nodeEntity = nodeRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
-        NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).modificationGroupUuid(UUID.randomUUID()).build());
+        NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).modificationGroupUuid(UUID.randomUUID()).nodeType(NetworkModificationNodeType.SECURITY).build());
         createNodeLinks(firstRootNetworkEntity, modificationNodeInfoEntity, firstVariantId, UUID.randomUUID(), BuildStatus.BUILT);
         createNodeLinks(secondRootNetworkEntity, modificationNodeInfoEntity, secondVariantId, UUID.randomUUID(), BuildStatus.NOT_BUILT);
         rootNetworkRepository.save(firstRootNetworkEntity);
@@ -1102,13 +1139,14 @@ class VoltageInitTest {
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid,
-                modificationGroupUuid, variantId, nodeName, BuildStatus.NOT_BUILT);
+                modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY, BuildStatus.NOT_BUILT);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-                                                                  UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType, BuildStatus buildStatus) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
+                .nodeType(nodeType)
                 .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 

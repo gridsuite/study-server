@@ -53,6 +53,7 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_SUBSTATION_ID = "substationId";
     public static final String QUERY_PARAM_RESULTS_UUIDS = "resultsUuids";
     public static final String QUERY_PARAM_RESULT_UUID = "resultUuid";
+    public static final String QUERY_PARAM_PARAMETERS_UUID = "parametersUuid";
 
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";

@@ -719,7 +719,7 @@ public class StudyController {
         if (prevResultUuid != null) {
             handleRerunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers, userId);
         } else {
-            studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, true, userId);
+            studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, networkModificationTreeService.isSecurityNode(nodeUuid), userId);
         }
         return ResponseEntity.ok().build();
     }
@@ -728,12 +728,12 @@ public class StudyController {
      * Need to have several transactions to send notifications by step
      * Disadvantage is that it is not atomic so need a try/catch to rollback
      */
-    private UUID handleRerunLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID prevResultUuid, Boolean withRatioTapChangers, String userId) {
+    private void handleRerunLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID prevResultUuid, Boolean withRatioTapChangers, String userId) {
         UUID loadflowResultUuid = null;
         try {
             studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid);
             loadflowResultUuid = studyService.createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers);
-            return studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+            studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
         } catch (Exception e) {
             if (loadflowResultUuid != null) {
                 studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid);

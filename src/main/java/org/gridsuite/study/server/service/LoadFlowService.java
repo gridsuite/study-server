@@ -42,12 +42,20 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
  */
 @Service
 public class LoadFlowService extends AbstractComputationService {
+    private static final String QUERY_PARAM_APPLY_SOLVED_VALUES = "applySolvedValues";
+    private static final String RESULT_UUID = "resultUuid";
 
-    static final String RESULT_UUID = "resultUuid";
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
     private String loadFlowServerBaseUri;
+
+    public record ParametersInfos(
+        UUID parametersUuid,
+        boolean withRatioTapChangers,
+        boolean applySolvedValues
+    ) {
+    }
 
     @Autowired
     public LoadFlowService(RemoteServicesProperties remoteServicesProperties,
@@ -58,7 +66,8 @@ public class LoadFlowService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public UUID runLoadFlow(NodeReceiver nodeReceiver, UUID loadflowResultUuid, VariantInfos variantInfos, UUID parametersUuid, boolean withRatioTapChangers, UUID reportUuid, String userId) {
+    public UUID runLoadFlow(NodeReceiver nodeReceiver, UUID loadflowResultUuid,
+                            VariantInfos variantInfos, ParametersInfos parametersInfos, UUID reportUuid, String userId) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(nodeReceiver), StandardCharsets.UTF_8);
@@ -68,7 +77,8 @@ public class LoadFlowService extends AbstractComputationService {
 
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/networks/{networkUuid}/run-and-save")
-                .queryParam(QUERY_WITH_TAP_CHANGER, withRatioTapChangers)
+                .queryParam(QUERY_WITH_TAP_CHANGER, parametersInfos.withRatioTapChangers)
+                .queryParam(QUERY_PARAM_APPLY_SOLVED_VALUES, parametersInfos.applySolvedValues)
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportUuid.toString())
                 .queryParam(QUERY_PARAM_REPORTER_ID, nodeReceiver.getNodeUuid().toString())
@@ -77,8 +87,8 @@ public class LoadFlowService extends AbstractComputationService {
         if (loadflowResultUuid != null) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_RESULT_UUID, loadflowResultUuid);
         }
-        if (parametersUuid != null) {
-            uriComponentsBuilder.queryParam("parametersUuid", parametersUuid.toString());
+        if (parametersInfos.parametersUuid != null) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_PARAMETERS_UUID, parametersInfos.parametersUuid.toString());
         }
         if (!StringUtils.isBlank(variantInfos.getVariantId())) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantInfos.getVariantId());

@@ -12,6 +12,8 @@ import org.gridsuite.study.server.dto.InvalidateNodeInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
@@ -22,11 +24,11 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 /**
@@ -66,12 +68,15 @@ class LoadFLowUnitTest {
     private UserAdminService userAdminService;
     @MockBean
     private NotificationService notificationService;
+    @MockBean
+    StudyRepository studyRepository;
 
     @Test
     void testRunLoadFlow() {
         when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(null);
-        doReturn(loadflowResultUuid).when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyBoolean(), anyString());
+        doNothing().when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyBoolean(), anyString());
         doNothing().when(studyService).assertCanRunLoadFLow(any(), any());
+
         controller.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId);
 
         verify(studyService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyBoolean(), anyString());
@@ -85,9 +90,8 @@ class LoadFLowUnitTest {
         doNothing().when(studyService).assertCanRunLoadFLow(studyUuid, nodeUuid);
 
         doNothing().when(studyService).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
-
         doReturn(loadflowResultUuid).when(studyService).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
-        doReturn(loadflowResultUuid).when(studyService).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
+        doNothing().when(studyService).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
 
         controller.runLoadFlow(studyUuid, rootNetworkUuid, nodeUuid, false, userId);
 
@@ -95,17 +99,41 @@ class LoadFLowUnitTest {
         verify(studyService, times(1)).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
         verify(studyService, times(1)).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
         verify(studyService, times(1)).assertCanRunLoadFLow(studyUuid, nodeUuid);
-
     }
 
     @Test
     void testRerunLoadFlow() {
-        boolean withRatioTapChangers = false;
+        testRerunLoadFlow(false, true);
+        testRerunLoadFlow(false, false);
+        testRerunLoadFlow(true, true);
+        testRerunLoadFlow(true, false);
+    }
+
+    private void testRerunLoadFlow(boolean withRatioTapChangers, boolean isSecurityNode) {
+        reset(studyService, networkModificationTreeService, networkModificationService, notificationService, loadFlowService);
+        if (isSecurityNode) {
+            when(networkModificationTreeService.isSecurityNode(nodeUuid)).thenReturn(true);
+            testRerunLoadFlowSecurityNode(withRatioTapChangers);
+        } else {
+            when(studyRepository.findById(studyUuid)).thenReturn(Optional.of(new StudyEntity()));
+            testRerunLoadFlowConstructionNode(withRatioTapChangers);
+        }
+    }
+
+    private void testRerunLoadFlowConstructionNode(boolean withRatioTapChangers) {
+        studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+
+        verify(loadFlowService, times(1)).runLoadFlow(any(), any(), any(), any(), any(), anyString());
+        verify(notificationService, times(1)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
+    }
+
+    private void testRerunLoadFlowSecurityNode(boolean withRatioTapChangers) {
         InvalidateNodeTreeParameters expectedInvalidationParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
             .computationsInvalidationMode(InvalidateNodeTreeParameters.ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
             .withBlockedNodeBuild(true)
             .build();
+
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         UUID groupUuidToInvalidate = UUID.randomUUID();
         invalidateNodeInfos.addGroupUuids(List.of(groupUuidToInvalidate));
@@ -125,7 +153,8 @@ class LoadFLowUnitTest {
         doReturn(loadflowResultUuid).when(loadFlowService).createRunningStatus();
 
         // execute loadflow rerun
-        assertEquals(loadflowResultUuid, studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId));
+        when(networkModificationTreeService.isSecurityNode(nodeUuid)).thenReturn(true);
+        studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
 
         // node invalidation
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters);
