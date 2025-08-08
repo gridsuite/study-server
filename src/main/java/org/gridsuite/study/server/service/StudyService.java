@@ -3230,8 +3230,9 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid, UUID nodeUuid) {
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+    public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid);
         return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid, variantId);
     }
 
