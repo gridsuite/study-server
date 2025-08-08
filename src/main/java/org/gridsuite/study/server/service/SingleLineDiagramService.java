@@ -28,8 +28,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
@@ -194,7 +197,7 @@ public class SingleLineDiagramService {
         }
     }
 
-    public UUID createDiagramConfig(NetworkAreaDiagramLayoutDetails nadLayoutDetails) {
+    public UUID createPositionsFromCsv(NetworkAreaDiagramLayoutDetails nadLayoutDetails) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/config")
                 .buildAndExpand()
@@ -247,5 +250,22 @@ public class SingleLineDiagramService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
+    }
+
+    public UUID createPositionsFromCsv(MultipartFile file) {
+        var path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
+                "/network-area-diagram/config/positions").buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        // Prepare the body
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file_name", file.getOriginalFilename());
+        body.add("file", file.getResource());
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, requestEntity, UUID.class).getBody();
     }
 }

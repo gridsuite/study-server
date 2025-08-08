@@ -56,9 +56,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
+import java.io.IOException;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -2472,5 +2474,11 @@ public class StudyController {
         studyService.assertIsStudyExist(studyUuid);
 
         return ResponseEntity.ok().body(studyService.saveDiagramGridLayout(studyUuid, diagramGridLayout));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/network-area-diagram/positions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> createPositionsFromCsv(@RequestParam("file") MultipartFile file, @PathVariable("studyUuid") UUID studyUuid) throws IOException {
+        studyService.createPositionsFromCsv(file, studyUuid);
+        return ResponseEntity.ok().build();
     }
 }

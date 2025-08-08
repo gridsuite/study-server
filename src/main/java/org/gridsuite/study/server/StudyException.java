@@ -157,7 +157,8 @@ public class StudyException extends RuntimeException {
         NETWORK_EXPORT_FAILED,
         GET_LOADFLOW_PROVIDER_FAILED,
         TOO_MANY_NAD_CONFIGS,
-        TOO_MANY_MAP_CARDS
+        TOO_MANY_MAP_CARDS,
+        IMPORT_CSV_FAILED,
     }
 
     private final Type type;
