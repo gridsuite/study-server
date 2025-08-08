@@ -2354,8 +2354,9 @@ public class StudyController {
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-        @Parameter(description = "Filters uuid to be resolved") @RequestParam("filtersUuid") List<UUID> filtersUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilters(rootNetworkUuid, filtersUuid, nodeUuid));
+        @Parameter(description = "Filters uuid to be resolved") @RequestParam("filtersUuid") List<UUID> filtersUuid,
+        @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilters(rootNetworkUuid, filtersUuid, nodeUuid, inUpstreamBuiltParentNode));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/run")
