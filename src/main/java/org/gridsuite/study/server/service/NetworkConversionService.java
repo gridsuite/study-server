@@ -18,7 +18,7 @@ import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.RootNetworkCreationInfos;
+import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.StudyException;
@@ -65,22 +65,22 @@ public class NetworkConversionService {
      * - one variant for root node - INITIAL_VARIANT
      * - one variant cloned from the previous one for the 1st node - *variantId*
      */
-    public void persistNetwork(RootNetworkCreationInfos rootNetworkCreationInfos, String variantId, String userId, UUID importReportUuid, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
+    public void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, String userId, UUID importReportUuid, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(
-                        new CaseImportReceiver(rootNetworkCreationInfos.studyUuid(), rootNetworkCreationInfos.rootNetworkUuid(), rootNetworkCreationInfos.caseUuid(), rootNetworkCreationInfos.originalCaseUuid(), importReportUuid, userId, System.nanoTime(), caseImportAction
+                        new CaseImportReceiver(studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getCaseInfos().getCaseUuid(), rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), importReportUuid, userId, System.nanoTime(), caseImportAction
                     )), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
-            .queryParam(CASE_UUID, rootNetworkCreationInfos.caseUuid())
+            .queryParam(CASE_UUID, rootNetworkInfos.getCaseInfos().getCaseUuid())
             .queryParamIfPresent(QUERY_PARAM_VARIANT_ID, Optional.ofNullable(variantId))
             .queryParam(REPORT_UUID, importReportUuid)
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
-            .queryParam(CASE_FORMAT, rootNetworkCreationInfos.caseFormat());
+            .queryParam(CASE_FORMAT, rootNetworkInfos.getCaseInfos().getCaseFormat());
 
         String path = builder
                 .buildAndExpand()
