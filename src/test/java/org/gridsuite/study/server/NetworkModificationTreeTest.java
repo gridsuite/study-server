@@ -95,7 +95,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfigurationWithTestChannel
 class NetworkModificationTreeTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTreeTest.class);
-    private static final String NODE_EDITED= "nodeEdited";
+    private static final String NODE_EDITED = "nodeEdited";
     private static final long TIMEOUT = 1000;
 
     @Autowired
