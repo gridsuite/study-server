@@ -519,8 +519,8 @@ public class NetworkModificationTreeService {
             networkModificationNodeEntity.setDescription(node.getDescription());
         }
 
-        if (isRenameNode(node)) {
-            notificationService.emitNodeRenamed(self.getStudyUuidForNodeId(node.getId()), node.getId());
+        if (isEditedNode(node)) {
+            notificationService.emitNodeEdited(self.getStudyUuidForNodeId(node.getId()), node.getId());
         } else {
             notificationService.emitNodesChanged(self.getStudyUuidForNodeId(node.getId()), Collections.singletonList(node.getId()));
         }
@@ -548,13 +548,14 @@ public class NetworkModificationTreeService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    private boolean isRenameNode(AbstractNode node) {
-        NetworkModificationNode renameNode = NetworkModificationNode.builder()
-            .id(node.getId())
-            .name(node.getName())
-            .type(node.getType())
-            .build();
-        return renameNode.equals(node);
+    private boolean isEditedNode(AbstractNode node) {
+        NetworkModificationNode editedNode = NetworkModificationNode.builder()
+                .id(node.getId())
+                .name(node.getName())
+                .type(node.getType())
+                .description(node.getDescription())
+                .build();
+        return editedNode.equals(node);
     }
 
     private NodeEntity getNodeEntity(UUID nodeId) {

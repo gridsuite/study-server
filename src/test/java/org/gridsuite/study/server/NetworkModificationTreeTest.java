@@ -95,7 +95,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfigurationWithTestChannel
 class NetworkModificationTreeTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTreeTest.class);
-    private static final String NODE_UPDATED = "nodeUpdated";
+    private static final String NODE_EDITED = "nodeEdited";
     private static final long TIMEOUT = 1000;
 
     @Autowired
@@ -1127,7 +1127,7 @@ class NetworkModificationTreeTest {
                 .content(objectWriter.writeValueAsString(justANameUpdate))
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
-        assertEquals(NODE_RENAMED, output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION).getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(NODE_EDITED, output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION).getHeaders().get(HEADER_UPDATE_TYPE));
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
 
         var newNode = getNode(root.getStudyId(), node1.getId(), firstRootNetworkUuid);
@@ -1174,9 +1174,7 @@ class NetworkModificationTreeTest {
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
     }
 
-    // This test is for a part of the code that is not used yet
-    // We update a node description (this is not used in the front) and we assume that it will emit a nodeUpdated notif
-    // If it's not the case or if this test causes problems feel free to update it / remove it as needed
+    // We edit a node description and assume that it will emit a nodeEdited notif
     @Test
     void testNodeDescriptionUpdate() throws Exception {
         String userId = "userId";
@@ -1194,7 +1192,7 @@ class NetworkModificationTreeTest {
                 .content(objectWriter.writeValueAsString(nodeDescriptionUpdate))
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        assertEquals(NODE_UPDATED, output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION).getHeaders().get(HEADER_UPDATE_TYPE));
+        assertEquals(NODE_EDITED, output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION).getHeaders().get(HEADER_UPDATE_TYPE));
         checkElementUpdatedMessageSent(root.getStudyId(), userId);
     }
 
