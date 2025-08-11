@@ -34,7 +34,10 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -771,6 +774,15 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeLoadFlowFailed() {
         return message -> consumeCalculationFailed(message, LOAD_FLOW);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeShortCircuitAnalysisDebug() {
+        return message -> {
+            String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
+            ComputationType computationType = !StringUtils.isEmpty(busId) ? SHORT_CIRCUIT_ONE_BUS : SHORT_CIRCUIT;
+            consumeCalculationDebug(message, computationType);
+        };
     }
 
     @Bean
