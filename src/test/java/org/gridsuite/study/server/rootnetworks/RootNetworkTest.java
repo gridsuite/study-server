@@ -38,6 +38,7 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -53,14 +54,18 @@ import java.util.*;
 import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.gridsuite.study.server.StudyException.Type.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
 
 @AutoConfigureMockMvc
 @SpringBootTest
@@ -263,7 +268,7 @@ class RootNetworkTest {
             null
         );
 
-        Mockito.verify(caseService, Mockito.times(1)).duplicateCase(caseUuid, true);
+        verify(caseService, times(1)).duplicateCase(caseUuid, true);
         // check no rootNetworkRequest has been saved
         assertEquals(0, rootNetworkRequestRepository.count());
     }
@@ -279,7 +284,7 @@ class RootNetworkTest {
         studyRepository.save(studyEntity);
 
         // insert a creation request for the same study entity
-        rootNetworkService.insertCreationRequest(UUID.randomUUID(), studyEntity.getId(), "rootNetworkName4", "rn4", "rn4 description", USER_ID);
+        rootNetworkService.insertCreationRequest(studyEntity.getId(), RootNetworkInfos.builder().id(UUID.randomUUID()).name("rootNetworkName4").tag("rn4").description("rn4 description").build(), USER_ID);
         // request execution - fails since there is already too many root networks + root network creation requests for this study
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
@@ -373,7 +378,7 @@ class RootNetworkTest {
         UUID newRootNetworkUuid = UUID.randomUUID();
 
         // insert creation request as it should be when receiving a caseImportSucceeded with a rootNetworkUuid set
-        rootNetworkService.insertCreationRequest(newRootNetworkUuid, studyUuid, "CASE_NAME2", "rn2", "rn2 description", USER_ID);
+        rootNetworkService.insertCreationRequest(studyUuid, RootNetworkInfos.builder().id(newRootNetworkUuid).name("CASE_NAME2").tag("rn2").description("rn2 description").build(), USER_ID);
 
         // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
@@ -406,7 +411,7 @@ class RootNetworkTest {
         assertFalse(rootNetworkRequestRepository.existsById(newRootNetworkUuid));
 
         // check case expiration has been disabled
-        Mockito.verify(caseService, Mockito.times(1)).disableCaseExpiration(CASE_UUID2);
+        verify(caseService, times(1)).disableCaseExpiration(CASE_UUID2);
     }
 
     private void createAndConsumeMessageCaseImport(UUID studyUuid, RootNetworkInfos rootNetworkInfos, CaseImportAction caseImportAction) throws Exception {
@@ -469,11 +474,11 @@ class RootNetworkTest {
         assertFalse(rootNetworkRequestRepository.existsById(rootNetworkInfos.getId()));
 
         // assert distant resources deletions have been called
-        Mockito.verify(caseService, Mockito.times(1)).disableCaseExpiration(CASE_UUID2);
-        Mockito.verify(reportService, Mockito.times(1)).deleteReports(List.of(REPORT_UUID2));
-        Mockito.verify(equipmentInfosService, Mockito.times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
-        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID2);
-        Mockito.verify(caseService, Mockito.times(1)).deleteCase(CASE_UUID2);
+        verify(caseService, times(1)).disableCaseExpiration(CASE_UUID2);
+        verify(reportService, times(1)).deleteReports(List.of(REPORT_UUID2));
+        verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
+        verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID2);
+        verify(caseService, times(1)).deleteCase(CASE_UUID2);
     }
 
     @Test
@@ -534,21 +539,21 @@ class RootNetworkTest {
         assertEquals(firstRootNetworkUuid, rootNetworkListAfterDeletion.getFirst().rootNetworkUuid());
 
         // check deletion of link remote infos
-        Mockito.verify(reportService, Mockito.times(1)).deleteReports(List.of(REPORT_UUID2));
-        Mockito.verify(equipmentInfosService, Mockito.times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
-        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID2);
-        Mockito.verify(caseService, Mockito.times(1)).deleteCase(CASE_UUID2);
-        Mockito.verify(dynamicSimulationService, Mockito.times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
-        Mockito.verify(dynamicSecurityAnalysisService, Mockito.times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
+        verify(reportService, times(1)).deleteReports(List.of(REPORT_UUID2));
+        verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
+        verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID2);
+        verify(caseService, times(1)).deleteCase(CASE_UUID2);
+        verify(dynamicSimulationService, times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
+        verify(dynamicSecurityAnalysisService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
         // check LOADFLOW_RESULT_UUID2 is also deleted
-        Mockito.verify(loadFlowService, Mockito.times(1)).deleteLoadFlowResults(List.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2));
-        Mockito.verify(securityAnalysisService, Mockito.times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
-        Mockito.verify(shortCircuitService, Mockito.times(1)).deleteShortCircuitAnalysisResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
-        Mockito.verify(shortCircuitService, Mockito.times(1)).deleteShortCircuitAnalysisResults(List.of(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
-        Mockito.verify(stateEstimationService, Mockito.times(1)).deleteStateEstimationResults(List.of(STATE_ESTIMATION_RESULT_UUID));
-        Mockito.verify(sensitivityAnalysisService, Mockito.times(1)).deleteSensitivityAnalysisResults(List.of(SENSITIVITY_ANALYSIS_RESULT_UUID));
-        Mockito.verify(voltageInitService, Mockito.times(1)).deleteVoltageInitResults(List.of(VOLTAGE_INIT_RESULT_UUID));
-        Mockito.verify(nonEvacuatedEnergyService, Mockito.times(1)).deleteNonEvacuatedEnergyResults(List.of(NON_EVACUATED_ENERGY_RESULT_UUID));
+        verify(loadFlowService, times(1)).deleteLoadFlowResults(List.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2));
+        verify(securityAnalysisService, times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
+        verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
+        verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
+        verify(stateEstimationService, times(1)).deleteStateEstimationResults(List.of(STATE_ESTIMATION_RESULT_UUID));
+        verify(sensitivityAnalysisService, times(1)).deleteSensitivityAnalysisResults(List.of(SENSITIVITY_ANALYSIS_RESULT_UUID));
+        verify(voltageInitService, times(1)).deleteVoltageInitResults(List.of(VOLTAGE_INIT_RESULT_UUID));
+        verify(nonEvacuatedEnergyService, times(1)).deleteNonEvacuatedEnergyResults(List.of(NON_EVACUATED_ENERGY_RESULT_UUID));
     }
 
     @Test
@@ -701,7 +706,10 @@ class RootNetworkTest {
                 .header("userId", USER_ID)
         ).andExpect(status().isOk());
 
-        Mockito.verify(rootNetworkService, Mockito.times(1)).insertModificationRequest(rootNetworkUpdateInfos.getId(), studyEntity.getId(), rootNetworkUpdateInfos.getName(), rootNetworkUpdateInfos.getTag(), rootNetworkUpdateInfos.getDescription(), USER_ID);
+        ArgumentCaptor<RootNetworkInfos> rootNetworkInfosCaptor = ArgumentCaptor.forClass(RootNetworkInfos.class);
+        verify(rootNetworkService, times(1)).insertModificationRequest(eq(studyEntity.getId()), rootNetworkInfosCaptor.capture(), eq(USER_ID));
+        rootNetworkInfosCaptor.getValue().getCaseInfos().setCaseUuid(null);
+        assertThat(rootNetworkInfosCaptor.getValue()).usingRecursiveComparison().isEqualTo(rootNetworkUpdateInfos);
         wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
                 false,
                 Map.of(
@@ -717,7 +725,7 @@ class RootNetworkTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyEntity.getId(), rootNetworkInfos.getId(), modificationNode.getId()).header(HEADER_USER_ID, USER_ID))
             .andExpect(status().isForbidden());
 
-        rootNetworkService.insertModificationRequest(rootNetworkInfos.getId(), studyEntity.getId(), rootNetworkUpdateInfos.getName(), rootNetworkUpdateInfos.getTag(), rootNetworkUpdateInfos.getDescription(), USER_ID);
+        rootNetworkService.insertModificationRequest(studyEntity.getId(), rootNetworkUpdateInfos, USER_ID);
         createAndConsumeMessageCaseImport(studyEntity.getId(), rootNetworkUpdateInfos, CaseImportAction.ROOT_NETWORK_MODIFICATION);
 
         assertEqualsRootNetworkInDB(rootNetworkInfos);
@@ -775,7 +783,7 @@ class RootNetworkTest {
 
         // create a request of root network creation
         UUID requestUuid = UUID.randomUUID();
-        rootNetworkService.insertCreationRequest(requestUuid, studyEntity.getId(), "rootNetworkName2", "R_01", "description", USER_ID);
+        rootNetworkService.insertCreationRequest(studyEntity.getId(), RootNetworkInfos.builder().id(requestUuid).name("rootNetworkName2").tag("R_01").description("description").build(), USER_ID);
 
         String response = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks", studyEntity.getId()))
             .andExpect(status().isOk())
@@ -835,7 +843,7 @@ class RootNetworkTest {
 
         // create new root network
         UUID rootNetworkUuid = UUID.randomUUID();
-        rootNetworkService.insertCreationRequest(rootNetworkUuid, studyEntity.getId(), "dummyRootNetwork3", "RN_3", "rn3 description", USER_ID);
+        rootNetworkService.insertCreationRequest(studyEntity.getId(), RootNetworkInfos.builder().id(rootNetworkUuid).name("dummyRootNetwork3").tag("RN_3").description("rn3 description").build(), USER_ID);
         studyService.createRootNetwork(studyEntity.getId(), RootNetworkInfos.builder()
             .name(CASE_NAME2)
             .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))

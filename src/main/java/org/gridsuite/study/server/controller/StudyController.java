@@ -210,13 +210,8 @@ public class StudyController {
                                                   @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                   @RequestBody RootNetworkInfos rootNetworkInfos,
                                                   @RequestHeader(HEADER_USER_ID) String userId) {
-
-        if (rootNetworkInfos.getCaseInfos() != null) {
-            caseService.assertCaseExists(rootNetworkInfos.getCaseInfos().getOriginalCaseUuid());
-        }
+        caseService.assertCaseExists(rootNetworkInfos.getCaseInfos() != null ? rootNetworkInfos.getCaseInfos().getOriginalCaseUuid() : null);
         studyService.assertNoBlockedBuildInNodeTree(networkModificationTreeService.getStudyRootNodeUuid(studyUuid), rootNetworkUuid);
-
-        // then pass importParameters separately
         studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId);
         return ResponseEntity.ok().build();
     }
