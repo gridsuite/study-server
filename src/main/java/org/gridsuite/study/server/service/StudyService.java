@@ -3422,6 +3422,11 @@ public class StudyService {
         notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
     }
 
+    public void resetFilters(UUID studyUuid, UUID configUuid) {
+        studyConfigService.resetFilters(configUuid);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
     @Transactional(readOnly = true)
     public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid, String globalFilters) {
         UUID networkuuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
