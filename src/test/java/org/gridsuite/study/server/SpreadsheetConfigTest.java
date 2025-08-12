@@ -244,7 +244,7 @@ class SpreadsheetConfigTest {
         StudyEntity studyEntity = insertStudy();
         final String configServerUrl = "/v1/spreadsheet-configs/" + SPREADSHEET_CONFIG_UUID + "/reset-filters";
 
-        UUID stubId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo(configServerUrl))
+        UUID stubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(configServerUrl))
                 .willReturn(WireMock.noContent())).getId();
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/spreadsheet-config/{configUuid}/reset-filters", studyEntity.getId(), SPREADSHEET_CONFIG_UUID)
@@ -253,7 +253,7 @@ class SpreadsheetConfigTest {
                 .andReturn();
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
-        wireMockUtils.verifyDeleteRequest(stubId, configServerUrl, false, Map.of(), 1);
+        wireMockUtils.verifyPutRequest(stubId, configServerUrl, false, Map.of(), null);
     }
 
     private StudyEntity insertStudy() {
