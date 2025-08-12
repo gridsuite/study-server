@@ -610,6 +610,9 @@ public class NetworkModificationTreeService {
     ) {
 
         if (getNodeEntity(parentNodeId).getType() == NodeType.ROOT) {
+            if (newNodeType == NetworkModificationNodeType.CONSTRUCTION && insertMode == InsertMode.BEFORE) {
+                throw new StudyException(NOT_ALLOWED);
+            }
             if (newNodeType == NetworkModificationNodeType.SECURITY && insertMode != InsertMode.CHILD) {
                 throw new StudyException(NOT_ALLOWED);
             }
@@ -633,6 +636,10 @@ public class NetworkModificationTreeService {
 
     public boolean isConstructionNode(UUID nodeUuid) {
         return getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType() == NetworkModificationNodeType.CONSTRUCTION;
+    }
+
+    public boolean isSecurityNode(UUID nodeUuid) {
+        return getNetworkModificationNodeInfoEntity(nodeUuid).getNodeType() == NetworkModificationNodeType.SECURITY;
     }
 
     public void assertCreateNode(UUID parentNodeId, NetworkModificationNodeType newNodeType, InsertMode insertMode) {
