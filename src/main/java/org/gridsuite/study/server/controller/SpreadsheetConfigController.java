@@ -131,7 +131,7 @@ public class SpreadsheetConfigController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/{id}/columns/filters")
+    @PutMapping("/{id}/reset-filters")
     @Operation(summary = "Reset global and column filters",
             description = "Reset all columns filters in a spreadsheet configuration as well as the global filter")
     @ApiResponse(responseCode = "204", description = "Filters reset successfully")

@@ -242,12 +242,12 @@ class SpreadsheetConfigTest {
     @Test
     void testResetFilters(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertStudy();
-        final String configServerUrl = "/v1/spreadsheet-configs/" + SPREADSHEET_CONFIG_UUID + "/columns/filters";
+        final String configServerUrl = "/v1/spreadsheet-configs/" + SPREADSHEET_CONFIG_UUID + "/reset-filters";
 
         UUID stubId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo(configServerUrl))
                 .willReturn(WireMock.noContent())).getId();
 
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/spreadsheet-config/{configUuid}/columns/filters", studyEntity.getId(), SPREADSHEET_CONFIG_UUID)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/spreadsheet-config/{configUuid}/reset-filters", studyEntity.getId(), SPREADSHEET_CONFIG_UUID)
                         .header("content-type", "application/json"))
                 .andExpect(status().isNoContent())
                 .andReturn();
