@@ -11,18 +11,9 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyConstants.SINGLE_LINE_DIAGRAM_API_VERSION;
-import static org.gridsuite.study.server.StudyException.Type.SVG_NOT_FOUND;
-
-import java.util.List;
-import java.util.UUID;
-
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.DiagramParameters;
-import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
 import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -34,6 +25,12 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.List;
+import java.util.UUID;
+
+import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.SVG_NOT_FOUND;
 
 @Service
 public class SingleLineDiagramService {
@@ -197,20 +194,6 @@ public class SingleLineDiagramService {
         }
     }
 
-    public UUID createPositionsFromCsv(NetworkAreaDiagramLayoutDetails nadLayoutDetails) {
-        var path = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/config")
-                .buildAndExpand()
-                .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<NetworkAreaDiagramLayoutDetails> httpEntity = new HttpEntity<>(nadLayoutDetails, headers);
-
-        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
-    }
-
     public void createMultipleDiagramConfigs(List<NadConfigInfos> nadConfigs) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
@@ -252,7 +235,7 @@ public class SingleLineDiagramService {
         }
     }
 
-    public UUID createPositionsFromCsv(MultipartFile file) {
+    public UUID createNadPositionsConfigFromCsv(MultipartFile file) {
         var path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
                 "/network-area-diagram/config/positions").buildAndExpand()
                 .toUriString();

@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.StudyConstants.*;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
@@ -60,7 +59,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
-import java.io.IOException;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -2089,6 +2087,14 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/network-area-diagram/positions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "create a nad positions configuration from a csv")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The nad positions configuration created")})
+    public ResponseEntity<Void> createNadPositionsConfigFromCsv(@RequestParam("file") MultipartFile file, @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.createNadPositionsConfigFromCsv(file, studyUuid);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/optional-services")
     @Operation(summary = "Get all the optional services and their status")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of optional services")})
@@ -2458,11 +2464,5 @@ public class StudyController {
         studyService.assertIsStudyExist(studyUuid);
 
         return ResponseEntity.ok().body(studyService.saveDiagramGridLayout(studyUuid, diagramGridLayout));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/network-area-diagram/positions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Void> createPositionsFromCsv(@RequestParam("file") MultipartFile file, @PathVariable("studyUuid") UUID studyUuid) throws IOException {
-        studyService.createPositionsFromCsv(file, studyUuid);
-        return ResponseEntity.ok().build();
     }
 }

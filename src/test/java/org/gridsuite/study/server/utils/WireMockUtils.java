@@ -590,7 +590,7 @@ public class WireMockUtils {
     }
 
     public UUID stubUpdateNetworkVisualizationPositionsConfigUuidParameter(UUID parametersUuid, UUID positionsConfigUuid) {
-        return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_VISUALIZATION_PARAMS + "/" + parametersUuid + "/positions-config-uuid"))
+        return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_VISUALIZATION_PARAMS + "/" + parametersUuid + "/nad-positions-config-uuid"))
                 .withRequestBody(WireMock.equalToJson("\"" + positionsConfigUuid.toString() + "\""))
                 .willReturn(WireMock.ok())
         ).getId();
@@ -601,7 +601,7 @@ public class WireMockUtils {
     }
 
     public void verifyStubUpdateNetworkVisualizationPositionsConfigUuidParameter(UUID stubUuid, UUID parametersUuid) {
-        verifyPutRequest(stubUuid, URI_NETWORK_VISUALIZATION_PARAMS + "/" + parametersUuid + "/positions-config-uuid", true, Map.of(), null);
+        verifyPutRequest(stubUuid, URI_NETWORK_VISUALIZATION_PARAMS + "/" + parametersUuid + "/nad-positions-config-uuid", true, Map.of(), null);
     }
 
     public UUID stubCreateDefaultSpreadsheetConfigCollection(UUID uuid) {

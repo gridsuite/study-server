@@ -72,8 +72,8 @@ public class StudyConfigService {
         }
     }
 
-    public void updateNetworkVisualizationPositionsConfigUuidParameter(UUID parametersUuid, UUID positionsConfigUuid) {
-        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_WITH_ID_URI + "/positions-config-uuid");
+    public void updateNadPositionsConfigUuidParameter(UUID parametersUuid, UUID positionsConfigUuid) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_WITH_ID_URI + "/nad-positions-config-uuid");
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

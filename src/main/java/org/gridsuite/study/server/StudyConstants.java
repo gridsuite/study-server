@@ -86,8 +86,6 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_ACTIVATED = "activated";
     public static final String PATH_PARAM_PARAMETERS = "parameters";
     public static final String DYNA_FLOW_PROVIDER = "DynaFlow";
-    public static final String NETWORK_AREA_DIAGRAM_PARAMETERS = "networkAreaDiagramParameters";
-    public static final String POSITIONS_CONFIG_UUID = "positionsConfigUuid";
 
     public enum SldDisplayMode {
         FEEDER_POSITION,
