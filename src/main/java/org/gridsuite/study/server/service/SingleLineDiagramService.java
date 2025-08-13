@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.BAD_PARAMETER;
 import static org.gridsuite.study.server.StudyException.Type.SVG_NOT_FOUND;
 
 @Service
@@ -188,6 +189,8 @@ public class SingleLineDiagramService {
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + NOT_FOUND);
+            } else if (HttpStatus.BAD_REQUEST.equals(e.getStatusCode())) {
+                throw new StudyException(BAD_PARAMETER, e.getMessage());
             } else {
                 throw e;
             }
