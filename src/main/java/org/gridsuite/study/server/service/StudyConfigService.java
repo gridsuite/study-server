@@ -72,12 +72,12 @@ public class StudyConfigService {
         }
     }
 
-    public void updateNadPositionsConfigUuidParameter(UUID parametersUuid, UUID positionsConfigUuid) {
+    public void updateNadPositionsConfigUuidParameter(UUID parametersUuid, UUID nadPositionsConfigUuid) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_WITH_ID_URI + "/nad-positions-config-uuid");
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<UUID> httpEntity = new HttpEntity<>(positionsConfigUuid, headers);
+        HttpEntity<UUID> httpEntity = new HttpEntity<>(nadPositionsConfigUuid, headers);
         try {
             restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
         } catch (HttpStatusCodeException e) {
