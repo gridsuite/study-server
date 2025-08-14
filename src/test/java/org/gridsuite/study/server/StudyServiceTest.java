@@ -288,9 +288,9 @@ class StudyServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "positions.csv", "text/csv", csvContent.getBytes(StandardCharsets.UTF_8)
         );
-        UUID positionsConfigUuid = UUID.randomUUID();
-        UUID positionsFromCsvUuid = wireMockUtils.stubCreatePositionsFromCsv(positionsConfigUuid);
-        UUID updateNetworkVisualizationPositionsConfigUuidParameterUuid = wireMockUtils.stubUpdateNetworkVisualizationPositionsConfigUuidParameter(NETWORK_VISUALIZATION_UUID, positionsConfigUuid);
+        UUID nadPositionsConfigUuid = UUID.randomUUID();
+        UUID positionsFromCsvUuid = wireMockUtils.stubCreatePositionsFromCsv(nadPositionsConfigUuid);
+        UUID updateNetworkVisualizationPositionsConfigUuidParameterUuid = wireMockUtils.stubUpdateNetworkVisualizationPositionsConfigUuidParameter(NETWORK_VISUALIZATION_UUID, nadPositionsConfigUuid);
         mockMvc.perform(MockMvcRequestBuilders.multipart("/v1/studies/{studyUuid}/network-visualizations/nad-positions-config", studyUuid)
                 .file(file)
                 .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))

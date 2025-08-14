@@ -589,9 +589,9 @@ public class WireMockUtils {
         return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody("\"" + uuid.toString() + "\""))).getId();
     }
 
-    public UUID stubUpdateNetworkVisualizationPositionsConfigUuidParameter(UUID parametersUuid, UUID positionsConfigUuid) {
+    public UUID stubUpdateNetworkVisualizationPositionsConfigUuidParameter(UUID parametersUuid, UUID nadPositionsConfigUuid) {
         return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_VISUALIZATION_PARAMS + "/" + parametersUuid + "/nad-positions-config-uuid"))
-                .withRequestBody(WireMock.equalToJson("\"" + positionsConfigUuid.toString() + "\""))
+                .withRequestBody(WireMock.equalToJson("\"" + nadPositionsConfigUuid.toString() + "\""))
                 .willReturn(WireMock.ok())
         ).getId();
     }
