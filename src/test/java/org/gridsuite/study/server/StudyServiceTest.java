@@ -291,16 +291,10 @@ class StudyServiceTest {
         UUID positionsConfigUuid = UUID.randomUUID();
         UUID positionsFromCsvUuid = wireMockUtils.stubCreatePositionsFromCsv(positionsConfigUuid);
         UUID updateNetworkVisualizationPositionsConfigUuidParameterUuid = wireMockUtils.stubUpdateNetworkVisualizationPositionsConfigUuidParameter(NETWORK_VISUALIZATION_UUID, positionsConfigUuid);
-        mockMvc.perform(
-                        MockMvcRequestBuilders.multipart("/v1/studies/{studyUuid}/network-visualizations/nad-positions-config", studyUuid)
-                                .file(file)
-                                .contentType(MediaType.MULTIPART_FORM_DATA_VALUE)
-                                .with(request -> {
-                                    request.setMethod("PUT");
-                                    return request;
-                                })
-                )
-                .andExpect(status().isOk());
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/v1/studies/{studyUuid}/network-visualizations/nad-positions-config", studyUuid)
+                .file(file)
+                .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
+            .andExpect(status().isOk());
 
         // assert API calls have been made
         wireMockUtils.verifyStubCreatePositionsFromCsv(positionsFromCsvUuid);
