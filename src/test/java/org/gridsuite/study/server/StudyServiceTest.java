@@ -14,14 +14,8 @@ import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.network.store.client.NetworkStoreService;
 import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.CaseService;
-import org.gridsuite.study.server.service.LoadFlowService;
-import org.gridsuite.study.server.service.NetworkConversionService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.ReportService;
-import org.gridsuite.study.server.service.StudyConfigService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -38,11 +32,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,13 +48,11 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc
@@ -104,12 +100,10 @@ class StudyServiceTest {
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
     private static final UUID SHORTCIRCUIT_PARAMETERS_UUID = UUID.fromString("00000000-bd22-4a75-83d3-9e530245c7f4");
     private static final UUID SPREADSHEET_CONFIG_COLLECTION_UUID = UUID.fromString("77700000-bd22-4a75-83d3-9e530245c7f4");
+    private static final UUID NETWORK_VISUALIZATION_UUID = UUID.fromString("77700000-bd22-4a75-83d3-9e530245c7f5");
 
     @Autowired
     private StudyRepository studyRepository;
-
-    @Autowired
-    private StudyCreationRequestRepository studyCreationRequestRepository;
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
@@ -126,8 +120,10 @@ class StudyServiceTest {
     @MockBean
     private ShortCircuitService shortCircuitService;
 
-    @MockBean
+    @Autowired
     private StudyConfigService studyConfigService;
+    @Autowired
+    private SingleLineDiagramService singleLineDiagramService;
 
     @BeforeEach
     void setup() {
@@ -142,6 +138,8 @@ class StudyServiceTest {
         caseService.setCaseServerBaseUri(wireMockServer.baseUrl());
         networkConversionService.setNetworkConversionServerBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
+        singleLineDiagramService.setSingleLineDiagramServerBaseUri(wireMockServer.baseUrl());
+        studyConfigService.setStudyConfigServerBaseUri(wireMockServer.baseUrl());
 
     }
 
@@ -278,6 +276,35 @@ class StudyServiceTest {
         wireMockUtils.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
     }
 
+    @Test
+    void testImportCsv() throws Exception {
+        String userId = "userId";
+        Map<String, Object> importParameters = new HashMap<>();
+        UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
+        // Prepare CSV content
+        String csvContent = "voltageLevelId;equipmentType;xPosition;yPosition;xLabelPosition;yLabelPosition\n" +
+                "VL1;4;100;200;110;210";
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "positions.csv", "text/csv", csvContent.getBytes(StandardCharsets.UTF_8)
+        );
+        UUID nadPositionsConfigUuid = UUID.randomUUID();
+        UUID positionsFromCsvUuid = wireMockUtils.stubCreatePositionsFromCsv(nadPositionsConfigUuid);
+        UUID updateNetworkVisualizationPositionsConfigUuidParameterUuid = wireMockUtils.stubUpdateNetworkVisualizationPositionsConfigUuidParameter(NETWORK_VISUALIZATION_UUID, nadPositionsConfigUuid);
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/v1/studies/{studyUuid}/network-visualizations/nad-positions-config", studyUuid)
+                .file(file)
+                .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
+            .andExpect(status().isOk());
+
+        // assert API calls have been made
+        wireMockUtils.verifyStubCreatePositionsFromCsv(positionsFromCsvUuid);
+        wireMockUtils.verifyStubUpdateNetworkVisualizationPositionsConfigUuidParameter(updateNetworkVisualizationPositionsConfigUuidParameterUuid, NETWORK_VISUALIZATION_UUID);
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
+        assertEquals(NotificationService.UPDATE_NETWORK_VISUALIZATION_PARAMETERS, updateType);
+    }
+
     private UUID createStudy(String userId, UUID caseUuid, Map<String, Object> importParameters) throws Exception {
         // mock API calls
         UUID caseExistsStubId = wireMockUtils.stubCaseExists(caseUuid.toString(), true);
@@ -287,8 +314,8 @@ class StudyServiceTest {
         UUID sendReportStubId = wireMockUtils.stubSendReport();
         when(loadFlowService.createDefaultLoadFlowParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
-        when(studyConfigService.createDefaultSpreadsheetConfigCollection()).thenReturn(SPREADSHEET_CONFIG_COLLECTION_UUID);
-
+        UUID spreadsheetConfigCollectionUuid = wireMockUtils.stubCreateDefaultSpreadsheetConfigCollection(SPREADSHEET_CONFIG_COLLECTION_UUID);
+        UUID createDefaultNetworkVisualizationParameters = wireMockUtils.stubCreateDefaultNetworkVisualizationParameters(NETWORK_VISUALIZATION_UUID);
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                 .header("userId", userId)
                 .param(CASE_FORMAT_PARAM, "UCTE")
@@ -308,6 +335,8 @@ class StudyServiceTest {
         wireMockUtils.verifyImportNetwork(postNetworkStubId, caseUuid.toString(), WireMockUtils.FIRST_VARIANT_ID);
         wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, caseUuid.toString());
         wireMockUtils.verifySendReport(sendReportStubId);
+        wireMockUtils.verifyCreateDefaultSpreadsheetConfigCollection(spreadsheetConfigCollectionUuid);
+        wireMockUtils.verifyCreateDefaultNetworkVisualizationParameters(createDefaultNetworkVisualizationParameters);
 
         return studyUuid;
     }
