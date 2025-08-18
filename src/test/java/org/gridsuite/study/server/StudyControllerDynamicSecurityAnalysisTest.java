@@ -143,6 +143,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
     //output destinations
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
+    private static final String DSA_DEBUG_DESTINATION = "dsa.debug";
     private static final String DSA_RESULT_DESTINATION = "dsa.result";
     private static final String DSA_STOPPED_DESTINATION = "dsa.stopped";
     private static final String DSA_FAILED_DESTINATION = "dsa.run.dlx";
@@ -218,7 +219,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         doAnswer(invocation -> RESULT_UUID)
             .when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(
                 any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
-                any(), any(), any(), any());
+                any(), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run
@@ -238,7 +239,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
-        // mock the notification from dynamic-simulation server in case of failed
+        // mock the notification from dynamic-security-analysis-server in case of failed
         String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(modificationNode1Uuid, firstRootNetworkUuid)),
                 StandardCharsets.UTF_8);
         input.send(MessageBuilder.withPayload("")
@@ -253,6 +254,19 @@ class StudyControllerDynamicSecurityAnalysisTest {
         assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_FAILED);
+
+        // mock the notification from dynamic-security-analysis-server to send a debug status notif
+        input.send(MessageBuilder.withPayload("")
+                .setHeader("resultUuid", RESULT_UUID.toString())
+                .setHeader("receiver", receiver)
+                .build(), DSA_DEBUG_DESTINATION);
+
+        // must have message COMPUTATION_DEBUG_FILE_STATUS from channel : studyUpdateDestination
+        Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertThat(dynamicSimulationResultMessage.getHeaders())
+                .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
+
         // resultUuid must be empty in database at this moment
         assertThat(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SECURITY_ANALYSIS)).isNull();
     }
@@ -288,7 +302,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // setup DynamicSecurityAnalysisService mock
         doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(any(),
-            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any());
+            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), eq(false));
 
         MvcResult result;
         // --- call endpoint to be tested --- //
@@ -365,7 +379,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // setup DynamicSecurityAnalysisService mock
         doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(any(),
-            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any());
+            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
         // run on a regular node which allows a run

@@ -53,7 +53,7 @@ public class RootNetworkService {
     private final NetworkStoreService networkStoreService;
 
     @Value("${study.max-root-network-by-study}")
-    private int maximumRootNetworkByStudy = 3;
+    private int maximumRootNetworkByStudy = 4;
 
     public RootNetworkService(RootNetworkRepository rootNetworkRepository,
                               RootNetworkRequestRepository rootNetworkRequestRepository,
@@ -109,6 +109,7 @@ public class RootNetworkService {
             getRootNetworkRequest(rootNetworkInfos.getId()).ifPresent(request -> {
                 rootNetworkInfos.setName(request.getName());
                 rootNetworkInfos.setTag(request.getTag());
+                rootNetworkInfos.setDescription(request.getDescription());
             });
 
             updateCaseInfos(rootNetworkEntity, rootNetworkInfos.getCaseInfos());
@@ -123,6 +124,7 @@ public class RootNetworkService {
         if (rootNetworkInfos.getTag() != null) {
             rootNetworkEntity.setTag(rootNetworkInfos.getTag());
         }
+        rootNetworkEntity.setDescription(rootNetworkInfos.getDescription());
     }
 
     private void updateCaseInfos(@NonNull RootNetworkEntity rootNetworkEntity, @NonNull CaseInfos caseInfos) {
@@ -200,16 +202,16 @@ public class RootNetworkService {
         );
     }
 
-    private RootNetworkRequestEntity insertRootNetworkRequest(UUID rootNetworkUuid, UUID studyUuid, String rootNetworkName, String rootNetworkTag, String userId, RootNetworkAction action) {
-        return rootNetworkRequestRepository.save(RootNetworkRequestEntity.builder().id(rootNetworkUuid).name(rootNetworkName).tag(rootNetworkTag).studyUuid(studyUuid).userId(userId).actionRequest(action).build());
+    private RootNetworkRequestEntity insertRootNetworkRequest(UUID studyUuid, RootNetworkInfos rootNetworkInfos, RootNetworkAction action, String userId) {
+        return rootNetworkRequestRepository.save(RootNetworkRequestEntity.builder().id(rootNetworkInfos.getId()).name(rootNetworkInfos.getName()).tag(rootNetworkInfos.getTag()).description(rootNetworkInfos.getDescription()).studyUuid(studyUuid).actionRequest(action).userId(userId).build());
     }
 
-    public RootNetworkRequestEntity insertCreationRequest(UUID rootNetworkUuid, UUID studyUuid, String rootNetworkName, String rootNetworkTag, String userId) {
-        return insertRootNetworkRequest(rootNetworkUuid, studyUuid, rootNetworkName, rootNetworkTag, userId, RootNetworkAction.ROOT_NETWORK_CREATION);
+    public RootNetworkRequestEntity insertCreationRequest(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId) {
+        return insertRootNetworkRequest(studyUuid, rootNetworkInfos, RootNetworkAction.ROOT_NETWORK_CREATION, userId);
     }
 
-    public RootNetworkRequestEntity insertModificationRequest(UUID rootNetworkUuid, UUID studyUuid, String rootNetworkName, String rootNetworkTag, String userId) {
-        return insertRootNetworkRequest(rootNetworkUuid, studyUuid, rootNetworkName, rootNetworkTag, userId, RootNetworkAction.ROOT_NETWORK_MODIFICATION);
+    public RootNetworkRequestEntity insertModificationRequest(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId) {
+        return insertRootNetworkRequest(studyUuid, rootNetworkInfos, RootNetworkAction.ROOT_NETWORK_MODIFICATION, userId);
     }
 
     public void assertIsRootNetworkInStudy(UUID studyUuid, UUID rootNetworkUuid) {

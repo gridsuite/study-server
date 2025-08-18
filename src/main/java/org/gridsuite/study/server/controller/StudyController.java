@@ -17,12 +17,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
-import org.gridsuite.study.server.StudyConstants.SldDisplayMode;
+import org.gridsuite.study.server.StudyConstants.*;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
+import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -199,37 +199,21 @@ public class StudyController {
     @Operation(summary = "Create root network for study")
     @ApiResponse(responseCode = "200", description = "Root network created")
     public ResponseEntity<RootNetworkRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
-                                                                     @RequestParam(value = "name") String name,
-                                                                     @RequestParam(value = "tag") String tag,
-                                                                     @RequestParam(value = CASE_UUID) UUID caseUuid,
-                                                                     @RequestParam(value = CASE_FORMAT) String caseFormat,
-                                                                     @RequestBody(required = false) Map<String, Object> importParameters,
+                                                                     @RequestBody RootNetworkInfos rootNetworkInfos,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, name, tag, caseUuid, caseFormat, importParameters, userId));
+        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
     @Operation(summary = "update root network case")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The case is updated for a root network")})
     public ResponseEntity<Void> updateRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
-                                                      @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                      @RequestParam(value = CASE_UUID, required = false) UUID caseUuid,
-                                                      @RequestParam(value = "name", required = false) String name,
-                                                      @RequestParam(value = "tag", required = false) String tag,
-                                                      @RequestParam(value = CASE_FORMAT, required = false) String caseFormat,
-                                                      @RequestBody(required = false) Map<String, Object> importParameters,
-                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        caseService.assertCaseExists(caseUuid);
+                                                  @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                  @RequestBody RootNetworkInfos rootNetworkInfos,
+                                                  @RequestHeader(HEADER_USER_ID) String userId) {
+        caseService.assertCaseExists(rootNetworkInfos.getCaseInfos() != null ? rootNetworkInfos.getCaseInfos().getOriginalCaseUuid() : null);
         studyService.assertNoBlockedBuildInNodeTree(networkModificationTreeService.getStudyRootNodeUuid(studyUuid), rootNetworkUuid);
-        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder()
-            .id(rootNetworkUuid)
-            .name(name)
-            // .importParameters(importParameters) CANNOT BE PLACED IN DTO (not same type)
-            .caseInfos(new CaseInfos(caseUuid, null, null, caseFormat))
-            .tag(tag)
-            .build();
-        // then pass importParameters separately
-        studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, importParameters, userId);
+        studyService.updateRootNetworkRequest(studyUuid, rootNetworkInfos, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -720,7 +704,7 @@ public class StudyController {
         if (prevResultUuid != null) {
             handleRerunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers, userId);
         } else {
-            studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, true, userId);
+            studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, networkModificationTreeService.isSecurityNode(nodeUuid), userId);
         }
         return ResponseEntity.ok().build();
     }
@@ -729,12 +713,12 @@ public class StudyController {
      * Need to have several transactions to send notifications by step
      * Disadvantage is that it is not atomic so need a try/catch to rollback
      */
-    private UUID handleRerunLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID prevResultUuid, Boolean withRatioTapChangers, String userId) {
+    private void handleRerunLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID prevResultUuid, Boolean withRatioTapChangers, String userId) {
         UUID loadflowResultUuid = null;
         try {
             studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid);
             loadflowResultUuid = studyService.createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, withRatioTapChangers);
-            return studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+            studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
         } catch (Exception e) {
             if (loadflowResultUuid != null) {
                 studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid);
@@ -875,9 +859,10 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        studyService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().build();
     }
 
@@ -1929,10 +1914,11 @@ public class StudyController {
     public ResponseEntity<Void> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId);
+        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 
@@ -2019,9 +2005,10 @@ public class StudyController {
     public ResponseEntity<Void> runDynamicSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                      @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        studyService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 
@@ -2353,8 +2340,9 @@ public class StudyController {
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-        @Parameter(description = "Filters uuid to be resolved") @RequestParam("filtersUuid") List<UUID> filtersUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilters(rootNetworkUuid, filtersUuid, nodeUuid));
+        @Parameter(description = "Filters uuid to be resolved") @RequestParam("filtersUuid") List<UUID> filtersUuid,
+        @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilters(rootNetworkUuid, filtersUuid, nodeUuid, inUpstreamBuiltParentNode));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/run")
@@ -2449,5 +2437,26 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow provider is returned")})
     public ResponseEntity<String> getLoadFlowProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/diagram-grid-layout")
+    @Operation(summary = "Get diagram grid layout of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Diagram grid layout is returned"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<DiagramGridLayout> getDiagramGridLayout(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        studyService.assertIsStudyExist(studyUuid);
+        DiagramGridLayout diagramGridLayout = studyService.getDiagramGridLayout(studyUuid);
+        return diagramGridLayout != null ? ResponseEntity.ok().body(diagramGridLayout) : ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/diagram-grid-layout", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Save diagram grid layout of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Diagram grid layout is saved"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
+    public ResponseEntity<UUID> saveDiagramGridLayout(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody DiagramGridLayout diagramGridLayout) {
+        studyService.assertIsStudyExist(studyUuid);
+
+        return ResponseEntity.ok().body(studyService.saveDiagramGridLayout(studyUuid, diagramGridLayout));
     }
 }

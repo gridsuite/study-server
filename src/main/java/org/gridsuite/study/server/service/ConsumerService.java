@@ -55,6 +55,7 @@ public class ConsumerService {
     private static final String HEADER_CASE_FORMAT = "caseFormat";
     private static final String HEADER_CASE_NAME = "caseName";
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
+    private static final String HEADER_ERROR_MESSAGE = "errorMessage";
 
     private final ObjectMapper objectMapper;
 
@@ -619,6 +620,18 @@ public class ConsumerService {
             }));
     }
 
+    public void consumeCalculationDebug(Message<String> msg, ComputationType computationType) {
+        Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
+            .map(UUID::fromString)
+            .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+
+                String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR_MESSAGE);
+                String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
+                notificationService.emitComputationDebugFileStatus(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType, userId, resultUuid, errorMessage);
+            }));
+    }
+
     public void consumeCalculationResult(Message<String> msg, ComputationType computationType) {
         Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
             .map(UUID::fromString)
@@ -658,6 +671,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeDsDebug() {
+        return message -> consumeCalculationDebug(message, DYNAMIC_SIMULATION);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeDsResult() {
         return message -> consumeCalculationResult(message, DYNAMIC_SIMULATION);
     }
@@ -670,6 +688,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeDsFailed() {
         return message -> consumeCalculationFailed(message, DYNAMIC_SIMULATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDsaDebug() {
+        return message -> consumeCalculationDebug(message, DYNAMIC_SECURITY_ANALYSIS);
     }
 
     @Bean
@@ -777,6 +800,11 @@ public class ConsumerService {
                 consumeCalculationFailed(message, SHORT_CIRCUIT);
             }
         };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeVoltageInitDebug() {
+        return message -> consumeCalculationDebug(message, VOLTAGE_INITIALIZATION);
     }
 
     @Bean
