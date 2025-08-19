@@ -276,6 +276,8 @@ class LoadFlowTest {
                     return new MockResponse(404);
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)) {
                     return new MockResponse(200);
+                } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID + "&resultUuid=" + LOADFLOW_OTHER_NODE_RESULT_UUID)) {
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/stop.*")
                         || path.matches("/v1/results/" + LOADFLOW_OTHER_NODE_RESULT_UUID + "/stop.*")) {
                     String resultUuid = path.matches(".*variantId=" + VARIANT_ID_2 + ".*") ? LOADFLOW_OTHER_NODE_RESULT_UUID : LOADFLOW_RESULT_UUID;
@@ -365,15 +367,15 @@ class LoadFlowTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+        NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyNameUserIdUuid, rootNodeUuid,
             UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
+        NetworkModificationNode modificationNode2 = createNetworkModificationConstructionNode(studyNameUserIdUuid,
             modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
-        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
+        NetworkModificationNode modificationNode3 = createNetworkModificationConstructionNode(studyNameUserIdUuid,
             modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_2, "node 3");
 
         NetworkModificationNode modificationNode4 = createNetworkModificationNode(studyNameUserIdUuid,
@@ -553,6 +555,7 @@ class LoadFlowTest {
         // invalidating loadflow (with security node) invalidate node, their children and their computations
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        assertRequestsDone(server, List.of("/v1/results/invalidate-status\\?resultUuid=.*"));
     }
 
     @Test
@@ -562,11 +565,11 @@ class LoadFlowTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+        NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyNameUserIdUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
+        NetworkModificationNode modificationNode2 = createNetworkModificationConstructionNode(studyNameUserIdUuid,
                 modificationNode1Uuid, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode2Uuid = modificationNode2.getId();
 
@@ -602,7 +605,7 @@ class LoadFlowTest {
         UUID resultUuid = UUID.randomUUID();
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), LOADFLOW_PARAMETERS_UUID);
         RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId(), null);
-        NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
+        NetworkModificationNode modificationNode = createNetworkModificationConstructionNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), rootNetworkUuid));
 
@@ -677,7 +680,7 @@ class LoadFlowTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+        NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyNameUserIdUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
@@ -907,22 +910,22 @@ class LoadFlowTest {
         UUID studyUuid = studyEntity.getId();
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         RootNode rootNode = getRootNode(studyUuid);
-        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNode.getId(), UUID.randomUUID(), "variant1", "N1");
-        NetworkModificationNode node2 = createNetworkModificationNode(studyUuid, node1.getId(), UUID.randomUUID(), "variant2", "N2");
-        NetworkModificationNode node3 = createNetworkModificationNode(studyUuid, node1.getId(), UUID.randomUUID(), "variant3", "N3");
+        NetworkModificationNode node1 = createNetworkModificationConstructionNode(studyUuid, rootNode.getId(), UUID.randomUUID(), "variant1", "N1");
+        NetworkModificationNode node2 = createNetworkModificationConstructionNode(studyUuid, node1.getId(), UUID.randomUUID(), "variant2", "N2");
+        NetworkModificationNode node3 = createNetworkModificationNode(studyUuid, node1.getId(), UUID.randomUUID(), "variant3", "N3", NetworkModificationNodeType.SECURITY);
 
         /*
          *      R
          *      |
-         *     N1
+         *     N1(C)
          *   |     |
-         *  N2    N3
+         *  N2(C)  N3(S)
          */
         updateNodeBuildStatus(node1.getId(), rootNetworkUuid, BuildStatus.BUILT);
         updateNodeBuildStatus(node2.getId(), rootNetworkUuid, BuildStatus.BUILT);
         updateNodeBuildStatus(node3.getId(), rootNetworkUuid, BuildStatus.BUILT);
-        updateLoadflowResultUuid(node2.getId(), rootNetworkUuid, UUID.randomUUID());
-        updateLoadflowResultUuid(node3.getId(), rootNetworkUuid, UUID.randomUUID());
+        updateLoadflowResultUuid(node2.getId(), rootNetworkUuid, UUID.fromString(LOADFLOW_RESULT_UUID));
+        updateLoadflowResultUuid(node3.getId(), rootNetworkUuid, UUID.fromString(LOADFLOW_OTHER_NODE_RESULT_UUID));
 
         /*
          *      R
@@ -931,7 +934,9 @@ class LoadFlowTest {
          *   |     |
          *  N2*   N3*
          *
-         *  All nodes are BUILT, N2 and N3 have loadflow results - they will be invalidated
+         *  All nodes are BUILT, N2 and N3 have loadflow results
+         *  N2 is construction - its loadflow computation will be invalidated
+         *  N3 is security - it will be invalidated
          */
 
         // run loadflow invalidation on all study
@@ -940,16 +945,16 @@ class LoadFlowTest {
         // node2 and node3 will be invalidated with their children, but the order in which way they are invalidated is not deterministic
         // this is why we don't check node uuid here for those two calls
         checkUpdateModelsStatusMessagesReceived(studyUuid);
-        checkUpdateModelsStatusMessagesReceived(studyUuid);
 
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
 
-        var requests = TestUtils.getRequestsDone(4, server);
+        var requests = TestUtils.getRequestsDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=.*")));
 
         assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node1.getId(), rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
-        assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node2.getId(), rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
+        assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node2.getId(), rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
         assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node3.getId(), rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
     }
 
@@ -983,8 +988,8 @@ class LoadFlowTest {
                 .getContentAsString(), new TypeReference<>() { });
     }
 
-    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-                                                                  UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
+    private NetworkModificationNode createNetworkModificationConstructionNode(UUID studyUuid, UUID parentNodeUuid,
+                                                                              UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid, modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION);
     }
 
