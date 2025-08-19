@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
+import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
@@ -83,6 +84,7 @@ public class SupervisionService {
     private final StudyInfosService studyInfosService;
 
     private final RootNetworkService rootNetworkService;
+    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
@@ -101,7 +103,7 @@ public class SupervisionService {
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
-                              StudyRepository studyRepository) {
+                              StudyRepository studyRepository, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
@@ -120,6 +122,7 @@ public class SupervisionService {
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
         this.studyRepository = studyRepository;
+        this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
     @Transactional
@@ -197,7 +200,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         List<UUID> studyUuids = rootNetworkNodeInfoEntities.stream().map(rnnie -> rnnie.getRootNetwork().getStudy().getId()).distinct().toList();
-        studyUuids.forEach(studyService::invalidateNodeTreeWithLoadFlowResults);
+        studyUuids.forEach(studyService::invalidateAllStudyLoadFlowStatus);
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOAD_FLOW, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
