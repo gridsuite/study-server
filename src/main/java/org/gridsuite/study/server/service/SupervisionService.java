@@ -84,7 +84,6 @@ public class SupervisionService {
     private final StudyInfosService studyInfosService;
 
     private final RootNetworkService rootNetworkService;
-    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
@@ -103,7 +102,7 @@ public class SupervisionService {
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
-                              StudyRepository studyRepository, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+                              StudyRepository studyRepository) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
@@ -122,7 +121,6 @@ public class SupervisionService {
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
         this.studyRepository = studyRepository;
-        this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
     @Transactional
