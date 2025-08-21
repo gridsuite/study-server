@@ -72,6 +72,7 @@ public class StudyException extends RuntimeException {
         GET_NETWORK_NOMINAL_VOLTAGES_FAILED,
         BAD_JSON_FORMAT,
         UNKNOWN_ACTION_TYPE,
+        BAD_PARAMETER,
         MISSING_PARAMETER,
         LOAD_SCALING_FAILED,
         DELETE_VOLTAGE_LEVEL_ON_LINE,
