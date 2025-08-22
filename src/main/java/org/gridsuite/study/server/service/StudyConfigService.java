@@ -389,6 +389,16 @@ public class StudyConfigService {
         }
     }
 
+    public void resetFilters(UUID configUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/reset-filters")
+                .buildAndExpand(configUuid).toUriString();
+        try {
+            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, null, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
+        }
+    }
+
     public DiagramGridLayout getDiagramGridLayout(UUID diagramGridLayoutUuid) {
         Objects.requireNonNull(diagramGridLayoutUuid);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_WITH_ID_URI)

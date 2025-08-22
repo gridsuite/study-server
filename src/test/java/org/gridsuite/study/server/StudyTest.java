@@ -43,6 +43,7 @@ import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
@@ -1200,13 +1201,19 @@ class StudyTest {
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName, String userId) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid,
-                modificationGroupUuid, variantId, nodeName, BuildStatus.NOT_BUILT, userId);
+                modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY, BuildStatus.NOT_BUILT, userId);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-            UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus, String userId) throws Exception {
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus, String userId) throws Exception {
+        return createNetworkModificationNode(studyUuid, parentNodeUuid, modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY, buildStatus, userId);
+    }
+
+    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType, BuildStatus buildStatus, String userId) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
                 .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
+                .nodeType(nodeType)
                 .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
@@ -2244,14 +2251,11 @@ class StudyTest {
                 .andExpect(status().isNotFound());
 
         //try to cut and paste to before the root node and expect forbidden
-        UUID stubUuid = wireMockUtils.stubNetworkModificationCountGet(node1.getModificationGroupUuid().toString(), 0);
         mockMvc.perform(post(STUDIES_URL +
                         "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 study1Uuid, node1.getId(), rootNode.getId(), InsertMode.BEFORE)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isForbidden());
-
-        wireMockUtils.verifyNetworkModificationCountsGet(stubUuid, node1.getModificationGroupUuid().toString());
     }
 
     @Test
