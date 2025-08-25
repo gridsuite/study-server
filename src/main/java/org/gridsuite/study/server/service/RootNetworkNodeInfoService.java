@@ -247,7 +247,11 @@ public class RootNetworkNodeInfoService {
 
         // No need to delete node results with a status different of "BUILT"
         if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
-            return new InvalidateNodeInfos();
+            InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+            if (shouldRemoveModificationReports) {
+                invalidateNodeInfos.addReportUuid(rootNetworkNodeInfoEntity.getModificationReportUuid());
+            }
+            return invalidateNodeInfos;
         }
 
         InvalidateNodeInfos invalidateNodeInfos = getInvalidationComputationInfos(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
