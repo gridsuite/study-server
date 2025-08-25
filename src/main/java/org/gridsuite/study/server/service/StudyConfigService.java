@@ -376,6 +376,19 @@ public class StudyConfigService {
         }
     }
 
+    public void updateSpreadsheetConfig(UUID configUuid, String spreadsheetConfigInfos) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI);
+        String path = uriBuilder.buildAndExpand(configUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(spreadsheetConfigInfos, headers);
+        try {
+            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
+        }
+    }
+
     public void setGlobalFilters(UUID configUuid, String globalFilters) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/global-filters");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();

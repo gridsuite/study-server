@@ -142,4 +142,17 @@ public class SpreadsheetConfigController {
         studyService.resetFilters(studyUuid, id);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Update a spreadsheet configuration",
+            description = "Updates an existing spreadsheet configuration")
+    @ApiResponse(responseCode = "204", description = "Configuration updated")
+    @ApiResponse(responseCode = "404", description = "Configuration not found")
+    public ResponseEntity<Void> updateSpreadsheetConfig(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "ID of the configuration to update") @PathVariable UUID id,
+        @Valid @RequestBody String spreadsheetConfigInfos) {
+        studyService.updateSpreadsheetConfig(studyUuid, id, spreadsheetConfigInfos);
+        return ResponseEntity.noContent().build();
+    }
 }
