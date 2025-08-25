@@ -1729,8 +1729,6 @@ public class StudyService {
     private void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId, AbstractWorkflowInfos workflowInfos) {
         assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
-        Map<UUID, UUID> nodeUuidToReportUuid = buildInfos.getReportsInfos().stream().collect(Collectors.toMap(ReportInfos::nodeUuid, ReportInfos::reportUuid));
-        networkModificationTreeService.setModificationReports(nodeUuid, rootNetworkUuid, nodeUuidToReportUuid);
         networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         try {
             networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, workflowInfos);
@@ -2333,11 +2331,9 @@ public class StudyService {
 
     private ReportPage getParentNodesReportLogs(UUID nodeUuid, UUID rootNetworkUuid, String messageFilter, Set<String> severityLevels, boolean paged, Pageable pageable) {
         List<UUID> nodeIds = nodesTree(nodeUuid);
-        Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         List<UUID> reportUuids = nodeIds.stream()
-            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId, 
-                        networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
+            .map(nodeId -> networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid))
             .filter(Objects::nonNull)
             .toList();
         return reportService.getPagedMultipleReportLogs(reportUuids, messageFilter, severityLevels, paged, pageable);
@@ -2353,11 +2349,9 @@ public class StudyService {
 
     private String getSearchTermMatchesInParentNodesFilteredLogs(UUID nodeUuid, UUID rootNetworkUuid, Set<String> severityLevels, String messageFilter, String searchTerm, int pageSize) {
         List<UUID> nodeIds = nodesTree(nodeUuid);
-        Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         List<UUID> reportUuids = nodeIds.stream()
-            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId, 
-                        networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
+            .map(nodeId -> networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid))
             .filter(Objects::nonNull)
             .toList();
         return reportService.getSearchTermMatchesInMultipleFilteredLogs(reportUuids, severityLevels, messageFilter, searchTerm, pageSize);
@@ -2374,10 +2368,9 @@ public class StudyService {
     private Set<String> getParentNodesAggregatedReportSeverities(UUID nodeUuid, UUID rootNetworkUuid) {
         List<UUID> nodeIds = nodesTree(nodeUuid);
         Set<String> severities = new HashSet<>();
-        Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         for (UUID nodeId : nodeIds) {
-            UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
+            UUID reportId = networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid);
             severities.addAll(reportService.getReportAggregatedSeverities(reportId));
         }
         return severities;
@@ -2421,10 +2414,9 @@ public class StudyService {
     private List<Report> getAllModificationReports(UUID nodeUuid, UUID rootNetworkUuid, Set<String> severityLevels) {
         List<UUID> nodeIds = nodesTree(nodeUuid);
         List<Report> modificationReports = new ArrayList<>();
-        Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         for (UUID nodeId : nodeIds) {
-            UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
+            UUID reportId = networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid);
             modificationReports.add(reportService.getReport(reportId, nodeId.toString(), severityLevels));
         }
 
