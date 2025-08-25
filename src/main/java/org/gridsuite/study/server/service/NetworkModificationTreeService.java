@@ -887,7 +887,7 @@ public class NetworkModificationTreeService {
     }
 
     private void invalidateAscendantNodesReports(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos) {
-        List<UUID> allNodesToHighestParentInBuiltBranch = getAllNodesToHighestParentInBuiltBranch(nodeUuid, rootNetworkUuid, false);
+        List<UUID> allNodesToHighestParentInBuiltBranch = getAllNodesToHighestParentInBuiltBranch(nodeUuid, rootNetworkUuid);
         rootNetworkNodeInfoService.getRootNetworkNodes(rootNetworkUuid, allNodesToHighestParentInBuiltBranch).forEach(entity -> invalidateNodeInfos.addReportUuid(entity.getModificationReportUuid()));
     }
 
@@ -954,15 +954,13 @@ public class NetworkModificationTreeService {
      * @return the NodeEntity having its parent matching one of the above criteria
      */
     private NodeEntity getSubTreeToInvalidateIndexedModifications(UUID nodeUuid, UUID rootNetworkUuid) {
-        Set<NodeEntity> descendantsChecked = new HashSet<>();
-
         NodeEntity currentNode = getNodeEntity(nodeUuid);
 
         while (currentNode.getParentNode() != null) {
             NodeEntity parentNode = currentNode.getParentNode();
             if (parentNode.getType().equals(NodeType.ROOT)
                 || isNodeBuilt(rootNetworkUuid, parentNode)
-                || hasAnyBuiltChildren(parentNode, rootNetworkUuid, descendantsChecked)) {
+                || hasAnyBuiltChildren(parentNode, rootNetworkUuid)) {
                 return currentNode;
             }
 
@@ -979,25 +977,19 @@ public class NetworkModificationTreeService {
      * - one of its children is built
      * @param nodeUuid reference node from where the recursion will start
      * @param rootNetworkUuid root network necessary to get the build status of each node
-     * @param withHighestParent whether the parent that belongs to a built branch should be in the set or not
-     * @return A set filled with IDs of all the parents of the current node that does not belong to a built branch
+     * @return A set filled with IDs of all the parents of the current node that does not belong to a built branch in the tree
      */
-    private List<UUID> getAllNodesToHighestParentInBuiltBranch(UUID nodeUuid, UUID rootNetworkUuid, boolean withHighestParent) {
+    private List<UUID> getAllNodesToHighestParentInBuiltBranch(UUID nodeUuid, UUID rootNetworkUuid) {
         List<UUID> parents = new ArrayList<>();
-        Set<NodeEntity> descendantsChecked = new HashSet<>();
-
         NodeEntity currentNode = getNodeEntity(nodeUuid);
-
         boolean found = false;
+
         while (!found || currentNode.getParentNode() != null) {
             NodeEntity parentNode = currentNode.getParentNode();
             if (parentNode.getType().equals(NodeType.ROOT)
                 || isNodeBuilt(rootNetworkUuid, parentNode)
-                || hasAnyBuiltChildren(parentNode, rootNetworkUuid, descendantsChecked)) {
+                || hasAnyBuiltChildren(parentNode, rootNetworkUuid)) {
                 found = true;
-                if (withHighestParent) {
-                    parents.add(parentNode.getIdNode());
-                }
             } else {
                 parents.add(parentNode.getIdNode());
             }
@@ -1011,19 +1003,18 @@ public class NetworkModificationTreeService {
     private boolean hasAnyBuiltChildren(NodeEntity node, UUID rootNetworkUuid) {
         return getChildren(node.getIdNode())
             .stream()
-            .map(child -> hasAnyBuiltChildren(child, rootNetworkUuid, new HashSet<>()))
+            .map(child -> hasAnyBuiltChildrenRecursive(child, rootNetworkUuid))
             .anyMatch(el -> el.equals(Boolean.TRUE));
     }
 
-    private boolean hasAnyBuiltChildren(NodeEntity node, UUID rootNetworkUuid, Set<NodeEntity> checkedChildren) {
+    // This method should not be called directly, hasAnyBuiltChildren should be called instead
+    private boolean hasAnyBuiltChildrenRecursive(NodeEntity node, UUID rootNetworkUuid) {
         if (isNodeBuilt(rootNetworkUuid, node)) {
             return true;
         }
-        checkedChildren.add(node);
 
         for (NodeEntity child : getChildren(node.getIdNode())) {
-            if (!checkedChildren.contains(child)
-                && hasAnyBuiltChildren(child, rootNetworkUuid, checkedChildren)) {
+            if (hasAnyBuiltChildrenRecursive(child, rootNetworkUuid)) {
                 return true;
             }
         }
