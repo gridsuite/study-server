@@ -904,7 +904,7 @@ public class NetworkModificationTreeService {
         // First node
         if (isModificationNode && !invalidateTreeParameters.isOnlyChildren()) {
             // if we enter this case node will be unbuilt anyway and its children too so we will have to remove reports too
-            invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, invalidateTreeParameters, false);
+            invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, invalidateTreeParameters, true);
             invalidateAscendantNodesReports(nodeUuid, rootNetworkUuid, invalidateNodeInfos);
         }
 
@@ -933,7 +933,7 @@ public class NetworkModificationTreeService {
             .build();
         rootNetworkNodeInfoEntities.forEach(child ->
             // InvalidationMode is ALL, so I know that all children will be unbuilt, so we have to remove reports
-            invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters, false))
+            invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters, true))
         );
 
         return invalidateNodeInfos;
