@@ -232,12 +232,12 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+    public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeTreeParameters invalidateTreeParameters, boolean shouldRemoveModificationReports) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-        return invalidateRootNetworkNode(rootNetworkNodeInfoEntity, invalidateTreeParameters);
+        return invalidateRootNetworkNode(rootNetworkNodeInfoEntity, invalidateTreeParameters, shouldRemoveModificationReports);
     }
 
-    public InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters) {
+    public InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters, boolean shouldRemoveModificationReports) {
         boolean notOnlyChildrenBuildStatus = !invalidateTreeParameters.isOnlyChildrenBuildStatus();
 
         // Always update blocked build info
@@ -253,6 +253,9 @@ public class RootNetworkNodeInfoService {
         InvalidateNodeInfos invalidateNodeInfos = getInvalidationComputationInfos(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
 
         if (notOnlyChildrenBuildStatus) {
+            if (shouldRemoveModificationReports) {
+                invalidateNodeInfos.addReportUuid(rootNetworkNodeInfoEntity.getModificationReportUuid());
+            }
             invalidateNodeInfos.addVariantId(rootNetworkNodeInfoEntity.getVariantId());
             invalidateBuildStatus(rootNetworkNodeInfoEntity, invalidateNodeInfos);
         }

@@ -873,13 +873,22 @@ public class NetworkModificationTreeService {
     public InvalidateNodeInfos invalidateNode(UUID nodeUuid, UUID rootNetworkUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
 
-        InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL);
+        boolean hasBuiltChildren = hasAnyBuiltChildren(nodeEntity, rootNetworkUuid);
+        InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL, !hasBuiltChildren);
+        if (!hasBuiltChildren) {
+            invalidateAscendantNodesReports(nodeUuid, rootNetworkUuid, invalidateNodeInfos);
+        }
 
         fillIndexedNodeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos);
 
         notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), List.of(nodeUuid), rootNetworkUuid);
 
         return invalidateNodeInfos;
+    }
+
+    private void invalidateAscendantNodesReports(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos) {
+        List<UUID> allNodesToHighestParentInBuiltBranch = getAllNodesToHighestParentInBuiltBranch(nodeUuid, rootNetworkUuid, false);
+        rootNetworkNodeInfoService.getRootNetworkNodes(rootNetworkUuid, allNodesToHighestParentInBuiltBranch).forEach(entity -> invalidateNodeInfos.addReportUuid(entity.getModificationReportUuid()));
     }
 
     @Transactional
@@ -889,12 +898,14 @@ public class NetworkModificationTreeService {
         // Node status before invalidation
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         boolean isModificationNode = nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION);
-        boolean isNodeBuilt = self.getNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
+        boolean isNodeBuilt = isNodeBuilt(rootNetworkUuid, nodeEntity);
         boolean shouldInvalidateIndexedInfos = isNodeBuilt || hasAnyBuiltChildren(nodeEntity, rootNetworkUuid);
 
         // First node
         if (isModificationNode && !invalidateTreeParameters.isOnlyChildren()) {
-            invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
+            // if we enter this case node will be unbuilt anyway and its children too so we will have to remove reports too
+            invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, invalidateTreeParameters, false);
+            invalidateAscendantNodesReports(nodeUuid, rootNetworkUuid, invalidateNodeInfos);
         }
 
         // Invalidate indexed nodes
@@ -921,7 +932,8 @@ public class NetworkModificationTreeService {
             .withBlockedNodeBuild(invalidateTreeParameters.withBlockedNodeBuild())
             .build();
         rootNetworkNodeInfoEntities.forEach(child ->
-            invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters))
+            // InvalidationMode is ALL, so I know that all children will be unbuilt, so we have to remove reports
+            invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters, false))
         );
 
         return invalidateNodeInfos;
@@ -949,7 +961,7 @@ public class NetworkModificationTreeService {
         while (currentNode.getParentNode() != null) {
             NodeEntity parentNode = currentNode.getParentNode();
             if (parentNode.getType().equals(NodeType.ROOT)
-                || self.getNodeBuildStatus(parentNode.getIdNode(), rootNetworkUuid).isBuilt()
+                || isNodeBuilt(rootNetworkUuid, parentNode)
                 || hasAnyBuiltChildren(parentNode, rootNetworkUuid, descendantsChecked)) {
                 return currentNode;
             }
@@ -960,13 +972,51 @@ public class NetworkModificationTreeService {
         return currentNode;
     }
 
+    /**
+     * Recursively iterate through *nodeUuid* parents until one of them match one of the following conditions :<br>
+     * - it is of type ROOT<br>
+     * - it is built<br>
+     * - one of its children is built
+     * @param nodeUuid reference node from where the recursion will start
+     * @param rootNetworkUuid root network necessary to get the build status of each node
+     * @param withHighestParent whether the parent that belongs to a built branch should be in the set or not
+     * @return A set filled with IDs of all the parents of the current node that does not belong to a built branch
+     */
+    private List<UUID> getAllNodesToHighestParentInBuiltBranch(UUID nodeUuid, UUID rootNetworkUuid, boolean withHighestParent) {
+        List<UUID> parents = new ArrayList<>();
+        Set<NodeEntity> descendantsChecked = new HashSet<>();
+
+        NodeEntity currentNode = getNodeEntity(nodeUuid);
+
+        boolean found = false;
+        while (!found || currentNode.getParentNode() != null) {
+            NodeEntity parentNode = currentNode.getParentNode();
+            if (parentNode.getType().equals(NodeType.ROOT)
+                || isNodeBuilt(rootNetworkUuid, parentNode)
+                || hasAnyBuiltChildren(parentNode, rootNetworkUuid, descendantsChecked)) {
+                found = true;
+                if (withHighestParent) {
+                    parents.add(parentNode.getIdNode());
+                }
+            } else {
+                parents.add(parentNode.getIdNode());
+            }
+            currentNode = parentNode;
+        }
+
+        return parents;
+    }
+
     // TODO Need to optimise with a only one recursive query
     private boolean hasAnyBuiltChildren(NodeEntity node, UUID rootNetworkUuid) {
-        return hasAnyBuiltChildren(node, rootNetworkUuid, new HashSet<>());
+        return getChildren(node.getIdNode())
+            .stream()
+            .map(child -> hasAnyBuiltChildren(child, rootNetworkUuid, new HashSet<>()))
+            .anyMatch(el -> el.equals(Boolean.TRUE));
     }
 
     private boolean hasAnyBuiltChildren(NodeEntity node, UUID rootNetworkUuid, Set<NodeEntity> checkedChildren) {
-        if (self.getNodeBuildStatus(node.getIdNode(), rootNetworkUuid).isBuilt()) {
+        if (isNodeBuilt(rootNetworkUuid, node)) {
             return true;
         }
         checkedChildren.add(node);
@@ -984,7 +1034,7 @@ public class NetworkModificationTreeService {
     private void fillIndexedNodeInfosToInvalidate(NodeEntity nodeEntity, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos) {
         // when manually invalidating a single node, if this node does not have any built children
         // we need to invalidate indexed modifications up to it's last built parent, not included
-        if (hasAnyBuiltChildren(nodeEntity, rootNetworkUuid)) {
+        if (isNodeBuilt(rootNetworkUuid, nodeEntity) || hasAnyBuiltChildren(nodeEntity, rootNetworkUuid)) {
             return;
         }
 
@@ -1106,7 +1156,7 @@ public class NetworkModificationTreeService {
     public long countBuiltNodes(UUID studyUuid, UUID rootNetworkUuid) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
         // perform N queries, but it's fast: 25 ms for 400 nodes
-        return nodes.stream().filter(n -> self.getNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
+        return nodes.stream().filter(n -> isNodeBuilt(rootNetworkUuid, n)).count();
     }
 
     private void fillIndexedNodeInfosToInvalidate(UUID parentNodeUuid, boolean includeParentNode, InvalidateNodeInfos invalidateNodeInfos) {
@@ -1141,5 +1191,9 @@ public class NetworkModificationTreeService {
         nodeInfo.getChildren().forEach(child -> self.createNodeTree(study, nodeInfo.getId(), (NetworkModificationNode) child));
 
         return nodeInfo;
+    }
+
+    private boolean isNodeBuilt(UUID rootNetworkUuid, NodeEntity nodeEntity) {
+        return self.getNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
     }
 }
