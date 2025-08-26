@@ -954,13 +954,14 @@ public class NetworkModificationTreeService {
      * @return the NodeEntity having its parent matching one of the above criteria
      */
     private NodeEntity getSubTreeToInvalidateIndexedModifications(UUID nodeUuid, UUID rootNetworkUuid) {
+        Set<NodeEntity> descendantsChecked = new HashSet<>();
         NodeEntity currentNode = getNodeEntity(nodeUuid);
 
         while (currentNode.getParentNode() != null) {
             NodeEntity parentNode = currentNode.getParentNode();
             if (parentNode.getType().equals(NodeType.ROOT)
                 || isNodeBuilt(rootNetworkUuid, parentNode)
-                || hasAnyBuiltChildren(parentNode, rootNetworkUuid)) {
+                || hasAnyBuiltChildren(parentNode, rootNetworkUuid, descendantsChecked)) {
                 return currentNode;
             }
 
@@ -980,15 +981,16 @@ public class NetworkModificationTreeService {
      * @return A set filled with IDs of all the parents of the current node that does not belong to a built branch in the tree
      */
     private List<UUID> getAllNodesToHighestParentInBuiltBranch(UUID nodeUuid, UUID rootNetworkUuid) {
-        List<UUID> parents = new ArrayList<>();
+        Set<NodeEntity> descendantsChecked = new HashSet<>();
         NodeEntity currentNode = getNodeEntity(nodeUuid);
+        List<UUID> parents = new ArrayList<>();
         boolean found = false;
 
         while (!found || currentNode.getParentNode() != null) {
             NodeEntity parentNode = currentNode.getParentNode();
             if (parentNode.getType().equals(NodeType.ROOT)
                 || isNodeBuilt(rootNetworkUuid, parentNode)
-                || hasAnyBuiltChildren(parentNode, rootNetworkUuid)) {
+                || hasAnyBuiltChildren(parentNode, rootNetworkUuid, descendantsChecked)) {
                 found = true;
             } else {
                 parents.add(parentNode.getIdNode());
@@ -1003,18 +1005,19 @@ public class NetworkModificationTreeService {
     private boolean hasAnyBuiltChildren(NodeEntity node, UUID rootNetworkUuid) {
         return getChildren(node.getIdNode())
             .stream()
-            .map(child -> hasAnyBuiltChildrenRecursive(child, rootNetworkUuid))
+            .map(child -> hasAnyBuiltChildren(child, rootNetworkUuid, new HashSet<>()))
             .anyMatch(el -> el.equals(Boolean.TRUE));
     }
 
-    // This method should not be called directly, hasAnyBuiltChildren should be called instead
-    private boolean hasAnyBuiltChildrenRecursive(NodeEntity node, UUID rootNetworkUuid) {
+    private boolean hasAnyBuiltChildren(NodeEntity node, UUID rootNetworkUuid, Set<NodeEntity> checkedChildren) {
         if (isNodeBuilt(rootNetworkUuid, node)) {
             return true;
         }
+        checkedChildren.add(node);
 
         for (NodeEntity child : getChildren(node.getIdNode())) {
-            if (hasAnyBuiltChildrenRecursive(child, rootNetworkUuid)) {
+            if (!checkedChildren.contains(child)
+                && hasAnyBuiltChildren(child, rootNetworkUuid, checkedChildren)) {
                 return true;
             }
         }
