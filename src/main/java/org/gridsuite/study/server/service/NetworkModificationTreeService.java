@@ -873,9 +873,10 @@ public class NetworkModificationTreeService {
     public InvalidateNodeInfos invalidateNode(UUID nodeUuid, UUID rootNetworkUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
 
+        boolean isNodeBuilt = isNodeBuilt(rootNetworkUuid, nodeEntity);
         boolean hasBuiltChildren = hasAnyBuiltChildren(nodeEntity, rootNetworkUuid);
         InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL, !hasBuiltChildren);
-        if (!hasBuiltChildren) {
+        if (isNodeBuilt && !hasBuiltChildren) {
             invalidateAscendantNodesReports(nodeUuid, rootNetworkUuid, invalidateNodeInfos);
         }
 
@@ -986,7 +987,7 @@ public class NetworkModificationTreeService {
         List<UUID> parents = new ArrayList<>();
         boolean found = false;
 
-        while (!found || currentNode.getParentNode() != null) {
+        while (!found && currentNode.getParentNode() != null) {
             NodeEntity parentNode = currentNode.getParentNode();
             if (parentNode.getType().equals(NodeType.ROOT)
                 || isNodeBuilt(rootNetworkUuid, parentNode)
@@ -994,8 +995,8 @@ public class NetworkModificationTreeService {
                 found = true;
             } else {
                 parents.add(parentNode.getIdNode());
+                currentNode = parentNode;
             }
-            currentNode = parentNode;
         }
 
         return parents;
