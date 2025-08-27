@@ -89,7 +89,7 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService) {
+                           StateEstimationService stateEstimationService, DiagramGridLayoutService diagramGridLayoutService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -294,12 +294,30 @@ public class ConsumerService {
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
+        UUID diagramGridLayoutUuid = createDefaultDiagramGridLayout(userId, userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, spreadsheetConfigCollectionUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
             importParameters, importReportUuid);
+    }
+
+    private UUID createDefaultDiagramGridLayout(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getDiagramConfigId() != null) {
+            try {
+                return studyConfigService.duplicateDiagramGridLayout(userProfileInfos.getDiagramConfigId());
+            } catch (Exception e) {
+                LOGGER.error(String.format("Could not duplicate diagram grid layout with id '%s' from user/profile '%s/%s'. Using default diagram grid layout",
+                    userProfileInfos.getDiagramConfigId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        try {
+            return studyConfigService.createDefaultDiagramGridLayout(userProfileInfos.getDiagramConfigId());
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default diagram grid layout", e);
+            return null;
+        }
     }
 
     private UserProfileInfos getUserProfile(String userId) {
@@ -439,7 +457,7 @@ public class ConsumerService {
             } catch (Exception e) {
                 // TODO try to report a log in Root subreporter ?
                 LOGGER.error(String.format("Could not duplicate dynamic security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                        userProfileInfos.getDynamicSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
+                    userProfileInfos.getDynamicSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
             }
         }
         // no profile, or no/bad dynamic security analysis parameters in profile => use default values

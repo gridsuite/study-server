@@ -7,9 +7,11 @@
 package org.gridsuite.study.server.service;
 
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
+import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -35,6 +37,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 /**
  * @author David BRAQUART <david.braquart at rte-france.com>
  */
+@Slf4j
 @Service
 public class StudyConfigService {
     private static final String UUID_PARAM = "/{uuid}";
@@ -78,8 +81,8 @@ public class StudyConfigService {
     public UUID duplicateNetworkVisualizationParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
         var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI)
-                .queryParam("duplicateFrom", sourceParametersUuid)
-                .buildAndExpand().toUriString();
+            .queryParam("duplicateFrom", sourceParametersUuid)
+            .buildAndExpand().toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
@@ -94,7 +97,7 @@ public class StudyConfigService {
         Objects.requireNonNull(parametersUuid);
         String parameters;
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_WITH_ID_URI)
-                .buildAndExpand(parametersUuid).toUriString();
+            .buildAndExpand(parametersUuid).toUriString();
         try {
             parameters = restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
@@ -123,9 +126,9 @@ public class StudyConfigService {
 
     public UUID createDefaultNetworkVisualizationParameters() {
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI + "/default")
-                .buildAndExpand()
-                .toUriString();
+            .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI + "/default")
+            .buildAndExpand()
+            .toUriString();
         UUID parametersUuid;
         try {
             parametersUuid = restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
@@ -137,9 +140,9 @@ public class StudyConfigService {
 
     public UUID createNetworkVisualizationParameters(String parameters) {
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI)
-                .buildAndExpand()
-                .toUriString();
+            .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI)
+            .buildAndExpand()
+            .toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
@@ -156,8 +159,8 @@ public class StudyConfigService {
     public UUID duplicateSpreadsheetConfigCollection(UUID sourceUuid) {
         Objects.requireNonNull(sourceUuid);
         var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI)
-                .queryParam("duplicateFrom", sourceUuid)
-                .buildAndExpand().toUriString();
+            .queryParam("duplicateFrom", sourceUuid)
+            .buildAndExpand().toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
@@ -172,7 +175,7 @@ public class StudyConfigService {
         Objects.requireNonNull(uuid);
         String spreadsheetConfigCollection;
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_WITH_ID_URI)
-                .buildAndExpand(uuid).toUriString();
+            .buildAndExpand(uuid).toUriString();
         try {
             spreadsheetConfigCollection = restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
         } catch (HttpStatusCodeException e) {
@@ -201,9 +204,9 @@ public class StudyConfigService {
 
     public UUID createDefaultSpreadsheetConfigCollection() {
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI + "/default")
-                .buildAndExpand()
-                .toUriString();
+            .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI + "/default")
+            .buildAndExpand()
+            .toUriString();
         UUID uuid;
         try {
             uuid = restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
@@ -215,9 +218,9 @@ public class StudyConfigService {
 
     public UUID createSpreadsheetConfigCollection(String configCollection) {
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI)
-                .buildAndExpand()
-                .toUriString();
+            .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI)
+            .buildAndExpand()
+            .toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(configCollection, headers);
@@ -391,11 +394,25 @@ public class StudyConfigService {
 
     public void resetFilters(UUID configUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/reset-filters")
-                .buildAndExpand(configUuid).toUriString();
+            .buildAndExpand(configUuid).toUriString();
         try {
             restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, null, UUID.class);
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
+        }
+    }
+
+    public UUID duplicateDiagramGridLayout(UUID sourceUuid) {
+        Objects.requireNonNull(sourceUuid);
+        var path = UriComponentsBuilder.fromPath(STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_URI)
+            .queryParam("duplicateFrom", sourceUuid)
+            .buildAndExpand().toUriString();
+        try {
+            log.info("studyConfigServerBaseUri + path" + studyConfigServerBaseUri + path);
+            return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+
+            throw handleHttpError(e, DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED);
         }
     }
 
@@ -463,4 +480,32 @@ public class StudyConfigService {
             throw e;
         }
     }
+
+    public UUID createDefaultDiagramGridLayout(UUID diagramConfigId) {
+        if (diagramConfigId == null) {
+            return null;
+        }
+        DiagramGridLayout diagramGridLayout = DiagramGridLayout.builder()
+            .diagramLayouts(List.of(NetworkAreaDiagramLayout.builder()
+                .originalNadConfigUuid(diagramConfigId)
+                .currentNadConfigUuid(diagramConfigId)
+                .build()))
+            .build();
+
+        var path = UriComponentsBuilder
+            .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_URI)
+            .buildAndExpand()
+            .toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<DiagramGridLayout> httpEntity = new HttpEntity<>(diagramGridLayout, headers);
+        UUID uuid;
+        try {
+            uuid = restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_SPREADSHEET_CONFIG_COLLECTION_FAILED);
+        }
+        return uuid;
+    }
+
 }
