@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.StudyConstants.*;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
@@ -598,6 +597,19 @@ public class StudyController {
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelEquipments(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, voltageLevelId));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/voltage-levels/{voltageLevelId}/connections")
+    @Operation(summary = "Get voltage level equipments")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Voltage level equipments")})
+    public ResponseEntity<String> getVoltageLevelConnections(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+        @PathVariable("nodeUuid") UUID nodeUuid,
+        @Parameter(description = "voltage level id") @PathVariable("voltageLevelId") String voltageLevelId,
+        @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelConnections(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, voltageLevelId));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/all")
