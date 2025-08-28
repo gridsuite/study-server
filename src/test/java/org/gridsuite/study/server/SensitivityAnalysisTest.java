@@ -306,7 +306,7 @@ class SensitivityAnalysisTest {
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_RESULT_UUID);
                 } else {
-                    LOGGER.error("Unhandled method+path: " + request.getMethod() + " " + request.getPath());
+                    LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
                     return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
                 }
             }
@@ -377,7 +377,7 @@ class SensitivityAnalysisTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("userId", "userId")
                         .content(content))
-                .andExpectAll(status().isNotFound(), content().string("\"SENSITIVITY_ANALYSIS_NOT_FOUND\""));
+                .andExpectAll(status().isNotFound(), content().string("\"ROOT_NETWORK_NOT_FOUND\""));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", studyUuid, rootNetworkUuid, nodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -541,12 +541,12 @@ class SensitivityAnalysisTest {
         assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
         assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
 
-        StudyService studyService = Mockito.mock(StudyService.class);
+        StudyService studyServiceMock = Mockito.mock(StudyService.class);
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), SENSITIVITY_ANALYSIS_FAILED_DESTINATION);
             return resultUuid;
-        }).when(studyService).runSensitivityAnalysis(any(), any(), any(), any());
-        studyService.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), firstRootNetworkUuid, "testUserId");
+        }).when(studyServiceMock).runSensitivityAnalysis(any(), any(), any(), any());
+        studyServiceMock.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), firstRootNetworkUuid, "testUserId");
 
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
