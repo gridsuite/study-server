@@ -30,11 +30,17 @@ public class LimitViolationInfos {
 
     private String limitName;
 
+    private String nextLimitName;
+
     private Integer actualOverloadDuration;
 
     private Integer upComingOverloadDuration;
 
     private Double overload;
+
+    private Double patlLimit;
+
+    private Double patlOverload;
 
     private Double value;
 
