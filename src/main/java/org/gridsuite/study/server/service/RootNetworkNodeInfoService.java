@@ -33,6 +33,7 @@ import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResul
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
+import org.gridsuite.study.server.utils.StudyParameters;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -603,10 +604,13 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public String getShortCircuitAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
-            type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
-        return shortCircuitService.getShortCircuitAnalysisResult(resultUuid, mode, type, filters, paged, pageable);
+    public String getShortCircuitAnalysisResult(StudyParameters studyParameters, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, String globalFilters, boolean paged, Pageable pageable) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(studyParameters.getNodeUuid(), studyParameters.getRootNetworkUuid()).orElse(null);
+        studyParameters.setVariantId(rootNetworkNodeInfoEntity == null ? null : rootNetworkNodeInfoEntity.getVariantId());
+        studyParameters.setNetworkUuid(rootNetworkNodeInfoEntity == null ? studyParameters.getRootNetworkUuid() : rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid());
+        studyParameters.setResultUuid(getComputationResultUuid(studyParameters.getNodeUuid(), studyParameters.getRootNetworkUuid(),
+            type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS));
+        return shortCircuitService.getShortCircuitAnalysisResult(studyParameters, mode, type, filters, globalFilters, paged, pageable);
     }
 
     @Transactional(readOnly = true)
