@@ -3471,13 +3471,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void createNadPositionsConfigFromCsv(MultipartFile file, UUID studyUuid) {
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-
-        UUID nadPositionsConfigUuid = singleLineDiagramService.createNadPositionsConfigFromCsv(file);
-        UUID networkVisualizationParametersUuid = studyConfigService.getNetworkVisualizationParametersUuidOrElseCreateDefaults(studyEntity);
-        studyConfigService.updateNadPositionsConfigUuidParameter(networkVisualizationParametersUuid, nadPositionsConfigUuid);
-
-        notificationService.emitNetworkVisualizationParamsChanged(studyUuid);
+    public void createNadPositionsConfigFromCsv(MultipartFile file) {
+        singleLineDiagramService.createNadPositionsConfigFromCsv(file);
     }
 }

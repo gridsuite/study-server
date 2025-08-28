@@ -37,9 +37,7 @@ public class WireMockUtils {
     public static final String URI_NETWORK_DATA = "/v1/networks";
 
     private static final String URI_NETWORK_MODIFICATION = "/v1/network-modifications";
-    private static final String URI_NETWORK_VISUALIZATION_PARAMS = "/v1/network-visualizations-params";
     private static final String URI_NETWORK_AREA_DIAGRAM = "/v1/network-area-diagram/config/positions";
-    private static final String URI_SPREADSHEET_CONFIG = "/v1/spreadsheet-config-collections/default";
 
     private static final String URI_NETWORK_MODIFICATION_GROUPS = "/v1/groups";
 
@@ -583,42 +581,21 @@ public class WireMockUtils {
                         "userInput", WireMock.equalTo(userInput)));
     }
 
-    public UUID stubCreatePositionsFromCsv(UUID uuid) {
+    public UUID stubCreatePositionsFromCsv() {
         MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_AREA_DIAGRAM))
-                .withHeader("Content-Type", WireMock.containing("multipart/form-data"));
-        return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody("\"" + uuid.toString() + "\""))).getId();
-    }
-
-    public UUID stubUpdateNetworkVisualizationPositionsConfigUuidParameter(UUID parametersUuid, UUID nadPositionsConfigUuid) {
-        return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo(URI_NETWORK_VISUALIZATION_PARAMS + "/" + parametersUuid + "/nad-positions-config-uuid"))
-                .withRequestBody(WireMock.equalToJson("\"" + nadPositionsConfigUuid.toString() + "\""))
-                .willReturn(WireMock.ok())
-        ).getId();
+                .withHeader("Content-Type", WireMock.containing("multipart/form-data"))
+                .withMultipartRequestBody(WireMock.aMultipart()
+                        .withName("file")
+                        .withHeader("Content-Disposition", WireMock.containing("filename=\"positions.csv\""))
+                )
+                .withMultipartRequestBody(WireMock.aMultipart()
+                        .withName("file_name")
+                        .withBody(WireMock.equalTo("positions.csv"))
+                );
+        return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withHeader("Content-Type", "application/json"))).getId();
     }
 
     public void verifyStubCreatePositionsFromCsv(UUID stubUuid) {
         verifyPostRequest(stubUuid, URI_NETWORK_AREA_DIAGRAM, true, Map.of(), null);
-    }
-
-    public void verifyStubUpdateNetworkVisualizationPositionsConfigUuidParameter(UUID stubUuid, UUID parametersUuid) {
-        verifyPutRequest(stubUuid, URI_NETWORK_VISUALIZATION_PARAMS + "/" + parametersUuid + "/nad-positions-config-uuid", true, Map.of(), null);
-    }
-
-    public UUID stubCreateDefaultSpreadsheetConfigCollection(UUID uuid) {
-        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_SPREADSHEET_CONFIG));
-        return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody("\"" + uuid.toString() + "\""))).getId();
-    }
-
-    public void verifyCreateDefaultSpreadsheetConfigCollection(UUID stubUuid) {
-        verifyPostRequest(stubUuid, URI_SPREADSHEET_CONFIG, Map.of());
-    }
-
-    public void verifyCreateDefaultNetworkVisualizationParameters(UUID stubUuid) {
-        verifyPostRequest(stubUuid, URI_NETWORK_VISUALIZATION_PARAMS + "/default", Map.of());
-    }
-
-    public UUID stubCreateDefaultNetworkVisualizationParameters(UUID uuid) {
-        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_VISUALIZATION_PARAMS + "/default"));
-        return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody("\"" + uuid.toString() + "\""))).getId();
     }
 }

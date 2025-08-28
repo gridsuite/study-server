@@ -238,20 +238,20 @@ public class SingleLineDiagramService {
         }
     }
 
-    public UUID createNadPositionsConfigFromCsv(MultipartFile file) {
+    public void createNadPositionsConfigFromCsv(MultipartFile file) {
         var path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
                 "/network-area-diagram/config/positions").buildAndExpand()
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-        // Prepare the body
+
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("file_name", file.getOriginalFilename());
         body.add("file", file.getResource());
 
         HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
-        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, requestEntity, UUID.class).getBody();
+        restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, requestEntity, Void.class);
     }
 }

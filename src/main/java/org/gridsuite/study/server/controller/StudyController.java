@@ -2087,11 +2087,11 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/network-visualizations/nad-positions-config", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "create a nad positions configuration from a csv")
+    @PostMapping(value = "/studies/network-visualizations/nad-positions-config", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "create a nad positions configuration using data from a csv")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The nad positions configuration created")})
-    public ResponseEntity<Void> createNadPositionsConfigFromCsv(@RequestParam("file") MultipartFile file, @PathVariable("studyUuid") UUID studyUuid) {
-        studyService.createNadPositionsConfigFromCsv(file, studyUuid);
+    public ResponseEntity<Void> createNadPositionsConfigFromCsv(@RequestParam("file") MultipartFile file) {
+        studyService.createNadPositionsConfigFromCsv(file);
         return ResponseEntity.ok().build();
     }
 

@@ -100,7 +100,6 @@ class StudyServiceTest {
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
     private static final UUID SHORTCIRCUIT_PARAMETERS_UUID = UUID.fromString("00000000-bd22-4a75-83d3-9e530245c7f4");
     private static final UUID SPREADSHEET_CONFIG_COLLECTION_UUID = UUID.fromString("77700000-bd22-4a75-83d3-9e530245c7f4");
-    private static final UUID NETWORK_VISUALIZATION_UUID = UUID.fromString("77700000-bd22-4a75-83d3-9e530245c7f5");
 
     @Autowired
     private StudyRepository studyRepository;
@@ -120,7 +119,7 @@ class StudyServiceTest {
     @MockBean
     private ShortCircuitService shortCircuitService;
 
-    @Autowired
+    @MockBean
     private StudyConfigService studyConfigService;
     @Autowired
     private SingleLineDiagramService singleLineDiagramService;
@@ -278,31 +277,20 @@ class StudyServiceTest {
 
     @Test
     void testImportCsv() throws Exception {
-        String userId = "userId";
-        Map<String, Object> importParameters = new HashMap<>();
-        UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
-        // Prepare CSV content
         String csvContent = "voltageLevelId;equipmentType;xPosition;yPosition;xLabelPosition;yLabelPosition\n" +
                 "VL1;4;100;200;110;210";
 
         MockMultipartFile file = new MockMultipartFile(
                 "file", "positions.csv", "text/csv", csvContent.getBytes(StandardCharsets.UTF_8)
         );
-        UUID nadPositionsConfigUuid = UUID.randomUUID();
-        UUID positionsFromCsvUuid = wireMockUtils.stubCreatePositionsFromCsv(nadPositionsConfigUuid);
-        UUID updateNetworkVisualizationPositionsConfigUuidParameterUuid = wireMockUtils.stubUpdateNetworkVisualizationPositionsConfigUuidParameter(NETWORK_VISUALIZATION_UUID, nadPositionsConfigUuid);
-        mockMvc.perform(MockMvcRequestBuilders.multipart("/v1/studies/{studyUuid}/network-visualizations/nad-positions-config", studyUuid)
+        UUID positionsFromCsvUuid = wireMockUtils.stubCreatePositionsFromCsv();
+        mockMvc.perform(MockMvcRequestBuilders.multipart("/v1/studies/network-visualizations/nad-positions-config")
                 .file(file)
                 .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
             .andExpect(status().isOk());
 
         // assert API calls have been made
         wireMockUtils.verifyStubCreatePositionsFromCsv(positionsFromCsvUuid);
-        wireMockUtils.verifyStubUpdateNetworkVisualizationPositionsConfigUuidParameter(updateNetworkVisualizationPositionsConfigUuidParameterUuid, NETWORK_VISUALIZATION_UUID);
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_NETWORK_VISUALIZATION_PARAMETERS, updateType);
     }
 
     private UUID createStudy(String userId, UUID caseUuid, Map<String, Object> importParameters) throws Exception {
@@ -314,8 +302,7 @@ class StudyServiceTest {
         UUID sendReportStubId = wireMockUtils.stubSendReport();
         when(loadFlowService.createDefaultLoadFlowParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
-        UUID spreadsheetConfigCollectionUuid = wireMockUtils.stubCreateDefaultSpreadsheetConfigCollection(SPREADSHEET_CONFIG_COLLECTION_UUID);
-        UUID createDefaultNetworkVisualizationParameters = wireMockUtils.stubCreateDefaultNetworkVisualizationParameters(NETWORK_VISUALIZATION_UUID);
+        when(studyConfigService.createDefaultSpreadsheetConfigCollection()).thenReturn(SPREADSHEET_CONFIG_COLLECTION_UUID);
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                 .header("userId", userId)
                 .param(CASE_FORMAT_PARAM, "UCTE")
@@ -335,8 +322,6 @@ class StudyServiceTest {
         wireMockUtils.verifyImportNetwork(postNetworkStubId, caseUuid.toString(), WireMockUtils.FIRST_VARIANT_ID);
         wireMockUtils.verifyDisableCaseExpiration(disableCaseExpirationStubId, caseUuid.toString());
         wireMockUtils.verifySendReport(sendReportStubId);
-        wireMockUtils.verifyCreateDefaultSpreadsheetConfigCollection(spreadsheetConfigCollectionUuid);
-        wireMockUtils.verifyCreateDefaultNetworkVisualizationParameters(createDefaultNetworkVisualizationParameters);
 
         return studyUuid;
     }
