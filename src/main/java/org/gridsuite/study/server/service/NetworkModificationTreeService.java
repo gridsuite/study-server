@@ -932,10 +932,14 @@ public class NetworkModificationTreeService {
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
             .withBlockedNodeBuild(invalidateTreeParameters.withBlockedNodeBuild())
             .build();
-        rootNetworkNodeInfoEntities.forEach(child ->
-            // InvalidationMode is ALL, so I know that all children will be unbuilt, so we have to remove reports
-            invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters, true))
-        );
+        rootNetworkNodeInfoEntities.forEach(child -> {
+            // InvalidationMode is ALL, so I know that all children will be unbuilt,
+            // so we have to remove reports for all children that are built or have built children
+            NodeEntity childNodeEntity = getNodeEntity(child.getNodeInfo().getIdNode());
+            if (isNodeBuilt(rootNetworkUuid, childNodeEntity) || hasAnyBuiltChildren(childNodeEntity, rootNetworkUuid)) {
+                invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters, true));
+            }
+        });
 
         return invalidateNodeInfos;
     }
