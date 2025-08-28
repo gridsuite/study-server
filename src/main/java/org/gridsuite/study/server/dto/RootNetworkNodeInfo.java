@@ -28,7 +28,7 @@ public class RootNetworkNodeInfo {
 
     private Map<String, UUID> computationReports;
 
-    private Map<UUID, UUID> modificationReports;
+    private UUID modificationReportUuid;
 
     private UUID shortCircuitAnalysisResultUuid;
 
@@ -59,7 +59,7 @@ public class RootNetworkNodeInfo {
             .id(id)
             .variantId(variantId)
             .computationReports(computationReports)
-            .modificationReports(modificationReports)
+            .modificationReportUuid(modificationReportUuid)
             .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)
             .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)
             .loadFlowResultUuid(loadFlowResultUuid)

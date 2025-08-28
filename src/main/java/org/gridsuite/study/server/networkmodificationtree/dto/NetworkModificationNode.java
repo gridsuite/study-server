@@ -58,6 +58,10 @@ public class NetworkModificationNode extends AbstractNode {
 
     private NodeBuildStatus nodeBuildStatus;
 
+    private Map<String, UUID> computationsReports;
+
+    private UUID modificationReportUuid;
+
     @Builder.Default
     private NetworkModificationNodeType nodeType = NetworkModificationNodeType.CONSTRUCTION;
 
@@ -76,12 +80,8 @@ public class NetworkModificationNode extends AbstractNode {
         this.setStateEstimationResultUuid(rootNetworkNodeInfoEntity.getStateEstimationResultUuid());
         this.setNodeBuildStatus(rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto());
         this.setComputationsReports(new HashMap<>(rootNetworkNodeInfoEntity.getComputationReports()));
-        this.setModificationReports(new HashMap<>(rootNetworkNodeInfoEntity.getModificationReports()));
+        this.setModificationReportUuid(rootNetworkNodeInfoEntity.getModificationReportUuid());
     }
-
-    private Map<String, UUID> computationsReports;
-
-    private Map<UUID, UUID> modificationReports;
 
     @Override
     public NodeType getType() {

@@ -594,7 +594,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testLocalBuildValue() throws Exception {
+    void testLocalBuildValue(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -664,6 +664,9 @@ class NetworkModificationTest {
         //Build modification node 2, local status should be BUILT and computed one should be BUILT_WITH_ERRORS
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode2Uuid, rootNetworkUuid).getLocalBuildStatus());
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(modificationNode2Uuid, rootNetworkUuid).getGlobalBuildStatus());
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
@@ -761,7 +764,7 @@ class NetworkModificationTest {
         modificationBody = Pair.of(bodyJson, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNode1Uuid, NETWORK_UUID)));
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
 
         // modificationNode2 is still built
@@ -772,7 +775,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testNetworkModificationEquipment() throws Exception {
+    void testNetworkModificationEquipment(final MockWebServer server) throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         String userId = "userId";
@@ -831,10 +834,13 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         modificationBody = Pair.of(bodyJson, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNodeUuid2, NETWORK_UUID)));
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testCreateGenerator() throws Exception {
+    void testCreateGenerator(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -924,10 +930,13 @@ class NetworkModificationTest {
                         .content(bodyJsonCreateBis).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testCreateShuntsCompensator() throws Exception {
+    void testCreateShuntsCompensator(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -979,10 +988,13 @@ class NetworkModificationTest {
                         .content(createShuntCompensatorAttributes2).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testCreateLine() throws Exception {
+    void testCreateLine(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1068,10 +1080,13 @@ class NetworkModificationTest {
                         .content(createLineAttributes2).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testCreateTwoWindingsTransformer() throws Exception {
+    void testCreateTwoWindingsTransformer(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1140,6 +1155,9 @@ class NetworkModificationTest {
                         .content(createTwoWindingsTransformerAttributes2).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
@@ -1189,7 +1207,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testUpdateLines() throws Exception {
+    void testUpdateLines(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1340,10 +1358,13 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         modificationBody = Pair.of(bodyJsonCreate9, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNode2Uuid, NETWORK_UUID)));
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(9, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testCreateLoad() throws Exception {
+    void testCreateLoad(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1416,10 +1437,13 @@ class NetworkModificationTest {
                         .content(createLoadAttributes2).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testModifyLoad() throws Exception {
+    void testModifyLoad(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1477,10 +1501,13 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, loadAttributesUpdated);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testModifyEquipment() throws Exception {
+    void testModifyEquipment(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1535,10 +1562,13 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, generatorAttributesUpdated);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testCreateSubstation() throws Exception {
+    void testCreateSubstation(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1607,10 +1637,13 @@ class NetworkModificationTest {
                         .content(createSubstationAttributes2).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testCreateVoltageLevel() throws Exception {
+    void testCreateVoltageLevel(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1681,10 +1714,13 @@ class NetworkModificationTest {
                         .content(createVoltageLevelAttributes2).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isForbidden());
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testLineSplitWithVoltageLevel() throws Exception {
+    void testLineSplitWithVoltageLevel(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1752,10 +1788,13 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         wireMockUtils.verifyNetworkModificationPost(stubPostId, modificationBodyJson);
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, badBody);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testLineAttachToVoltageLevel() throws Exception {
+    void testLineAttachToVoltageLevel(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1792,10 +1831,13 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, createLineAttachToVoltageLevelAttributes);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testLinesAttachToSplitLines() throws Exception {
+    void testLinesAttachToSplitLines(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1847,6 +1889,9 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         wireMockUtils.verifyNetworkModificationPost(stubPostId, modificationBodyJson);
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, badBody);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @ParameterizedTest
@@ -1909,7 +1954,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testDeleteVoltageLevelOnline() throws Exception {
+    void testDeleteVoltageLevelOnline(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -1959,10 +2004,13 @@ class NetworkModificationTest {
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         wireMockUtils.verifyNetworkModificationPut(stubIdPutErr, MODIFICATION_UUID, badBody);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testDeleteAttachingline() throws Exception {
+    void testDeleteAttachingline(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -2013,10 +2061,13 @@ class NetworkModificationTest {
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         wireMockUtils.verifyNetworkModificationPut(stubIdPutErr, MODIFICATION_UUID, badBody);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
-    void testReorderModification() throws Exception {
+    void testReorderModification(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -2068,6 +2119,9 @@ class NetworkModificationTest {
                         "build", WireMock.equalTo("false"),
                         "before", WireMock.equalTo(modification2.toString())),
                 expectedBodyStr);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(2, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
@@ -2095,7 +2149,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testDuplicateModification() throws Exception {
+    void testDuplicateModification(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -2162,6 +2216,9 @@ class NetworkModificationTest {
         wireMockUtils.verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
                         "action", WireMock.equalTo("COPY")),
                 expectedBody);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
@@ -2193,7 +2250,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testCutAndPasteModification() throws Exception {
+    void testCutAndPasteModification(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -2267,6 +2324,9 @@ class NetworkModificationTest {
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isBadRequest());
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
@@ -2299,7 +2359,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testDeleteEquipment() throws Exception {
+    void testDeleteEquipment(final MockWebServer server) throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -2361,6 +2421,9 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         wireMockUtils.verifyNetworkModificationPut(stubPutId, MODIFICATION_UUID, bodyJson);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     @Test
@@ -2533,7 +2596,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testUpdateOfBuildStatus() throws Exception {
+    void testUpdateOfBuildStatus(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -2616,6 +2679,9 @@ class NetworkModificationTest {
         assertEquals(BuildStatus.BUILT_WITH_ERROR, networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid, firstRootNetworkUuid).getGlobalBuildStatus());
         modificationBody = Pair.of(jsonCreateLoadInfos, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNodeUuid, NETWORK_UUID)));
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     private void testBuildWithNodeUuid(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, UUID profileStubId) throws Exception {
@@ -2933,7 +2999,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testCreateModificationWithErrors() throws Exception {
+    void testCreateModificationWithErrors(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
@@ -2993,6 +3059,9 @@ class NetworkModificationTest {
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         wireMockUtils.verifyNetworkModificationPost(stubId, modificationBodyJson);
+
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(4, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
 
     private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {

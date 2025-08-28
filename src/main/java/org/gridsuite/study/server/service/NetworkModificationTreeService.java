@@ -498,12 +498,11 @@ public class NetworkModificationTreeService {
                     .withAllResourceBundlesFromClasspath()
                     .withMessageTemplate("study.server.modificationNodeId")
                     .withUntypedValue("modificationNodeId", modificationNode.getId().toString()).build();
-        reportService.sendReport(getModificationReportUuid(networkModificationNode.getId(), firstRootNetworkUuid, networkModificationNode.getId()), reportNode);
+        UUID modificationReportUuid = UUID.randomUUID();
+        reportService.sendReport(modificationReportUuid, reportNode);
 
-        BuildInfos buildInfos = getBuildInfos(modificationNode.getId(), firstRootNetworkUuid);
-        Map<UUID, UUID> nodeUuidToReportUuid = buildInfos.getReportsInfos().stream().collect(Collectors.toMap(ReportInfos::nodeUuid, ReportInfos::reportUuid));
         rootNetworkNodeInfoService.updateRootNetworkNode(networkModificationNode.getId(), firstRootNetworkUuid,
-            RootNetworkNodeInfo.builder().variantId(FIRST_VARIANT_ID).nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).modificationReports(nodeUuidToReportUuid).build());
+            RootNetworkNodeInfo.builder().variantId(FIRST_VARIANT_ID).nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).modificationReportUuid(modificationReportUuid).build());
     }
 
     @Transactional
@@ -754,7 +753,7 @@ public class NetworkModificationTreeService {
         if (nodeEntity.getType().equals(NodeType.ROOT)) {
             return rootNetworkService.getRootReportUuid(rootNetworkUuid);
         } else {
-            return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getModificationReports().get(nodeUuid);
+            return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getModificationReportUuid();
         }
     }
 
@@ -819,16 +818,6 @@ public class NetworkModificationTreeService {
         return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND)).getComputationReports();
     }
 
-    @Transactional
-    public void setModificationReports(UUID nodeUuid, UUID rootNetworkUuid, Map<UUID, UUID> modificationReports) {
-        rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).ifPresent(tpNodeInfo -> tpNodeInfo.setModificationReports(modificationReports));
-    }
-
-    @Transactional
-    public Map<UUID, UUID> getModificationReports(UUID nodeUuid, UUID rootNetworkUuid) {
-        return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NODE_NOT_FOUND)).getModificationReports();
-    }
-
     private void restoreNodeChildren(UUID studyId, UUID parentNodeId) {
         getChildren(parentNodeId).forEach(nodeEntity -> {
             NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeEntity.getIdNode()).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
@@ -848,19 +837,14 @@ public class NetworkModificationTreeService {
         return nodesRepository.findAllByStudyId(studyUuid);
     }
 
-    private UUID getModificationReportUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID nodeToBuildUuid) {
-        return self.getModificationReports(nodeToBuildUuid, rootNetworkUuid).getOrDefault(nodeUuid, UUID.randomUUID());
-    }
-
-    private void getBuildInfos(NodeEntity nodeEntity, UUID rootNetworkUuid, BuildInfos buildInfos, UUID nodeToBuildUuid) {
+    private void getBuildInfos(NodeEntity nodeEntity, UUID rootNetworkUuid, BuildInfos buildInfos) {
         AbstractNode node = getSimpleNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
             RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeEntity.getIdNode(), rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
             if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
-                UUID reportUuid = getModificationReportUuid(nodeEntity.getIdNode(), rootNetworkUuid, nodeToBuildUuid);
-                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), rootNetworkNodeInfoEntity.getModificationsUuidsToExclude(), new ReportInfos(reportUuid, modificationNode.getId()));
-                getBuildInfos(nodeEntity.getParentNode(), rootNetworkUuid, buildInfos, nodeToBuildUuid);
+                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), rootNetworkNodeInfoEntity.getModificationsUuidsToExclude(), new ReportInfos(rootNetworkNodeInfoEntity.getModificationReportUuid(), modificationNode.getId()));
+                getBuildInfos(nodeEntity.getParentNode(), rootNetworkUuid, buildInfos);
             } else {
                 buildInfos.setOriginVariantId(self.getVariantId(nodeEntity.getIdNode(), rootNetworkUuid));
             }
@@ -876,7 +860,7 @@ public class NetworkModificationTreeService {
                 throw new StudyException(BAD_NODE_TYPE, "The node " + entity.getIdNode() + " is not a modification node");
             } else {
                 buildInfos.setDestinationVariantId(self.getVariantId(nodeUuid, rootNetworkUuid));
-                getBuildInfos(entity, rootNetworkUuid, buildInfos, nodeUuid);
+                getBuildInfos(entity, rootNetworkUuid, buildInfos);
             }
         }, () -> {
             throw new StudyException(ELEMENT_NOT_FOUND);
@@ -889,13 +873,23 @@ public class NetworkModificationTreeService {
     public InvalidateNodeInfos invalidateNode(UUID nodeUuid, UUID rootNetworkUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
 
-        InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL);
+        boolean isNodeBuilt = isNodeBuilt(rootNetworkUuid, nodeEntity);
+        boolean hasBuiltChildren = hasAnyBuiltChildren(nodeEntity, rootNetworkUuid);
+        InvalidateNodeInfos invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL, !hasBuiltChildren);
+        if (isNodeBuilt && !hasBuiltChildren) {
+            invalidateAscendantNodesReports(nodeUuid, rootNetworkUuid, invalidateNodeInfos);
+        }
 
         fillIndexedNodeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos);
 
         notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), List.of(nodeUuid), rootNetworkUuid);
 
         return invalidateNodeInfos;
+    }
+
+    private void invalidateAscendantNodesReports(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos) {
+        List<UUID> allNodesToHighestParentInBuiltBranch = getAllNodesToHighestParentInBuiltBranch(nodeUuid, rootNetworkUuid);
+        rootNetworkNodeInfoService.getRootNetworkNodes(rootNetworkUuid, allNodesToHighestParentInBuiltBranch).forEach(entity -> invalidateNodeInfos.addReportUuid(entity.getModificationReportUuid()));
     }
 
     @Transactional
@@ -905,12 +899,14 @@ public class NetworkModificationTreeService {
         // Node status before invalidation
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         boolean isModificationNode = nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION);
-        boolean isNodeBuilt = self.getNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
+        boolean isNodeBuilt = isNodeBuilt(rootNetworkUuid, nodeEntity);
         boolean shouldInvalidateIndexedInfos = isNodeBuilt || hasAnyBuiltChildren(nodeEntity, rootNetworkUuid);
 
         // First node
         if (isModificationNode && !invalidateTreeParameters.isOnlyChildren()) {
-            invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
+            // if we enter this case node will be unbuilt anyway and its children too so we will have to remove reports too
+            invalidateNodeInfos = rootNetworkNodeInfoService.invalidateRootNetworkNode(nodeUuid, rootNetworkUuid, invalidateTreeParameters, true);
+            invalidateAscendantNodesReports(nodeUuid, rootNetworkUuid, invalidateNodeInfos);
         }
 
         // Invalidate indexed nodes
@@ -936,9 +932,14 @@ public class NetworkModificationTreeService {
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
             .withBlockedNodeBuild(invalidateTreeParameters.withBlockedNodeBuild())
             .build();
-        rootNetworkNodeInfoEntities.forEach(child ->
-            invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters))
-        );
+        rootNetworkNodeInfoEntities.forEach(child -> {
+            // InvalidationMode is ALL, so I know that all children will be unbuilt,
+            // so we have to remove reports for all children that are built or have built children
+            NodeEntity childNodeEntity = getNodeEntity(child.getNodeInfo().getIdNode());
+            if (isNodeBuilt(rootNetworkUuid, childNodeEntity) || hasAnyBuiltChildren(childNodeEntity, rootNetworkUuid)) {
+                invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters, true));
+            }
+        });
 
         return invalidateNodeInfos;
     }
@@ -959,13 +960,12 @@ public class NetworkModificationTreeService {
      */
     private NodeEntity getSubTreeToInvalidateIndexedModifications(UUID nodeUuid, UUID rootNetworkUuid) {
         Set<NodeEntity> descendantsChecked = new HashSet<>();
-
         NodeEntity currentNode = getNodeEntity(nodeUuid);
 
         while (currentNode.getParentNode() != null) {
             NodeEntity parentNode = currentNode.getParentNode();
             if (parentNode.getType().equals(NodeType.ROOT)
-                || self.getNodeBuildStatus(parentNode.getIdNode(), rootNetworkUuid).isBuilt()
+                || isNodeBuilt(rootNetworkUuid, parentNode)
                 || hasAnyBuiltChildren(parentNode, rootNetworkUuid, descendantsChecked)) {
                 return currentNode;
             }
@@ -976,13 +976,46 @@ public class NetworkModificationTreeService {
         return currentNode;
     }
 
+    /**
+     * Recursively iterate through *nodeUuid* parents until one of them match one of the following conditions :<br>
+     * - it is of type ROOT<br>
+     * - it is built<br>
+     * - one of its children is built
+     * @param nodeUuid reference node from where the recursion will start
+     * @param rootNetworkUuid root network necessary to get the build status of each node
+     * @return A set filled with IDs of all the parents of the current node that does not belong to a built branch in the tree
+     */
+    private List<UUID> getAllNodesToHighestParentInBuiltBranch(UUID nodeUuid, UUID rootNetworkUuid) {
+        Set<NodeEntity> descendantsChecked = new HashSet<>();
+        NodeEntity currentNode = getNodeEntity(nodeUuid);
+        List<UUID> parents = new ArrayList<>();
+        boolean found = false;
+
+        while (!found && currentNode.getParentNode() != null) {
+            NodeEntity parentNode = currentNode.getParentNode();
+            if (parentNode.getType().equals(NodeType.ROOT)
+                || isNodeBuilt(rootNetworkUuid, parentNode)
+                || hasAnyBuiltChildren(parentNode, rootNetworkUuid, descendantsChecked)) {
+                found = true;
+            } else {
+                parents.add(parentNode.getIdNode());
+                currentNode = parentNode;
+            }
+        }
+
+        return parents;
+    }
+
     // TODO Need to optimise with a only one recursive query
     private boolean hasAnyBuiltChildren(NodeEntity node, UUID rootNetworkUuid) {
-        return hasAnyBuiltChildren(node, rootNetworkUuid, new HashSet<>());
+        return getChildren(node.getIdNode())
+            .stream()
+            .map(child -> hasAnyBuiltChildren(child, rootNetworkUuid, new HashSet<>()))
+            .anyMatch(el -> el.equals(Boolean.TRUE));
     }
 
     private boolean hasAnyBuiltChildren(NodeEntity node, UUID rootNetworkUuid, Set<NodeEntity> checkedChildren) {
-        if (self.getNodeBuildStatus(node.getIdNode(), rootNetworkUuid).isBuilt()) {
+        if (isNodeBuilt(rootNetworkUuid, node)) {
             return true;
         }
         checkedChildren.add(node);
@@ -1000,7 +1033,7 @@ public class NetworkModificationTreeService {
     private void fillIndexedNodeInfosToInvalidate(NodeEntity nodeEntity, UUID rootNetworkUuid, InvalidateNodeInfos invalidateNodeInfos) {
         // when manually invalidating a single node, if this node does not have any built children
         // we need to invalidate indexed modifications up to it's last built parent, not included
-        if (hasAnyBuiltChildren(nodeEntity, rootNetworkUuid)) {
+        if (isNodeBuilt(rootNetworkUuid, nodeEntity) || hasAnyBuiltChildren(nodeEntity, rootNetworkUuid)) {
             return;
         }
 
@@ -1122,7 +1155,7 @@ public class NetworkModificationTreeService {
     public long countBuiltNodes(UUID studyUuid, UUID rootNetworkUuid) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
         // perform N queries, but it's fast: 25 ms for 400 nodes
-        return nodes.stream().filter(n -> self.getNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
+        return nodes.stream().filter(n -> isNodeBuilt(rootNetworkUuid, n)).count();
     }
 
     private void fillIndexedNodeInfosToInvalidate(UUID parentNodeUuid, boolean includeParentNode, InvalidateNodeInfos invalidateNodeInfos) {
@@ -1157,5 +1190,9 @@ public class NetworkModificationTreeService {
         nodeInfo.getChildren().forEach(child -> self.createNodeTree(study, nodeInfo.getId(), (NetworkModificationNode) child));
 
         return nodeInfo;
+    }
+
+    private boolean isNodeBuilt(UUID rootNetworkUuid, NodeEntity nodeEntity) {
+        return self.getNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
     }
 }

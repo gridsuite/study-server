@@ -63,11 +63,7 @@ public class RootNetworkNodeInfoEntity {
         foreignKey = @ForeignKey(name = "rootNetworkNodeInfoEntity_computationReports_fk1"))
     private Map<String, UUID> computationReports;
 
-    @ElementCollection
-    @CollectionTable(name = "modificationReports",
-        indexes = {@Index(name = "root_network_node_info_entity_modificationReports_idx1", columnList = "root_network_node_info_entity_id")},
-        foreignKey = @ForeignKey(name = "rootNetworkNodeInfoEntity_modificationReports_fk1"))
-    private Map<UUID, UUID> modificationReports;
+    private UUID modificationReportUuid;
 
     @Column(name = "shortCircuitAnalysisResultUuid")
     private UUID shortCircuitAnalysisResultUuid;
@@ -123,7 +119,7 @@ public class RootNetworkNodeInfoEntity {
         return RootNetworkNodeInfo.builder()
             .id(id)
             .computationReports(computationReports)
-            .modificationReports(modificationReports)
+            .modificationReportUuid(modificationReportUuid)
             .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
             .dynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid)
             .loadFlowResultUuid(loadFlowResultUuid)
