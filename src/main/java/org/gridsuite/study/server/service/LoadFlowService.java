@@ -146,10 +146,6 @@ public class LoadFlowService extends AbstractComputationService {
     public String getLoadFlowModifications(UUID resultUuid, UUID networkUuid, String variantId) {
         String result;
 
-        if (resultUuid == null) {
-            return null;
-        }
-
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/modifications");
         uriComponentsBuilder.queryParam(QUERY_PARAM_NETWORK_UUID, networkUuid.toString());
         uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);

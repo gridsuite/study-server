@@ -988,8 +988,11 @@ class LoadFlowTest {
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         RootNode rootNode = getRootNode(studyUuid);
         NetworkModificationNode node1 = createNetworkModificationConstructionNode(studyUuid, rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "N1");
-        updateLoadflowResultUuid(node1.getId(), rootNetworkUuid, UUID.fromString(LOADFLOW_ERROR_RESULT_UUID));
 
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/modifications", studyUuid, rootNetworkUuid, node1.getId()))
+            .andExpect(status().isNotFound());
+
+        updateLoadflowResultUuid(node1.getId(), rootNetworkUuid, UUID.fromString(LOADFLOW_ERROR_RESULT_UUID));
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/modifications", studyUuid, rootNetworkUuid, node1.getId()))
             .andExpect(status().isNotFound());
 

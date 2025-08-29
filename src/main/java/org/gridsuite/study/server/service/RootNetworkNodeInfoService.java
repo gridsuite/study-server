@@ -662,6 +662,9 @@ public class RootNetworkNodeInfoService {
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
         UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
+        if (resultUuid == null) {
+            throw new StudyException(LOADFLOW_NOT_FOUND);
+        }
         return loadFlowService.getLoadFlowModifications(resultUuid, networkUuid, variantId);
     }
 
