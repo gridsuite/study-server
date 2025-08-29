@@ -43,6 +43,7 @@ public final class StudyConstants {
 
     public static final String DELIMITER = "/";
     public static final String QUERY_PARAM_VARIANT_ID = "variantId";
+    public static final String QUERY_PARAM_NETWORK_UUID = "networkUuid";
     public static final String QUERY_PARAM_EQUIPMENT_TYPE = "equipmentType";
     public static final String QUERY_PARAM_ELEMENT_TYPE = "elementType";
     public static final String QUERY_PARAM_SIDE = "side";
