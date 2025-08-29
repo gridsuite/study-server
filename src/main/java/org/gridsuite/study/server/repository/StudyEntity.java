@@ -8,6 +8,7 @@ package org.gridsuite.study.server.repository;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.Builder.Default;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -37,7 +38,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @OneToMany(mappedBy = "study", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderColumn(name = "index")
-    @Builder.Default
+    @Default
     private List<RootNetworkEntity> rootNetworks = new ArrayList<>();
 
     /**
@@ -81,10 +82,8 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "dynamicSimulationParametersEntity_id",
-        referencedColumnName = "id",
-        foreignKey = @ForeignKey(
-            name = "dynamicSimulationParameters_id_fk"
-        ))
+                referencedColumnName = "id",
+                foreignKey = @ForeignKey(name = "dynamicSimulationParameters_id_fk"))
     private DynamicSimulationParametersEntity dynamicSimulationParameters;
 
     @Column(name = "dynamicSecurityAnalysisParametersUuid")
@@ -113,27 +112,27 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "nonEvacuatedEnergyParametersEntity_id",
-        referencedColumnName = "id",
-        foreignKey = @ForeignKey(
-            name = "nonEvacuatedEnergyParameters_id_fk"
-        ))
+                referencedColumnName = "id",
+                foreignKey = @ForeignKey(name = "nonEvacuatedEnergyParameters_id_fk"))
     private NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParameters;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "study_voltage_init_parameters_id",
-        foreignKey = @ForeignKey(
-            name = "study_voltage_init_parameters_id_fk"
-        ))
+                foreignKey = @ForeignKey(name = "study_voltage_init_parameters_id_fk"))
     private StudyVoltageInitParametersEntity voltageInitParameters;
 
     @ElementCollection
-    @CollectionTable(name = "StudyNodeAliases", foreignKey = @ForeignKey(
-            name = "study_node_aliases_fk"
-        ))
+    @CollectionTable(name = "StudyNodeAliases", foreignKey = @ForeignKey(name = "study_node_aliases_fk"))
     private List<NodeAliasEmbeddable> nodeAliases;
 
-    @Column(name = "mono_root", columnDefinition = "boolean default true")
-    private boolean monoRoot;
+    @Column(name = "mono_root", nullable = false, columnDefinition = "boolean default true")
+    @Default
+    private boolean monoRoot = true;
+
+    @Embedded
+    //@EmbeddedColumnNaming("sp_")
+    @Default
+    private SpreadsheetParametersEntity spreadsheetParameters = new SpreadsheetParametersEntity();
 
     public RootNetworkEntity getFirstRootNetwork() {
         return rootNetworks.get(0);
@@ -149,4 +148,3 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         rootNetworks.removeAll(rootNetworks.stream().filter(rn -> uuids.contains(rn.getId())).toList());
     }
 }
-
