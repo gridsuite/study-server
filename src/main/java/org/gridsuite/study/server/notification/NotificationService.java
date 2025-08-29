@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
+import org.gridsuite.study.server.dto.SpreadsheetParameters;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.notification.dto.StudyAlert;
@@ -93,6 +94,7 @@ public class NotificationService {
     public static final String UPDATE_SPREADSHEET_NODE_ALIASES = "nodeAliasesUpdated";
     public static final String UPDATE_SPREADSHEET_TAB = "spreadsheetTabUpdated";
     public static final String UPDATE_SPREADSHEET_COLLECTION = "spreadsheetCollectionUpdated";
+    public static final String UPDATE_SPREADSHEET_PARAMETERS = "spreadsheetParametersUpdated";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
@@ -199,6 +201,15 @@ public class NotificationService {
     @PostCompletion
     public void emitSpreadsheetCollectionChanged(UUID studyUuid, UUID collectionUuid) {
         sendStudyUpdateMessage(studyUuid, UPDATE_SPREADSHEET_COLLECTION, MessageBuilder.withPayload(collectionUuid.toString()));
+    }
+
+    @PostCompletion
+    public void emitSpreadsheetParametersChange(@NonNull final UUID studyUuid, @NonNull final SpreadsheetParameters spreadsheetParameters) {
+        try {
+            sendStudyUpdateMessage(studyUuid, UPDATE_SPREADSHEET_PARAMETERS, MessageBuilder.withPayload(this.objectMapper.writeValueAsString(spreadsheetParameters)));
+        } catch (final JsonProcessingException err) {
+            LOGGER.error("Unable to notify on spreadsheet parameters change", err);
+        }
     }
 
     @PostCompletion

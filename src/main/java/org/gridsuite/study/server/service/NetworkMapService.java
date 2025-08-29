@@ -37,9 +37,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
 public class NetworkMapService {
-
-    static final String QUERY_PARAM_LINE_ID = "lineId";
-
     private final RestTemplate restTemplate;
 
     private String networkMapServerBaseUri;
@@ -50,26 +47,22 @@ public class NetworkMapService {
         this.restTemplate = restTemplate;
     }
 
-    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages, String infoType, double dcPowerFactor) {
+    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages, String infoType, double dcPowerFactor, boolean partialObject) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
-
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType)
-                .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
-
+                .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                .queryParam("partialObject", partialObject);
         if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
             builder = builder.queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltages);
         }
-        InfoTypeParameters infoTypeParameters = InfoTypeParameters.builder()
+        queryParamInfoTypeParameters(InfoTypeParameters.builder()
                 .optionalParameters(Map.of(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor)))
-                .build();
-        queryParamInfoTypeParameters(infoTypeParameters, builder);
+                .build(), builder);
         String url = builder.buildAndExpand(networkUuid).toUriString();
-
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<List<String>> httpEntity = new HttpEntity<>(substationsIds, headers);
