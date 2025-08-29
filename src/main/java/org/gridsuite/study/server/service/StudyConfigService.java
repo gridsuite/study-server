@@ -400,18 +400,6 @@ public class StudyConfigService {
         }
     }
 
-    public UUID duplicateDiagramGridLayout(UUID sourceUuid) {
-        Objects.requireNonNull(sourceUuid);
-        var path = UriComponentsBuilder.fromPath(STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_URI)
-            .queryParam("duplicateFrom", sourceUuid)
-            .buildAndExpand().toUriString();
-        try {
-            return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED);
-        }
-    }
-
     public DiagramGridLayout getDiagramGridLayout(UUID diagramGridLayoutUuid) {
         Objects.requireNonNull(diagramGridLayoutUuid);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_WITH_ID_URI)
@@ -477,14 +465,14 @@ public class StudyConfigService {
         }
     }
 
-    public UUID createDefaultDiagramGridLayout(UUID diagramConfigId) {
-        if (diagramConfigId == null) {
+    public UUID createGridLayoutFromNadDiagram(UUID nadDiagramConfigId) {
+        if (nadDiagramConfigId == null) {
             return null;
         }
         DiagramGridLayout diagramGridLayout = DiagramGridLayout.builder()
             .diagramLayouts(List.of(NetworkAreaDiagramLayout.builder()
-                .originalNadConfigUuid(diagramConfigId)
-                .currentNadConfigUuid(diagramConfigId)
+                .originalNadConfigUuid(nadDiagramConfigId)
+                .currentNadConfigUuid(nadDiagramConfigId)
                 .build()))
             .build();
 

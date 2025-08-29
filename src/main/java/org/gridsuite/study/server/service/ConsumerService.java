@@ -89,7 +89,7 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService, DiagramGridLayoutService diagramGridLayoutService) {
+                           StateEstimationService stateEstimationService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -294,7 +294,7 @@ public class ConsumerService {
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
-        UUID diagramGridLayoutUuid = createDefaultDiagramGridLayout(userId, userProfileInfos);
+        UUID diagramGridLayoutUuid = createGridLayoutFromNadDiagram(userId, userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
@@ -303,21 +303,16 @@ public class ConsumerService {
             importParameters, importReportUuid);
     }
 
-    private UUID createDefaultDiagramGridLayout(String userId, UserProfileInfos userProfileInfos) {
+    private UUID createGridLayoutFromNadDiagram(String userId, UserProfileInfos userProfileInfos) {
         if (userProfileInfos != null && userProfileInfos.getDiagramConfigId() != null) {
             try {
-                return studyConfigService.duplicateDiagramGridLayout(userProfileInfos.getDiagramConfigId());
+                return studyConfigService.createGridLayoutFromNadDiagram(userProfileInfos.getDiagramConfigId());
             } catch (Exception e) {
-                LOGGER.error(String.format("Could not duplicate diagram grid layout with id '%s' from user/profile '%s/%s'. Using default diagram grid layout",
+                LOGGER.error(String.format("Could not create a diagram grid layout with NAD elment id '%s' from user/profile '%s/%s'. No layout created",
                     userProfileInfos.getDiagramConfigId(), userId, userProfileInfos.getName()), e);
             }
         }
-        try {
-            return studyConfigService.createDefaultDiagramGridLayout(userProfileInfos.getDiagramConfigId());
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default diagram grid layout", e);
-            return null;
-        }
+        return null;
     }
 
     private UserProfileInfos getUserProfile(String userId) {

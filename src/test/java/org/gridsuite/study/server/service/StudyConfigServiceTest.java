@@ -41,22 +41,7 @@ class StudyConfigServiceTest {
     }
 
     @Test
-    void testDuplicateDiagramGridLayout() throws JsonProcessingException {
-        UUID sourceUuid = UUID.randomUUID();
-        UUID expectedUuid = UUID.randomUUID();
-        wireMockServer.stubFor(post(urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout"))
-            .withQueryParam("duplicateFrom", equalTo(sourceUuid.toString()))
-            .willReturn(okJson(objectMapper.writeValueAsString(expectedUuid))));
-
-        UUID result = studyConfigService.duplicateDiagramGridLayout(sourceUuid);
-
-        assertEquals(expectedUuid, result);
-        wireMockServer.verify(postRequestedFor(urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout"))
-            .withQueryParam("duplicateFrom", equalTo(sourceUuid.toString())));
-    }
-
-    @Test
-    void testCreateDefaultDiagramGridLayout() throws JsonProcessingException {
+    void testCreateDiagramGridLayoutFromNadConfig() throws JsonProcessingException {
         UUID diagramConfigId = UUID.randomUUID();
         UUID expectedUuid = UUID.randomUUID();
         DiagramGridLayout requestBody = DiagramGridLayout.builder()
@@ -70,11 +55,10 @@ class StudyConfigServiceTest {
             .withRequestBody(equalToJson(objectMapper.writeValueAsString(requestBody)))
             .willReturn(okJson(objectMapper.writeValueAsString(expectedUuid))));
 
-        UUID result = studyConfigService.createDefaultDiagramGridLayout(diagramConfigId);
+        UUID result = studyConfigService.createGridLayoutFromNadDiagram(diagramConfigId);
 
         assertEquals(expectedUuid, result);
         wireMockServer.verify(postRequestedFor(urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout"))
             .withRequestBody(equalToJson(objectMapper.writeValueAsString(requestBody))));
     }
 }
-

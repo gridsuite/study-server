@@ -11,7 +11,6 @@ import java.lang.reflect.Method;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class ConsumerServiceTest {
@@ -22,55 +21,35 @@ class ConsumerServiceTest {
     @InjectMocks
     private ConsumerService consumerService;
 
-    private Method createDefaultDiagramGridLayout;
+    private Method createGridLayoutFromNadDiagram;
 
     @BeforeEach
     void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
-        createDefaultDiagramGridLayout = ConsumerService.class
-                .getDeclaredMethod("createDefaultDiagramGridLayout", String.class, UserProfileInfos.class);
-        createDefaultDiagramGridLayout.setAccessible(true);
+        createGridLayoutFromNadDiagram = ConsumerService.class
+                .getDeclaredMethod("createGridLayoutFromNadDiagram", String.class, UserProfileInfos.class);
+        createGridLayoutFromNadDiagram.setAccessible(true);
     }
 
     @Test
-    void whenProfileHasDiagramConfigThenDuplicateIsUsed() throws Exception {
-        UUID configId = UUID.randomUUID();
-        UUID expected = UUID.randomUUID();
-        UserProfileInfos profile = UserProfileInfos.builder().diagramConfigId(configId).build();
-        when(studyConfigService.duplicateDiagramGridLayout(configId)).thenReturn(expected);
-
-        UUID result = (UUID) createDefaultDiagramGridLayout.invoke(consumerService, "user", profile);
-
-        assertEquals(expected, result);
-        verify(studyConfigService).duplicateDiagramGridLayout(configId);
-        verify(studyConfigService, never()).createDefaultDiagramGridLayout(any());
-    }
-
-    @Test
-    void whenDuplicateFailsThenCreateDefaultIsUsed() throws Exception {
+    void whenProfileHasAssociatedNadConfig() throws Exception {
         UUID configId = UUID.randomUUID();
         UUID expected = UUID.randomUUID();
         UserProfileInfos profile = UserProfileInfos.builder().diagramConfigId(configId).name("name").build();
-        when(studyConfigService.duplicateDiagramGridLayout(configId)).thenThrow(new RuntimeException("fail"));
-        when(studyConfigService.createDefaultDiagramGridLayout(configId)).thenReturn(expected);
+        when(studyConfigService.createGridLayoutFromNadDiagram(configId)).thenReturn(expected);
 
-        UUID result = (UUID) createDefaultDiagramGridLayout.invoke(consumerService, "user", profile);
+        UUID result = (UUID) createGridLayoutFromNadDiagram.invoke(consumerService, "user", profile);
 
         assertEquals(expected, result);
-        verify(studyConfigService).duplicateDiagramGridLayout(configId);
-        verify(studyConfigService).createDefaultDiagramGridLayout(configId);
+        verify(studyConfigService).createGridLayoutFromNadDiagram(configId);
     }
 
     @Test
-    void whenNoDiagramConfigThenCreateDefaultCalledWithNull() throws Exception {
-        UUID expected = UUID.randomUUID();
+    void whenProfileHasNoAssociatedNadConfig() throws Exception {
+        UUID expected = null;
         UserProfileInfos profile = UserProfileInfos.builder().diagramConfigId(null).build();
-        when(studyConfigService.createDefaultDiagramGridLayout(null)).thenReturn(expected);
-
-        UUID result = (UUID) createDefaultDiagramGridLayout.invoke(consumerService, "user", profile);
-
+        when(studyConfigService.createGridLayoutFromNadDiagram(null)).thenReturn(expected);
+        UUID result = (UUID) createGridLayoutFromNadDiagram.invoke(consumerService, "user", profile);
         assertEquals(expected, result);
-        verify(studyConfigService, never()).duplicateDiagramGridLayout(any());
-        verify(studyConfigService).createDefaultDiagramGridLayout(null);
     }
 }
