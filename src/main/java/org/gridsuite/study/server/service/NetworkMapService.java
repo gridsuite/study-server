@@ -47,7 +47,7 @@ public class NetworkMapService {
         this.restTemplate = restTemplate;
     }
 
-    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages, String infoType, double dcPowerFactor, boolean partialObject) {
+    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages, String infoType, double dcPowerFactor, boolean fullObject) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
@@ -55,7 +55,7 @@ public class NetworkMapService {
         }
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType)
                 .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
-                .queryParam("partialObject", partialObject);
+                .queryParam("fullObject", fullObject);
         if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
             builder = builder.queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltages);
         }

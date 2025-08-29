@@ -815,15 +815,15 @@ public class StudyService {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
-        final boolean partialObject = "tab".equalsIgnoreCase(infoType) && switch (elementType.toLowerCase()) {
+        final boolean fullObject = !"tab".equalsIgnoreCase(infoType) || ("tab".equalsIgnoreCase(infoType) && switch (elementType.toLowerCase()) {
             case "branch" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBranchOperationalLimitGroup();
             case "line" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup();
             case "two_windings_transformer" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoadT2wOperationalLimitGroup();
             case "generator" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal();
-            default -> false;
-        };
+            default -> true;
+        });
         return networkMapService.getElementsInfos(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
-                substationsIds, elementType, nominalVoltages, infoType, loadFlowParameters.getDcPowerFactor(), partialObject);
+                substationsIds, elementType, nominalVoltages, infoType, loadFlowParameters.getDcPowerFactor(), fullObject);
     }
 
     public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String elementType, InfoTypeParameters infoTypeParameters, String elementId, boolean inUpstreamBuiltParentNode) {
