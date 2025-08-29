@@ -3416,6 +3416,11 @@ public class StudyService {
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
+    public void updateSpreadsheetConfig(UUID studyUuid, UUID configUuid, String spreadsheetConfigInfos) {
+        studyConfigService.updateSpreadsheetConfig(configUuid, spreadsheetConfigInfos);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
     public UUID addSpreadsheetConfigToCollection(UUID studyUuid, UUID collectionUuid, String configurationDto) {
         UUID newConfigId = studyConfigService.addSpreadsheetConfigToCollection(collectionUuid, configurationDto);
         notificationService.emitSpreadsheetCollectionChanged(studyUuid, collectionUuid);
