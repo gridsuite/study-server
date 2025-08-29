@@ -34,6 +34,7 @@ public class RestResponseEntityExceptionHandler {
                     STUDY_NOT_FOUND,
                     NODE_NOT_FOUND,
                     ROOT_NETWORK_NOT_FOUND,
+                    LOADFLOW_NOT_FOUND,
                     SECURITY_ANALYSIS_NOT_FOUND,
                     SENSITIVITY_ANALYSIS_NOT_FOUND,
                     SHORT_CIRCUIT_ANALYSIS_NOT_FOUND,
