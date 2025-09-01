@@ -371,6 +371,7 @@ class SensitivityAnalysisTest {
                 .sensitivityFunctionType(SensitivityFunctionType.BRANCH_CURRENT_1)
                 .resultTab("N")
                 .csvHeaders(List.of("h1", "h2", "h3"))
+                .language("en")
                 .build());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", studyUuid, rootNetworkUuid, UUID.randomUUID())
