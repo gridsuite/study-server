@@ -29,4 +29,5 @@ public class SensitivityAnalysisCsvFileInfos {
     private SensitivityFunctionType sensitivityFunctionType;
     private String resultTab;
     private List<String> csvHeaders;
+    private String language;
 }
