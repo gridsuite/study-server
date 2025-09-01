@@ -42,7 +42,7 @@ public abstract class AbstractNodeInfoEntity extends AbstractManuallyAssignedIde
     @Column(columnDefinition = "CLOB")
     String name;
 
-    @Column
+    @Column(columnDefinition = "CLOB")
     String description;
 
     @Column
