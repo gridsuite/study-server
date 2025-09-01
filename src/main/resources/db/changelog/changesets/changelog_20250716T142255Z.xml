@@ -1,0 +1,29 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="labidiayo (generated)" id="1752675798879-18">
+        <addColumn tableName="root_network_node_info">
+            <column name="modification_report_uuid" type="uuid"/>
+        </addColumn>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1752675798879-21">
+        <sql>
+            UPDATE root_network_node_info 
+            SET modification_report_uuid = (
+                SELECT mr.modification_reports 
+                FROM modification_reports mr 
+                WHERE mr.modification_reports_key = root_network_node_info.node_info_id
+                  AND mr.root_network_node_info_entity_id = root_network_node_info.id
+                LIMIT 1
+            )
+            WHERE EXISTS (
+                SELECT 1 
+                FROM modification_reports mr2 
+                WHERE mr2.modification_reports_key = root_network_node_info.node_info_id
+                  AND mr2.root_network_node_info_entity_id = root_network_node_info.id
+            );
+        </sql>
+    </changeSet>
+    <changeSet author="labidiayo (generated)" id="1752675798879-23">
+        <dropTable tableName="MODIFICATION_REPORTS"/>
+    </changeSet>
+</databaseChangeLog>

@@ -2153,6 +2153,9 @@ class StudyTest {
                         && nodeEntity.getParentNode().getIdNode().equals(rootNode.getId()))
                 .map(NodeEntity::getIdNode)
                 .collect(Collectors.toList()));
+
+        Set<String> request = TestUtils.getRequestsDone(7, mockWebServer);
+        assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports")));
     }
 
     @Test
@@ -2203,9 +2206,6 @@ class StudyTest {
         NetworkModificationNode emptyNodeChild = createNetworkModificationNode(study1Uuid, emptyNode.getId(), UUID.randomUUID(), VARIANT_ID_3, "emptyNodeChild", BuildStatus.BUILT, userId);
 
         cutAndPasteNode(study1Uuid, emptyNode, node1.getId(), InsertMode.BEFORE, 1, userId);
-
-        Set<String> request = TestUtils.getRequestsDone(1, server);
-        assertTrue(request.stream().allMatch(r -> r.matches("/v1/reports")));
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(emptyNode.getId(), rootNetworkUuid).getGlobalBuildStatus());
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(node1.getId(), rootNetworkUuid).getGlobalBuildStatus());
