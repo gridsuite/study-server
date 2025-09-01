@@ -3,6 +3,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import mockwebserver3.MockWebServer;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -35,9 +36,9 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -236,6 +237,53 @@ class SpreadsheetConfigTest {
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
         wireMockUtils.verifyPostRequest(stubId, configServerUrl, false, Map.of(), globalFilters);
+    }
+
+    @Test
+    void testResetFilters(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertStudy();
+        final String configServerUrl = "/v1/spreadsheet-configs/" + SPREADSHEET_CONFIG_UUID + "/reset-filters";
+
+        UUID stubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.noContent())).getId();
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/spreadsheet-config/{configUuid}/reset-filters", studyEntity.getId(), SPREADSHEET_CONFIG_UUID)
+                        .header("content-type", "application/json"))
+                .andExpect(status().isNoContent())
+                .andReturn();
+
+        checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
+        wireMockUtils.verifyPutRequest(stubId, configServerUrl, false, Map.of(), null);
+    }
+
+    @Test
+    void testUpdateConfig() throws Exception {
+        StudyEntity studyEntity = insertStudy();
+        String configServerUrl = "/v1/spreadsheet-configs/" + SPREADSHEET_CONFIG_UUID;
+
+        UUID stubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.noContent())).getId();
+
+        String spreadsheetConfig = "{\"id\": \"" + SPREADSHEET_CONFIG_UUID + "\"," +
+                                   "\"name\": \"name\"" + "," +
+                                   "\"sheetType\": \"SUBSTATION\"" + "," +
+                                   "\"columns\": [{" +
+                                   "\"uuid\": \"" + UUID.randomUUID() + "\"," +
+                                   "\"id\": \"id\"" + "," +
+                                   "\"name\": \"columnName\"" + "," +
+                                   "\"type\": \"TEXT\"" + "," +
+                                   "\"formula\": \"id\"" +
+                                   "}]" +
+                                   "}";
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/spreadsheet-config/{configUuid}", studyEntity.getId(), SPREADSHEET_CONFIG_UUID)
+                        .header("content-type", "application/json")
+                        .content(spreadsheetConfig))
+                .andExpect(status().isNoContent())
+                .andReturn();
+
+        checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
+        wireMockUtils.verifyPutRequest(stubId, configServerUrl, false, Map.of(), spreadsheetConfig);
     }
 
     private StudyEntity insertStudy() {
