@@ -614,7 +614,7 @@ public class StudyService {
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid,
-                                              UUID spreadsheetConfigCollectionUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -628,7 +628,7 @@ public class StudyService {
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                stateEstimationParametersUuid, spreadsheetConfigCollectionUuid, importParameters, importReportUuid);
+                stateEstimationParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
@@ -918,7 +918,7 @@ public class StudyService {
 
         handleLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
     }
-    
+
     private void handleLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         UUID lfParametersUuid = loadflowService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
@@ -1452,7 +1452,7 @@ public class StudyService {
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                     UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid,
-                                                    UUID spreadsheetConfigCollectionUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1469,6 +1469,8 @@ public class StudyService {
                 .dynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisParametersUuid)
                 .stateEstimationParametersUuid(stateEstimationParametersUuid)
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
+                .diagramGridLayoutUuid(diagramGridLayoutUuid)
+                .monoRoot(true)
                 .build();
 
         var study = studyRepository.save(studyEntity);
@@ -2342,7 +2344,7 @@ public class StudyService {
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         List<UUID> reportUuids = nodeIds.stream()
-            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId, 
+            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId,
                         networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
             .filter(Objects::nonNull)
             .toList();
@@ -2362,7 +2364,7 @@ public class StudyService {
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         List<UUID> reportUuids = nodeIds.stream()
-            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId, 
+            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId,
                         networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
             .filter(Objects::nonNull)
             .toList();

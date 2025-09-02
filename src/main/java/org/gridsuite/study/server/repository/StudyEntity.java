@@ -125,9 +125,8 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @CollectionTable(name = "StudyNodeAliases", foreignKey = @ForeignKey(name = "study_node_aliases_fk"))
     private List<NodeAliasEmbeddable> nodeAliases;
 
-    @Column(name = "mono_root", nullable = false, columnDefinition = "boolean default true")
-    @Default
-    private boolean monoRoot = true;
+    @Column(name = "mono_root", columnDefinition = "boolean default true")
+    private boolean monoRoot;
 
     @Embedded
     //@EmbeddedColumnNaming("sp_")
