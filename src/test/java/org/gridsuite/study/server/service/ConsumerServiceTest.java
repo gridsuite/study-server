@@ -14,15 +14,17 @@ class ConsumerServiceTest {
 
     private StudyConfigService studyConfigService;
     private SingleLineDiagramService singleLineDiagramService;
+    private DirectoryService directoryService;
     private ConsumerService consumerService;
 
     @BeforeEach
     void setUp() {
         studyConfigService = mock(StudyConfigService.class);
         singleLineDiagramService = mock(SingleLineDiagramService.class);
+        directoryService = mock(DirectoryService.class);
         consumerService = new ConsumerService(null, null, null, null, null,
                 null, null, null, null, null,
-                studyConfigService, null, null, null, null,
+                studyConfigService, directoryService, null, null, null, null,
                 singleLineDiagramService);
     }
 
@@ -31,16 +33,18 @@ class ConsumerServiceTest {
         UUID diagramConfigId = UUID.randomUUID();
         UUID clonedConfigId = UUID.randomUUID();
         UUID gridLayoutUuid = UUID.randomUUID();
+        String nadElementName = "N";
         UserProfileInfos profile = UserProfileInfos.builder().diagramConfigId(diagramConfigId).build();
 
         when(singleLineDiagramService.duplicateNadConfig(diagramConfigId)).thenReturn(clonedConfigId);
-        when(studyConfigService.createGridLayoutFromNadDiagram(diagramConfigId, clonedConfigId)).thenReturn(gridLayoutUuid);
+        when(directoryService.getElementName(diagramConfigId)).thenReturn(nadElementName);
+        when(studyConfigService.createGridLayoutFromNadDiagram(diagramConfigId, clonedConfigId, nadElementName)).thenReturn(gridLayoutUuid);
 
         UUID result = ReflectionTestUtils.invokeMethod(consumerService, "createGridLayoutFromNadDiagram", "user", profile);
 
         assertEquals(gridLayoutUuid, result);
         verify(singleLineDiagramService).duplicateNadConfig(diagramConfigId);
-        verify(studyConfigService).createGridLayoutFromNadDiagram(diagramConfigId, clonedConfigId);
+        verify(studyConfigService).createGridLayoutFromNadDiagram(diagramConfigId, clonedConfigId, nadElementName);
     }
 
     @Test
