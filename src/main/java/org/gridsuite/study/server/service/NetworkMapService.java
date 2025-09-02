@@ -16,7 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
-import org.gridsuite.study.server.dto.InfoTypeParameters;
+import org.gridsuite.study.server.repository.SpreadsheetParametersEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -25,9 +25,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -37,6 +35,10 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
 public class NetworkMapService {
+    public static final String QUERY_PARAM_VIEW_BRANCH_OLG = "viewBranchShowOperationalLimitsGroup";
+    public static final String QUERY_PARAM_VIEW_LINE_OLG = "viewLineShowOperationalLimitsGroup";
+    public static final String QUERY_PARAM_VIEW_2WT_OLG = "view2wtShowOperationalLimitsGroup";
+    public static final String QUERY_PARAM_VIEW_GENERATOR_REGULATING_TERMINALS = "viewGeneratorShowRegulatingTerminal";
     private final RestTemplate restTemplate;
 
     private String networkMapServerBaseUri;
@@ -47,7 +49,7 @@ public class NetworkMapService {
         this.restTemplate = restTemplate;
     }
 
-    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages, String infoType, double dcPowerFactor, boolean fullObject) {
+    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages, String infoType, double dcPowerFactor, final SpreadsheetParametersEntity spreadsheetParameters) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
@@ -55,13 +57,14 @@ public class NetworkMapService {
         }
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType)
                 .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
-                .queryParam("fullObject", fullObject);
+                .queryParam(QUERY_PARAM_DC_POWERFACTOR, dcPowerFactor)
+                .queryParam(QUERY_PARAM_VIEW_BRANCH_OLG, spreadsheetParameters.isSpreadsheetLoadBranchOperationalLimitGroup())
+                .queryParam(QUERY_PARAM_VIEW_LINE_OLG, spreadsheetParameters.isSpreadsheetLoadLineOperationalLimitGroup())
+                .queryParam(QUERY_PARAM_VIEW_2WT_OLG, spreadsheetParameters.isSpreadsheetLoadT2wOperationalLimitGroup())
+                .queryParam(QUERY_PARAM_VIEW_GENERATOR_REGULATING_TERMINALS, spreadsheetParameters.isSpreadsheetLoadGeneratorRegulatingTerminal());
         if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
             builder = builder.queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltages);
         }
-        queryParamInfoTypeParameters(InfoTypeParameters.builder()
-                .optionalParameters(Map.of(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor)))
-                .build(), builder);
         String url = builder.buildAndExpand(networkUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -70,20 +73,19 @@ public class NetworkMapService {
     }
 
     public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType,
-                                  double dcPowerFactor, String elementId) {
+                                  double dcPowerFactor, String elementId, final SpreadsheetParametersEntity spreadsheetParameters) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements/{elementId}";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
-        builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
-        Map<String, String> optionalParams = new HashMap<>();
-        optionalParams.put(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor));
-        InfoTypeParameters infoTypeParameters = InfoTypeParameters.builder()
-                .optionalParameters(optionalParams)
-                .build();
-        queryParamInfoTypeParameters(infoTypeParameters, builder);
+        builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+                .queryParam(QUERY_PARAM_DC_POWERFACTOR, dcPowerFactor)
+                .queryParam(QUERY_PARAM_VIEW_BRANCH_OLG, spreadsheetParameters.isSpreadsheetLoadBranchOperationalLimitGroup())
+                .queryParam(QUERY_PARAM_VIEW_LINE_OLG, spreadsheetParameters.isSpreadsheetLoadLineOperationalLimitGroup())
+                .queryParam(QUERY_PARAM_VIEW_2WT_OLG, spreadsheetParameters.isSpreadsheetLoadT2wOperationalLimitGroup())
+                .queryParam(QUERY_PARAM_VIEW_GENERATOR_REGULATING_TERMINALS, spreadsheetParameters.isSpreadsheetLoadGeneratorRegulatingTerminal());
 
         try {
             return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid, elementId);
@@ -96,10 +98,6 @@ public class NetworkMapService {
             }
             throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
         }
-    }
-
-    private void queryParamInfoTypeParameters(InfoTypeParameters infoTypesParameters, UriComponentsBuilder builder) {
-        infoTypesParameters.getOptionalParameters().forEach((key, value) -> builder.queryParam(String.format(QUERY_FORMAT_OPTIONAL_PARAMS, key), value));
     }
 
     public String getCountries(UUID networkUuid, String variantId) {

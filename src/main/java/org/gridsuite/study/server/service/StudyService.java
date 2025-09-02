@@ -823,7 +823,7 @@ public class StudyService {
             default -> true;
         };
         return networkMapService.getElementsInfos(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
-                substationsIds, elementType, nominalVoltages, infoType, loadFlowParameters.getDcPowerFactor(), fullObject);
+                substationsIds, elementType, nominalVoltages, infoType, loadFlowParameters.getDcPowerFactor(), studyEntity.getSpreadsheetParameters());
     }
 
     public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String elementType, InfoTypeParameters infoTypeParameters, String elementId, boolean inUpstreamBuiltParentNode) {
@@ -831,7 +831,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         return networkMapService.getElementInfos(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
-                elementType, infoTypeParameters.getInfoType(), loadFlowParameters.getDcPowerFactor(), elementId);
+                elementType, infoTypeParameters.getInfoType(), loadFlowParameters.getDcPowerFactor(), elementId, studyEntity.getSpreadsheetParameters());
     }
 
     public String getNetworkCountries(UUID nodeUuid, UUID rootNetworkUuid, boolean inUpstreamBuiltParentNode) {
