@@ -73,6 +73,7 @@ public class ConsumerService {
     private final VoltageInitService voltageInitService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
+    private final SingleLineDiagramService singleLineDiagramService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -89,7 +90,8 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService) {
+                           StateEstimationService stateEstimationService,
+                           SingleLineDiagramService singleLineDiagramService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -105,6 +107,7 @@ public class ConsumerService {
         this.voltageInitService = voltageInitService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
+        this.singleLineDiagramService = singleLineDiagramService;
     }
 
     @Bean
@@ -306,7 +309,8 @@ public class ConsumerService {
     private UUID createGridLayoutFromNadDiagram(String userId, UserProfileInfos userProfileInfos) {
         if (userProfileInfos != null && userProfileInfos.getDiagramConfigId() != null) {
             try {
-                return studyConfigService.createGridLayoutFromNadDiagram(userProfileInfos.getDiagramConfigId());
+                UUID clonedNadConfig = singleLineDiagramService.duplicateNadConfig(userProfileInfos.getDiagramConfigId());
+                return studyConfigService.createGridLayoutFromNadDiagram(userProfileInfos.getDiagramConfigId(), clonedNadConfig);
             } catch (Exception e) {
                 LOGGER.error(String.format("Could not create a diagram grid layout with NAD elment id '%s' from user/profile '%s/%s'. No layout created",
                     userProfileInfos.getDiagramConfigId(), userId, userProfileInfos.getName()), e);
