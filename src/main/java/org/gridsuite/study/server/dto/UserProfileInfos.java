@@ -43,4 +43,6 @@ public class UserProfileInfos {
     private UUID spreadsheetConfigCollectionId;
 
     private UUID networkVisualizationParameterId;
+
+    private UUID diagramConfigId;
 }
