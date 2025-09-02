@@ -21,9 +21,9 @@ class ConsumerServiceTest {
         studyConfigService = mock(StudyConfigService.class);
         singleLineDiagramService = mock(SingleLineDiagramService.class);
         consumerService = new ConsumerService(null, null, null, null, null,
-            null, null, null, null, null,
-            studyConfigService, null, null, null, null,
-            singleLineDiagramService);
+                null, null, null, null, null,
+                studyConfigService, null, null, null, null,
+                singleLineDiagramService);
     }
 
     @Test
@@ -49,5 +49,19 @@ class ConsumerServiceTest {
 
         assertNull(result);
         verifyNoInteractions(singleLineDiagramService, studyConfigService);
+    }
+
+    @Test
+    void createGridLayoutFromNadDiagramCloneFailure() {
+        UUID diagramConfigId = UUID.randomUUID();
+        UserProfileInfos profile = UserProfileInfos.builder().diagramConfigId(diagramConfigId).build();
+        when(singleLineDiagramService.duplicateNadConfig(diagramConfigId))
+            .thenThrow(new RuntimeException("boom"));
+
+        UUID result = ReflectionTestUtils.invokeMethod(consumerService, "createGridLayoutFromNadDiagram", "user", profile);
+
+        assertNull(result);
+        verify(singleLineDiagramService).duplicateNadConfig(diagramConfigId);
+        verifyNoInteractions(studyConfigService);
     }
 }

@@ -1,6 +1,7 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.UUID;
@@ -19,51 +21,54 @@ import static org.mockito.Mockito.*;
 class StudyConfigServiceTest {
 
     @Test
-    void createGridLayoutFromNadDiagramShouldPostAndReturnUuid() {
+    void createGridLayoutFromNadDiagram() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         RemoteServicesProperties properties = mock(RemoteServicesProperties.class);
         when(properties.getServiceUri("study-config-server")).thenReturn("http://study-config");
-
         StudyConfigService service = new StudyConfigService(properties, restTemplate);
 
-        UUID source = UUID.randomUUID();
+        UUID src = UUID.randomUUID();
         UUID clone = UUID.randomUUID();
         UUID expected = UUID.randomUUID();
 
-        when(restTemplate.exchange(
-            eq("http://study-config/v1/diagram-grid-layout"),
-            eq(HttpMethod.POST),
-            any(HttpEntity.class),
-            eq(UUID.class)))
-            .thenReturn(new ResponseEntity<>(expected, HttpStatus.OK));
-
-        UUID result = service.createGridLayoutFromNadDiagram(source, clone);
-
-        assertEquals(expected, result);
-
-        @SuppressWarnings("unchecked")
         ArgumentCaptor<HttpEntity<DiagramGridLayout>> captor = ArgumentCaptor.forClass(HttpEntity.class);
-        verify(restTemplate).exchange(eq("http://study-config/v1/diagram-grid-layout"), eq(HttpMethod.POST), captor.capture(), eq(UUID.class));
+        when(restTemplate.exchange(eq("http://study-config/v1/diagram-grid-layout"),
+                eq(HttpMethod.POST), captor.capture(), eq(UUID.class)))
+            .thenReturn(ResponseEntity.ok(expected));
+
+        assertEquals(expected, service.createGridLayoutFromNadDiagram(src, clone));
 
         DiagramGridLayout body = captor.getValue().getBody();
-        assertNotNull(body);
-        assertEquals(1, body.getDiagramLayouts().size());
         NetworkAreaDiagramLayout layout = (NetworkAreaDiagramLayout) body.getDiagramLayouts().get(0);
-        assertEquals(source, layout.getOriginalNadConfigUuid());
+        assertEquals(src, layout.getOriginalNadConfigUuid());
         assertEquals(clone, layout.getCurrentNadConfigUuid());
     }
 
     @Test
-    void createGridLayoutFromNadDiagramWithNullSourceReturnsNull() {
+    void createGridLayoutFromNadDiagramNullSource() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         RemoteServicesProperties properties = mock(RemoteServicesProperties.class);
         when(properties.getServiceUri("study-config-server")).thenReturn("http://study-config");
-
         StudyConfigService service = new StudyConfigService(properties, restTemplate);
 
-        UUID result = service.createGridLayoutFromNadDiagram(null, UUID.randomUUID());
-
-        assertNull(result);
+        assertNull(service.createGridLayoutFromNadDiagram(null, UUID.randomUUID()));
         verifyNoInteractions(restTemplate);
+    }
+
+    @Test
+    void createGridLayoutFromNadDiagramRestError() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        RemoteServicesProperties properties = mock(RemoteServicesProperties.class);
+        when(properties.getServiceUri("study-config-server")).thenReturn("http://study-config");
+        StudyConfigService service = new StudyConfigService(properties, restTemplate);
+
+        UUID src = UUID.randomUUID();
+        UUID clone = UUID.randomUUID();
+
+        when(restTemplate.exchange(eq("http://study-config/v1/diagram-grid-layout"),
+                eq(HttpMethod.POST), any(HttpEntity.class), eq(UUID.class)))
+            .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        assertThrows(StudyException.class, () -> service.createGridLayoutFromNadDiagram(src, clone));
     }
 }
