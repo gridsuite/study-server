@@ -60,7 +60,7 @@ public class NetworkMapService {
                 .queryParam(QUERY_PARAM_DC_POWERFACTOR, dcPowerFactor)
                 .queryParam(QUERY_PARAM_VIEW_BRANCH_OLG, spreadsheetParameters.isSpreadsheetLoadBranchOperationalLimitGroup())
                 .queryParam(QUERY_PARAM_VIEW_LINE_OLG, spreadsheetParameters.isSpreadsheetLoadLineOperationalLimitGroup())
-                .queryParam(QUERY_PARAM_VIEW_2WT_OLG, spreadsheetParameters.isSpreadsheetLoadT2wOperationalLimitGroup())
+                .queryParam(QUERY_PARAM_VIEW_2WT_OLG, spreadsheetParameters.isSpreadsheetLoad2wtOperationalLimitGroup())
                 .queryParam(QUERY_PARAM_VIEW_GENERATOR_REGULATING_TERMINALS, spreadsheetParameters.isSpreadsheetLoadGeneratorRegulatingTerminal());
         if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
             builder = builder.queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltages);
@@ -84,7 +84,7 @@ public class NetworkMapService {
                 .queryParam(QUERY_PARAM_DC_POWERFACTOR, dcPowerFactor)
                 .queryParam(QUERY_PARAM_VIEW_BRANCH_OLG, spreadsheetParameters.isSpreadsheetLoadBranchOperationalLimitGroup())
                 .queryParam(QUERY_PARAM_VIEW_LINE_OLG, spreadsheetParameters.isSpreadsheetLoadLineOperationalLimitGroup())
-                .queryParam(QUERY_PARAM_VIEW_2WT_OLG, spreadsheetParameters.isSpreadsheetLoadT2wOperationalLimitGroup())
+                .queryParam(QUERY_PARAM_VIEW_2WT_OLG, spreadsheetParameters.isSpreadsheetLoad2wtOperationalLimitGroup())
                 .queryParam(QUERY_PARAM_VIEW_GENERATOR_REGULATING_TERMINALS, spreadsheetParameters.isSpreadsheetLoadGeneratorRegulatingTerminal());
 
         try {

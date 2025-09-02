@@ -818,7 +818,7 @@ public class StudyService {
         final boolean fullObject = !"tab".equalsIgnoreCase(infoType) || switch (elementType.toLowerCase()) {
             case "branch" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBranchOperationalLimitGroup();
             case "line" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup();
-            case "two_windings_transformer" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoadT2wOperationalLimitGroup();
+            case "two_windings_transformer" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoad2wtOperationalLimitGroup();
             case "generator" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal();
             default -> true;
         };
