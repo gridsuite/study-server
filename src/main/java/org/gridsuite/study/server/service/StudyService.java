@@ -848,7 +848,7 @@ public class StudyService {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         String equipmentPath = "voltage-levels" + StudyConstants.DELIMITER + voltageLevelId + StudyConstants.DELIMITER + "equipments";
         return networkMapService.getEquipmentsMapData(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
-                null, equipmentPath);
+                null, equipmentPath, null);
     }
 
     public String getHvdcLineShuntCompensators(UUID nodeUuid, UUID rootNetworkUuid, boolean inUpstreamBuiltParentNode, String hvdcId) {
@@ -866,8 +866,9 @@ public class StudyService {
     }
 
     public String getAllMapData(UUID nodeUuid, UUID rootNetworkUuid, List<String> substationsIds) {
+        final Optional<SpreadsheetParametersEntity> spreadsheetParametersEntity = studyRepository.findWithRootNetworksById(rootNetworkUuid).map(StudyEntity::getSpreadsheetParameters);
         return networkMapService.getEquipmentsMapData(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid),
-                substationsIds, "all");
+                substationsIds, "all", spreadsheetParametersEntity.orElseGet(SpreadsheetParametersEntity::new));
     }
 
     @Transactional

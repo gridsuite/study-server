@@ -12,6 +12,7 @@ package org.gridsuite.study.server.service;
  */
 
 import com.powsybl.iidm.network.ThreeSides;
+import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
@@ -57,11 +58,8 @@ public class NetworkMapService {
         }
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType)
                 .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
-                .queryParam(QUERY_PARAM_DC_POWERFACTOR, dcPowerFactor)
-                .queryParam(QUERY_PARAM_VIEW_BRANCH_OLG, spreadsheetParameters.isSpreadsheetLoadBranchOperationalLimitGroup())
-                .queryParam(QUERY_PARAM_VIEW_LINE_OLG, spreadsheetParameters.isSpreadsheetLoadLineOperationalLimitGroup())
-                .queryParam(QUERY_PARAM_VIEW_2WT_OLG, spreadsheetParameters.isSpreadsheetLoad2wtOperationalLimitGroup())
-                .queryParam(QUERY_PARAM_VIEW_GENERATOR_REGULATING_TERMINALS, spreadsheetParameters.isSpreadsheetLoadGeneratorRegulatingTerminal());
+                .queryParam(QUERY_PARAM_DC_POWERFACTOR, dcPowerFactor);
+        builder = addSpreadSheetParameters(builder, spreadsheetParameters);
         if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
             builder = builder.queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltages);
         }
@@ -81,11 +79,8 @@ public class NetworkMapService {
         }
         builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
                 .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
-                .queryParam(QUERY_PARAM_DC_POWERFACTOR, dcPowerFactor)
-                .queryParam(QUERY_PARAM_VIEW_BRANCH_OLG, spreadsheetParameters.isSpreadsheetLoadBranchOperationalLimitGroup())
-                .queryParam(QUERY_PARAM_VIEW_LINE_OLG, spreadsheetParameters.isSpreadsheetLoadLineOperationalLimitGroup())
-                .queryParam(QUERY_PARAM_VIEW_2WT_OLG, spreadsheetParameters.isSpreadsheetLoad2wtOperationalLimitGroup())
-                .queryParam(QUERY_PARAM_VIEW_GENERATOR_REGULATING_TERMINALS, spreadsheetParameters.isSpreadsheetLoadGeneratorRegulatingTerminal());
+                .queryParam(QUERY_PARAM_DC_POWERFACTOR, dcPowerFactor);
+        builder = addSpreadSheetParameters(builder, spreadsheetParameters);
 
         try {
             return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid, elementId);
@@ -156,7 +151,7 @@ public class NetworkMapService {
     }
 
     public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds,
-                                       String equipmentPath) {
+                                       String equipmentPath, SpreadsheetParametersEntity spreadsheetParameters) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath;
         UriComponentsBuilder builder = UriComponentsBuilder
             .fromPath(path);
@@ -165,6 +160,9 @@ public class NetworkMapService {
         }
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        if ("all".equals(equipmentPath)) {
+            builder = addSpreadSheetParameters(builder, spreadsheetParameters);
         }
         String url = builder.buildAndExpand(networkUuid).toUriString();
         return restTemplate.getForObject(networkMapServerBaseUri + url, String.class);
@@ -245,5 +243,12 @@ public class NetworkMapService {
 
     public void setNetworkMapServerBaseUri(String networkMapServerBaseUri) {
         this.networkMapServerBaseUri = networkMapServerBaseUri;
+    }
+
+    private static UriComponentsBuilder addSpreadSheetParameters(@NonNull final UriComponentsBuilder builder, @NonNull final SpreadsheetParametersEntity spreadsheetParameters) {
+        return builder.queryParam(QUERY_PARAM_VIEW_BRANCH_OLG, spreadsheetParameters.isSpreadsheetLoadBranchOperationalLimitGroup())
+                .queryParam(QUERY_PARAM_VIEW_LINE_OLG, spreadsheetParameters.isSpreadsheetLoadLineOperationalLimitGroup())
+                .queryParam(QUERY_PARAM_VIEW_2WT_OLG, spreadsheetParameters.isSpreadsheetLoad2wtOperationalLimitGroup())
+                .queryParam(QUERY_PARAM_VIEW_GENERATOR_REGULATING_TERMINALS, spreadsheetParameters.isSpreadsheetLoadGeneratorRegulatingTerminal());
     }
 }
