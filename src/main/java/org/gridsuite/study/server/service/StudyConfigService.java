@@ -478,7 +478,7 @@ public class StudyConfigService {
         }
     }
 
-    public UUID createGridLayoutFromNadDiagram(UUID nadDiagramConfigId) {
+    public UUID createGridLayoutFromNadDiagram(UUID nadDiagramConfigId, String nadDiagramConfigName) {
         if (nadDiagramConfigId == null) {
             return null;
         }
@@ -486,6 +486,7 @@ public class StudyConfigService {
             .diagramLayouts(List.of(NetworkAreaDiagramLayout.builder()
                 .originalNadConfigUuid(nadDiagramConfigId)
                 .currentNadConfigUuid(nadDiagramConfigId)
+                .name(nadDiagramConfigName)
                 .build()))
             .build();
 
