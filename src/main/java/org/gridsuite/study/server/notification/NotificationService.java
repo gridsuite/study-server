@@ -204,12 +204,8 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitSpreadsheetParametersChange(@NonNull final UUID studyUuid, @NonNull final SpreadsheetParameters spreadsheetParameters) {
-        try {
-            sendStudyUpdateMessage(studyUuid, UPDATE_SPREADSHEET_PARAMETERS, MessageBuilder.withPayload(this.objectMapper.writeValueAsString(spreadsheetParameters)));
-        } catch (final JsonProcessingException err) {
-            LOGGER.error("Unable to notify on spreadsheet parameters change", err);
-        }
+    public void emitSpreadsheetParametersChange(UUID studyUuid) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_SPREADSHEET_PARAMETERS, MessageBuilder.withPayload(""));
     }
 
     @PostCompletion

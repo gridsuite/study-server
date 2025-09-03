@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyException;
@@ -53,9 +52,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.lang.NonNull;
 import org.springframework.util.CollectionUtils;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
@@ -70,7 +67,6 @@ import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
-@Validated
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION)
 @Tag(name = "Study server")
@@ -534,6 +530,7 @@ public class StudyController {
             @Parameter(description = "Should get in upstream built node ?")
             @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @Parameter(description = "Nominal Voltages") @RequestParam(name = "nominalVoltages", required = false) List<Double> nominalVoltages) {
+
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, rootNetworkUuid, substationsIds, infoType, elementType, inUpstreamBuiltParentNode, nominalVoltages));
     }
 
@@ -611,7 +608,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(nodeUuid, rootNetworkUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(studyUuid, nodeUuid, rootNetworkUuid, substationsIds));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}")
@@ -2456,6 +2453,7 @@ public class StudyController {
         @PathVariable("studyUuid") UUID studyUuid,
         @RequestBody DiagramGridLayout diagramGridLayout) {
         studyService.assertIsStudyExist(studyUuid);
+
         return ResponseEntity.ok().body(studyService.saveDiagramGridLayout(studyUuid, diagramGridLayout));
     }
 
@@ -2463,7 +2461,7 @@ public class StudyController {
     @Operation(summary = "Get global parameters of the spreadsheets")
     @ApiResponse(responseCode = "200", description = "Get the parameters")
     @ApiResponse(responseCode = "204", description = "Get the study does not exist")
-    public ResponseEntity<SpreadsheetParameters> getSpreadsheetParameters(@PathVariable("studyUuid") @NonNull final UUID studyUuid) {
+    public ResponseEntity<SpreadsheetParameters> getSpreadsheetParameters(@PathVariable("studyUuid") final UUID studyUuid) {
         return ResponseEntity.of(this.studyService.getSpreadsheetParameters(studyUuid));
     }
 
@@ -2471,8 +2469,8 @@ public class StudyController {
     @Operation(summary = "Update global parameters of the spreadsheets")
     @ApiResponse(responseCode = "204", description = "The parameters are updated")
     @ApiResponse(responseCode = "404", description = "Get the study does not exist")
-    public ResponseEntity<Void> updateSpreadsheetParameters(@PathVariable("studyUuid") @NonNull final UUID studyUuid,
-                                                            @RequestBody @Valid final SpreadsheetParameters spreadsheetParameters) {
+    public ResponseEntity<Void> updateSpreadsheetParameters(@PathVariable("studyUuid") final UUID studyUuid,
+                                                            @RequestBody final SpreadsheetParameters spreadsheetParameters) {
         return (this.studyService.updateSpreadsheetParameters(studyUuid, spreadsheetParameters) ? ResponseEntity.noContent() : ResponseEntity.notFound()).build();
     }
 }

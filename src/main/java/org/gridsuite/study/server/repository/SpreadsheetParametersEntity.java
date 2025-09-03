@@ -22,9 +22,9 @@ public class SpreadsheetParametersEntity {
     @Default
     private boolean spreadsheetLoadLineOperationalLimitGroup = false;
 
-    @Column(name = "sp_load_t2w_olg", nullable = false, columnDefinition = "boolean default false")
+    @Column(name = "sp_load_twt_olg", nullable = false, columnDefinition = "boolean default false")
     @Default
-    private boolean spreadsheetLoadT2wOperationalLimitGroup = false;
+    private boolean spreadsheetLoadTwtOperationalLimitGroup = false;
 
     @Column(name = "sp_load_generator_rt", nullable = false, columnDefinition = "boolean default false")
     @Default
@@ -34,7 +34,7 @@ public class SpreadsheetParametersEntity {
         return new SpreadsheetParameters(
             new BranchSpreadsheetParameters(this.spreadsheetLoadBranchOperationalLimitGroup),
             new BranchSpreadsheetParameters(this.spreadsheetLoadLineOperationalLimitGroup),
-            new BranchSpreadsheetParameters(this.spreadsheetLoadT2wOperationalLimitGroup),
+            new BranchSpreadsheetParameters(this.spreadsheetLoadTwtOperationalLimitGroup),
             new GeneratorSpreadsheetParameters(this.spreadsheetLoadGeneratorRegulatingTerminal)
         );
     }
@@ -58,11 +58,11 @@ public class SpreadsheetParametersEntity {
                 this.spreadsheetLoadLineOperationalLimitGroup = lineParams.getOperationalLimitsGroups();
             }
         }
-        final BranchSpreadsheetParameters t2wParams = dto.getT2w();
-        if (t2wParams != null) {
-            if (t2wParams.getOperationalLimitsGroups() != null && this.spreadsheetLoadT2wOperationalLimitGroup != t2wParams.getOperationalLimitsGroups()) {
+        final BranchSpreadsheetParameters twtParams = dto.getTwt();
+        if (twtParams != null) {
+            if (twtParams.getOperationalLimitsGroups() != null && this.spreadsheetLoadTwtOperationalLimitGroup != twtParams.getOperationalLimitsGroups()) {
                 modified = true;
-                this.spreadsheetLoadT2wOperationalLimitGroup = t2wParams.getOperationalLimitsGroups();
+                this.spreadsheetLoadTwtOperationalLimitGroup = twtParams.getOperationalLimitsGroups();
             }
         }
         final GeneratorSpreadsheetParameters generatorParams = dto.getGenerator();

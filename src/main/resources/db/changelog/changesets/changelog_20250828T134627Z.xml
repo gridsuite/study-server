@@ -20,7 +20,7 @@
             </column>
         </addColumn>
         <addColumn tableName="study">
-            <column name="sp_load_t2w_olg" type="boolean" defaultValueBoolean="false" remarks="SpreadSheet branch t2w exclude OperationalLimitGroups data">
+            <column name="sp_load_twt_olg" type="boolean" defaultValueBoolean="false" remarks="SpreadSheet branch t2w exclude OperationalLimitGroups data">
                 <constraints nullable="false"/>
             </column>
         </addColumn>

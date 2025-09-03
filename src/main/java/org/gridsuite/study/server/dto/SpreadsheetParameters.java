@@ -28,7 +28,7 @@ public class SpreadsheetParameters {
 
     @JsonProperty("TWO_WINDINGS_TRANSFORMER")
     @JsonInclude(Include.NON_EMPTY)
-    private BranchSpreadsheetParameters t2w;
+    private BranchSpreadsheetParameters twt;
 
     @JsonProperty("GENERATOR")
     @JsonInclude(Include.NON_EMPTY)
