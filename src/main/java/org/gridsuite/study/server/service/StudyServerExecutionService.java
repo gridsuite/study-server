@@ -43,7 +43,7 @@ public class StudyServerExecutionService {
     }
 
     private void logAsyncError(Throwable e) {
-        if (e != null) {
+        if (LOGGER.isErrorEnabled() && e != null) {
             LOGGER.error(e.toString(), e);
         }
     }
