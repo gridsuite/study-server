@@ -36,6 +36,7 @@ public final class StudyConstants {
     public static final String DYNAMIC_MAPPING_API_VERSION = ""; // mapping server is now without version, must be v1 in the next time
     public static final String FILTER_API_VERSION = "v1";
     public static final String STATE_ESTIMATION_API_VERSION = "v1";
+    public static final String DIRECTORY_API_VERSION = "v1";
 
     public static final String NETWORK_UUID = "networkUuid";
     public static final String CASE_UUID = "caseUuid";
