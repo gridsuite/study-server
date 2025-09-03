@@ -10,6 +10,7 @@ import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
+import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -376,6 +377,19 @@ public class StudyConfigService {
         }
     }
 
+    public void updateSpreadsheetConfig(UUID configUuid, String spreadsheetConfigInfos) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI);
+        String path = uriBuilder.buildAndExpand(configUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(spreadsheetConfigInfos, headers);
+        try {
+            restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_SPREADSHEET_CONFIG_FAILED);
+        }
+    }
+
     public void setGlobalFilters(UUID configUuid, String globalFilters) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/global-filters");
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();
@@ -463,4 +477,32 @@ public class StudyConfigService {
             throw e;
         }
     }
+
+    public UUID createGridLayoutFromNadDiagram(UUID sourceNadConfigUuid, UUID clonedNadConfigUuid) {
+        if (sourceNadConfigUuid == null) {
+            return null;
+        }
+        DiagramGridLayout diagramGridLayout = DiagramGridLayout.builder()
+            .diagramLayouts(List.of(NetworkAreaDiagramLayout.builder()
+                .originalNadConfigUuid(sourceNadConfigUuid)
+                .currentNadConfigUuid(clonedNadConfigUuid)
+                .build()))
+            .build();
+
+        var path = UriComponentsBuilder
+            .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_URI)
+            .buildAndExpand()
+            .toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<DiagramGridLayout> httpEntity = new HttpEntity<>(diagramGridLayout, headers);
+        UUID uuid;
+        try {
+            uuid = restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_SPREADSHEET_CONFIG_COLLECTION_FAILED);
+        }
+        return uuid;
+    }
+
 }
