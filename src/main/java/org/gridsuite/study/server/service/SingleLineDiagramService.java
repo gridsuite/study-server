@@ -14,6 +14,7 @@ package org.gridsuite.study.server.service;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.DiagramParameters;
+import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
 import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -27,11 +28,12 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.BAD_PARAMETER;
-import static org.gridsuite.study.server.StudyException.Type.SVG_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
 public class SingleLineDiagramService {
@@ -63,21 +65,21 @@ public class SingleLineDiagramService {
 
     public List<String> getAvailableSvgComponentLibraries() {
         String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-component-libraries").toUriString();
+            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg-component-libraries").toUriString();
 
         return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.GET, null,
-                new ParameterizedTypeReference<List<String>>() {
-                }).getBody();
+            new ParameterizedTypeReference<List<String>>() {
+            }).getBody();
     }
 
     public byte[] getVoltageLevelSvg(UUID networkUuid, String variantId, String voltageLevelId, DiagramParameters diagramParameters) {
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
-                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
-                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
-                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
-                .queryParam(LANGUAGE, diagramParameters.getLanguage());
+            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
+            .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
+            .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
+            .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
+            .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
+            .queryParam(LANGUAGE, diagramParameters.getLanguage());
         addParameters(diagramParameters, uriComponentsBuilder, variantId);
 
         var path = uriComponentsBuilder
@@ -99,14 +101,14 @@ public class SingleLineDiagramService {
 
     public String getVoltageLevelSvgAndMetadata(UUID networkUuid, String variantId, String voltageLevelId, DiagramParameters diagramParameters) {
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION
-                        + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
-                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
-                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
-                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
-                .queryParam(QUERY_PARAM_DISPLAY_MODE, diagramParameters.getSldDisplayMode())
-                .queryParam(LANGUAGE, diagramParameters.getLanguage());
+            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION
+                + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
+            .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
+            .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
+            .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
+            .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
+            .queryParam(QUERY_PARAM_DISPLAY_MODE, diagramParameters.getSldDisplayMode())
+            .queryParam(LANGUAGE, diagramParameters.getLanguage());
         addParameters(diagramParameters, uriComponentsBuilder, variantId);
 
         String result;
@@ -124,12 +126,12 @@ public class SingleLineDiagramService {
 
     public byte[] getSubstationSvg(UUID networkUuid, String variantId, String substationId, DiagramParameters diagramParameters, String substationLayout) {
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}")
-                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
-                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
-                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
-                .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout);
+            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}")
+            .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
+            .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
+            .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
+            .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
+            .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout);
         addParameters(diagramParameters, uriComponentsBuilder, variantId);
         var path = uriComponentsBuilder.buildAndExpand(networkUuid, substationId).toUriString();
 
@@ -148,13 +150,13 @@ public class SingleLineDiagramService {
 
     public String getSubstationSvgAndMetadata(UUID networkUuid, String variantId, String substationId, DiagramParameters diagramParameters, String substationLayout) {
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}")
-                .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
-                .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
-                .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
-                .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
-                .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout)
-                .queryParam(LANGUAGE, diagramParameters.getLanguage());
+            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}")
+            .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
+            .queryParam(QUERY_PARAM_CENTER_LABEL, diagramParameters.isLabelCentered())
+            .queryParam(QUERY_PARAM_DIAGONAL_LABEL, diagramParameters.isDiagonalLabel())
+            .queryParam(QUERY_PARAM_TOPOLOGICAL_COLORING, diagramParameters.isTopologicalColoring())
+            .queryParam(QUERY_PARAM_SUBSTATION_LAYOUT, substationLayout)
+            .queryParam(LANGUAGE, diagramParameters.getLanguage());
         addParameters(diagramParameters, uriComponentsBuilder, variantId);
 
         String result;
@@ -172,13 +174,13 @@ public class SingleLineDiagramService {
 
     public String getNetworkAreaDiagram(UUID networkUuid, String variantId, String nadRequestInfos) {
         var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
-                "/network-area-diagram/{networkUuid}");
+            "/network-area-diagram/{networkUuid}");
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         var path = uriComponentsBuilder
-                .buildAndExpand(networkUuid)
-                .toUriString();
+            .buildAndExpand(networkUuid)
+            .toUriString();
 
         var headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -199,9 +201,9 @@ public class SingleLineDiagramService {
 
     public void createMultipleDiagramConfigs(List<NadConfigInfos> nadConfigs) {
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
-                .buildAndExpand()
-                .toUriString();
+            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
+            .buildAndExpand()
+            .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -213,9 +215,9 @@ public class SingleLineDiagramService {
 
     public void deleteMultipleDiagramConfigs(List<UUID> configUuids) {
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
-                .buildAndExpand()
-                .toUriString();
+            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
+            .buildAndExpand()
+            .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -238,10 +240,30 @@ public class SingleLineDiagramService {
         }
     }
 
+    public UUID duplicateNadConfig(UUID sourceNadConfigUuid) {
+        Objects.requireNonNull(sourceNadConfigUuid);
+
+        var path = UriComponentsBuilder
+            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/config")
+            .queryParam("duplicateFrom", sourceNadConfigUuid)
+            .buildAndExpand()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<NetworkAreaDiagramLayoutDetails> httpEntity = new HttpEntity<>(headers);
+
+        try {
+            return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, UUID.class);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED);
+        }
+    }
+
     public void createNadPositionsConfigFromCsv(MultipartFile file) {
         var path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
                 "/network-area-diagram/config/positions").buildAndExpand()
-                .toUriString();
+            .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);

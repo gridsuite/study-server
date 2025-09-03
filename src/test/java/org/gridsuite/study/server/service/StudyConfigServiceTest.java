@@ -1,64 +1,74 @@
 package org.gridsuite.study.server.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.WireMockServer;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
 import java.util.UUID;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.STUDY_CONFIG_API_VERSION;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class StudyConfigServiceTest {
 
-    private WireMockServer wireMockServer;
-    private StudyConfigService studyConfigService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Test
+    void createGridLayoutFromNadDiagram() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        RemoteServicesProperties properties = mock(RemoteServicesProperties.class);
+        when(properties.getServiceUri("study-config-server")).thenReturn("http://study-config");
+        StudyConfigService service = new StudyConfigService(properties, restTemplate);
 
-    @BeforeEach
-    void setUp() {
-        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
-        wireMockServer.start();
-        RestTemplate restTemplate = new RestTemplate();
-        studyConfigService = new StudyConfigService(new RemoteServicesProperties(), restTemplate);
-        studyConfigService.setStudyConfigServerBaseUri(wireMockServer.baseUrl() + "/");
-    }
+        UUID src = UUID.randomUUID();
+        UUID clone = UUID.randomUUID();
+        UUID expected = UUID.randomUUID();
 
-    @AfterEach
-    void tearDown() {
-        wireMockServer.stop();
+        ArgumentCaptor<HttpEntity<DiagramGridLayout>> captor = ArgumentCaptor.forClass(HttpEntity.class);
+        when(restTemplate.exchange(eq("http://study-config/v1/diagram-grid-layout"),
+                eq(HttpMethod.POST), captor.capture(), eq(UUID.class)))
+            .thenReturn(ResponseEntity.ok(expected));
+
+        assertEquals(expected, service.createGridLayoutFromNadDiagram(src, clone, "N"));
+
+        DiagramGridLayout body = captor.getValue().getBody();
+        NetworkAreaDiagramLayout layout = (NetworkAreaDiagramLayout) body.getDiagramLayouts().get(0);
+        assertEquals(src, layout.getOriginalNadConfigUuid());
+        assertEquals(clone, layout.getCurrentNadConfigUuid());
     }
 
     @Test
-    void testCreateDiagramGridLayoutFromNadConfig() throws JsonProcessingException {
-        UUID diagramConfigId = UUID.randomUUID();
-        UUID expectedUuid = UUID.randomUUID();
-        DiagramGridLayout requestBody = DiagramGridLayout.builder()
-            .diagramLayouts(List.of(NetworkAreaDiagramLayout.builder()
-                .originalNadConfigUuid(diagramConfigId)
-                .currentNadConfigUuid(diagramConfigId)
-                .build()))
-            .build();
+    void createGridLayoutFromNadDiagramNullSource() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        RemoteServicesProperties properties = mock(RemoteServicesProperties.class);
+        when(properties.getServiceUri("study-config-server")).thenReturn("http://study-config");
+        StudyConfigService service = new StudyConfigService(properties, restTemplate);
 
-        wireMockServer.stubFor(post(urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout"))
-            .withRequestBody(equalToJson(objectMapper.writeValueAsString(requestBody)))
-            .willReturn(okJson(objectMapper.writeValueAsString(expectedUuid))));
+        assertNull(service.createGridLayoutFromNadDiagram(null, UUID.randomUUID(), "N"));
+        verifyNoInteractions(restTemplate);
+    }
 
-        UUID result = studyConfigService.createGridLayoutFromNadDiagram(diagramConfigId);
+    @Test
+    void createGridLayoutFromNadDiagramRestError() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        RemoteServicesProperties properties = mock(RemoteServicesProperties.class);
+        when(properties.getServiceUri("study-config-server")).thenReturn("http://study-config");
+        StudyConfigService service = new StudyConfigService(properties, restTemplate);
 
-        assertEquals(expectedUuid, result);
-        wireMockServer.verify(postRequestedFor(urlPathEqualTo(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout"))
-            .withRequestBody(equalToJson(objectMapper.writeValueAsString(requestBody))));
+        UUID src = UUID.randomUUID();
+        UUID clone = UUID.randomUUID();
+
+        when(restTemplate.exchange(eq("http://study-config/v1/diagram-grid-layout"),
+                eq(HttpMethod.POST), any(HttpEntity.class), eq(UUID.class)))
+            .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        assertThrows(StudyException.class, () -> service.createGridLayoutFromNadDiagram(src, clone, "N"));
     }
 }
