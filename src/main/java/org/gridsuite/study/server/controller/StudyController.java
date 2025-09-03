@@ -216,10 +216,10 @@ public class StudyController {
     }
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/studies/{studyUuid}/root-networks", params = {"name"})
-    @Operation(summary = "Check if an element with this name and this type already exists in the given directory")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
-        @ApiResponse(responseCode = "204", description = "The element doesn't exist")})
-    public ResponseEntity<Void> elementExists(@PathVariable("studyUuid") UUID studyUuid,
+    @Operation(summary = "Check if a root network already exists")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The root network exists"),
+        @ApiResponse(responseCode = "204", description = "The root network doesn't exist")})
+    public ResponseEntity<Void> rootNetworkExists(@PathVariable("studyUuid") UUID studyUuid,
                                               @RequestParam("name") String rootNetworkName) {
         HttpStatus status = rootNetworkService.isRootNetworkNameExistsInStudy(studyUuid, rootNetworkName) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
