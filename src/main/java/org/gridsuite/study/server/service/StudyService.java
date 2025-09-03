@@ -57,6 +57,7 @@ import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurit
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.utils.ElementType;
 import org.gridsuite.study.server.utils.PropertyUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -906,16 +907,21 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         Map<String, Map<String, String>> additionalParameters = new HashMap<>();
-        Stream.of("LINE", "TIE_LINE", "TWO_WINDINGS_TRANSFORMER").forEach(type -> additionalParameters.put(
-            type,
-            new HashMap<>(Map.of(InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR, String.valueOf(loadFlowParameters.getDcPowerFactor())))));
-        additionalParameters.get("LINE").put(
+        Stream.of(
+            String.valueOf(ElementType.LINE),
+            String.valueOf(ElementType.TIE_LINE),
+            String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER)
+            ).forEach(type -> additionalParameters.put(
+                type,
+                new HashMap<>(Map.of(InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR, String.valueOf(loadFlowParameters.getDcPowerFactor())))
+            ));
+        additionalParameters.get(String.valueOf(ElementType.LINE)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
-        additionalParameters.get("TWO_WINDINGS_TRANSFORMER").put(
+        additionalParameters.get(String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadTwtOperationalLimitGroup()));
-        additionalParameters.put("GENERATOR",
+        additionalParameters.put(String.valueOf(ElementType.GENERATOR),
             Map.of(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal())));

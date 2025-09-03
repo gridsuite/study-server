@@ -8,7 +8,6 @@ package org.gridsuite.study.server.repository;
 
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.Builder.Default;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -122,8 +121,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "study_voltage_init_parameters_id",
-                foreignKey = @ForeignKey(
-                        name = "study_voltage_init_parameters_id_fk"))
+        foreignKey = @ForeignKey(
+            name = "study_voltage_init_parameters_id_fk"
+        ))
     private StudyVoltageInitParametersEntity voltageInitParameters;
 
     @ElementCollection
@@ -136,7 +136,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private boolean monoRoot;
 
     @Embedded
-    @Default
+    @Builder.Default
     private SpreadsheetParametersEntity spreadsheetParameters = new SpreadsheetParametersEntity();
 
     public RootNetworkEntity getFirstRootNetwork() {
