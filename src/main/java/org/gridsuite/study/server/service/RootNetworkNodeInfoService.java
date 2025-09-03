@@ -657,15 +657,11 @@ public class RootNetworkNodeInfoService {
 
     @Transactional(readOnly = true)
     public String getLoadFlowModifications(UUID nodeUuid, UUID rootNetworkUuid) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(()
-            -> new StudyException(ROOT_NETWORK_NOT_FOUND));
-        String variantId = rootNetworkNodeInfoEntity.getVariantId();
-        UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         if (resultUuid == null) {
             throw new StudyException(LOADFLOW_NOT_FOUND);
         }
-        return loadFlowService.getLoadFlowModifications(resultUuid, networkUuid, variantId);
+        return loadFlowService.getLoadFlowModifications(resultUuid);
     }
 
     @Transactional(readOnly = true)

@@ -143,12 +143,10 @@ public class LoadFlowService extends AbstractComputationService {
         return result;
     }
 
-    public String getLoadFlowModifications(UUID resultUuid, UUID networkUuid, String variantId) {
+    public String getLoadFlowModifications(UUID resultUuid) {
         String result;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/modifications");
-        uriComponentsBuilder.queryParam(QUERY_PARAM_NETWORK_UUID, networkUuid.toString());
-        uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
 
         try {

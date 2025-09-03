@@ -275,9 +275,9 @@ class LoadFlowTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), COMPUTING_STATUS_JSON);
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation")) {
                     return new MockResponse(404);
-                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/modifications\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID)) {
+                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/modifications")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "loadflow modifications mock");
-                } else if (path.matches("/v1/results/" + LOADFLOW_ERROR_RESULT_UUID + "/modifications\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID)) {
+                } else if (path.matches("/v1/results/" + LOADFLOW_ERROR_RESULT_UUID + "/modifications")) {
                     return new MockResponse(404);
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)) {
                     return new MockResponse(200);
@@ -978,7 +978,7 @@ class LoadFlowTest {
 
         assertEquals(LOADFLOW_MODIFICATIONS, mvcResult.getResponse().getContentAsString());
 
-        assertRequestsDone(server, List.of("/v1/results/" + LOADFLOW_RESULT_UUID + "/modifications\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID));
+        assertRequestsDone(server, List.of("/v1/results/" + LOADFLOW_RESULT_UUID + "/modifications"));
     }
 
     @Test
@@ -996,7 +996,7 @@ class LoadFlowTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/modifications", studyUuid, rootNetworkUuid, node1.getId()))
             .andExpect(status().isNotFound());
 
-        assertRequestsDone(server, List.of("/v1/results/" + LOADFLOW_ERROR_RESULT_UUID + "/modifications\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID));
+        assertRequestsDone(server, List.of("/v1/results/" + LOADFLOW_ERROR_RESULT_UUID + "/modifications"));
     }
 
     private void updateNodeBuildStatus(UUID nodeId, UUID rootNetworkUuid, BuildStatus buildStatus) {
