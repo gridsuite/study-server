@@ -611,7 +611,7 @@ public class RootNetworkNodeInfoService {
                 resultParameters.getNodeUuid(),
                 rootNetworkNodeInfoEntity == null ? null : rootNetworkNodeInfoEntity.getVariantId(),
                 rootNetworkNodeInfoEntity == null ? resultParameters.getRootNetworkUuid() : rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid(),
-                getComputationResultUuid(resultParameters.getNodeUuid(), resultParameters.getRootNetworkUuid(), (type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS)));
+                getComputationResultUuid(resultParameters.getNodeUuid(), resultParameters.getRootNetworkUuid(), type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS));
         return shortCircuitService.getShortCircuitAnalysisResult(resultParametersEnriched, mode, type, filters, globalFilters, paged, pageable);
     }
 
