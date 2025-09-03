@@ -815,8 +815,15 @@ public class StudyService {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
+        final boolean fullObject = !"tab".equalsIgnoreCase(infoType) || switch (elementType.toLowerCase()) {
+            case "branch" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBranchOperationalLimitGroup();
+            case "line" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup();
+            case "two_windings_transformer" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoad2wtOperationalLimitGroup();
+            case "generator" -> studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal();
+            default -> true;
+        };
         return networkMapService.getElementsInfos(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
-                substationsIds, elementType, nominalVoltages, infoType, loadFlowParameters.getDcPowerFactor());
+                substationsIds, elementType, nominalVoltages, infoType, loadFlowParameters.getDcPowerFactor(), studyEntity.getSpreadsheetParameters());
     }
 
     public String getNetworkElementInfos(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String elementType, InfoTypeParameters infoTypeParameters, String elementId, boolean inUpstreamBuiltParentNode) {
@@ -824,7 +831,7 @@ public class StudyService {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         return networkMapService.getElementInfos(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
-                elementType, infoTypeParameters.getInfoType(), loadFlowParameters.getDcPowerFactor(), elementId);
+                elementType, infoTypeParameters.getInfoType(), loadFlowParameters.getDcPowerFactor(), elementId, studyEntity.getSpreadsheetParameters());
     }
 
     public String getNetworkCountries(UUID nodeUuid, UUID rootNetworkUuid, boolean inUpstreamBuiltParentNode) {
@@ -841,7 +848,7 @@ public class StudyService {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         String equipmentPath = "voltage-levels" + StudyConstants.DELIMITER + voltageLevelId + StudyConstants.DELIMITER + "equipments";
         return networkMapService.getEquipmentsMapData(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
-                null, equipmentPath);
+                null, equipmentPath, null);
     }
 
     public String getHvdcLineShuntCompensators(UUID nodeUuid, UUID rootNetworkUuid, boolean inUpstreamBuiltParentNode, String hvdcId) {
@@ -859,8 +866,9 @@ public class StudyService {
     }
 
     public String getAllMapData(UUID nodeUuid, UUID rootNetworkUuid, List<String> substationsIds) {
+        final Optional<SpreadsheetParametersEntity> spreadsheetParametersEntity = studyRepository.findWithRootNetworksById(rootNetworkUuid).map(StudyEntity::getSpreadsheetParameters);
         return networkMapService.getEquipmentsMapData(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid),
-                substationsIds, "all");
+                substationsIds, "all", spreadsheetParametersEntity.orElseGet(SpreadsheetParametersEntity::new));
     }
 
     @Transactional
@@ -3473,5 +3481,24 @@ public class StudyService {
 
     private void removeDiagramGridLayout(@Nullable UUID diagramGridLayoutUuid) {
         diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
+    }
+
+    public Optional<SpreadsheetParameters> getSpreadsheetParameters(@NonNull final UUID studyUuid) {
+        return this.studyRepository.findById(studyUuid).map(StudyEntity::getSpreadsheetParameters).map(SpreadsheetParametersEntity::toDto);
+    }
+
+    /**
+     * @return {@code true} if studyUuid exist, {@code false} otherwise
+     */
+    @Transactional
+    public boolean updateSpreadsheetParameters(@NonNull final UUID studyUuid, @NonNull final SpreadsheetParameters spreadsheetParameters) {
+        final Optional<StudyEntity> studyEntity = this.studyRepository.findById(studyUuid);
+        studyEntity.map(StudyEntity::getSpreadsheetParameters).ifPresent(entity -> {
+            if (entity.update(spreadsheetParameters)) {
+                this.studyRepository.save(studyEntity.get());
+                this.notificationService.emitSpreadsheetParametersChange(studyUuid, spreadsheetParameters);
+            }
+        });
+        return studyEntity.isPresent();
     }
 }
