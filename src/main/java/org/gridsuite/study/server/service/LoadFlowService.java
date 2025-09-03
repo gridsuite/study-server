@@ -139,6 +139,23 @@ public class LoadFlowService extends AbstractComputationService {
         return result;
     }
 
+    public String getLoadFlowModifications(UUID resultUuid) {
+        String result;
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/modifications");
+        String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
+
+        try {
+            result = restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(LOADFLOW_NOT_FOUND);
+            }
+            throw e;
+        }
+        return result;
+    }
+
     public LoadFlowStatus getLoadFlowStatus(UUID resultUuid) {
         LoadFlowStatus result;
 

@@ -34,6 +34,7 @@ public class RestResponseEntityExceptionHandler {
                     STUDY_NOT_FOUND,
                     NODE_NOT_FOUND,
                     ROOT_NETWORK_NOT_FOUND,
+                    LOADFLOW_NOT_FOUND,
                     SECURITY_ANALYSIS_NOT_FOUND,
                     SENSITIVITY_ANALYSIS_NOT_FOUND,
                     SHORT_CIRCUIT_ANALYSIS_NOT_FOUND,
@@ -80,7 +81,8 @@ public class RestResponseEntityExceptionHandler {
                     BAD_MODIFICATION_TYPE,
                     BAD_JSON_FORMAT,
                     TIME_SERIES_BAD_TYPE,
-                    TIMELINE_BAD_TYPE
+                    TIMELINE_BAD_TYPE,
+                    BAD_PARAMETER
                     -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getMessage());
             case NETWORK_NOT_FOUND,
                     NETWORK_INDEXATION_FAILED,

@@ -23,10 +23,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.STUDY_CONFIG_API_VERSION;
