@@ -5,10 +5,6 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet author="chuinetri" id="1756388806407-1">
-        <addDefaultValue tableName="study" columnName="mono_root" columnDataType="boolean" defaultValueBoolean="true"/>
-        <addNotNullConstraint tableName="study" columnName="mono_root" columnDataType="boolean" validate="true" defaultNullValue="true"/>
-    </changeSet>
-    <changeSet author="chuinetri" id="1756388806407-2">
         <addColumn tableName="study">
             <column name="sp_load_branch_olg" type="boolean" defaultValueBoolean="false" remarks="SpreadSheet branch type exclude OperationalLimitGroups data">
                 <constraints nullable="false"/>
