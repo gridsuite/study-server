@@ -908,6 +908,7 @@ public class StudyService {
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
         Map<String, Map<String, String>> additionalParameters = new HashMap<>();
         Stream.of(
+            String.valueOf(ElementType.BRANCH),
             String.valueOf(ElementType.LINE),
             String.valueOf(ElementType.TIE_LINE),
             String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER)
@@ -915,6 +916,9 @@ public class StudyService {
                 type,
                 new HashMap<>(Map.of(InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR, String.valueOf(loadFlowParameters.getDcPowerFactor())))
             ));
+        additionalParameters.get(String.valueOf(ElementType.BRANCH)).put(
+            InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
+            String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBranchOperationalLimitGroup()));
         additionalParameters.get(String.valueOf(ElementType.LINE)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
