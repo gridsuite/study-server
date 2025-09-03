@@ -36,7 +36,7 @@ class StudyConfigServiceTest {
                 eq(HttpMethod.POST), captor.capture(), eq(UUID.class)))
             .thenReturn(ResponseEntity.ok(expected));
 
-        assertEquals(expected, service.createGridLayoutFromNadDiagram(src, clone));
+        assertEquals(expected, service.createGridLayoutFromNadDiagram(src, clone, "N"));
 
         DiagramGridLayout body = captor.getValue().getBody();
         NetworkAreaDiagramLayout layout = (NetworkAreaDiagramLayout) body.getDiagramLayouts().get(0);
@@ -51,7 +51,7 @@ class StudyConfigServiceTest {
         when(properties.getServiceUri("study-config-server")).thenReturn("http://study-config");
         StudyConfigService service = new StudyConfigService(properties, restTemplate);
 
-        assertNull(service.createGridLayoutFromNadDiagram(null, UUID.randomUUID()));
+        assertNull(service.createGridLayoutFromNadDiagram(null, UUID.randomUUID(), "N"));
         verifyNoInteractions(restTemplate);
     }
 
@@ -69,6 +69,6 @@ class StudyConfigServiceTest {
                 eq(HttpMethod.POST), any(HttpEntity.class), eq(UUID.class)))
             .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
 
-        assertThrows(StudyException.class, () -> service.createGridLayoutFromNadDiagram(src, clone));
+        assertThrows(StudyException.class, () -> service.createGridLayoutFromNadDiagram(src, clone, "N"));
     }
 }

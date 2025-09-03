@@ -68,6 +68,7 @@ public class ConsumerService {
     private final UserAdminService userAdminService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyConfigService studyConfigService;
+    private final DirectoryService directoryService;
     private final ShortCircuitService shortCircuitService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
@@ -87,6 +88,7 @@ public class ConsumerService {
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
                            StudyConfigService studyConfigService,
+                           DirectoryService directoryService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
@@ -102,6 +104,7 @@ public class ConsumerService {
         this.networkModificationTreeService = networkModificationTreeService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.studyConfigService = studyConfigService;
+        this.directoryService = directoryService;
         this.shortCircuitService = shortCircuitService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;
@@ -308,12 +311,14 @@ public class ConsumerService {
 
     private UUID createGridLayoutFromNadDiagram(String userId, UserProfileInfos userProfileInfos) {
         if (userProfileInfos != null && userProfileInfos.getDiagramConfigId() != null) {
+            UUID sourceNadConfig = userProfileInfos.getDiagramConfigId();
             try {
-                UUID clonedNadConfig = singleLineDiagramService.duplicateNadConfig(userProfileInfos.getDiagramConfigId());
-                return studyConfigService.createGridLayoutFromNadDiagram(userProfileInfos.getDiagramConfigId(), clonedNadConfig);
+                UUID clonedNadConfig = singleLineDiagramService.duplicateNadConfig(sourceNadConfig);
+                String nadConfigName = directoryService.getElementName(sourceNadConfig);
+                return studyConfigService.createGridLayoutFromNadDiagram(sourceNadConfig, clonedNadConfig, nadConfigName);
             } catch (Exception e) {
-                LOGGER.error(String.format("Could not create a diagram grid layout with NAD elment id '%s' from user/profile '%s/%s'. No layout created",
-                    userProfileInfos.getDiagramConfigId(), userId, userProfileInfos.getName()), e);
+                LOGGER.error(String.format("Could not create a diagram grid layout cloning NAD elment id '%s' from user/profile '%s/%s'. No layout created",
+                    sourceNadConfig, userId, userProfileInfos.getName()), e);
             }
         }
         return null;
