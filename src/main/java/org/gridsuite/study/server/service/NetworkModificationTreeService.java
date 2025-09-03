@@ -271,12 +271,10 @@ public class NetworkModificationTreeService {
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
-    public List<UUID> doDeleteNode(UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
-        List<UUID> removedNodes = new ArrayList<>();
+    public void doDeleteNode(UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
         UUID studyId = self.getStudyUuidForNodeId(nodeId);
-        deleteNodes(nodeId, deleteChildren, false, removedNodes, deleteNodeInfos);
-        notificationService.emitNodesDeleted(studyId, removedNodes, deleteChildren);
-        return removedNodes;
+        deleteNodes(nodeId, deleteChildren, false, deleteNodeInfos);
+        notificationService.emitNodesDeleted(studyId, deleteNodeInfos.getRemovedNodeUuids(), deleteChildren);
     }
 
     @Transactional
@@ -314,7 +312,7 @@ public class NetworkModificationTreeService {
         });
     }
 
-    private void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, List<UUID> removedNodes, DeleteNodeInfos deleteNodeInfos) {
+    private void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, DeleteNodeInfos deleteNodeInfos) {
         Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
         optNodeToDelete.ifPresent(nodeToDelete -> {
             /* root cannot be deleted by accident */
@@ -332,9 +330,9 @@ public class NetworkModificationTreeService {
                 getChildren(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
             } else {
                 getChildren(id)
-                    .forEach(child -> deleteNodes(child.getIdNode(), true, false, removedNodes, deleteNodeInfos));
+                    .forEach(child -> deleteNodes(child.getIdNode(), true, false, deleteNodeInfos));
             }
-            removedNodes.add(id);
+            deleteNodeInfos.addRemovedNodeUuid(id);
             if (nodeToDelete.getType() == NodeType.ROOT) {
                 rootNodeInfoRepository.deleteById(id);
             } else {

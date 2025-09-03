@@ -9,6 +9,8 @@ package org.gridsuite.study.server.service;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
@@ -17,6 +19,8 @@ import java.util.concurrent.Executors;
 
 @Service
 public class StudyServerExecutionService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyServerExecutionService.class);
 
     private ExecutorService executorService;
 
@@ -32,5 +36,15 @@ public class StudyServerExecutionService {
 
     public CompletableFuture<Void> runAsync(Runnable runnable) {
         return CompletableFuture.runAsync(runnable, executorService);
+    }
+
+    public CompletableFuture<Void> runAsyncAndComplete(Runnable runnable) {
+        return CompletableFuture.runAsync(runnable, executorService).whenCompleteAsync((r, t) -> logAsyncError(t));
+    }
+
+    private void logAsyncError(Throwable e) {
+        if (e != null) {
+            LOGGER.error(e.toString(), e);
+        }
     }
 }
