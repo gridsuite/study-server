@@ -830,7 +830,7 @@ public class StudyService {
             elementType,
             nominalVoltages,
             infoType,
-            getAdditionalParameters(elementType, studyEntity, loadFlowParameters));
+            getOptionalParameters(elementType, studyEntity, loadFlowParameters));
     }
 
     public String getNetworkElementInfos(UUID studyUuid,
@@ -848,11 +848,11 @@ public class StudyService {
             networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
             elementType,
             infoTypeParameters.getInfoType(),
-            getAdditionalParameters(elementType, studyEntity, loadFlowParameters),
+            getOptionalParameters(elementType, studyEntity, loadFlowParameters),
             elementId);
     }
 
-    private static Map<String, String> getAdditionalParameters(String elementType, StudyEntity studyEntity, LoadFlowParameters loadFlowParameters) {
+    private static Map<String, String> getOptionalParameters(String elementType, StudyEntity studyEntity, LoadFlowParameters loadFlowParameters) {
         Map<String, String> additionalParameters = new HashMap<>();
         additionalParameters.put(InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR, String.valueOf(loadFlowParameters.getDcPowerFactor()));
         switch (elementType.toLowerCase()) {
@@ -906,26 +906,26 @@ public class StudyService {
     public String getAllMapData(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, List<String> substationsIds) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
-        Map<String, Map<String, String>> additionalParameters = new HashMap<>();
+        Map<String, Map<String, String>> optionalParameters = new HashMap<>();
         Stream.of(
             String.valueOf(ElementType.BRANCH),
             String.valueOf(ElementType.LINE),
             String.valueOf(ElementType.TIE_LINE),
             String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER)
-            ).forEach(type -> additionalParameters.put(
+            ).forEach(type -> optionalParameters.put(
                 type,
                 new HashMap<>(Map.of(InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR, String.valueOf(loadFlowParameters.getDcPowerFactor())))
             ));
-        additionalParameters.get(String.valueOf(ElementType.BRANCH)).put(
+        optionalParameters.get(String.valueOf(ElementType.BRANCH)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBranchOperationalLimitGroup()));
-        additionalParameters.get(String.valueOf(ElementType.LINE)).put(
+        optionalParameters.get(String.valueOf(ElementType.LINE)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadLineOperationalLimitGroup()));
-        additionalParameters.get(String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER)).put(
+        optionalParameters.get(String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER)).put(
             InfoTypeParameters.QUERY_PARAM_LOAD_OPERATIONAL_LIMIT_GROUPS,
             String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadTwtOperationalLimitGroup()));
-        additionalParameters.put(String.valueOf(ElementType.GENERATOR),
+        optionalParameters.put(String.valueOf(ElementType.GENERATOR),
             Map.of(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal())));
@@ -933,7 +933,7 @@ public class StudyService {
             rootNetworkService.getNetworkUuid(rootNetworkUuid),
             networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid),
             substationsIds,
-            additionalParameters);
+            optionalParameters);
     }
 
     @Transactional

@@ -51,7 +51,7 @@ public class NetworkMapService {
                                    String elementType,
                                    List<Double> nominalVoltages,
                                    String infoType,
-                                   Map<String, String> additionalParameters) {
+                                   Map<String, String> optionalParameters) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
@@ -63,7 +63,7 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltages);
         }
         queryParamInfoTypeParameters(InfoTypeParameters.builder()
-                .optionalParameters(additionalParameters)
+                .optionalParameters(optionalParameters)
                 .build(), builder);
         String url = builder.buildAndExpand(networkUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();
@@ -76,7 +76,7 @@ public class NetworkMapService {
                                   String variantId,
                                   String elementType,
                                   String infoType,
-                                  Map<String, String> additionalParameters,
+                                  Map<String, String> optionalParameters,
                                   String elementId) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements/{elementId}";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
@@ -86,7 +86,7 @@ public class NetworkMapService {
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType)
             .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
         queryParamInfoTypeParameters(InfoTypeParameters.builder()
-            .optionalParameters(additionalParameters)
+            .optionalParameters(optionalParameters)
             .build(), builder);
 
         try {
@@ -105,7 +105,7 @@ public class NetworkMapService {
     public String getAllElementsInfos(UUID networkUuid,
                                       String variantId,
                                       List<String> substationsIds,
-                                      Map<String, Map<String, String>> additionalParameters) {
+                                      Map<String, Map<String, String>> optionalParameters) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/all";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
@@ -117,7 +117,7 @@ public class NetworkMapService {
         }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<?> httpEntity = new HttpEntity<>(additionalParameters, headers);
+        HttpEntity<?> httpEntity = new HttpEntity<>(optionalParameters, headers);
         return restTemplate.postForObject(networkMapServerBaseUri + builder.buildAndExpand(networkUuid).toUriString(), httpEntity, String.class);
     }
 
