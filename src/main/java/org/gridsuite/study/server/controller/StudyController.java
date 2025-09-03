@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.StudyConstants.*;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
@@ -56,6 +55,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
@@ -2094,6 +2094,14 @@ public class StudyController {
             @RequestBody(required = false) String networkVisualizationParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setNetworkVisualizationParametersValues(studyUuid, networkVisualizationParametersValues, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/network-visualizations/nad-positions-config", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "create a nad positions configuration using data from a csv")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The nad positions configuration created")})
+    public ResponseEntity<Void> createNadPositionsConfigFromCsv(@RequestParam("file") MultipartFile file) {
+        studyService.createNadPositionsConfigFromCsv(file);
         return ResponseEntity.ok().build();
     }
 

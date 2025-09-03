@@ -89,7 +89,6 @@ public final class StudyConstants {
     public static final String PATH_PARAM_PARAMETERS = "parameters";
     public static final String DYNA_FLOW_PROVIDER = "DynaFlow";
 
-
     public enum SldDisplayMode {
         FEEDER_POSITION,
         STATE_VARIABLE
