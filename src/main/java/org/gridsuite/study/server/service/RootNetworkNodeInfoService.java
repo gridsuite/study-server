@@ -662,6 +662,15 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
+    public String getLoadFlowModifications(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
+        if (resultUuid == null) {
+            throw new StudyException(LOADFLOW_NOT_FOUND);
+        }
+        return loadFlowService.getLoadFlowModifications(resultUuid);
+    }
+
+    @Transactional(readOnly = true)
     public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
         return securityAnalysisService.getSecurityAnalysisStatus(resultUuid);
