@@ -11,14 +11,6 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
-
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.DiagramParameters;
@@ -28,9 +20,20 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
+import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
 public class SingleLineDiagramService {
@@ -188,24 +191,12 @@ public class SingleLineDiagramService {
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + NOT_FOUND);
+            } else if (HttpStatus.BAD_REQUEST.equals(e.getStatusCode())) {
+                throw new StudyException(BAD_PARAMETER, e.getMessage());
             } else {
                 throw e;
             }
         }
-    }
-
-    public UUID createDiagramConfig(NetworkAreaDiagramLayoutDetails nadLayoutDetails) {
-        var path = UriComponentsBuilder
-            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/config")
-            .buildAndExpand()
-            .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<NetworkAreaDiagramLayoutDetails> httpEntity = new HttpEntity<>(nadLayoutDetails, headers);
-
-        return restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public void createMultipleDiagramConfigs(List<NadConfigInfos> nadConfigs) {
@@ -267,5 +258,22 @@ public class SingleLineDiagramService {
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED);
         }
+    }
+
+    public void createNadPositionsConfigFromCsv(MultipartFile file) {
+        var path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
+                "/network-area-diagram/config/positions").buildAndExpand()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file_name", file.getOriginalFilename());
+        body.add("file", file.getResource());
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, requestEntity, Void.class);
     }
 }
