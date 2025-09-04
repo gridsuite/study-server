@@ -600,6 +600,19 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelEquipments(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, voltageLevelId));
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/voltage-levels/{voltageLevelId}/connections")
+    @Operation(summary = "Get voltage level equipments")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Voltage level equipments")})
+    public ResponseEntity<String> getVoltageLevelConnections(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+        @PathVariable("nodeUuid") UUID nodeUuid,
+        @Parameter(description = "voltage level id") @PathVariable("voltageLevelId") String voltageLevelId,
+        @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelConnections(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, voltageLevelId));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/all")
     @Operation(summary = "Get Network equipments description")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of equipments data")})
