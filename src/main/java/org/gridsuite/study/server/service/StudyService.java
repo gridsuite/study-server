@@ -3566,6 +3566,7 @@ public class StudyService {
             }
         });
         return studyEntity.isPresent();
+    }
 
     @Transactional
     public void createNadPositionsConfigFromCsv(MultipartFile file) {
