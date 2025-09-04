@@ -141,18 +141,25 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return result;
     }
 
-    public byte[] exportSensitivityResultsAsCsv(UUID resultUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
+    public byte[] exportSensitivityResultsAsCsv(UUID resultUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos, UUID networkUuid, String variantId, String filters, String globalFilters) {
         if (resultUuid == null) {
             throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
         }
 
-        // initializing from uri string (not from path string) allows build() to escape selector content
-        URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
-                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuid.toString(), "csv")
-                .build()
-                .encode()
-                .toUri();
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
+                .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuid.toString(), "csv");
+        if (StringUtils.isNotBlank(filters)) {
+            uriBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
+        }
+        if (!StringUtils.isEmpty(globalFilters)) {
+            uriBuilder.queryParam("globalFilters", URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
+            uriBuilder.queryParam("networkUuid", networkUuid);
+            if (!StringUtils.isBlank(variantId)) {
+                uriBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+        }
 
+        URI uri = uriBuilder.build().encode().toUri();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
