@@ -145,6 +145,7 @@ class LoadFlowTest {
     private static final String LOADFLOW_RESULT_DESTINATION = "loadflow.result";
     private static final String LOADFLOW_STOPPED_DESTINATION = "loadflow.stopped";
     private static final String LOADFLOW_FAILED_DESTINATION = "loadflow.run.dlx";
+    private static final String LOADFLOW_MODIFICATIONS = "loadflow modifications mock";
 
     @Autowired
     private MockMvc mockMvc;
@@ -273,6 +274,10 @@ class LoadFlowTest {
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation-status")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), COMPUTING_STATUS_JSON);
                 } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/computation")) {
+                    return new MockResponse(404);
+                } else if (path.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/modifications")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "loadflow modifications mock");
+                } else if (path.matches("/v1/results/" + LOADFLOW_ERROR_RESULT_UUID + "/modifications")) {
                     return new MockResponse(404);
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=" + LOADFLOW_RESULT_UUID)) {
                     return new MockResponse(200);
@@ -956,6 +961,42 @@ class LoadFlowTest {
         assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node1.getId(), rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
         assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node2.getId(), rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
         assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node3.getId(), rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
+    }
+
+    @Test
+    void testGetLoadFlowModification(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        RootNode rootNode = getRootNode(studyUuid);
+        NetworkModificationNode node1 = createNetworkModificationConstructionNode(studyUuid, rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "N1");
+        updateLoadflowResultUuid(node1.getId(), rootNetworkUuid, UUID.fromString(LOADFLOW_RESULT_UUID));
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/modifications", studyUuid, rootNetworkUuid, node1.getId()))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertEquals(LOADFLOW_MODIFICATIONS, mvcResult.getResponse().getContentAsString());
+
+        assertRequestsDone(server, List.of("/v1/results/" + LOADFLOW_RESULT_UUID + "/modifications"));
+    }
+
+    @Test
+    void testGetLoadFlowModificationNotFound(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        RootNode rootNode = getRootNode(studyUuid);
+        NetworkModificationNode node1 = createNetworkModificationConstructionNode(studyUuid, rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "N1");
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/modifications", studyUuid, rootNetworkUuid, node1.getId()))
+            .andExpect(status().isNotFound());
+
+        updateLoadflowResultUuid(node1.getId(), rootNetworkUuid, UUID.fromString(LOADFLOW_ERROR_RESULT_UUID));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/modifications", studyUuid, rootNetworkUuid, node1.getId()))
+            .andExpect(status().isNotFound());
+
+        assertRequestsDone(server, List.of("/v1/results/" + LOADFLOW_ERROR_RESULT_UUID + "/modifications"));
     }
 
     private void updateNodeBuildStatus(UUID nodeId, UUID rootNetworkUuid, BuildStatus buildStatus) {
