@@ -80,10 +80,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES;
@@ -944,9 +944,10 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public void assertCanRunLoadFLow(UUID studyUuid, UUID nodeUuid) {
-        if (networkModificationTreeService.isConstructionNode(nodeUuid) && DYNA_FLOW_PROVIDER.equals(getLoadFlowProvider(studyUuid))) {
-            throw new StudyException(NOT_ALLOWED, "DynaFlow must run only from a security type node !");
+    public void assertCanRunOnConstructionNode(UUID studyUuid, UUID nodeUuid, List<String> forbiddenProvidersOnConstructionNode, Function<UUID, String> providerGetter) {
+        String provider = providerGetter.apply(studyUuid);
+        if (networkModificationTreeService.isConstructionNode(nodeUuid) && forbiddenProvidersOnConstructionNode.contains(provider)) {
+            throw new StudyException(NOT_ALLOWED, provider + " must run only from a security type node !");
         }
     }
 
