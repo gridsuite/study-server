@@ -20,6 +20,7 @@ import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
@@ -130,11 +131,11 @@ public class ShortCircuitService extends AbstractComputationService {
         return resultPath + "/paged";
     }
 
-    public String getShortCircuitAnalysisResult(UUID resultUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, boolean paged, Pageable pageable) {
+    public String getShortCircuitAnalysisResult(ResultParameters resultParameters, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, String globalFilters, boolean paged, Pageable pageable) {
         if (paged) {
-            return getShortCircuitAnalysisResultsPage(resultUuid, mode, type, filters, pageable);
+            return getShortCircuitAnalysisResultsPage(resultParameters, mode, type, filters, globalFilters, pageable);
         } else {
-            return getShortCircuitAnalysisResult(resultUuid, mode);
+            return getShortCircuitAnalysisResult(resultParameters.getResultUuid(), mode);
         }
     }
 
@@ -178,17 +179,23 @@ public class ShortCircuitService extends AbstractComputationService {
         return getShortCircuitAnalysisResource(builder.build().toUri());
     }
 
-    public String getShortCircuitAnalysisResultsPage(UUID resultUuid, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, Pageable pageable) {
-        String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(resultUuid, type);
+    public String getShortCircuitAnalysisResultsPage(ResultParameters resultParameters, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, String globalFilters, Pageable pageable) {
+        String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(resultParameters.getResultUuid(), type);
         if (resultsPath == null) {
             return null;
         }
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultsPath)
+                .queryParam("rootNetworkUuid", resultParameters.getNetworkUuid())
+                .queryParam("variantId", resultParameters.getVariantId())
                 .queryParam("mode", mode);
 
         if (filters != null && !filters.isEmpty()) {
             builder.queryParam("filters", filters);
+        }
+
+        if (globalFilters != null && !globalFilters.isEmpty()) {
+            builder.queryParam("globalFilters", globalFilters);
         }
 
         addPageableToQueryParams(builder, pageable);
