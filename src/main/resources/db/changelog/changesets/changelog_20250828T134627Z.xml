@@ -1,0 +1,29 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+                   xmlns:pro="http://www.liquibase.org/xml/ns/pro"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="chuinetri" id="1756388806407-1">
+        <addColumn tableName="study">
+            <column name="sp_load_branch_olg" type="boolean" defaultValueBoolean="false" remarks="SpreadSheet branch type exclude OperationalLimitGroups data">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="study">
+            <column name="sp_load_line_olg" type="boolean" defaultValueBoolean="false" remarks="SpreadSheet branch line exclude OperationalLimitGroups data">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="study">
+            <column name="sp_load_twt_olg" type="boolean" defaultValueBoolean="false" remarks="SpreadSheet branch t2w exclude OperationalLimitGroups data">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="study">
+            <column name="sp_load_generator_rt" type="boolean" defaultValueBoolean="false" remarks="SpreadSheet generator type exclude regulating terminals data">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

@@ -93,6 +93,7 @@ public class NotificationService {
     public static final String UPDATE_SPREADSHEET_NODE_ALIASES = "nodeAliasesUpdated";
     public static final String UPDATE_SPREADSHEET_TAB = "spreadsheetTabUpdated";
     public static final String UPDATE_SPREADSHEET_COLLECTION = "spreadsheetCollectionUpdated";
+    public static final String UPDATE_SPREADSHEET_PARAMETERS = "spreadsheetParametersUpdated";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
@@ -199,6 +200,11 @@ public class NotificationService {
     @PostCompletion
     public void emitSpreadsheetCollectionChanged(UUID studyUuid, UUID collectionUuid) {
         sendStudyUpdateMessage(studyUuid, UPDATE_SPREADSHEET_COLLECTION, MessageBuilder.withPayload(collectionUuid.toString()));
+    }
+
+    @PostCompletion
+    public void emitSpreadsheetParametersChange(UUID studyUuid) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_SPREADSHEET_PARAMETERS, MessageBuilder.withPayload(""));
     }
 
     @PostCompletion

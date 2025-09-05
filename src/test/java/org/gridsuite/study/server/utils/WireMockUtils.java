@@ -49,6 +49,14 @@ public class WireMockUtils {
         this.wireMock = wireMock;
     }
 
+    public UUID stubAllNetworkElementInfosGet(String networkUuid, String infoType, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "all"))
+            .withQueryParam(QUERY_PARAM_VARIANT_ID, WireMock.equalTo(FIRST_VARIANT_ID))
+            .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
+            .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
     public UUID stubNetworkElementInfosGet(String networkUuid, String elementType, String infoType, String elementId, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements" + DELIMITER + elementId))
                 .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
