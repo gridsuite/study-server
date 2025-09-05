@@ -2479,7 +2479,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/spreadsheet/parameters", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get global parameters of the spreadsheets")
     @ApiResponse(responseCode = "200", description = "Get the parameters")
-    @ApiResponse(responseCode = "204", description = "Get the study does not exist")
+    @ApiResponse(responseCode = "204", description = "The study does not exist")
     public ResponseEntity<SpreadsheetParameters> getSpreadsheetParameters(@PathVariable("studyUuid") final UUID studyUuid) {
         return ResponseEntity.of(this.studyService.getSpreadsheetParameters(studyUuid));
     }
@@ -2487,7 +2487,7 @@ public class StudyController {
     @PutMapping(value = "/studies/{studyUuid}/spreadsheet/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Update global parameters of the spreadsheets")
     @ApiResponse(responseCode = "204", description = "The parameters are updated")
-    @ApiResponse(responseCode = "404", description = "Get the study does not exist")
+    @ApiResponse(responseCode = "404", description = "The study does not exist")
     public ResponseEntity<Void> updateSpreadsheetParameters(@PathVariable("studyUuid") final UUID studyUuid,
                                                             @RequestBody final SpreadsheetParameters spreadsheetParameters) {
         return (this.studyService.updateSpreadsheetParameters(studyUuid, spreadsheetParameters) ? ResponseEntity.noContent() : ResponseEntity.notFound()).build();
