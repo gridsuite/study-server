@@ -193,6 +193,8 @@ public class SingleLineDiagramService {
                 throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + NOT_FOUND);
             } else if (HttpStatus.BAD_REQUEST.equals(e.getStatusCode())) {
                 throw new StudyException(BAD_PARAMETER, e.getMessage());
+            } else if (HttpStatus.FORBIDDEN.equals(e.getStatusCode())) {
+                throw new StudyException(TOO_MANY_VOLTAGE_LEVELS, "Too many voltage levels");
             } else {
                 throw e;
             }
