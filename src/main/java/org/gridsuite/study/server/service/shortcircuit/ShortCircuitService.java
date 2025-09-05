@@ -15,7 +15,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.ShortCircuitStatus;
+import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.utils.ResultParameters;
@@ -39,7 +41,8 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.utils.StudyUtils.*;
+import static org.gridsuite.study.server.utils.StudyUtils.addPageableToQueryParams;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -67,11 +70,11 @@ public class ShortCircuitService extends AbstractComputationService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runShortCircuit(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, String busId, Optional<UUID> parametersUuid, UUID reportUuid, String userId) {
+    public UUID runShortCircuit(UUID rootNetworkUuid, VariantInfos variantInfos, String busId, Optional<UUID> parametersUuid, ReportInfos reportInfos, String userId, boolean debug) {
 
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(reportInfos.nodeUuid(), rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }
@@ -79,8 +82,8 @@ public class ShortCircuitService extends AbstractComputationService {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
-                .queryParam("reportUuid", reportUuid.toString())
-                .queryParam("reporterId", nodeUuid.toString())
+                .queryParam("reportUuid", reportInfos.reportUuid().toString())
+                .queryParam("reporterId", reportInfos.nodeUuid().toString())
                 .queryParam("reportType", StringUtils.isBlank(busId) ? StudyService.ReportType.SHORT_CIRCUIT.reportKey :
                         StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS.reportKey)
                 .queryParamIfPresent("parametersUuid", parametersUuid);
@@ -89,10 +92,15 @@ public class ShortCircuitService extends AbstractComputationService {
             uriComponentsBuilder.queryParam("busId", busId);
         }
 
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        if (!StringUtils.isBlank(variantInfos.getVariantId())) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantInfos.getVariantId());
         }
-        var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
+
+        if (debug) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, true);
+        }
+
+        var path = uriComponentsBuilder.buildAndExpand(variantInfos.getNetworkUuid()).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
