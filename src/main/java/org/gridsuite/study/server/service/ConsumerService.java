@@ -34,7 +34,10 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -68,11 +71,13 @@ public class ConsumerService {
     private final UserAdminService userAdminService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyConfigService studyConfigService;
+    private final DirectoryService directoryService;
     private final ShortCircuitService shortCircuitService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
+    private final SingleLineDiagramService singleLineDiagramService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -86,10 +91,12 @@ public class ConsumerService {
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
                            StudyConfigService studyConfigService,
+                           DirectoryService directoryService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService) {
+                           StateEstimationService stateEstimationService,
+                           SingleLineDiagramService singleLineDiagramService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -100,11 +107,13 @@ public class ConsumerService {
         this.networkModificationTreeService = networkModificationTreeService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.studyConfigService = studyConfigService;
+        this.directoryService = directoryService;
         this.shortCircuitService = shortCircuitService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
+        this.singleLineDiagramService = singleLineDiagramService;
     }
 
     @Bean
@@ -294,12 +303,28 @@ public class ConsumerService {
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
+        UUID diagramGridLayoutUuid = createGridLayoutFromNadDiagram(userId, userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, spreadsheetConfigCollectionUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
             importParameters, importReportUuid);
+    }
+
+    private UUID createGridLayoutFromNadDiagram(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getDiagramConfigId() != null) {
+            UUID sourceNadConfig = userProfileInfos.getDiagramConfigId();
+            try {
+                UUID clonedNadConfig = singleLineDiagramService.duplicateNadConfig(sourceNadConfig);
+                String nadConfigName = directoryService.getElementName(sourceNadConfig);
+                return studyConfigService.createGridLayoutFromNadDiagram(sourceNadConfig, clonedNadConfig, nadConfigName);
+            } catch (Exception e) {
+                LOGGER.error(String.format("Could not create a diagram grid layout cloning NAD elment id '%s' from user/profile '%s/%s'. No layout created",
+                    sourceNadConfig, userId, userProfileInfos.getName()), e);
+            }
+        }
+        return null;
     }
 
     private UserProfileInfos getUserProfile(String userId) {
@@ -771,6 +796,11 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeLoadFlowFailed() {
         return message -> consumeCalculationFailed(message, LOAD_FLOW);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeShortCircuitAnalysisDebug() {
+        return message -> consumeCalculationDebug(message, SHORT_CIRCUIT);
     }
 
     @Bean

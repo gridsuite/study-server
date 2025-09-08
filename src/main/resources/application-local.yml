@@ -82,3 +82,6 @@ gridsuite:
     -
       name: study-config-server
       base-uri: http://localhost:5035/
+    -
+      name: directory-server
+      base-uri: http://localhost:5026

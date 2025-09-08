@@ -11,7 +11,7 @@ spring:
       consumeBuildResult;consumeBuildStopped;consumeBuildFailed;\
       consumeCaseImportSucceeded;consumeCaseImportFailed;\
       consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeSensitivityAnalysisCancelFailed;\
-      consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeShortCircuitAnalysisCancelFailed;\
+      consumeShortCircuitAnalysisDebug;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeShortCircuitAnalysisCancelFailed;\
       consumeVoltageInitDebug;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeVoltageInitCancelFailed;\
       consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;consumeLoadFlowCancelFailed;\
       consumeNonEvacuatedEnergyResult;consumeNonEvacuatedEnergyStopped;consumeNonEvacuatedEnergyFailed;consumeNonEvacuatedEnergyCancelFailed;\
@@ -109,6 +109,9 @@ spring:
         consumeNonEvacuatedEnergyCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.cancelfailed
           group: studyNonEvacuatedEnergyCancelFailedGroup
+        consumeShortCircuitAnalysisDebug-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.debug
+          group: studyShortCircuitAnalysisDebugGroup
         consumeShortCircuitAnalysisResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.result
           group: studyShortCircuitAnalysisResultGroup
@@ -224,6 +227,9 @@ gridsuite:
     -
       name: study-config-server
       base-uri: http://study-config-server/
+    -
+      name: directory-server
+      base-uri: http://directory-server/
 
 study:
   max-root-network-by-study: 4
