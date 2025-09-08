@@ -55,6 +55,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
@@ -216,10 +217,10 @@ public class StudyController {
     }
 
     @RequestMapping(method = RequestMethod.HEAD, value = "/studies/{studyUuid}/root-networks", params = {"name"})
-    @Operation(summary = "Check if an element with this name and this type already exists in the given directory")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The element exists"),
-        @ApiResponse(responseCode = "204", description = "The element doesn't exist")})
-    public ResponseEntity<Void> elementExists(@PathVariable("studyUuid") UUID studyUuid,
+    @Operation(summary = "Check if a root network already exists")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The root network exists"),
+        @ApiResponse(responseCode = "204", description = "The root network doesn't exist")})
+    public ResponseEntity<Void> rootNetworkExists(@PathVariable("studyUuid") UUID studyUuid,
                                               @RequestParam("name") String rootNetworkName) {
         HttpStatus status = rootNetworkService.isRootNetworkNameExistsInStudy(studyUuid, rootNetworkName) ? HttpStatus.OK : HttpStatus.NO_CONTENT;
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).build();
@@ -761,6 +762,16 @@ public class StudyController {
                                                                                 @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkNodeInfoService.getLoadFlowComputationInfos(nodeUuid, rootNetworkUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/modifications")
+    @Operation(summary = "Get the loadflow modifications on study node and root network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow computation infos"),
+        @ApiResponse(responseCode = "404", description = "The loadflow computation has not been found")})
+    public ResponseEntity<String> getLoadFlowModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(rootNetworkNodeInfoService.getLoadFlowModifications(nodeUuid, rootNetworkUuid));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/stop")
@@ -2084,6 +2095,14 @@ public class StudyController {
             @RequestBody(required = false) String networkVisualizationParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setNetworkVisualizationParametersValues(studyUuid, networkVisualizationParametersValues, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/network-visualizations/nad-positions-config", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "create a nad positions configuration using data from a csv")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The nad positions configuration created")})
+    public ResponseEntity<Void> createNadPositionsConfigFromCsv(@RequestParam("file") MultipartFile file) {
+        studyService.createNadPositionsConfigFromCsv(file);
         return ResponseEntity.ok().build();
     }
 
