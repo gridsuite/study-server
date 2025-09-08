@@ -135,6 +135,10 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "mono_root", columnDefinition = "boolean default true")
     private boolean monoRoot;
 
+    @Embedded
+    @Builder.Default
+    private SpreadsheetParametersEntity spreadsheetParameters = new SpreadsheetParametersEntity();
+
     public RootNetworkEntity getFirstRootNetwork() {
         return rootNetworks.get(0);
     }
@@ -149,4 +153,3 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         rootNetworks.removeAll(rootNetworks.stream().filter(rn -> uuids.contains(rn.getId())).toList());
     }
 }
-
