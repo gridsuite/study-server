@@ -945,9 +945,11 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public void assertCanRunOnConstructionNode(UUID studyUuid, UUID nodeUuid, List<String> forbiddenProvidersOnConstructionNode, Function<UUID, String> providerGetter) {
-        String provider = providerGetter.apply(studyUuid);
-        if (networkModificationTreeService.isConstructionNode(nodeUuid) && forbiddenProvidersOnConstructionNode.contains(provider)) {
-            throw new StudyException(NOT_ALLOWED, provider + " must run only from a security type node !");
+        if (networkModificationTreeService.isConstructionNode(nodeUuid)) {
+            String provider = providerGetter.apply(studyUuid);
+            if (forbiddenProvidersOnConstructionNode.contains(provider)) {
+                throw new StudyException(NOT_ALLOWED, provider + " must run only from a security type node !");
+            }
         }
     }
 
