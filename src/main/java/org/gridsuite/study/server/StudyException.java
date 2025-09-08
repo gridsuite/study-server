@@ -160,8 +160,7 @@ public class StudyException extends RuntimeException {
         CREATE_DIAGRAM_GRID_LAYOUT_FAILED,
         DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED,
         TOO_MANY_NAD_CONFIGS,
-        TOO_MANY_MAP_CARDS,
-        TOO_MANY_VOLTAGE_LEVELS
+        TOO_MANY_MAP_CARDS
     }
 
     private final Type type;

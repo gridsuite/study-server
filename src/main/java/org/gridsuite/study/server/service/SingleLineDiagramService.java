@@ -194,7 +194,7 @@ public class SingleLineDiagramService {
             } else if (HttpStatus.BAD_REQUEST.equals(e.getStatusCode())) {
                 throw new StudyException(BAD_PARAMETER, e.getMessage());
             } else if (HttpStatus.FORBIDDEN.equals(e.getStatusCode())) {
-                throw new StudyException(TOO_MANY_VOLTAGE_LEVELS, "Too many voltage levels");
+                throw handleHttpError(e, NOT_ALLOWED);
             } else {
                 throw e;
             }
