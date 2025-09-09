@@ -252,10 +252,10 @@ class SensitivityAnalysisTest {
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/filter-options" + "\\?.*")
                         || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/filter-options" + "\\?.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), FAKE_RESULT_JSON);
-                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/csv")
-                        || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/csv\\?filters=lineId2&globalFilters=ss&networkUuid=.*&variantId=.*")
-                        || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/csv")
-                        || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/csv\\?filters=lineId2&globalFilters=ss&networkUuid=.*&variantId=.*")) {
+                } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/csv\\?selector=fakeJsonSelector")
+                        || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/csv\\?selector=fakeJsonSelector&filters=lineId2&globalFilters=ss&networkUuid=.*&variantId=.*")
+                        || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/csv\\?selector=fakeJsonSelector")
+                        || path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/csv\\?selector=fakeJsonSelector&filters=lineId2&globalFilters=ss&networkUuid=.*&variantId=.*")) {
                     return new MockResponse.Builder().code(200).body(getBinaryAsBuffer(SENSITIVITY_RESULTS_AS_ZIPPED_CSV))
                             .addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).build();
                 } else if (path.matches("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID) && request.getMethod().equals("DELETE")) {
@@ -375,22 +375,22 @@ class SensitivityAnalysisTest {
                 .build());
 
         // error case
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", studyUuid, rootNetworkUuid, UUID.randomUUID())
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv?selector=fakeJsonSelector", studyUuid, rootNetworkUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("userId", "userId")
                         .content(content))
                 .andExpectAll(status().isNotFound(), content().string("\"ROOT_NETWORK_NOT_FOUND\""));
 
         // csv export with no filter
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", studyUuid, rootNetworkUuid, nodeUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv?selector=fakeJsonSelector", studyUuid, rootNetworkUuid, nodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("userId", "userId")
                         .content(content))
                 .andExpectAll(status().isOk(), content().bytes(SENSITIVITY_RESULTS_AS_ZIPPED_CSV));
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid + "/csv")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.contains("/v1/results/" + resultUuid + "/csv?selector=fakeJsonSelector")));
 
         // csv export with filters
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv?filters=lineId2&globalFilters=ss", studyUuid, rootNetworkUuid, nodeUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv?selector=fakeJsonSelector&filters=lineId2&globalFilters=ss", studyUuid, rootNetworkUuid, nodeUuid)
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("userId", "userId")
                         .content(content))
