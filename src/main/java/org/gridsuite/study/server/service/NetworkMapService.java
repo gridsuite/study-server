@@ -25,21 +25,16 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
 public class NetworkMapService {
-
-    static final String QUERY_PARAM_LINE_ID = "lineId";
-
     private final RestTemplate restTemplate;
 
     private String networkMapServerBaseUri;
@@ -50,47 +45,49 @@ public class NetworkMapService {
         this.restTemplate = restTemplate;
     }
 
-    public String getElementsInfos(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages, String infoType, double dcPowerFactor) {
+    public String getElementsInfos(UUID networkUuid,
+                                   String variantId,
+                                   List<String> substationsIds,
+                                   String elementType,
+                                   List<Double> nominalVoltages,
+                                   String infoType,
+                                   Map<String, String> optionalParameters) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
-
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-
         builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType)
                 .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
-
         if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
             builder = builder.queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltages);
         }
-        InfoTypeParameters infoTypeParameters = InfoTypeParameters.builder()
-                .optionalParameters(Map.of(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor)))
-                .build();
-        queryParamInfoTypeParameters(infoTypeParameters, builder);
+        queryParamInfoTypeParameters(InfoTypeParameters.builder()
+                .optionalParameters(optionalParameters)
+                .build(), builder);
         String url = builder.buildAndExpand(networkUuid).toUriString();
-
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<List<String>> httpEntity = new HttpEntity<>(substationsIds, headers);
         return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
     }
 
-    public String getElementInfos(UUID networkUuid, String variantId, String elementType, String infoType,
-                                  double dcPowerFactor, String elementId) {
+    public String getElementInfos(UUID networkUuid,
+                                  String variantId,
+                                  String elementType,
+                                  String infoType,
+                                  Map<String, String> optionalParameters,
+                                  String elementId) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements/{elementId}";
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        builder = builder.queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
-        builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType);
-        Map<String, String> optionalParams = new HashMap<>();
-        optionalParams.put(QUERY_PARAM_DC_POWERFACTOR, String.valueOf(dcPowerFactor));
-        InfoTypeParameters infoTypeParameters = InfoTypeParameters.builder()
-                .optionalParameters(optionalParams)
-                .build();
-        queryParamInfoTypeParameters(infoTypeParameters, builder);
+        builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+            .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType);
+        queryParamInfoTypeParameters(InfoTypeParameters.builder()
+            .optionalParameters(optionalParameters)
+            .build(), builder);
 
         try {
             return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid, elementId);
@@ -103,6 +100,25 @@ public class NetworkMapService {
             }
             throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
         }
+    }
+
+    public String getAllElementsInfos(UUID networkUuid,
+                                      String variantId,
+                                      List<String> substationsIds,
+                                      Map<String, Map<String, String>> optionalParameters) {
+        String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/all";
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(path);
+        if (!StringUtils.isBlank(variantId)) {
+            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        builder = builder.queryParam(QUERY_PARAM_INFO_TYPE, "TAB");
+        if (substationsIds != null) {
+            builder = builder.queryParam(QUERY_PARAM_SUBSTATION_ID, substationsIds);
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<?> httpEntity = new HttpEntity<>(optionalParameters, headers);
+        return restTemplate.postForObject(networkMapServerBaseUri + builder.buildAndExpand(networkUuid).toUriString(), httpEntity, String.class);
     }
 
     private void queryParamInfoTypeParameters(InfoTypeParameters infoTypesParameters, UriComponentsBuilder builder) {
@@ -164,8 +180,7 @@ public class NetworkMapService {
         return restTemplate.postForObject(networkMapServerBaseUri + url, httpEntity, String.class);
     }
 
-    public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds,
-                                       String equipmentPath) {
+    public String getEquipmentsMapData(UUID networkUuid, String variantId, List<String> substationsIds, String equipmentPath) {
         String path = DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/" + equipmentPath;
         UriComponentsBuilder builder = UriComponentsBuilder
             .fromPath(path);
