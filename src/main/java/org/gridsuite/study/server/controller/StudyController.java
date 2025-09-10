@@ -609,7 +609,7 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Substations id") @RequestParam(name = "substationId", required = false) List<String> substationsIds) {
 
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(nodeUuid, rootNetworkUuid, substationsIds));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(studyUuid, nodeUuid, rootNetworkUuid, substationsIds));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}")
@@ -2476,5 +2476,22 @@ public class StudyController {
         studyService.assertIsStudyExist(studyUuid);
 
         return ResponseEntity.ok().body(studyService.saveDiagramGridLayout(studyUuid, diagramGridLayout));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/spreadsheet/parameters", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get global parameters of the spreadsheets")
+    @ApiResponse(responseCode = "200", description = "Get the parameters")
+    @ApiResponse(responseCode = "204", description = "The study does not exist")
+    public ResponseEntity<SpreadsheetParameters> getSpreadsheetParameters(@PathVariable("studyUuid") final UUID studyUuid) {
+        return ResponseEntity.of(this.studyService.getSpreadsheetParameters(studyUuid));
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/spreadsheet/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Update global parameters of the spreadsheets")
+    @ApiResponse(responseCode = "204", description = "The parameters are updated")
+    @ApiResponse(responseCode = "404", description = "The study does not exist")
+    public ResponseEntity<Void> updateSpreadsheetParameters(@PathVariable("studyUuid") final UUID studyUuid,
+                                                            @RequestBody final SpreadsheetParameters spreadsheetParameters) {
+        return (this.studyService.updateSpreadsheetParameters(studyUuid, spreadsheetParameters) ? ResponseEntity.noContent() : ResponseEntity.notFound()).build();
     }
 }
