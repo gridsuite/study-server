@@ -134,7 +134,7 @@ public class RootNetworkNodeInfoService {
             .variantId(UUID.randomUUID().toString())
             .modificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())))
             .modificationsUuidsToExclude(modificationsToExclude)
-            .blockedBuild(false)
+            .blockedNode(false)
             .build();
     }
 
@@ -243,8 +243,8 @@ public class RootNetworkNodeInfoService {
         boolean notOnlyChildrenBuildStatus = !invalidateTreeParameters.isOnlyChildrenBuildStatus();
 
         // Always update blocked build info
-        if (invalidateTreeParameters.withBlockedNodeBuild()) {
-            rootNetworkNodeInfoEntity.setBlockedBuild(true);
+        if (invalidateTreeParameters.withBlockedNode()) {
+            rootNetworkNodeInfoEntity.setBlockedNode(true);
         }
 
         // No need to delete node results with a status different of "BUILT"
@@ -399,14 +399,14 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    public void assertNoBlockedBuild(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndBlockedBuild(rootNetworkUuid, nodesUuids)) {
+    public void assertNoBlockedNode(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndBlockedNode(rootNetworkUuid, nodesUuids)) {
             throw new StudyException(NOT_ALLOWED, "Another action is in progress in this branch !");
         }
     }
 
-    public void invalidateBlockedBuild(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        getRootNetworkNodes(rootNetworkUuid, nodesUuids).stream().forEach(rnn -> rnn.setBlockedBuild(false));
+    public void unblockNodes(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        getRootNetworkNodes(rootNetworkUuid, nodesUuids).stream().forEach(rnn -> rnn.setBlockedNode(false));
     }
 
     private void addLink(NetworkModificationNodeInfoEntity nodeInfoEntity, RootNetworkEntity rootNetworkEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
