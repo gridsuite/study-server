@@ -57,8 +57,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.*;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
@@ -165,6 +164,7 @@ class ShortCircuitTest implements WithAssertions {
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String elementUpdateDestination = "element.update";
+    private final String shortCircuitAnalysisDebugDestination = "shortcircuitanalysis.debug";
     private final String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
     private final String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
     private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.run.dlx";
@@ -196,14 +196,40 @@ class ShortCircuitTest implements WithAssertions {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = Objects.requireNonNull(request.getMethod());
 
-                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&busId=BUS_TEST_ID&variantId=" + VARIANT_ID_2)) {
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&busId=BUS_TEST_ID&variantId=" + VARIANT_ID_2 + "&debug=.*")) {
+                    String receiver = "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D";
+                    input.send(MessageBuilder.withPayload("")
+                        .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
+                        .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
+                        .setHeader("busId", "BUS_TEST_ID")
+                        .build(), shortCircuitAnalysisResultDestination);
+                    // mock the notification from shortcircuit-server to send a debug status notif
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
+                            .setHeader("receiver", receiver)
+                            .setHeader("busId", "BUS_TEST_ID")
+                            .build(), shortCircuitAnalysisDebugDestination);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), shortCircuitAnalysisResultUuidStr);
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&busId=BUS_TEST_ID&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                         .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
                         .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
                         .setHeader("busId", "BUS_TEST_ID")
                         .build(), shortCircuitAnalysisResultDestination);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), shortCircuitAnalysisResultUuidStr);
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + ".*")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&debug=.*")) {
+                    String receiver = "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D";
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
+                            .setHeader("receiver", receiver)
+                            .build(), shortCircuitAnalysisResultDestination);
+                    // mock the notification from shortcircuit-server to send a debug status notif
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
+                            .setHeader("receiver", receiver)
+                            .build(), shortCircuitAnalysisDebugDestination);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), shortCircuitAnalysisResultUuidStr);
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
@@ -340,15 +366,17 @@ class ShortCircuitTest implements WithAssertions {
                         .header("userId", "userId"))
                 .andExpect(status().isForbidden());
 
-        //run an all-buses short circuit analysis
+        //run in debug mode an all-buses short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
-                        .param("debug", "true")
+                        .param(QUERY_PARAM_DEBUG, "true")
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
 
@@ -557,9 +585,10 @@ class ShortCircuitTest implements WithAssertions {
                 .header("userId", "userId"))
             .andExpect(status().isForbidden());
 
-        //run a one bus short circuit analysis
+        //run in debug mode a one bus short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                 .param("busId", "BUS_TEST_ID")
+                .param(QUERY_PARAM_DEBUG, "true")
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
@@ -567,9 +596,11 @@ class ShortCircuitTest implements WithAssertions {
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT);
 
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
+
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&debug=true")));
 
         assertEquals(1, rootNetworkNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
 
