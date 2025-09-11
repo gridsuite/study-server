@@ -532,7 +532,7 @@ public class ConsumerService {
             try {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
-                LOGGER.info("{} failed for node '{}' with error messsage: {}", computationType.getLabel(), receiverObj.getNodeUuid(), errorMessage);
+                LOGGER.info("{} failed for node '{}' with error message: {}", computationType.getLabel(), receiverObj.getNodeUuid(), errorMessage);
 
                 // delete computation results from the databases
                 // ==> will probably be removed soon because it prevents the front from recovering the resultId ; or 'null' parameter will be replaced by null like in VOLTAGE_INITIALIZATION
