@@ -35,6 +35,8 @@ public class RootNetworkRequestEntity {
 
     private String tag;
 
+    private String description;
+
     @Enumerated(EnumType.STRING)
     private RootNetworkAction actionRequest;
 
@@ -47,6 +49,6 @@ public class RootNetworkRequestEntity {
     }
 
     public BasicRootNetworkInfos toBasicDto() {
-        return new BasicRootNetworkInfos(getId(), null, getName(), getTag(), true);
+        return new BasicRootNetworkInfos(getId(), null, getName(), getTag(), getDescription(), true);
     }
 }

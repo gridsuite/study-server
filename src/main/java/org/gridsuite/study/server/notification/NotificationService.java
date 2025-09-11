@@ -93,6 +93,7 @@ public class NotificationService {
     public static final String UPDATE_SPREADSHEET_NODE_ALIASES = "nodeAliasesUpdated";
     public static final String UPDATE_SPREADSHEET_TAB = "spreadsheetTabUpdated";
     public static final String UPDATE_SPREADSHEET_COLLECTION = "spreadsheetCollectionUpdated";
+    public static final String UPDATE_SPREADSHEET_PARAMETERS = "spreadsheetParametersUpdated";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
@@ -119,7 +120,7 @@ public class NotificationService {
     public static final String NODE_DELETED = "nodeDeleted";
     public static final String NODE_CREATED = "nodeCreated";
     public static final String NODE_MOVED = "nodeMoved";
-    public static final String NODE_RENAMED = "nodeRenamed";
+    public static final String NODE_EDITED = "nodeEdited";
     public static final String NODE_BUILD_STATUS_UPDATED = "nodeBuildStatusUpdated";
     public static final String SUBTREE_MOVED = "subtreeMoved";
     public static final String NODES_COLUMN_POSITIONS_CHANGED = "nodesColumnPositionsChanged";
@@ -199,6 +200,11 @@ public class NotificationService {
     @PostCompletion
     public void emitSpreadsheetCollectionChanged(UUID studyUuid, UUID collectionUuid) {
         sendStudyUpdateMessage(studyUuid, UPDATE_SPREADSHEET_COLLECTION, MessageBuilder.withPayload(collectionUuid.toString()));
+    }
+
+    @PostCompletion
+    public void emitSpreadsheetParametersChange(UUID studyUuid) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_SPREADSHEET_PARAMETERS, MessageBuilder.withPayload(""));
     }
 
     @PostCompletion
@@ -337,8 +343,8 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitNodeRenamed(UUID studyUuid, UUID nodeUuid) {
-        sendStudyUpdateMessage(studyUuid, NODE_RENAMED, MessageBuilder.withPayload("")
+    public void emitNodeEdited(UUID studyUuid, UUID nodeUuid) {
+        sendStudyUpdateMessage(studyUuid, NODE_EDITED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_NODE, nodeUuid)
         );
     }

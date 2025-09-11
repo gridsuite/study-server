@@ -37,6 +37,7 @@ public class WireMockUtils {
     public static final String URI_NETWORK_DATA = "/v1/networks";
 
     private static final String URI_NETWORK_MODIFICATION = "/v1/network-modifications";
+    private static final String URI_NETWORK_AREA_DIAGRAM = "/v1/network-area-diagram/config/positions";
 
     private static final String URI_NETWORK_MODIFICATION_GROUPS = "/v1/groups";
 
@@ -46,6 +47,14 @@ public class WireMockUtils {
 
     public WireMockUtils(WireMockServer wireMock) {
         this.wireMock = wireMock;
+    }
+
+    public UUID stubAllNetworkElementInfosGet(String networkUuid, String infoType, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "all"))
+            .withQueryParam(QUERY_PARAM_VARIANT_ID, WireMock.equalTo(FIRST_VARIANT_ID))
+            .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
+            .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
     }
 
     public UUID stubNetworkElementInfosGet(String networkUuid, String elementType, String infoType, String elementId, String responseBody) {
@@ -580,4 +589,21 @@ public class WireMockUtils {
                         "userInput", WireMock.equalTo(userInput)));
     }
 
+    public UUID stubCreatePositionsFromCsv() {
+        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_AREA_DIAGRAM))
+                .withHeader("Content-Type", WireMock.containing("multipart/form-data"))
+                .withMultipartRequestBody(WireMock.aMultipart()
+                        .withName("file")
+                        .withHeader("Content-Disposition", WireMock.containing("filename=\"positions.csv\""))
+                )
+                .withMultipartRequestBody(WireMock.aMultipart()
+                        .withName("file_name")
+                        .withBody(WireMock.equalTo("positions.csv"))
+                );
+        return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withHeader("Content-Type", "application/json"))).getId();
+    }
+
+    public void verifyStubCreatePositionsFromCsv(UUID stubUuid) {
+        verifyPostRequest(stubUuid, URI_NETWORK_AREA_DIAGRAM, true, Map.of(), null);
+    }
 }

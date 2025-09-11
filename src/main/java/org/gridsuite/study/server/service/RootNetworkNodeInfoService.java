@@ -20,6 +20,7 @@ import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -382,7 +383,7 @@ public class RootNetworkNodeInfoService {
     }
 
     public List<RootNetworkNodeInfoEntity> getAllByStudyUuidWithLoadFlowResultsNotNull(UUID studyUuid) {
-        return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyIdAndLoadFlowResultUuidNotNull(studyUuid);
+        return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyIdAndNodeInfoNodeTypeAndLoadFlowResultUuidNotNull(studyUuid, NetworkModificationNodeType.SECURITY);
     }
 
     public void assertNoRootNetworkNodeIsBuilding(UUID studyUuid) {
@@ -652,6 +653,15 @@ public class RootNetworkNodeInfoService {
             throw new StudyException(LOADFLOW_ERROR);
         }
         return new LoadFlowComputationInfos(isWithRatioTapChangers);
+    }
+
+    @Transactional(readOnly = true)
+    public String getLoadFlowModifications(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
+        if (resultUuid == null) {
+            throw new StudyException(LOADFLOW_NOT_FOUND);
+        }
+        return loadFlowService.getLoadFlowModifications(resultUuid);
     }
 
     @Transactional(readOnly = true)
