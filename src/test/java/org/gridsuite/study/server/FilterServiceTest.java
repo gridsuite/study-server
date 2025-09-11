@@ -32,6 +32,8 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import java.util.List;
 import java.util.UUID;
@@ -289,6 +291,35 @@ class FilterServiceTest {
         Assert.assertEquals(responseBody, resultAsString);
 
         wireMockUtils.verifyFilterExport(stubUuid, FILTER_UUID_STRING, studyFirstRootNetworkUuid.toString());
+    }
+
+    @Test
+    void evaluateFiltersOnFirstRootNetworkTest() throws Exception {
+
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID studyFirstRootNetworkUuid = studyTestUtils.getOneRootNetwork(studyUuid).getNetworkUuid();
+        String responseBody = """
+                [
+                    {"id":"MANDA7COND.41","type":"SHUNT_COMPENSATOR","distributionKey":null},
+                    {"id":"MANDA7COND.31","type":"SHUNT_COMPENSATOR","distributionKey":null}
+                ]
+            """;
+        List<UUID> filtersUuids = List.of(UUID.fromString(FILTER_UUID_STRING));
+        UUID stubUuid = wireMockUtils.stubFiltersEvaluate(studyFirstRootNetworkUuid.toString(), filtersUuids, responseBody);
+
+        List<String> strfilterUuids = filtersUuids.stream().map(Object::toString).collect(Collectors.toList());
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.addAll("filtersUuid", strfilterUuids);
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/filters/elements",
+                studyUuid).params(params).contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        Assert.assertEquals(responseBody, resultAsString);
+
+        wireMockUtils.verifyFiltersEvaluate(stubUuid, strfilterUuids, studyFirstRootNetworkUuid.toString());
     }
 
     @Test
