@@ -42,7 +42,6 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationSer
 import org.gridsuite.study.server.utils.PropertyType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -255,14 +254,12 @@ class StudyControllerDynamicSimulationTest {
                 .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
-        // Only for tests
-        String mnBodyJson = objectMapper.writeValueAsString(modificationNode);
-        JSONObject jsonObject = new JSONObject(mnBodyJson);
-        jsonObject.put("modificationGroupUuid", modificationGroupUuid);
-        mnBodyJson = jsonObject.toString();
-
-        studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+        studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
+                .content(objectMapper.writeValueAsString(modificationNode))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("userId", "userId"))
                 .andExpect(status().isOk());
+
         var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertThat(mess).isNotNull();
         UUID newNodeId = UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE)));
@@ -367,6 +364,7 @@ class StudyControllerDynamicSimulationTest {
         // create a construction node
         NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
+
         Mockito.doAnswer(invocation -> DYNAWO_PROVIDER).when(studyService).getDynamicSimulationProvider(studyUuid);
 
         // --- call endpoint to be tested --- //

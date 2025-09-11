@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAna
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -30,7 +31,6 @@ import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurit
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -173,44 +173,56 @@ class StudyControllerDynamicSecurityAnalysisTest {
         return study;
     }
 
-    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-                                                                  UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
+    private NetworkModificationNode createNetworkModificationConstructionNode(UUID studyUuid, UUID parentNodeUuid,
+                                                                              UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid,
-                modificationGroupUuid, variantId, nodeName, BuildStatus.NOT_BUILT);
+                modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION);
+    }
+
+    private NetworkModificationNode createNetworkModificationSecurityNode(UUID studyUuid, UUID parentNodeUuid,
+                                                                          UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
+        return createNetworkModificationNode(studyUuid, parentNodeUuid,
+                modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-                                                                  UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
-        NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
-                .description("description").modificationGroupUuid(modificationGroupUuid)
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType) throws Exception {
+        return createNetworkModificationNode(studyUuid, parentNodeUuid,
+                modificationGroupUuid, variantId, nodeName, nodeType, BuildStatus.NOT_BUILT);
+    }
+
+    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType, BuildStatus buildStatus) throws Exception {
+        NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName).nodeType(nodeType)
+                .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
                 .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
-        // Only for tests
-        String mnBodyJson = objectMapper.writeValueAsString(modificationNode);
-        JSONObject jsonObject = new JSONObject(mnBodyJson);
-        jsonObject.put("modificationGroupUuid", modificationGroupUuid);
-        mnBodyJson = jsonObject.toString();
-
-        studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+        studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
+                        .content(objectMapper.writeValueAsString(modificationNode))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("userId", "userId"))
                 .andExpect(status().isOk());
+
         var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertThat(mess).isNotNull();
         UUID newNodeId = UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE)));
         modificationNode.setId(newNodeId);
         assertThat(mess.getHeaders()).containsEntry(NotificationService.HEADER_INSERT_MODE, InsertMode.CHILD.name());
+
         rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getOneRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
+
         return modificationNode;
     }
 
     @Test
-    void testRunDynamicSecurityAnalysisGivenRegularNodeAndFailed() throws Exception {
+    void testRunDynamicSecurityAnalysisGivenSecurityNodeAndFailed() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
@@ -223,7 +235,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
                 any(), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
-        // run on a regular node which allows a run
+        // run on a security node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
@@ -289,13 +301,34 @@ class StudyControllerDynamicSecurityAnalysisTest {
     }
 
     @Test
-    void testRunDynamicSecurityAnalysisGivenRegularNode() throws Exception {
+    void testRunDynamicSecurityAnalysisGivenConstructionNode() throws Exception {
+        // create a root node in the db
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+
+        // create a construction node
+        NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+        doAnswer(invocation -> DYNAWO_PROVIDER).when(spyDynamicSecurityAnalysisService).getProvider(any());
+
+        // --- call endpoint to be tested --- //
+        // run on root node => forbidden
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN,
+                studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
+                .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testRunDynamicSecurityAnalysisGivenSecurityNode() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
@@ -307,7 +340,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         MvcResult result;
         // --- call endpoint to be tested --- //
-        // run on a regular node which allows a run
+        // run on a security node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
@@ -366,13 +399,13 @@ class StudyControllerDynamicSecurityAnalysisTest {
     }
 
     @Test
-    void testRunDynamicSecurityAnalysisGivenRegularNodeAndStopped() throws Exception {
+    void testRunDynamicSecurityAnalysisGivenSecurityNodeAndStopped() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
@@ -383,7 +416,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
             eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
-        // run on a regular node which allows a run
+        // run on a security node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
