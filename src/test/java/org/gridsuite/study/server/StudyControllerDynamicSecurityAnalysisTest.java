@@ -57,6 +57,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.any;
 import static org.mockito.BDDMockito.eq;
@@ -460,7 +461,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // prepare request body
         DynamicSecurityAnalysisParametersInfos parameters = DynamicSecurityAnalysisParametersInfos.builder()
-                .provider("Dynawo")
+                .provider(DYNAWO_PROVIDER)
                 .scenarioDuration(50.0)
                 .contingenciesStartTime(5.0)
                 .build();
@@ -516,7 +517,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PROVIDER, studyUuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString("Dynawo")))
+                        .content(objectMapper.writeValueAsString(DYNAWO_PROVIDER)))
                 .andExpect(status().isOk());
 
         // check notifications

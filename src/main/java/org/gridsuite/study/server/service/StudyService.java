@@ -1280,6 +1280,11 @@ public class StudyService {
         return dynamicSecurityAnalysisService.getDefaultProvider();
     }
 
+    public String getDynamicSecurityAnalysisProvider(UUID studyUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return dynamicSecurityAnalysisService.getProvider(studyEntity.getDynamicSecurityAnalysisParametersUuid());
+    }
+
     public void updateDynamicSecurityAnalysisProvider(UUID studyUuid, String provider, String userId) {
         updateProvider(studyUuid, userId, studyEntity -> {
             dynamicSecurityAnalysisService.updateProvider(studyEntity.getDynamicSecurityAnalysisParametersUuid(), provider);

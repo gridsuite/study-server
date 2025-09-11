@@ -1095,7 +1095,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/provider")
-    @Operation(summary = "Get dynamic simulation provider for a specified study, empty string means default provider")
+    @Operation(summary = "Get dynamic simulation provider for a specified study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is returned")})
     public ResponseEntity<String> getDynamicSimulationProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getDynamicSimulationProvider(studyUuid));
@@ -1109,6 +1109,13 @@ public class StudyController {
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.updateDynamicSecurityAnalysisProvider(studyUuid, provider, userId);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-security-analysis/provider")
+    @Operation(summary = "Get dynamic security analysis provider for a specified study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis provider is returned")})
+    public ResponseEntity<String> getDynamicSecurityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getDynamicSecurityAnalysisProvider(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
