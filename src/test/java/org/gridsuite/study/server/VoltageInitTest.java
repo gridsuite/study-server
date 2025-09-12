@@ -265,6 +265,7 @@ class VoltageInitTest {
 
     //output destinations
     private final String studyUpdateDestination = "study.update";
+    private final String voltageInitDebugDestination = "voltageinit.debug";
     private final String voltageInitResultDestination = "voltageinit.result";
     private final String voltageInitStoppedDestination = "voltageinit.stopped";
     private final String voltageInitFailedDestination = "voltageinit.run.dlx";
@@ -316,7 +317,22 @@ class VoltageInitTest {
                             .setHeader(HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE, Boolean.TRUE)
                             .build(), voltageInitResultDestination);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitResultUuidStr2);
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + ".*")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&debug=.*")) {
+                    String receiver = "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D";
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("resultUuid", VOLTAGE_INIT_RESULT_UUID)
+                            .setHeader("receiver", receiver)
+                            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
+                            .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
+                            .setHeader(HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE, Boolean.TRUE)
+                            .build(), voltageInitResultDestination);
+                    // mock the notification from voltage-init-server to send a debug status notif
+                    input.send(MessageBuilder.withPayload("")
+                            .setHeader("resultUuid", VOLTAGE_INIT_RESULT_UUID)
+                            .setHeader("receiver", receiver)
+                            .build(), voltageInitDebugDestination);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitResultUuidStr);
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", VOLTAGE_INIT_RESULT_UUID)
                             .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
@@ -576,6 +592,8 @@ class VoltageInitTest {
 
         checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
         checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(studyNameUserIdUuid);
+
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
 
