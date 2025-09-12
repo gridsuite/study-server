@@ -102,8 +102,8 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "stateEstimationResultUuid")
     private UUID stateEstimationResultUuid;
 
-    @Column(name = "blockedBuild")
-    private Boolean blockedBuild;
+    @Column(name = "blockedNode")
+    private Boolean blockedNode;
 
     @Embedded
     @AttributeOverrides(value = {

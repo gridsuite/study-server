@@ -16,7 +16,7 @@ import lombok.Builder;
 @Builder
 public record InvalidateNodeTreeParameters(
     InvalidationMode invalidationMode,
-    boolean withBlockedNodeBuild,
+    boolean withBlockedNode,
     ComputationsInvalidationMode computationsInvalidationMode // Only for the first node (root node)
 ) {
     public static InvalidateNodeTreeParameters ALL = new InvalidateNodeTreeParameters(InvalidationMode.ALL, false, ComputationsInvalidationMode.ALL);

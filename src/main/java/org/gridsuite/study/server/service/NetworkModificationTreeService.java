@@ -934,7 +934,7 @@ public class NetworkModificationTreeService {
 
         InvalidateNodeTreeParameters invalidateChildrenParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
-            .withBlockedNodeBuild(invalidateTreeParameters.withBlockedNodeBuild())
+            .withBlockedNode(invalidateTreeParameters.withBlockedNode())
             .build();
         rootNetworkNodeInfoEntities.forEach(child ->
             invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters))
@@ -944,8 +944,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void invalidateBlockedBuildNodeTree(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.invalidateBlockedBuild(rootNetworkUuid, getNodeTreeUuids(nodeUuid));
+    public void unblockNodeTree(UUID rootNetworkUuid, UUID nodeUuid) {
+        rootNetworkNodeInfoService.unblockNodes(rootNetworkUuid, getNodeTreeUuids(nodeUuid));
     }
 
     /**
