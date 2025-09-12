@@ -1759,8 +1759,11 @@ public class StudyController {
         @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+        @Parameter(description = "results selector") @RequestParam("selector") String selector,
+        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+        @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
         @RequestBody SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
-        byte[] result = rootNetworkNodeInfoService.exportSensitivityResultsAsCsv(nodeUuid, rootNetworkUuid, sensitivityAnalysisCsvFileInfos);
+        byte[] result = rootNetworkNodeInfoService.exportSensitivityResultsAsCsv(nodeUuid, rootNetworkUuid, sensitivityAnalysisCsvFileInfos, selector, filters, globalFilters);
         HttpHeaders responseHeaders = new HttpHeaders();
         responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         responseHeaders.setContentDispositionFormData("attachment", "sensitivity_results.csv");
