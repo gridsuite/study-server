@@ -68,16 +68,13 @@ public class ConsumerService {
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final CaseService caseService;
     private final LoadFlowService loadFlowService;
-    private final UserAdminService userAdminService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyConfigService studyConfigService;
-    private final DirectoryService directoryService;
     private final ShortCircuitService shortCircuitService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
-    private final SingleLineDiagramService singleLineDiagramService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -91,29 +88,24 @@ public class ConsumerService {
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
                            StudyConfigService studyConfigService,
-                           DirectoryService directoryService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService,
-                           SingleLineDiagramService singleLineDiagramService) {
+                           StateEstimationService stateEstimationService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
         this.securityAnalysisService = securityAnalysisService;
         this.caseService = caseService;
         this.loadFlowService = loadFlowService;
-        this.userAdminService = userAdminService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.studyConfigService = studyConfigService;
-        this.directoryService = directoryService;
         this.shortCircuitService = shortCircuitService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
-        this.singleLineDiagramService = singleLineDiagramService;
     }
 
     @Bean
