@@ -36,6 +36,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class FilterService {
 
     public static final String FILTER_END_POINT_EVALUATE = "/filters/evaluate";
+    public static final String FILTER_END_POINT_EVALUATE_IDS = "/filters/evaluate/identifiables";
     public static final String FILTER_END_POINT_EXPORT = "/filters/{id}/export";
     public static final String FILTERS_END_POINT_EXPORT = "/filters/export";
 
@@ -104,6 +105,19 @@ public class FilterService {
         if (variantId != null && !variantId.isBlank()) {
             uriComponentsBuilder.queryParam("variantId", variantId);
         }
+        uriComponentsBuilder.queryParam("ids", filtersUuid);
+        var uriComponent = uriComponentsBuilder.buildAndExpand();
+
+        return restTemplate.getForObject(uriComponent.toUriString(), String.class);
+    }
+
+    public String evaluateFilters(UUID networkUuid, List<UUID> filtersUuid) {
+        Objects.requireNonNull(networkUuid);
+        Objects.requireNonNull(filtersUuid);
+        String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EVALUATE_IDS;
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
+        uriComponentsBuilder.queryParam("networkUuid", networkUuid);
         uriComponentsBuilder.queryParam("ids", filtersUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand();
 
