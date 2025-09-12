@@ -72,7 +72,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         String url = buildEndPointUrl("", API_VERSION, null) + "/default-provider";
 
         // --- Success --- //
-        String expectedDefaultProvider = "Dynawo";
+        String expectedDefaultProvider = DYNAWO_PROVIDER;
 
         // configure mock server response
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
@@ -109,7 +109,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + "/provider";
 
         // --- Success --- //
-        String expectedProvider = "Dynawo";
+        String expectedProvider = DYNAWO_PROVIDER;
 
         // configure mock server response
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
@@ -146,7 +146,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + "/provider";
 
         // --- Success --- //
-        String newProvider = "Dynawo2";
+        String newProvider = DYNAWO_PROVIDER + "_2";
 
         // configure mock server response
         wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
@@ -179,7 +179,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetParameters() throws Exception {
         DynamicSecurityAnalysisParametersInfos parameters = DynamicSecurityAnalysisParametersInfos.builder()
-                .provider("Dynawo")
+                .provider(DYNAWO_PROVIDER)
                 .scenarioDuration(50.0)
                 .contingenciesStartTime(5.0)
                 .build();
@@ -221,7 +221,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testCreateParameters() throws Exception {
         DynamicSecurityAnalysisParametersInfos parameters = DynamicSecurityAnalysisParametersInfos.builder()
-                .provider("Dynawo")
+                .provider(DYNAWO_PROVIDER)
                 .scenarioDuration(50.0)
                 .contingenciesStartTime(5.0)
                 .build();
@@ -254,7 +254,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testUpdateParameters() throws Exception {
         DynamicSecurityAnalysisParametersInfos parameters = DynamicSecurityAnalysisParametersInfos.builder()
-                .provider("Dynawo")
+                .provider(DYNAWO_PROVIDER)
                 .scenarioDuration(50.0)
                 .contingenciesStartTime(5.0)
                 .build();
@@ -371,7 +371,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         String url = RUN_BASE_URL + DELIMITER + NETWORK_UUID + DELIMITER + "run";
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
                 .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo("variantId"))
-                .withQueryParam("provider", equalTo("Dynawo"))
+                .withQueryParam("provider", equalTo(DYNAWO_PROVIDER))
                 .withQueryParam("dynamicSimulationResultUuid", equalTo(DYNAMIC_SIMULATION_RESULT_UUID.toString()))
                 .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
@@ -384,7 +384,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        UUID resultUuid = dynamicSecurityAnalysisClient.run("Dynawo", "receiver", NETWORK_UUID,
+        UUID resultUuid = dynamicSecurityAnalysisClient.run(DYNAWO_PROVIDER, "receiver", NETWORK_UUID,
                "variantId", new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId", false);
 
         // check result
