@@ -3,29 +3,30 @@ package org.gridsuite.study.server.service;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class ConsumerServiceTest {
+class StudyServiceCreateGridLayoutTest {
 
     private StudyConfigService studyConfigService;
     private SingleLineDiagramService singleLineDiagramService;
     private DirectoryService directoryService;
-    private ConsumerService consumerService;
+    private StudyService studyService;
 
     @BeforeEach
     void setUp() {
         studyConfigService = mock(StudyConfigService.class);
         singleLineDiagramService = mock(SingleLineDiagramService.class);
         directoryService = mock(DirectoryService.class);
-        consumerService = new ConsumerService(null, null, null, null, null,
-                null, null, null, null, null,
-                studyConfigService, directoryService, null, null, null, null,
-                singleLineDiagramService);
+        studyService = new StudyService(null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
+                null, null, singleLineDiagramService, null, null, null, null,
+                null, null, null, null, null, null, null,
+                null, studyConfigService, null, null, null, null, null,
+                null, directoryService);
     }
 
     @Test
@@ -40,7 +41,7 @@ class ConsumerServiceTest {
         when(directoryService.getElementName(diagramConfigId)).thenReturn(nadElementName);
         when(studyConfigService.createGridLayoutFromNadDiagram(diagramConfigId, clonedConfigId, nadElementName)).thenReturn(gridLayoutUuid);
 
-        UUID result = ReflectionTestUtils.invokeMethod(consumerService, "createGridLayoutFromNadDiagram", "user", profile);
+        UUID result = studyService.createGridLayoutFromNadDiagram("user", profile);
 
         assertEquals(gridLayoutUuid, result);
         verify(singleLineDiagramService).duplicateNadConfig(diagramConfigId);
@@ -49,7 +50,7 @@ class ConsumerServiceTest {
 
     @Test
     void createGridLayoutFromNadDiagramNoConfig() {
-        UUID result = ReflectionTestUtils.invokeMethod(consumerService, "createGridLayoutFromNadDiagram", "user", UserProfileInfos.builder().build());
+        UUID result = studyService.createGridLayoutFromNadDiagram("user", UserProfileInfos.builder().build());
 
         assertNull(result);
         verifyNoInteractions(singleLineDiagramService, studyConfigService);
@@ -60,9 +61,9 @@ class ConsumerServiceTest {
         UUID diagramConfigId = UUID.randomUUID();
         UserProfileInfos profile = UserProfileInfos.builder().diagramConfigId(diagramConfigId).build();
         when(singleLineDiagramService.duplicateNadConfig(diagramConfigId))
-            .thenThrow(new RuntimeException("boom"));
+                .thenThrow(new RuntimeException("boom"));
 
-        UUID result = ReflectionTestUtils.invokeMethod(consumerService, "createGridLayoutFromNadDiagram", "user", profile);
+        UUID result = studyService.createGridLayoutFromNadDiagram("user", profile);
 
         assertNull(result);
         verify(singleLineDiagramService).duplicateNadConfig(diagramConfigId);
