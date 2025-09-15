@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SECURITY_ANALYSIS_RUNNING;
 import static org.gridsuite.study.server.utils.TestUtils.assertStudyException;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -194,28 +195,28 @@ class DynamicSecurityAnalysisServiceTest {
 
     @Test
     void testUpdateProvider() {
-        doNothing().when(dynamicSecurityAnalysisClient).updateProvider(PARAMETERS_UUID, "Dynawo");
+        doNothing().when(dynamicSecurityAnalysisClient).updateProvider(PARAMETERS_UUID, DYNAWO_PROVIDER);
 
-        dynamicSecurityAnalysisService.updateProvider(PARAMETERS_UUID, "Dynawo");
+        dynamicSecurityAnalysisService.updateProvider(PARAMETERS_UUID, DYNAWO_PROVIDER);
 
-        verify(dynamicSecurityAnalysisClient, times(1)).updateProvider(PARAMETERS_UUID, "Dynawo");
+        verify(dynamicSecurityAnalysisClient, times(1)).updateProvider(PARAMETERS_UUID, DYNAWO_PROVIDER);
     }
 
     @Test
     void testGetDefaultProvider() {
-        given(dynamicSecurityAnalysisClient.getDefaultProvider()).willReturn("Dynawo");
+        given(dynamicSecurityAnalysisClient.getDefaultProvider()).willReturn(DYNAWO_PROVIDER);
 
         String provider = dynamicSecurityAnalysisService.getDefaultProvider();
 
-        assertThat(provider).isEqualTo("Dynawo");
+        assertThat(provider).isEqualTo(DYNAWO_PROVIDER);
     }
 
     @Test
     void testGetProvider() {
-        given(dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID)).willReturn("Dynawo");
+        given(dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID)).willReturn(DYNAWO_PROVIDER);
 
         String provider = dynamicSecurityAnalysisService.getProvider(PARAMETERS_UUID);
 
-        assertThat(provider).isEqualTo("Dynawo");
+        assertThat(provider).isEqualTo(DYNAWO_PROVIDER);
     }
 }
