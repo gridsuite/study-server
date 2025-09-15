@@ -948,6 +948,16 @@ public class NetworkModificationTreeService {
         rootNetworkNodeInfoService.unblockNodes(rootNetworkUuid, getNodeTreeUuids(nodeUuid));
     }
 
+    @Transactional
+    public void unblockNode(UUID rootNetworkUuid, UUID nodeUuid) {
+        rootNetworkNodeInfoService.unblockNodes(rootNetworkUuid, List.of(nodeUuid));
+    }
+
+    @Transactional
+    public void blockNode(UUID rootNetworkUuid, UUID nodeUuid) {
+        rootNetworkNodeInfoService.blockNodes(rootNetworkUuid, List.of(nodeUuid));
+    }
+
     /**
      * Recursively iterate through *nodeUuid* parents until one of them match one of the following conditions :<br>
      * - it is of type ROOT<br>

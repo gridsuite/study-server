@@ -984,6 +984,7 @@ public class StudyService {
                 .userId(userId)
                 .build());
         } else {
+            networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
             handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
         }
     }
@@ -1019,6 +1020,8 @@ public class StudyService {
                 .withBlockedNode(true)
                 .computationsInvalidationMode(ComputationsInvalidationMode.ALL)
                 .build());
+        } else {
+            networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
         }
 
         handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
@@ -1390,16 +1393,18 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSecurityAnalysis(UUID studyUuid, List<String> contingencyListNames, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(contingencyListNames);
-        Objects.requireNonNull(nodeUuid);
+    public UUID runSecurityAnalysis(@NonNull UUID studyUuid, @NonNull List<String> contingencyListNames, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
+        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
+        return handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, contingencyListNames, userId);
+    }
+
+    private UUID handleSecurityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, List<String> contingencyListNames, String userId) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID saReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(SECURITY_ANALYSIS.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS, saReportUuid);
-        StudyEntity study = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)),
@@ -1417,7 +1422,7 @@ public class StudyService {
         UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, variantId, runSecurityAnalysisParametersInfos,
                 new ReportInfos(saReportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SECURITY_ANALYSIS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         return result;
     }
 
@@ -1881,7 +1886,7 @@ public class StudyService {
         // we need to invalidate them all
         boolean invalidateAll = networkModificationTreeService.isSecurityNode(nodeUuid) && rootNetworkNodeInfoService.isLoadflowDone(nodeUuid, rootNetworkUuid);
         if (invalidateAll) {
-            invalidateNodeTree(studyUuid, nodeUuid);
+            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid);
         } else {
             invalidateNode(studyUuid, nodeUuid, rootNetworkUuid);
         }

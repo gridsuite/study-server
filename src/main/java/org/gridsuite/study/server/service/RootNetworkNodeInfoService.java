@@ -406,8 +406,12 @@ public class RootNetworkNodeInfoService {
         }
     }
 
+    public void blockNodes(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        getRootNetworkNodes(rootNetworkUuid, nodesUuids).forEach(rnn -> rnn.setBlockedNode(true));
+    }
+
     public void unblockNodes(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        getRootNetworkNodes(rootNetworkUuid, nodesUuids).stream().forEach(rnn -> rnn.setBlockedNode(false));
+        getRootNetworkNodes(rootNetworkUuid, nodesUuids).forEach(rnn -> rnn.setBlockedNode(false));
     }
 
     private void addLink(NetworkModificationNodeInfoEntity nodeInfoEntity, RootNetworkEntity rootNetworkEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {

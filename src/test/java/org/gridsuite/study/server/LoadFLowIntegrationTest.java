@@ -221,7 +221,12 @@ class LoadFLowIntegrationTest {
             wireMockUtils.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
         }
         verify(networkModificationService, times(isSecurityNode ? 1 : 0)).deleteIndexedModifications(any(), any(UUID.class));
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, isSecurityNode);
+
+        // verify that the node is blocked
+        // build is forbidden, for example
+        assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid).header(HEADER_USER_ID, userId))
+            .andExpect(status().isForbidden());
 
         // consume loadflow result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
@@ -262,13 +267,11 @@ class LoadFLowIntegrationTest {
             wireMockUtils.verifyRunLoadflow(runLoadflowStubUuid, networkUuid, withRatioTapChangers, null);
         }
 
-        // verify that the node is blocked in security mode
+        // verify that the node is blocked
         // build is forbidden, for example
-        if (isSecurityNode) {
-            assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
-            mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid).header(HEADER_USER_ID, userId))
-                .andExpect(status().isForbidden());
-        }
+        assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid).header(HEADER_USER_ID, userId))
+            .andExpect(status().isForbidden());
 
         // consume loadflow result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
