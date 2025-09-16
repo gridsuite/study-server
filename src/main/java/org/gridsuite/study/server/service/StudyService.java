@@ -140,6 +140,7 @@ public class StudyService {
     private final StateEstimationService stateEstimationService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final DirectoryService directoryService;
 
     private final ObjectMapper objectMapper;
 
@@ -202,7 +203,8 @@ public class StudyService {
         StateEstimationService stateEstimationService,
         @Lazy StudyService studyService,
         RootNetworkService rootNetworkService,
-        RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+        RootNetworkNodeInfoService rootNetworkNodeInfoService,
+        DirectoryService directoryService) {
         this.defaultNonEvacuatedEnergyProvider = defaultNonEvacuatedEnergyProvider;
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
@@ -239,6 +241,7 @@ public class StudyService {
         this.self = studyService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.directoryService = directoryService;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -656,6 +659,30 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
+    public UUID createGridLayoutFromNadDiagram(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getDiagramConfigId() != null) {
+            UUID sourceNadConfig = userProfileInfos.getDiagramConfigId();
+            try {
+                UUID clonedNadConfig = singleLineDiagramService.duplicateNadConfig(sourceNadConfig);
+                String nadConfigName = directoryService.getElementName(sourceNadConfig);
+                return studyConfigService.createGridLayoutFromNadDiagram(sourceNadConfig, clonedNadConfig, nadConfigName);
+            } catch (Exception e) {
+                LOGGER.error(String.format("Could not create a diagram grid layout cloning NAD elment id '%s' from user/profile '%s/%s'. No layout created",
+                        sourceNadConfig, userId, userProfileInfos.getName()), e);
+            }
+        }
+        return null;
+    }
+
+    public UserProfileInfos getUserProfile(String userId) {
+        try {
+            return userAdminService.getUserProfile(userId).orElse(null);
+        } catch (Exception e) {
+            LOGGER.error(String.format("Could not access to profile for user '%s'", userId), e);
+        }
+        return null;
+    }
+
     private void duplicateStudyNodeAliases(StudyEntity newStudyEntity, StudyEntity sourceStudyEntity) {
         if (!CollectionUtils.isEmpty(sourceStudyEntity.getNodeAliases())) {
             Map<UUID, AbstractNode> newStudyNodes = networkModificationTreeService.getAllStudyNodesByUuid(newStudyEntity.getId());
@@ -683,7 +710,7 @@ public class StudyService {
 
         StudyEntity sourceStudy = studyRepository.findById(sourceStudyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
-        StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId());
+        StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId(), userId);
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudy);
         networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudy);
         duplicateStudyNodeAliases(newStudyEntity, sourceStudy);
@@ -695,7 +722,7 @@ public class StudyService {
         return newStudyEntity;
     }
 
-    private StudyEntity duplicateStudyEntity(StudyEntity sourceStudyEntity, UUID newStudyId) {
+    private StudyEntity duplicateStudyEntity(StudyEntity sourceStudyEntity, UUID newStudyId, String userId) {
         UUID copiedLoadFlowParametersUuid = null;
         if (sourceStudyEntity.getLoadFlowParametersUuid() != null) {
             copiedLoadFlowParametersUuid = loadflowService.duplicateLoadFlowParameters(sourceStudyEntity.getLoadFlowParametersUuid());
@@ -742,6 +769,9 @@ public class StudyService {
             copiedStateEstimationParametersUuid = stateEstimationService.duplicateStateEstimationParameters(sourceStudyEntity.getStateEstimationParametersUuid());
         }
 
+        UserProfileInfos userProfile = getUserProfile(userId);
+        UUID diagramGridLayoutId = createGridLayoutFromNadDiagram(userId, userProfile);
+
         return studyRepository.save(StudyEntity.builder()
             .id(newStudyId)
             .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
@@ -756,6 +786,7 @@ public class StudyService {
             .spreadsheetConfigCollectionUuid(copiedSpreadsheetConfigCollectionUuid)
             .nonEvacuatedEnergyParameters(NonEvacuatedEnergyService.toEntity(nonEvacuatedEnergyParametersInfos))
             .stateEstimationParametersUuid(copiedStateEstimationParametersUuid)
+            .diagramGridLayoutUuid(diagramGridLayoutId)
             .build());
     }
 
