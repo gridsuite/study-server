@@ -87,6 +87,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -361,6 +362,9 @@ class StudyTest {
     @Autowired
     private TestUtils studyTestUtils;
 
+    @SpyBean
+    private StudyServerExecutionService studyServerExecutionService;
+
     private static EquipmentInfos toEquipmentInfos(Line line) {
         return EquipmentInfos.builder()
             .networkUuid(NETWORK_UUID)
@@ -400,6 +404,12 @@ class StudyTest {
                 .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
 
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
+
+        // Synchronize for tests
+        doAnswer((Answer<CompletableFuture>) invocation -> {
+            ((Runnable) invocation.getArguments()[0]).run();
+            return CompletableFuture.completedFuture(null);
+        }).when(studyServerExecutionService).runAsyncAndComplete(any(Runnable.class));
     }
 
     private void initMockBeansNetworkNotExisting() {
