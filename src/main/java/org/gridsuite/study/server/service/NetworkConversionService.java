@@ -104,7 +104,40 @@ public class NetworkConversionService {
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public void exportNetwork(UUID networkUuid, String variantId, String format, String parametersJson, String fileName, HttpServletResponse exportNetworkResponse) {
+    public void downloadExportNetworkFile(UUID exportUuid, HttpServletResponse exportNetworkResponse) {
+
+        try (ServletOutputStream outputStream = exportNetworkResponse.getOutputStream()) {
+            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/download/{exportUuid}");
+            String path = uriComponentsBuilder.buildAndExpand(exportUuid).toUriString();
+
+            restTemplate.execute(
+                    networkConversionServerBaseUri + path,
+                    HttpMethod.POST,
+                    request -> {
+                        request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                    },
+                    networkConversionServerResponse -> {
+                        String fileNameFromResponse = networkConversionServerResponse.getHeaders().getContentDisposition().getFilename();
+                        long contentLength = networkConversionServerResponse.getHeaders().getContentLength();
+                        exportNetworkResponse.setHeader(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.builder("attachment").filename(fileNameFromResponse, StandardCharsets.UTF_8).build().toString());
+                        exportNetworkResponse.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM.toString());
+                        if (contentLength != -1) {
+                            exportNetworkResponse.setContentLengthLong(contentLength);
+                        }
+                        exportNetworkResponse.setStatus(HttpStatus.OK.value());
+                        StreamUtils.copy(networkConversionServerResponse.getBody(), outputStream);
+                        return null;
+                    }
+            );
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, NETWORK_EXPORT_FAILED);
+        } catch (IOException e) {
+            throw new StudyException(NETWORK_EXPORT_FAILED, e.getMessage());
+        }
+    }
+
+    public void exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, String format,
+                              String parametersJson, String fileName, String userId, HttpServletResponse exportNetworkResponse) {
 
         try (ServletOutputStream outputStream = exportNetworkResponse.getOutputStream()) {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
@@ -116,31 +149,27 @@ public class NetworkConversionService {
             if (!StringUtils.isEmpty(fileName)) {
                 uriComponentsBuilder.queryParam("fileName", fileName);
             }
-
+            String receiver = studyUuid + "|" + nodeUuid + "|" + rootNetworkUuid + "|" + userId;
+            uriComponentsBuilder.queryParam("receiver", receiver);
             String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
                 .toUriString();
 
             restTemplate.execute(
-                networkConversionServerBaseUri + path,
-                HttpMethod.POST,
-                request -> {
-                    request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-                    if (parametersJson != null && !parametersJson.isEmpty()) {
-                        StreamUtils.copy(parametersJson, StandardCharsets.UTF_8, request.getBody());
+                    networkConversionServerBaseUri + path,
+                    HttpMethod.POST,
+                    request -> {
+                        request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+                        if (parametersJson != null && !parametersJson.isEmpty()) {
+                            StreamUtils.copy(parametersJson, StandardCharsets.UTF_8, request.getBody());
+                        }
+                    },
+                    networkConversionServerResponse -> {
+                        exportNetworkResponse.setStatus(HttpStatus.ACCEPTED.value());
+                        exportNetworkResponse.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                        String responseJson = "{\"message\":\"Export started, you will receive a notification when ready\"}";
+                        StreamUtils.copy(responseJson, StandardCharsets.UTF_8, outputStream);
+                        return null;
                     }
-                },
-                networkConversionServerResponse -> {
-                    String fileNameFromResponse = networkConversionServerResponse.getHeaders().getContentDisposition().getFilename();
-                    long contentLength = networkConversionServerResponse.getHeaders().getContentLength();
-                    exportNetworkResponse.setHeader(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.builder("attachment").filename(fileNameFromResponse, StandardCharsets.UTF_8).build().toString());
-                    exportNetworkResponse.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM.toString());
-                    if (contentLength != -1) {
-                        exportNetworkResponse.setContentLengthLong(contentLength);
-                    }
-                    exportNetworkResponse.setStatus(HttpStatus.OK.value());
-                    StreamUtils.copy(networkConversionServerResponse.getBody(), outputStream);
-                    return null;
-                }
             );
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, NETWORK_EXPORT_FAILED);

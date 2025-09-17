@@ -942,6 +942,15 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formatsJson);
     }
 
+    @GetMapping(value = "/download-network-file")
+    @Operation(summary = "get the export file")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The available export file")})
+    public void downloadExportNetworkFile(
+            @PathVariable("exportUuid") UUID exportUuid,
+            HttpServletResponse response) {
+        studyService.downloadExportNetworkFile(exportUuid, response);
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}")
     @Operation(summary = "export the study's network in the given format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network in the given format")})
@@ -952,9 +961,10 @@ public class StudyController {
             @PathVariable("format") String format,
             @RequestParam(value = "formatParameters", required = false) String parametersJson,
             @RequestParam(value = "fileName") String fileName,
+            @RequestHeader(HEADER_USER_ID) String userId,
             HttpServletResponse response) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
-        studyService.exportNetwork(nodeUuid, rootNetworkUuid, format, parametersJson, fileName, response);
+        studyService.exportNetwork(studyUuid, nodeUuid, rootNetworkUuid, format, parametersJson, fileName, userId, response);
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run")

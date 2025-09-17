@@ -34,15 +34,14 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.*;
+import static org.gridsuite.study.server.notification.NotificationService.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -59,7 +58,7 @@ public class ConsumerService {
     private static final String HEADER_CASE_NAME = "caseName";
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
-
+    private static final String HEADER_EXPORT_UUID = "exportUuid";
     private final ObjectMapper objectMapper;
 
     private final NotificationService notificationService;
@@ -833,5 +832,26 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeStateEstimationFailed() {
         return message -> consumeCalculationFailed(message, STATE_ESTIMATION);
+    }
+
+    public void consumeNetworkExportSucceeded(Message<String> msg) {
+        Optional.ofNullable(msg.getHeaders().get(NETWORK_UUID, String.class))
+                .map(UUID::fromString)
+                .ifPresent(networkUuid -> {
+                    UUID studyUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_STUDY_UUID)).toString());
+                    UUID nodeUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get("nodeUuid")).toString());
+                    UUID rootNetworkUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_ROOT_NETWORK_UUID)).toString());
+                    String format = (String) msg.getHeaders().get("format");
+                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
+                    String fileName = (String) msg.getHeaders().get(HEADER_FILE_NAME);
+                    UUID exportUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID)).toString());
+                    String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR_MESSAGE);
+                    notificationService.emitNetworkExportSucceeded(studyUuid, nodeUuid, rootNetworkUuid, format, userId, fileName, exportUuid, errorMessage);
+                });
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeNetworkExportSucceeded() {
+        return this::consumeNetworkExportSucceeded;
     }
 }
