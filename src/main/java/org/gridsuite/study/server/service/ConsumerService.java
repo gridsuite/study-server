@@ -759,7 +759,11 @@ public class ConsumerService {
 
     @Bean
     public Consumer<Message<String>> consumeShortCircuitAnalysisDebug() {
-        return message -> consumeCalculationDebug(message, SHORT_CIRCUIT);
+        return message -> {
+            String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
+            ComputationType computationType = !StringUtils.isEmpty(busId) ? SHORT_CIRCUIT_ONE_BUS : SHORT_CIRCUIT;
+            consumeCalculationDebug(message, computationType);
+        };
     }
 
     @Bean

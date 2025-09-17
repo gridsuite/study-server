@@ -59,8 +59,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.*;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
@@ -170,6 +169,7 @@ class ShortCircuitTest implements WithAssertions {
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String elementUpdateDestination = "element.update";
+    private final String shortCircuitAnalysisDebugDestination = "shortcircuitanalysis.debug";
     private final String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
     private final String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
     private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.run.dlx";
@@ -333,13 +333,13 @@ class ShortCircuitTest implements WithAssertions {
                         .header("userId", "userId"))
                 .andExpect(status().isForbidden());
 
-        //run an all-buses short circuit analysis
+        //run in debug mode an all-buses short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
-                        .param("debug", "true")
+                        .param(QUERY_PARAM_DEBUG, "true")
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        consumeShortCircuitAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
+        consumeShortCircuitAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, true);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&debug=true")));
 
@@ -439,7 +439,7 @@ class ShortCircuitTest implements WithAssertions {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        consumeShortCircuitAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode4Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND);
+        consumeShortCircuitAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode4Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND, false);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING_NOT_FOUND + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_4)));
 
@@ -451,7 +451,7 @@ class ShortCircuitTest implements WithAssertions {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv")));
     }
 
-    private void consumeShortCircuitAnalysisResult(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, String resultUuid) throws JsonProcessingException {
+    private void consumeShortCircuitAnalysisResult(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, String resultUuid, boolean debug) throws JsonProcessingException {
         // consume result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
         MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", resultUuid, HEADER_RECEIVER, resultUuidJson));
@@ -461,9 +461,14 @@ class ShortCircuitTest implements WithAssertions {
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
+
+        if (debug) {
+            consumerService.consumeShortCircuitAnalysisDebug().accept(MessageBuilder.createMessage("", messageHeaders));
+            checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
+        }
     }
 
-    private void consumeShortCircuitAnalysisOneBusResult(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, String resultUuid) throws JsonProcessingException {
+    private void consumeShortCircuitAnalysisOneBusResult(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, String resultUuid, boolean debug) throws JsonProcessingException {
         // consume result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
         MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", resultUuid, "busId", "BUS_TEST_ID", HEADER_RECEIVER, resultUuidJson));
@@ -472,6 +477,11 @@ class ShortCircuitTest implements WithAssertions {
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT);
+
+        if (debug) {
+            consumerService.consumeShortCircuitAnalysisDebug().accept(MessageBuilder.createMessage("", messageHeaders));
+            checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
+        }
     }
 
     @Test
@@ -492,7 +502,7 @@ class ShortCircuitTest implements WithAssertions {
                 .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isOk());
 
-        consumeShortCircuitAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
+        consumeShortCircuitAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, false);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
@@ -561,15 +571,16 @@ class ShortCircuitTest implements WithAssertions {
                 .header("userId", "userId"))
             .andExpect(status().isForbidden());
 
-        //run a one bus short circuit analysis
+        //run in debug mode a one bus short circuit analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                 .param("busId", "BUS_TEST_ID")
+                .param(QUERY_PARAM_DEBUG, "true")
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
-        consumeShortCircuitAnalysisOneBusResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
+        consumeShortCircuitAnalysisOneBusResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, true);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&debug=true")));
 
         assertEquals(1, rootNetworkNodeInfoRepository.findAllByOneBusShortCircuitAnalysisResultUuidNotNull().size());
 
@@ -726,7 +737,7 @@ class ShortCircuitTest implements WithAssertions {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        consumeShortCircuitAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
+        consumeShortCircuitAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, false);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
@@ -737,7 +748,7 @@ class ShortCircuitTest implements WithAssertions {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        consumeShortCircuitAnalysisOneBusResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
+        consumeShortCircuitAnalysisOneBusResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, false);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 

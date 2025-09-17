@@ -272,6 +272,7 @@ class VoltageInitTest {
 
     //output destinations
     private final String studyUpdateDestination = "study.update";
+    private final String voltageInitDebugDestination = "voltageinit.debug";
     private final String voltageInitResultDestination = "voltageinit.result";
     private final String voltageInitStoppedDestination = "voltageinit.stopped";
     private final String voltageInitFailedDestination = "voltageinit.run.dlx";
@@ -514,7 +515,7 @@ class VoltageInitTest {
             )
             .andExpect(status().isOk());
 
-        consumeVoltageInitResult(studyEntity.getId(), firstRootNetworkUuid, modificationNode1.getId(), VOLTAGE_INIT_RESULT_UUID);
+        consumeVoltageInitResult(studyEntity.getId(), firstRootNetworkUuid, modificationNode1.getId(), VOLTAGE_INIT_RESULT_UUID, false);
 
         // Running the computation
         TestUtils.assertRequestMatches("POST", "/v1/networks/" + NETWORK_UUID_STRING + "/.*", server);
@@ -561,7 +562,7 @@ class VoltageInitTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        consumeVoltageInitResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, VOLTAGE_INIT_RESULT_UUID);
+        consumeVoltageInitResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, VOLTAGE_INIT_RESULT_UUID, true);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&debug=true")));
 
@@ -620,7 +621,7 @@ class VoltageInitTest {
         testDeleteResults(server, 1); //Delete Voltage init results
     }
 
-    private void consumeVoltageInitResult(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, String resultUuid) throws Exception {
+    private void consumeVoltageInitResult(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, String resultUuid, boolean debug) throws Exception {
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
         MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", resultUuid, HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE, HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10., HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE, Boolean.TRUE, HEADER_RECEIVER, resultUuidJson));
 
@@ -632,6 +633,11 @@ class VoltageInitTest {
 
         checkReactiveSlacksAlertMessagesReceived(studyUuid, 10.);
         checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(studyUuid);
+
+        if (debug) {
+            consumerService.consumeVoltageInitDebug().accept(MessageBuilder.createMessage("", messageHeaders));
+            checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
+        }
     }
 
     private void consumeVoltageInitFailed(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid) throws JsonProcessingException {
@@ -672,7 +678,7 @@ class VoltageInitTest {
                 .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3)));
 
-        consumeVoltageInitResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode4Uuid, VOLTAGE_INIT_CANCEL_FAILED_UUID);
+        consumeVoltageInitResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode4Uuid, VOLTAGE_INIT_CANCEL_FAILED_UUID, false);
 
         // stop voltage init analysis fail
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/stop", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode4Uuid)
@@ -768,7 +774,7 @@ class VoltageInitTest {
             .andExpect(status().isOk());
         assertTrue(networkModificationTreeService.getNodeBuildStatus(nodeUuuid, rootNetworkUuid).isBuilt());
 
-        consumeVoltageInitResult(studyUuid, rootNetworkUuid, nodeUuuid, VOLTAGE_INIT_RESULT_UUID);
+        consumeVoltageInitResult(studyUuid, rootNetworkUuid, nodeUuuid, VOLTAGE_INIT_RESULT_UUID, false);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
@@ -825,7 +831,7 @@ class VoltageInitTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        consumeVoltageInitResult(studyUuid, firstRootNetworkUuid, nodeUuid, VOLTAGE_INIT_RESULT_UUID);
+        consumeVoltageInitResult(studyUuid, firstRootNetworkUuid, nodeUuid, VOLTAGE_INIT_RESULT_UUID, false);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
