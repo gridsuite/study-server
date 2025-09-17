@@ -354,7 +354,7 @@ class LoadFlowTest {
     private void consumeLoadFlowResult(UUID studyUuid, UUID rootNetworkUuid, NetworkModificationNode modificationNode) throws JsonProcessingException {
         UUID nodeUuid = modificationNode.getId();
 
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, modificationNode.isSecurityNode());
+        assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
 
         // consume loadflow result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
@@ -489,7 +489,7 @@ class LoadFlowTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        // running loadflow ()(with security node) invalidate node children and their computations
+        // running loadflow (with security node) invalidate node children and their computations
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);

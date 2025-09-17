@@ -36,7 +36,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -70,7 +69,7 @@ public class ShortCircuitService extends AbstractComputationService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runShortCircuit(UUID rootNetworkUuid, VariantInfos variantInfos, String busId, Optional<UUID> parametersUuid, ReportInfos reportInfos, String userId, boolean debug) {
+    public UUID runShortCircuit(UUID rootNetworkUuid, VariantInfos variantInfos, String busId, UUID parametersUuid, ReportInfos reportInfos, String userId, boolean debug) {
 
         String receiver;
         try {
@@ -86,7 +85,7 @@ public class ShortCircuitService extends AbstractComputationService {
                 .queryParam("reporterId", reportInfos.nodeUuid().toString())
                 .queryParam("reportType", StringUtils.isBlank(busId) ? StudyService.ReportType.SHORT_CIRCUIT.reportKey :
                         StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS.reportKey)
-                .queryParamIfPresent("parametersUuid", parametersUuid);
+                .queryParam("parametersUuid", parametersUuid);
 
         if (!StringUtils.isBlank(busId)) {
             uriComponentsBuilder.queryParam("busId", busId);
