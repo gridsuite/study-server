@@ -269,10 +269,13 @@ class StudyControllerDynamicSimulationTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), eq(true));
+        Mockito.doAnswer(invocation -> RESULT_UUID)
+            .when(dynamicSimulationService).runDynamicSimulation(
+                any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
+                any(), any(), any(), eq(true));
 
         // --- call endpoint to be tested --- //
-        // run on a regular node which allows a run
+        // run in debug mode on a regular node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .param(QUERY_PARAM_DEBUG, "true")
