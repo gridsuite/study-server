@@ -136,7 +136,7 @@ public class ConsumerService {
             WorkflowType workflowType = WorkflowType.valueOf(workflowTypeStr);
             if (WorkflowType.RERUN_LOAD_FLOW.equals(workflowType)) {
                 RerunLoadFlowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowInfos.class);
-                studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), false, workflowInfos.getUserId());
+                studyService.sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId());
             }
         }
     }
@@ -274,7 +274,7 @@ public class ConsumerService {
             }
             if (caseImportAction == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
                 UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-                networkModificationTreeService.invalidateBlockedBuildNodeTree(rootNetworkUuid, rootNodeUuid);
+                networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNodeUuid);
             }
             LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
                 TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
@@ -534,7 +534,7 @@ public class ConsumerService {
             } finally {
                 if (receiverObj != null) {
                     if (computationType == LOAD_FLOW) {
-                        networkModificationTreeService.invalidateBlockedBuildNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
+                        networkModificationTreeService.unblockNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
                     }
 
                     // send notification for failed computation
@@ -603,7 +603,7 @@ public class ConsumerService {
                     // update DB
                     rootNetworkNodeInfoService.updateLoadflowResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, withRatioTapChangers);
                 } finally {
-                    networkModificationTreeService.invalidateBlockedBuildNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
+                    networkModificationTreeService.unblockNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
 
                     // send notifications
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
