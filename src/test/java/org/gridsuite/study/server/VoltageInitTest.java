@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -263,6 +264,12 @@ class VoltageInitTest {
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
 
+    @Autowired
+    private ConsumerService consumerService;
+
+    @Autowired
+    private VoltageInitResultConsumer voltageInitResultConsumer;
+
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String voltageInitResultDestination = "voltageinit.result";
@@ -308,28 +315,10 @@ class VoltageInitTest {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = Objects.requireNonNull(request.getMethod());
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3)) {
-                    input.send(MessageBuilder.withPayload("")
-                            .setHeader("resultUuid", VOLTAGE_INIT_CANCEL_FAILED_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
-                            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
-                            .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
-                            .setHeader(HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE, Boolean.TRUE)
-                            .build(), voltageInitResultDestination);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitResultUuidStr2);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + ".*")) {
-                    input.send(MessageBuilder.withPayload("")
-                            .setHeader("resultUuid", VOLTAGE_INIT_RESULT_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
-                            .setHeader(HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE)
-                            .setHeader(HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10.)
-                            .setHeader(HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE, Boolean.TRUE)
-                            .build(), voltageInitResultDestination);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitResultUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
-                    input.send(MessageBuilder.withPayload("")
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
-                            .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
-                        .build(), voltageInitFailedDestination);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitErrorResultUuidStr);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_RESULT_JSON);
@@ -525,6 +514,8 @@ class VoltageInitTest {
             )
             .andExpect(status().isOk());
 
+        consumeVoltageInitResult(studyEntity.getId(), firstRootNetworkUuid, modificationNode1.getId(), VOLTAGE_INIT_RESULT_UUID);
+
         // Running the computation
         TestUtils.assertRequestMatches("POST", "/v1/networks/" + NETWORK_UUID_STRING + "/.*", server);
         // Fetch results to get modification group UUID
@@ -570,14 +561,7 @@ class VoltageInitTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
-
-        checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
-        checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(studyNameUserIdUuid);
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        consumeVoltageInitResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, VOLTAGE_INIT_RESULT_UUID);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&debug=true")));
 
@@ -628,14 +612,35 @@ class VoltageInitTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_FAILED);
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        consumeVoltageInitFailed(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid);
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
 
         testResultCount(server); //Test result count
         testDeleteResults(server, 1); //Delete Voltage init results
+    }
+
+    private void consumeVoltageInitResult(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, String resultUuid) throws Exception {
+        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
+        MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", resultUuid, HEADER_REACTIVE_SLACKS_OVER_THRESHOLD, Boolean.TRUE, HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE, 10., HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE, Boolean.TRUE, HEADER_RECEIVER, resultUuidJson));
+
+        voltageInitResultConsumer.consumeVoltageInitResult().accept(MessageBuilder.createMessage("", messageHeaders));
+
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
+
+        checkReactiveSlacksAlertMessagesReceived(studyUuid, 10.);
+        checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(studyUuid);
+    }
+
+    private void consumeVoltageInitFailed(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid) throws JsonProcessingException {
+        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
+        MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID, HEADER_RECEIVER, resultUuidJson));
+        consumerService.consumeVoltageInitFailed().accept(MessageBuilder.createMessage("", messageHeaders));
+
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_FAILED);
     }
 
     @Test
@@ -667,14 +672,7 @@ class VoltageInitTest {
                 .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3)));
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
-
-        checkReactiveSlacksAlertMessagesReceived(studyNameUserIdUuid, 10.);
-        checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(studyNameUserIdUuid);
-
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        consumeVoltageInitResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode4Uuid, VOLTAGE_INIT_CANCEL_FAILED_UUID);
 
         // stop voltage init analysis fail
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/stop", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode4Uuid)
@@ -770,11 +768,8 @@ class VoltageInitTest {
             .andExpect(status().isOk());
         assertTrue(networkModificationTreeService.getNodeBuildStatus(nodeUuuid, rootNetworkUuid).isBuilt());
 
-        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
-        checkReactiveSlacksAlertMessagesReceived(studyUuid, 10.);
-        checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(studyUuid);
-        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        consumeVoltageInitResult(studyUuid, rootNetworkUuid, nodeUuuid, VOLTAGE_INIT_RESULT_UUID);
+
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         // just retrieve modifications list from modificationNode3Uuid
@@ -829,11 +824,9 @@ class VoltageInitTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run", studyUuid, firstRootNetworkUuid, nodeUuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
-        checkUpdateModelStatusMessagesReceived(studyUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
-        checkReactiveSlacksAlertMessagesReceived(studyUuid, 10.);
-        checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(studyUuid);
-        checkUpdateModelStatusMessagesReceived(studyUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+
+        consumeVoltageInitResult(studyUuid, firstRootNetworkUuid, nodeUuid, VOLTAGE_INIT_RESULT_UUID);
+
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
 
         // clone and insert voltage-init modification
