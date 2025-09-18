@@ -40,6 +40,10 @@ public class SpreadsheetParameters {
     @JsonInclude(Include.NON_EMPTY)
     private GeneratorSpreadsheetParameters generator;
 
+    @JsonProperty("BUS")
+    @JsonInclude(Include.NON_EMPTY)
+    private BusSpreadsheetParameters bus;
+
     @AllArgsConstructor
     @NoArgsConstructor
     @Data
@@ -60,5 +64,16 @@ public class SpreadsheetParameters {
     public static class GeneratorSpreadsheetParameters {
         @JsonInclude(Include.NON_NULL)
         private Boolean regulatingTerminal;
+    }
+
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Data
+    @Accessors(chain = true)
+    @Jacksonized
+    @Builder
+    public static class BusSpreadsheetParameters {
+        @JsonInclude(Include.NON_NULL)
+        private Boolean networkComponents;
     }
 }

@@ -20,6 +20,7 @@ class SpreadsheetParametersEntityTest {
         assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadLineOperationalLimitGroup());
         assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadTwtOperationalLimitGroup());
         assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadGeneratorRegulatingTerminal());
+        assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadBusNetworkComponents());
     }
 
     @Test
@@ -29,11 +30,13 @@ class SpreadsheetParametersEntityTest {
             .spreadsheetLoadLineOperationalLimitGroup(true)
             .spreadsheetLoadTwtOperationalLimitGroup(true)
             .spreadsheetLoadGeneratorRegulatingTerminal(true)
+            .spreadsheetLoadBusNetworkComponents(true)
             .build();
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadBranchOperationalLimitGroup());
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadLineOperationalLimitGroup());
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadTwtOperationalLimitGroup());
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadGeneratorRegulatingTerminal());
+        assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadBusNetworkComponents());
     }
 
     @Test
@@ -43,6 +46,7 @@ class SpreadsheetParametersEntityTest {
             .spreadsheetLoadLineOperationalLimitGroup(true)
             .spreadsheetLoadTwtOperationalLimitGroup(true)
             .spreadsheetLoadGeneratorRegulatingTerminal(true)
+            .spreadsheetLoadBusNetworkComponents(true)
             .build();
 
         SpreadsheetParameters spreadsheetParameters = spreadsheetParametersEntity.toDto();
@@ -50,6 +54,7 @@ class SpreadsheetParametersEntityTest {
         assertTrue(spreadsheetParameters.getLine().getOperationalLimitsGroups());
         assertTrue(spreadsheetParameters.getTwt().getOperationalLimitsGroups());
         assertTrue(spreadsheetParameters.getGenerator().getRegulatingTerminal());
+        assertTrue(spreadsheetParameters.getBus().getNetworkComponents());
     }
 
     @Test
@@ -65,6 +70,7 @@ class SpreadsheetParametersEntityTest {
         assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadLineOperationalLimitGroup());
         assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadTwtOperationalLimitGroup());
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadGeneratorRegulatingTerminal());
+        assertFalse(spreadsheetParametersEntity.isSpreadsheetLoadBusNetworkComponents());
     }
 
     @Test
@@ -75,6 +81,7 @@ class SpreadsheetParametersEntityTest {
             .line(SpreadsheetParameters.BranchSpreadsheetParameters.builder().operationalLimitsGroups(true).build())
             .twt(SpreadsheetParameters.BranchSpreadsheetParameters.builder().operationalLimitsGroups(true).build())
             .generator(SpreadsheetParameters.GeneratorSpreadsheetParameters.builder().regulatingTerminal(true).build())
+            .bus(SpreadsheetParameters.BusSpreadsheetParameters.builder().networkComponents(true).build())
             .build();
 
         spreadsheetParametersEntity.update(newParameters);
@@ -82,5 +89,6 @@ class SpreadsheetParametersEntityTest {
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadLineOperationalLimitGroup());
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadTwtOperationalLimitGroup());
         assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadGeneratorRegulatingTerminal());
+        assertTrue(spreadsheetParametersEntity.isSpreadsheetLoadBusNetworkComponents());
     }
 }

@@ -590,6 +590,9 @@ class NetworkMapTest {
   "GENERATOR": {
     "loadRegulatingTerminals": "true"
   },
+  "BUS" : {
+    "loadNetworkComponents" : "false"
+  },
   "TIE_LINE": {
     "dcPowerFactor": "1.0"
   },

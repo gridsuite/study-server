@@ -23,5 +23,5 @@ import lombok.experimental.SuperBuilder;
 @ToString(callSuper = true)
 @Schema(description = "Equipment deletion")
 public class EquipmentDeletionInfos extends EquipmentModificationInfos {
-    // String equipmentType transfered up to EquipmentModificationInfos.
+    // String equipmentType transferred up to EquipmentModificationInfos.
 }

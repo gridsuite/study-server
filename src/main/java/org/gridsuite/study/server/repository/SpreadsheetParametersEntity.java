@@ -36,12 +36,17 @@ public class SpreadsheetParametersEntity {
     @Default
     private boolean spreadsheetLoadGeneratorRegulatingTerminal = false;
 
+    @Column(name = "sp_load_bus_nc", nullable = false, columnDefinition = "boolean default false")
+    @Default
+    private boolean spreadsheetLoadBusNetworkComponents = false;
+
     public SpreadsheetParameters toDto() {
         return new SpreadsheetParameters(
             new BranchSpreadsheetParameters(this.spreadsheetLoadBranchOperationalLimitGroup),
             new BranchSpreadsheetParameters(this.spreadsheetLoadLineOperationalLimitGroup),
             new BranchSpreadsheetParameters(this.spreadsheetLoadTwtOperationalLimitGroup),
-            new GeneratorSpreadsheetParameters(this.spreadsheetLoadGeneratorRegulatingTerminal)
+            new GeneratorSpreadsheetParameters(this.spreadsheetLoadGeneratorRegulatingTerminal),
+            new SpreadsheetParameters.BusSpreadsheetParameters(this.spreadsheetLoadBusNetworkComponents)
         );
     }
 
@@ -76,6 +81,13 @@ public class SpreadsheetParametersEntity {
             if (generatorParams.getRegulatingTerminal() != null && this.spreadsheetLoadGeneratorRegulatingTerminal != generatorParams.getRegulatingTerminal()) {
                 modified = true;
                 this.spreadsheetLoadGeneratorRegulatingTerminal = generatorParams.getRegulatingTerminal();
+            }
+        }
+        final SpreadsheetParameters.BusSpreadsheetParameters busParams = dto.getBus();
+        if (busParams != null) {
+            if (busParams.getNetworkComponents() != null && this.spreadsheetLoadBusNetworkComponents != busParams.getNetworkComponents()) {
+                modified = true;
+                this.spreadsheetLoadBusNetworkComponents = busParams.getNetworkComponents();
             }
         }
         return modified;
