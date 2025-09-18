@@ -838,7 +838,7 @@ public class ConsumerService {
         Optional.ofNullable(msg.getHeaders().get(NETWORK_UUID, String.class))
                 .map(UUID::fromString)
                 .ifPresent(networkUuid -> {
-                    UUID studyUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_STUDY_UUID)).toString());
+                    UUID studyUuid = UUID.fromString(msg.getHeaders().get(HEADER_STUDY_UUID, String.class));
                     UUID nodeUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get("nodeUuid")).toString());
                     UUID rootNetworkUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_ROOT_NETWORK_UUID)).toString());
                     String format = (String) msg.getHeaders().get("format");

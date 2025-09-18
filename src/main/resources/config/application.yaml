@@ -156,7 +156,7 @@ spring:
           group: dlq
         consumeNetworkExportSucceeded-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}network.export.succeeded
-          group: studyExportNetworkSucceededGroup
+          group: dlq
       output-bindings: publishStudyUpdate-out-0;publishElementUpdate-out-0
 
 powsybl:

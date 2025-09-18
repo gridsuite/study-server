@@ -112,10 +112,8 @@ public class NetworkConversionService {
 
             restTemplate.execute(
                     networkConversionServerBaseUri + path,
-                    HttpMethod.POST,
-                    request -> {
-                        request.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-                    },
+                    HttpMethod.GET,
+                    request -> { },
                     networkConversionServerResponse -> {
                         String fileNameFromResponse = networkConversionServerResponse.getHeaders().getContentDisposition().getFilename();
                         long contentLength = networkConversionServerResponse.getHeaders().getContentLength();
@@ -126,6 +124,7 @@ public class NetworkConversionService {
                         }
                         exportNetworkResponse.setStatus(HttpStatus.OK.value());
                         StreamUtils.copy(networkConversionServerResponse.getBody(), outputStream);
+                        outputStream.flush();
                         return null;
                     }
             );
