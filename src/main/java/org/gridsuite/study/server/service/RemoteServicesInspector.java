@@ -84,7 +84,7 @@ public class RemoteServicesInspector {
         // parallel health status check for all services marked as "optional: true" in application.yaml
         List<CompletableFuture<ServiceStatusInfos>> results = remoteServicesProperties.getServices().stream()
             .filter(RemoteServicesProperties.Service::isOptional)
-            .map(service -> asyncSelf.isServerUp(service).thenApply(isUp -> ServiceStatusInfos.builder()
+            .map(service -> asyncSelf.isOptionalServiceUp(service).thenApply(isUp -> ServiceStatusInfos.builder()
                     .name(service.getName())
                     .status(Boolean.TRUE.equals(isUp) ? ServiceStatus.UP : ServiceStatus.DOWN)
                     .build()))
@@ -93,20 +93,28 @@ public class RemoteServicesInspector {
         return results.stream().map(CompletableFuture::join).toList();
     }
 
+    /**
+     * Check if an optional service is up and running.
+     * This method is specifically designed for optional services and uses debug-level logging
+     * to avoid polluting stdout with expected failures.
+     *
+     * @param service the optional service to check
+     * @return CompletableFuture<Boolean> true if service is UP, false otherwise
+     */
     @Async
-    public CompletableFuture<Boolean> isServerUp(RemoteServicesProperties.Service service) {
+    public CompletableFuture<Boolean> isOptionalServiceUp(RemoteServicesProperties.Service service) {
         try {
             final String result = restTemplate.getForObject(service.getBaseUri() + "/actuator/health", String.class);
             final JsonNode node = objectMapper.readTree(result).path(ACTUATOR_HEALTH_STATUS_JSON_FIELD);
             if (node.isMissingNode()) {
-                LOGGER.error("Cannot find {} json node while testing '{}'", ACTUATOR_HEALTH_STATUS_JSON_FIELD, service.getName());
+                LOGGER.debug("Cannot find {} json node while testing '{}'", ACTUATOR_HEALTH_STATUS_JSON_FIELD, service.getName());
             } else {
                 return CompletableFuture.completedFuture("UP".equalsIgnoreCase(node.asText()));
             }
         } catch (RestClientException e) {
-            LOGGER.error("Network error while testing " + service.getName(), e);
+            LOGGER.debug("Network error while testing {}", service.getName(), e);
         } catch (JsonProcessingException e) {
-            LOGGER.error("Json parsing error while testing " + service.getName(), e);
+            LOGGER.debug("Json parsing error while testing {}", service.getName(), e);
         }
         return CompletableFuture.completedFuture(false);
     }
