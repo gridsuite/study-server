@@ -903,6 +903,9 @@ public class StudyService {
             case "generator" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()));
+            case "bus" -> additionalParameters.put(
+                InfoTypeParameters.QUERY_PARAM_LOAD_NETWORK_COMPONENTS,
+                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBusNetworkComponents()));
         }
         return additionalParameters;
     }
@@ -964,6 +967,10 @@ public class StudyService {
             Map.of(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal())));
+        optionalParameters.put(String.valueOf(ElementType.BUS),
+            Map.of(
+                InfoTypeParameters.QUERY_PARAM_LOAD_NETWORK_COMPONENTS,
+                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBusNetworkComponents())));
         return networkMapService.getAllElementsInfos(
             rootNetworkService.getNetworkUuid(rootNetworkUuid),
             networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid),
