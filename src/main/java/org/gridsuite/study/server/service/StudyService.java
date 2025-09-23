@@ -1480,8 +1480,8 @@ public class StudyService {
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            List<CurrentLimitViolationInfos> simpleViolations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
-            nadRequestInfos.put("limitViolationInfos", simpleViolations);
+            List<CurrentLimitViolationInfos> currentLimitViolationInfos = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
+            nadRequestInfos.put("currentLimitViolationsInfos", currentLimitViolationInfos);
             return singleLineDiagramService.generateNetworkAreaDiagram(networkUuid, variantId, nadRequestInfos);
         } else {
             return null;

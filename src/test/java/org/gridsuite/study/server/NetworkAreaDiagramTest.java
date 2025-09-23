@@ -6,7 +6,13 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
+
+import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.CurrentLimitViolationInfos;
+import org.gridsuite.study.server.dto.LimitViolationInfos;
+import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.SingleLineDiagramService;
 import org.gridsuite.study.server.utils.WireMockUtils;
@@ -20,12 +26,14 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -55,6 +63,12 @@ class NetworkAreaDiagramTest {
     private RootNetworkService rootNetworkService;
 
     @MockBean
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+
+    @MockBean
+    private LoadFlowService loadFlowService;
+
+    @MockBean
     private NetworkStoreService networkStoreService;
 
     private static final String SINGLE_LINE_DIAGRAM_SERVER_BASE_URL = "/v1/network-area-diagram/";
@@ -63,7 +77,10 @@ class NetworkAreaDiagramTest {
     private static final UUID ROOTNETWORK_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
     private static final Map<String, Object> BODY_CONTENT = Map.of("key", "bodyContent");
-    private static final Map<String, Object> BODY_CONTENT_WITH_VIOLATIONS = Map.of("limitViolationInfos", List.of(), "key", "bodyContent");
+    private static final Map<String, Object> BODY_CONTENT_WITH_VIOLATIONS = new LinkedHashMap<String, Object>() {{
+                put("key", "bodyContent");
+                put("currentLimitViolationsInfos", List.of(new CurrentLimitViolationInfos("eq1", null)));
+        }};
 
     @BeforeEach
     void setUp() {
@@ -73,6 +90,8 @@ class NetworkAreaDiagramTest {
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(wireMockServer.baseUrl());
 
         when(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
+        when(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID, ROOTNETWORK_UUID, ComputationType.LOAD_FLOW)).thenReturn(UUID.randomUUID());
+        when(loadFlowService.getCurrentLimitViolations(any())).thenReturn(List.of(LimitViolationInfos.builder().subjectId("eq1").limitName("limit1").build()));
         when(rootNetworkService.getNetworkUuid(ROOTNETWORK_UUID)).thenReturn(NETWORK_UUID);
         when(networkStoreService.getVariantsInfos(NETWORK_UUID)).thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
     }
