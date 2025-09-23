@@ -10,7 +10,7 @@ package org.gridsuite.study.server.dto;
  * @author Ayoub LABIDI <ayoub.labidi at rte-france.com>
  */
 
-public record SimpleLimitViolationInfos(
+public record CurrentLimitViolationInfos(
     String equipmentId,
     String limitName
 ) {
