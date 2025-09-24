@@ -186,6 +186,8 @@ class StudyTest {
     private static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
     private static final String INVALID_PARAMS_IN_PROFILE_USER_ID = "invalidParamInProfileUser";
     private static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
+    private static final String NAD_CONFIG_USER_ID = "nadConfigUser";
+    private static final String NAD_ELEMENT_NAME = "nadName";
 
     private static final String PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING = "f09f5282-8e34-48b5-b66e-7ef9f3f36c4f";
     private static final String PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING = "a09f5282-8e36-48b5-b66e-7ef9f3f36c4f";
@@ -212,6 +214,7 @@ class StudyTest {
     private static final String PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING = "9cec4a7b-ab74-5d78-9d07-ce73c5ef11d9";
     private static final String PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING = "2c865123-4378-8dd2-9d07-ce73c5ef11d9";
     private static final String PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING = "207a4bec-6f1a-400f-98f0-e5bcf37d4fcf";
+    private static final String PROFILE_DIAGRAM_CONFIG_UUID_STRING = "518b5cac-6f1a-400f-98f0-e5bcf37d4fcf";
 
     private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" +
         PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING +
@@ -222,6 +225,17 @@ class StudyTest {
         "\",\"spreadsheetConfigCollectionId\":\"" + PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING +
         "\",\"networkVisualizationParameterId\":\"" + PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING +
         "\",\"allLinksValid\":true}";
+
+    private static final String USER_PROFILE_WITH_DIAGRAM_CONFIG_PARAMS_JSON = "{\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" +
+            PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING +
+            "\",\"securityAnalysisParameterId\":\"" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING +
+            "\",\"sensitivityAnalysisParameterId\":\"" + PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING +
+            "\",\"shortcircuitParameterId\":\"" + PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING +
+            "\",\"voltageInitParameterId\":\"" + PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING +
+            "\",\"spreadsheetConfigCollectionId\":\"" + PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING +
+            "\",\"networkVisualizationParameterId\":\"" + PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING +
+            "\",\"diagramConfigId\":\"" + PROFILE_DIAGRAM_CONFIG_UUID_STRING +
+            "\",\"allLinksValid\":true}";
 
     private static final String PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
     private static final String DUPLICATED_LOADFLOW_PARAMS_JSON = "\"" + PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
@@ -293,6 +307,12 @@ class StudyTest {
 
     @Autowired
     private StudyConfigService studyConfigService;
+
+    @Autowired
+    private SingleLineDiagramService singleLineDiagramService;
+
+    @Autowired
+    private DirectoryService directoryService;
 
     @MockBean
     private EquipmentInfosService equipmentInfosService;
@@ -436,6 +456,8 @@ class StudyTest {
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
         studyConfigService.setStudyConfigServerBaseUri(baseUrl);
+        singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
+        directoryService.setDirectoryServerServerBaseUri(baseUrl);
 
         String baseUrlWireMock = wireMockServer.baseUrl();
         networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
@@ -570,6 +592,12 @@ class StudyTest {
                     return new MockResponse(404); // params duplication request KO
                 } else if (path.matches("/v1/network-visualizations-params\\?duplicateFrom=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
+                } else if (path.matches("/v1/diagram-grid-layout") && POST.equals(request.getMethod())) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
+                } else if (path.matches("/v1/network-area-diagram/config\\?duplicateFrom=.*") && POST.equals(request.getMethod())) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
+                } else if (path.matches("/v1/elements/" + PROFILE_DIAGRAM_CONFIG_UUID_STRING + "/name") && GET.equals(request.getMethod())) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(NAD_ELEMENT_NAME));
                 } else if (path.matches("/v1/parameters/.*/provider") && GET.equals(request.getMethod())) {
                     return new MockResponse.Builder().code(200).body(defaultNonEvacuatedEnergyProvider).build();
                 } else if (path.matches("/v1/parameters/.*/provider")) {
@@ -582,6 +610,10 @@ class StudyTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_INVALID_PARAMS_JSON);
                 } else if (path.matches("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_VALID_PARAMS_JSON);
+                } else if (path.matches("/v1/users/" + NAD_CONFIG_USER_ID + "/profile")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_WITH_DIAGRAM_CONFIG_PARAMS_JSON);
+                } else if (path.matches("/v1/users/userId/profile")) {
+                    return new MockResponse(404);
                 } else if (path.matches("/v1/spreadsheet-config-collections/default") && !POST.equals(request.getMethod())) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), DUPLICATED_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
                 } else if (path.matches("/v1/spreadsheet-config-collections/.*") && DELETE.equals(request.getMethod())) {
@@ -1716,8 +1748,7 @@ class StudyTest {
         createStudy(mockWebServer, VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID, PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING, true);
     }
 
-    private void testDuplicateStudy(final MockWebServer mockWebServer, UUID study1Uuid, UUID rootNetworkUuid) throws Exception {
-        String userId = "userId";
+    private void testDuplicateStudy(final MockWebServer mockWebServer, UUID study1Uuid, UUID rootNetworkUuid, String userId) throws Exception {
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
@@ -1730,7 +1761,7 @@ class StudyTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), rootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
-                .header(USER_ID_HEADER, "userId"))
+                .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
@@ -1746,7 +1777,7 @@ class StudyTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), rootNetworkUuid)
             .contentType(MediaType.APPLICATION_JSON)
             .content(createLoadAttributes)
-            .header(USER_ID_HEADER, "userId"))
+            .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
@@ -1779,7 +1810,7 @@ class StudyTest {
         checkNodeAliasUpdateMessageReceived(study1Uuid);
 
         // duplicate the study
-        StudyEntity duplicatedStudy = duplicateStudy(mockWebServer, study1Uuid);
+        StudyEntity duplicatedStudy = duplicateStudy(mockWebServer, study1Uuid, userId);
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
 
         // Verify node aliases on the duplicated study
@@ -1802,7 +1833,7 @@ class StudyTest {
 
         //Test duplication from a non-existing source study
         mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID())
-                .header(USER_ID_HEADER, "userId"))
+                .header(USER_ID_HEADER, userId))
                 .andExpect(status().isNotFound());
     }
 
@@ -1819,7 +1850,23 @@ class StudyTest {
         studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
-        testDuplicateStudy(mockWebServer, study1Uuid, firstRootNetworkUuid);
+        testDuplicateStudy(mockWebServer, study1Uuid, firstRootNetworkUuid, "userId");
+    }
+
+    @Test
+    void testDuplicateStudyWithGridLayout(final MockWebServer mockWebServer) throws Exception {
+        UUID study1Uuid = createStudy(mockWebServer, "userId", CASE_UUID);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
+        StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
+        studyEntity.setLoadFlowParametersUuid(UUID.randomUUID());
+        studyEntity.setSecurityAnalysisParametersUuid(UUID.randomUUID());
+        studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
+        studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
+        studyEntity.setStateEstimationParametersUuid(UUID.randomUUID());
+        studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
+        studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
+        studyRepository.save(studyEntity);
+        testDuplicateStudy(mockWebServer, study1Uuid, firstRootNetworkUuid, NAD_CONFIG_USER_ID);
     }
 
     @Test
@@ -1835,7 +1882,7 @@ class StudyTest {
         studyEntity.setNetworkVisualizationParametersUuid(null);
         studyEntity.setSpreadsheetConfigCollectionUuid(null);
         studyRepository.save(studyEntity);
-        testDuplicateStudy(mockWebServer, study1Uuid, firstRootNetworkUuid);
+        testDuplicateStudy(mockWebServer, study1Uuid, firstRootNetworkUuid, "userId");
     }
 
     @Test
@@ -1882,10 +1929,10 @@ class StudyTest {
         TestUtils.getRequestsWithBodyDone(numberOfRequests, mockWebServer);
     }
 
-    private StudyEntity duplicateStudy(final MockWebServer server, UUID studyUuid) throws Exception {
+    private StudyEntity duplicateStudy(final MockWebServer server, UUID studyUuid, String userId) throws Exception {
         UUID stubUuid = wireMockUtils.stubDuplicateModificationGroup(mapper.writeValueAsString(Map.of()));
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
-                        .header(USER_ID_HEADER, "userId"))
+                        .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         ObjectMapper mapper = new ObjectMapper();
         String newUuid = mapper.readValue(response, String.class);
@@ -1927,7 +1974,7 @@ class StudyTest {
         wireMockUtils.verifyDuplicateModificationGroup(stubUuid, 3);
 
         Set<RequestWithBody> requests;
-        int numberOfRequests = 3;
+        int numberOfRequests = 4;
         if (sourceStudy.getSecurityAnalysisParametersUuid() == null) {
             // if we don't have a securityAnalysisParametersUuid we don't call the security-analysis-server to duplicate them
             assertNull(duplicatedStudy.getSecurityAnalysisParametersUuid());
@@ -1976,11 +2023,15 @@ class StudyTest {
             assertNotNull(duplicatedStudy.getSpreadsheetConfigCollectionUuid());
             numberOfRequests++;
         }
+        if (NAD_CONFIG_USER_ID.equals(userId)) {
+            numberOfRequests = numberOfRequests + 3;
+        }
         requests = TestUtils.getRequestsWithBodyDone(numberOfRequests, server);
 
         RootNetworkEntity rootNetworkEntity = studyTestUtils.getOneRootNetwork(duplicatedStudy.getId());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/networks/" + rootNetworkEntity.getNetworkUuid() + "/reindex-all")).count());
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/cases\\?duplicateFrom=.*&withExpiration=false")).count());
+        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/users/.*/profile")).count());
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getVoltageInitParametersUuid())).count());
         }
@@ -2004,6 +2055,11 @@ class StudyTest {
         }
         if (sourceStudy.getSpreadsheetConfigCollectionUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + sourceStudy.getSpreadsheetConfigCollectionUuid())).count());
+        }
+        if (NAD_CONFIG_USER_ID.equals(userId)) {
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/network-area-diagram/config\\?duplicateFrom=" + PROFILE_DIAGRAM_CONFIG_UUID_STRING)).count());
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/elements/.*/name")).count());
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/diagram-grid-layout")).count());
         }
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports/.*/duplicate")).count());
         return duplicatedStudy;

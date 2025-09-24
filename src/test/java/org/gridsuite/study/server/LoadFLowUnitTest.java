@@ -89,12 +89,12 @@ class LoadFLowUnitTest {
     @Test
     void testRunLoadFlow() {
         when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(null);
-        doNothing().when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyBoolean(), anyString());
+        doNothing().when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
         doNothing().when(studyService).assertCanRunLoadFLow(any(), any());
 
         controller.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId);
 
-        verify(studyService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyBoolean(), anyString());
+        verify(studyService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
         verify(studyService, times(1)).assertCanRunLoadFLow(any(), any());
     }
 
@@ -125,12 +125,14 @@ class LoadFLowUnitTest {
     }
 
     private void testRerunLoadFlow(boolean withRatioTapChangers, boolean isSecurityNode) {
-        reset(studyService, networkModificationTreeService, networkModificationService, notificationService, loadFlowService);
+        StudyEntity studyEntity = new StudyEntity();
+        studyEntity.setId(studyUuid);
+        reset(studyService, networkModificationTreeService, networkModificationService, notificationService, loadFlowService, studyRepository);
+        when(studyRepository.findById(studyUuid)).thenReturn(Optional.of(studyEntity));
+        when(networkModificationTreeService.isSecurityNode(nodeUuid)).thenReturn(isSecurityNode);
         if (isSecurityNode) {
-            when(networkModificationTreeService.isSecurityNode(nodeUuid)).thenReturn(true);
             testRerunLoadFlowSecurityNode(withRatioTapChangers);
         } else {
-            when(studyRepository.findById(studyUuid)).thenReturn(Optional.of(new StudyEntity()));
             testRerunLoadFlowConstructionNode(withRatioTapChangers);
         }
     }
@@ -146,7 +148,7 @@ class LoadFLowUnitTest {
         InvalidateNodeTreeParameters expectedInvalidationParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
             .computationsInvalidationMode(InvalidateNodeTreeParameters.ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
-            .withBlockedNodeBuild(true)
+            .withBlockedNode(true)
             .build();
 
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
@@ -168,7 +170,6 @@ class LoadFLowUnitTest {
         doReturn(loadflowResultUuid).when(loadFlowService).createRunningStatus();
 
         // execute loadflow rerun
-        when(networkModificationTreeService.isSecurityNode(nodeUuid)).thenReturn(true);
         studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
 
         // node invalidation

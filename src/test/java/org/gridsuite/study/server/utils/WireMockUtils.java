@@ -49,6 +49,14 @@ public class WireMockUtils {
         this.wireMock = wireMock;
     }
 
+    public UUID stubAllNetworkElementInfosGet(String networkUuid, String infoType, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "all"))
+            .withQueryParam(QUERY_PARAM_VARIANT_ID, WireMock.equalTo(FIRST_VARIANT_ID))
+            .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
+            .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
     public UUID stubNetworkElementInfosGet(String networkUuid, String elementType, String infoType, String elementId, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements" + DELIMITER + elementId))
                 .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
@@ -542,6 +550,14 @@ public class WireMockUtils {
         ).getId();
     }
 
+    public UUID stubFiltersEvaluate(String networkUuid, List<UUID> filtersUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/filters/evaluate/identifiables"))
+            .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+                .withQueryParam("ids", WireMock.equalTo(String.join(",", filtersUuid.stream().map(UUID::toString).toList())))
+            .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
     public UUID stubFiltersExport(String networkUuid, List<String> filtersUuid, String responseBody) {
         MappingBuilder requestPatternBuilder = WireMock.get(WireMock.urlPathEqualTo("/v1/filters/export"))
             .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid));
@@ -563,6 +579,15 @@ public class WireMockUtils {
             queryParams.put(IDS, WireMock.equalTo(filterUuid));
         }
         verifyGetRequest(stubUuid, "/v1/filters/export", queryParams);
+    }
+
+    public void verifyFiltersEvaluate(UUID stubUuid, List<String> filtersUuid, String networkUuid) {
+        Map<String, StringValuePattern> queryParams = new HashMap<>();
+        queryParams.put(NETWORK_UUID, WireMock.equalTo(networkUuid));
+        for (String filterUuid : filtersUuid) {
+            queryParams.put(IDS, WireMock.equalTo(filterUuid));
+        }
+        verifyGetRequest(stubUuid, "/v1/filters/evaluate/identifiables", queryParams);
     }
 
     public UUID stubSearchModifications(String networkUuid, String userInput, String responseBody) {

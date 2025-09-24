@@ -9,6 +9,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.iidm.network.TwoSides;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -62,10 +63,8 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -169,7 +168,12 @@ class NetworkMapTest {
                 if (path.matches("/v1/reports/.*") && "PUT".equals(request.getMethod())) {
                     return new MockResponse(200);
                 }
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/all?variantId=first_variant_id&infoType=TAB") && "POST".equals(request.getMethod())) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "");
+                }
                 switch (path) {
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/all?variantId=first_variant_id&infoType=TAB":
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "");
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VL_ID_1 + "/buses-or-busbar-sections?variantId=first_variant_id":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), busesDataAsString);
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/buses-or-busbar-sections?variantId=first_variant_id":
@@ -563,6 +567,65 @@ class NetworkMapTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches(
                 "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/switches\\?variantId=first_variant_id")));
 
+    }
+
+    @Test
+    void testGetAllNetworkElementsInfos(final MockWebServer server) throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
+        StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        studyEntity.getSpreadsheetParameters().setSpreadsheetLoadBranchOperationalLimitGroup(true);
+        studyEntity.getSpreadsheetParameters().setSpreadsheetLoadGeneratorRegulatingTerminal(true);
+        studyRepository.save(studyEntity);
+
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
+        AbstractNode node = getRootNode(studyEntity.getId()).getChildren().stream().findFirst().orElseThrow();
+
+        String expectedJson = """
+{
+  "BRANCH": {
+    "loadOperationalLimitGroups": "true",
+    "dcPowerFactor": "1.0"
+  },
+  "GENERATOR": {
+    "loadRegulatingTerminals": "true"
+  },
+  "BUS" : {
+    "loadNetworkComponents" : "false"
+  },
+  "TIE_LINE": {
+    "dcPowerFactor": "1.0"
+  },
+  "LINE": {
+    "loadOperationalLimitGroups": "false",
+    "dcPowerFactor": "1.0"
+  },
+  "TWO_WINDINGS_TRANSFORMER": {
+    "loadOperationalLimitGroups": "false",
+    "dcPowerFactor": "1.0"
+  }
+}
+            """;
+
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/all"))
+                .withQueryParam(QUERY_PARAM_VARIANT_ID, WireMock.equalTo("first_variant_id"))
+                .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo("TAB"))
+                .willReturn(WireMock.ok().withBody(""))).getId();
+
+        mockMvc.perform(
+            get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/all",
+                studyEntity.getId(), rootNetworkUuid, node.getId())
+        ).andExpect(status().isOk());
+
+        wireMockUtils.verifyPostRequest(
+            stubId,
+            "/v1/networks/" + NETWORK_UUID_STRING + "/all",
+            true,
+            Map.of(QUERY_PARAM_VARIANT_ID, WireMock.equalTo("first_variant_id"), QUERY_PARAM_INFO_TYPE, WireMock.equalTo("TAB")),
+            expectedJson);
+
+        var requests = TestUtils.getRequestsDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
     }
 
     private StudyEntity insertDummyStudy(final MockWebServer server, UUID networkUuid, UUID caseUuid) {
