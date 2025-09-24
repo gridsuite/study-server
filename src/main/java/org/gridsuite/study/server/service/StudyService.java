@@ -22,6 +22,7 @@ import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsI
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
+import org.gridsuite.study.server.dto.CurrentLimitViolationInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -796,7 +797,7 @@ public class StudyService {
         return newStudy;
     }
 
-    public byte[] getVoltageLevelSvg(String voltageLevelId, DiagramParameters diagramParameters,
+    public byte[] generateVoltageLevelSvg(String voltageLevelId, DiagramParameters diagramParameters,
                                      UUID nodeUuid, UUID rootNetworkUuid) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
@@ -804,13 +805,14 @@ public class StudyService {
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            return singleLineDiagramService.getVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters);
+            List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
+            return singleLineDiagramService.generateVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters, violations);
         } else {
             return null;
         }
     }
 
-    public String getVoltageLevelSvgAndMetadata(String voltageLevelId, DiagramParameters diagramParameters,
+    public String generateVoltageLevelSvgAndMetadata(String voltageLevelId, DiagramParameters diagramParameters,
                                                 UUID nodeUuid, UUID rootNetworkUuid) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
@@ -818,7 +820,8 @@ public class StudyService {
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            return singleLineDiagramService.getVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters);
+            List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
+            return singleLineDiagramService.generateVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters, violations);
         } else {
             return null;
         }
@@ -900,6 +903,9 @@ public class StudyService {
             case "generator" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()));
+            case "bus" -> additionalParameters.put(
+                InfoTypeParameters.QUERY_PARAM_LOAD_NETWORK_COMPONENTS,
+                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBusNetworkComponents()));
         }
         return additionalParameters;
     }
@@ -961,6 +967,10 @@ public class StudyService {
             Map.of(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal())));
+        optionalParameters.put(String.valueOf(ElementType.BUS),
+            Map.of(
+                InfoTypeParameters.QUERY_PARAM_LOAD_NETWORK_COMPONENTS,
+                String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBusNetworkComponents())));
         return networkMapService.getAllElementsInfos(
             rootNetworkService.getNetworkUuid(rootNetworkUuid),
             networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid),
@@ -1440,7 +1450,7 @@ public class StudyService {
         return loadflowService.getLimitViolations(resultUuid, filters, globalFilters, sort, networkuuid, variantId);
     }
 
-    public byte[] getSubstationSvg(String substationId, DiagramParameters diagramParameters,
+    public byte[] generateSubstationSvg(String substationId, DiagramParameters diagramParameters,
                                    String substationLayout, UUID nodeUuid, UUID rootNetworkUuid) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
@@ -1448,13 +1458,14 @@ public class StudyService {
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            return singleLineDiagramService.getSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout);
+            List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
+            return singleLineDiagramService.generateSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout, violations);
         } else {
             return null;
         }
     }
 
-    public String getSubstationSvgAndMetadata(String substationId, DiagramParameters diagramParameters,
+    public String generateSubstationSvgAndMetadata(String substationId, DiagramParameters diagramParameters,
                                               String substationLayout, UUID nodeUuid, UUID rootNetworkUuid) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
@@ -1462,20 +1473,23 @@ public class StudyService {
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            return singleLineDiagramService.getSubstationSvgAndMetadata(networkUuid, variantId, substationId, diagramParameters, substationLayout);
+            List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
+            return singleLineDiagramService.generateSubstationSvgAndMetadata(networkUuid, variantId, substationId, diagramParameters, substationLayout, violations);
         } else {
             return null;
         }
     }
 
-    public String getNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, String nadRequestInfos) {
+    public String generateNetworkAreaDiagram(UUID nodeUuid, UUID rootNetworkUuid, Map<String, Object> nadRequestInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(ROOT_NETWORK_NOT_FOUND);
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            return singleLineDiagramService.getNetworkAreaDiagram(networkUuid, variantId, nadRequestInfos);
+            List<CurrentLimitViolationInfos> currentLimitViolationInfos = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
+            nadRequestInfos.put("currentLimitViolationsInfos", currentLimitViolationInfos);
+            return singleLineDiagramService.generateNetworkAreaDiagram(networkUuid, variantId, nadRequestInfos);
         } else {
             return null;
         }
@@ -3354,6 +3368,11 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
+    public String evaluateFiltersFromFirstRootNetwork(UUID studyUuid, List<UUID> filtersUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        return filterService.evaluateFilters(studyEntity.getFirstRootNetwork().getNetworkUuid(), filtersUuid);
+    }
+
     public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid);
@@ -3636,5 +3655,16 @@ public class StudyService {
     @Transactional
     public void createNadPositionsConfigFromCsv(MultipartFile file) {
         singleLineDiagramService.createNadPositionsConfigFromCsv(file);
+    }
+
+    private List<CurrentLimitViolationInfos> getCurrentLimitViolations(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
+        if (resultUuid == null) {
+            return List.of();
+        }
+        return loadflowService.getCurrentLimitViolations(resultUuid)
+            .stream()
+            .map(l -> new CurrentLimitViolationInfos(l.getSubjectId(), null))
+            .toList();
     }
 }

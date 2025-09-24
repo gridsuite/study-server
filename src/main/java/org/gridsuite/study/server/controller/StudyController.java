@@ -369,7 +369,7 @@ public class StudyController {
     @Operation(summary = "get the voltage level diagram for the given network and voltage level")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
         @ApiResponse(responseCode = "404", description = "The voltage level has not been found")})
-    public ResponseEntity<byte[]> getVoltageLevelDiagram(
+    public ResponseEntity<byte[]> generateVoltageLevelDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
@@ -390,7 +390,7 @@ public class StudyController {
                 .sldDisplayMode(sldDisplayMode)
                 .language(language)
                 .build();
-        byte[] result = studyService.getVoltageLevelSvg(
+        byte[] result = studyService.generateVoltageLevelSvg(
                 voltageLevelId,
                 diagramParameters,
                 nodeUuid,
@@ -403,7 +403,7 @@ public class StudyController {
     @Operation(summary = "get the voltage level diagram for the given network and voltage level")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg and metadata"),
         @ApiResponse(responseCode = "404", description = "The voltage level has not been found")})
-    public ResponseEntity<String> getVoltageLevelDiagramAndMetadata(
+    public ResponseEntity<String> generateVoltageLevelDiagramAndMetadata(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
@@ -424,7 +424,7 @@ public class StudyController {
                 .sldDisplayMode(sldDisplayMode)
                 .language(language)
                 .build();
-        String result = studyService.getVoltageLevelSvgAndMetadata(
+        String result = studyService.generateVoltageLevelSvgAndMetadata(
                 voltageLevelId,
                 diagramParameters,
                 nodeUuid,
@@ -1135,7 +1135,7 @@ public class StudyController {
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
         @ApiResponse(responseCode = "404", description = "The substation has not been found")})
-    public ResponseEntity<byte[]> getSubstationDiagram(
+    public ResponseEntity<byte[]> generateSubstationDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
@@ -1155,7 +1155,7 @@ public class StudyController {
                 .componentLibrary(componentLibrary)
                 .language(language)
                 .build();
-        byte[] result = studyService.getSubstationSvg(substationId,
+        byte[] result = studyService.generateSubstationSvg(substationId,
                 diagramParameters, substationLayout, nodeUuid, rootNetworkUuid);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
@@ -1165,7 +1165,7 @@ public class StudyController {
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg and metadata"),
         @ApiResponse(responseCode = "404", description = "The substation has not been found")})
-    public ResponseEntity<String> getSubstationDiagramAndMetadata(
+    public ResponseEntity<String> generateSubstationDiagramAndMetadata(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
@@ -1185,7 +1185,7 @@ public class StudyController {
                 .componentLibrary(componentLibrary)
                 .language(language)
                 .build();
-        String result = studyService.getSubstationSvgAndMetadata(
+        String result = studyService.generateSubstationSvgAndMetadata(
                 substationId,
                 diagramParameters,
                 substationLayout,
@@ -1198,12 +1198,12 @@ public class StudyController {
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "get the network area diagram for the given network and voltage levels")
     @ApiResponse(responseCode = "200", description = "The svg")
-    public ResponseEntity<String> getNetworkAreaDiagram(
+    public ResponseEntity<String> generateNetworkAreaDiagram(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestBody String nadRequestInfos) {
-        String result = studyService.getNetworkAreaDiagram(nodeUuid, rootNetworkUuid, nadRequestInfos);
+            @RequestBody Map<String, Object> nadRequestInfos) {
+        String result = studyService.generateNetworkAreaDiagram(nodeUuid, rootNetworkUuid, nadRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -2353,6 +2353,16 @@ public class StudyController {
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
         @Parameter(description = "Filter uuid to be applied") @PathVariable("filterUuid") UUID filterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.exportFilterFromFirstRootNetwork(studyUuid, filterUuid));
+    }
+
+    // temporary - used by grid-explore only to prevent filter conversion from dysfunctioning since it does not have access to root networks yet
+    @GetMapping(value = "/studies/{studyUuid}/filters/elements")
+    @Operation(summary = "Evaluate filters list on first root network of study to get matched identifiables elements")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched identifiables elements")})
+    public ResponseEntity<String> evaluateFiltersOnFirstRootNetwork(
+        @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "Filters uuid to be applied") @RequestParam(name = "filtersUuid") List<UUID> filtersUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFiltersFromFirstRootNetwork(studyUuid, filtersUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/elements")
