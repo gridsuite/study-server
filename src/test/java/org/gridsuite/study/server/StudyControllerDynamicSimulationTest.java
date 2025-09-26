@@ -641,7 +641,7 @@ class StudyControllerDynamicSimulationTest {
                         STUDY_UUID, ROOT_NETWORK_UUID, NODE_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
-        DynamicSimulationStatus statusResult = objectMapper.readValue(result.getResponse().getContentAsString(), DynamicSimulationStatus.class);
+        DynamicSimulationStatus statusResult = DynamicSimulationStatus.valueOf(result.getResponse().getContentAsString());
 
         // --- check result --- //
         DynamicSimulationStatus statusExpected = DynamicSimulationStatus.DIVERGED;

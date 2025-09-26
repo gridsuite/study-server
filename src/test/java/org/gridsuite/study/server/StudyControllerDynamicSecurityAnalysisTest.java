@@ -478,7 +478,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
                         STUDY_UUID, ROOT_NETWORK_UUID, NODE_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
-        DynamicSecurityAnalysisStatus statusResult = objectMapper.readValue(result.getResponse().getContentAsString(), DynamicSecurityAnalysisStatus.class);
+        DynamicSecurityAnalysisStatus statusResult = DynamicSecurityAnalysisStatus.valueOf(result.getResponse().getContentAsString());
 
         // --- check result --- //
         DynamicSecurityAnalysisStatus statusExpected = DynamicSecurityAnalysisStatus.FAILED;
