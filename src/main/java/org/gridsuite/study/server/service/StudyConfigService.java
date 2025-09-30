@@ -10,6 +10,7 @@ import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
+import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.DiagramPosition;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,8 @@ public class StudyConfigService {
 
     private static final String DIAGRAM_GRID_LAYOUT_URI = "/diagram-grid-layout";
     private static final String DIAGRAM_GRID_LAYOUT_WITH_ID_URI = DIAGRAM_GRID_LAYOUT_URI + UUID_PARAM;
+
+    private static final DiagramPosition DEFAULT_DIAGRAM_POSITION = new DiagramPosition(2, 2, 0, 0);
 
     private final RestTemplate restTemplate;
 
@@ -479,8 +482,12 @@ public class StudyConfigService {
         if (sourceNadConfigUuid == null) {
             return null;
         }
+        Map<String, DiagramPosition> diagramPositions = new HashMap<>();
+        diagramPositions.put("lg", DEFAULT_DIAGRAM_POSITION);
         DiagramGridLayout diagramGridLayout = DiagramGridLayout.builder()
             .diagramLayouts(List.of(NetworkAreaDiagramLayout.builder()
+                .diagramUuid(UUID.randomUUID())
+                .diagramPositions(diagramPositions)
                 .originalNadConfigUuid(sourceNadConfigUuid)
                 .currentNadConfigUuid(clonedNadConfigUuid)
                 .name(nadDiagramConfigName)

@@ -57,6 +57,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_DEBUG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.any;
 import static org.mockito.BDDMockito.eq;
@@ -219,12 +220,13 @@ class StudyControllerDynamicSecurityAnalysisTest {
         doAnswer(invocation -> RESULT_UUID)
             .when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(
                 any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
-                any(), any(), any(), any(), eq(false));
+                any(), any(), any(), any(), eq(true));
 
         // --- call endpoint to be tested --- //
-        // run on a regular node which allows a run
+        // run in debug mode on a regular node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
+                        .param(QUERY_PARAM_DEBUG, "true")
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk());
 
@@ -442,7 +444,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
                         STUDY_UUID, ROOT_NETWORK_UUID, NODE_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
-        DynamicSecurityAnalysisStatus statusResult = objectMapper.readValue(result.getResponse().getContentAsString(), DynamicSecurityAnalysisStatus.class);
+        DynamicSecurityAnalysisStatus statusResult = DynamicSecurityAnalysisStatus.valueOf(result.getResponse().getContentAsString());
 
         // --- check result --- //
         DynamicSecurityAnalysisStatus statusExpected = DynamicSecurityAnalysisStatus.FAILED;
