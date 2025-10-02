@@ -14,7 +14,6 @@ spring:
       consumeShortCircuitAnalysisDebug;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeShortCircuitAnalysisCancelFailed;\
       consumeVoltageInitDebug;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeVoltageInitCancelFailed;\
       consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;consumeLoadFlowCancelFailed;\
-      consumeNonEvacuatedEnergyResult;consumeNonEvacuatedEnergyStopped;consumeNonEvacuatedEnergyFailed;consumeNonEvacuatedEnergyCancelFailed;\
       consumeStateEstimationResult;consumeStateEstimationStopped;consumeStateEstimationFailed"
     stream:
       bindings:
@@ -97,18 +96,6 @@ spring:
         consumeSensitivityAnalysisCancelFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sensitivityanalysis.cancelfailed
           group: studySensitivityAnalysisCancelFailedGroup
-        consumeNonEvacuatedEnergyResult-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.result
-          group: studyNonEvacuatedEnergyResultGroup
-        consumeNonEvacuatedEnergyStopped-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.stopped
-          group: studyNonEvacuatedEnergyStoppedGroup
-        consumeNonEvacuatedEnergyFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.run.dlx
-          group: dlq
-        consumeNonEvacuatedEnergyCancelFailed-in-0:
-          destination: ${powsybl-ws.rabbitmq.destination.prefix:}nonEvacuatedEnergy.cancelfailed
-          group: studyNonEvacuatedEnergyCancelFailedGroup
         consumeShortCircuitAnalysisDebug-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}shortcircuitanalysis.debug
           group: studyShortCircuitAnalysisDebugGroup
@@ -164,9 +151,6 @@ powsybl:
 powsybl-ws:
   database:
     name: study
-
-non-evacuated-energy:
-  default-provider: OpenLoadFlow
 
 dynamic-simulation:
   default-provider: Dynawo

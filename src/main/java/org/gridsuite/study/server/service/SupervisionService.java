@@ -67,8 +67,6 @@ public class SupervisionService {
 
     private final SensitivityAnalysisService sensitivityAnalysisService;
 
-    private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
-
     private final ShortCircuitService shortCircuitService;
 
     private final VoltageInitService voltageInitService;
@@ -94,7 +92,6 @@ public class SupervisionService {
                               DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                               SecurityAnalysisService securityAnalysisService,
                               SensitivityAnalysisService sensitivityAnalysisService,
-                              NonEvacuatedEnergyService nonEvacuatedEnergyService,
                               ShortCircuitService shortCircuitService,
                               VoltageInitService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
@@ -112,7 +109,6 @@ public class SupervisionService {
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
-        this.nonEvacuatedEnergyService = nonEvacuatedEnergyService;
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
@@ -135,8 +131,6 @@ public class SupervisionService {
                     dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
             case SENSITIVITY_ANALYSIS ->
                     dryRun ? sensitivityAnalysisService.getSensitivityAnalysisResultsCount() : deleteSensitivityAnalysisResults();
-            case NON_EVACUATED_ENERGY_ANALYSIS ->
-                    dryRun ? nonEvacuatedEnergyService.getNonEvacuatedEnergyAnalysisResultsCount() : deleteNonEvacuatedEnergyAnalysisResults();
             case SHORT_CIRCUIT, SHORT_CIRCUIT_ONE_BUS ->
                     dryRun ? shortCircuitService.getShortCircuitResultsCount() : deleteShortcircuitResults();
             case VOLTAGE_INITIALIZATION ->
@@ -252,24 +246,6 @@ public class SupervisionService {
         reportService.deleteReports(reportsToDelete);
         sensitivityAnalysisService.deleteAllSensitivityAnalysisResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.SENSITIVITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-
-        return rootNetworkNodeInfoEntities.size();
-    }
-
-    private Integer deleteNonEvacuatedEnergyAnalysisResults() {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-        startTime.set(System.nanoTime());
-
-        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByNonEvacuatedEnergyResultUuidNotNull();
-        List<UUID> reportsToDelete = new ArrayList<>();
-        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfo -> {
-            rootNetworkNodeInfo.setNonEvacuatedEnergyResultUuid(null);
-            reportsToDelete.add(rootNetworkNodeInfo.getComputationReports().get(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name()));
-            rootNetworkNodeInfo.getComputationReports().remove(ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name());
-        });
-        reportService.deleteReports(reportsToDelete);
-        nonEvacuatedEnergyService.deleteAllNonEvacuatedEnergyResults();
-        LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.NON_EVACUATED_ENERGY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
         return rootNetworkNodeInfoEntities.size();
     }

@@ -29,7 +29,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
-import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -149,7 +148,7 @@ class StateEstimationTest {
     private ConsumerService consumerService;
 
     @AllArgsConstructor
-    private static class StudyNodeIds {
+    private static final class StudyNodeIds {
         UUID studyId;
         UUID rootNetworkUuid;
         UUID nodeId;
@@ -244,11 +243,9 @@ class StateEstimationTest {
     }
 
     private StudyNodeIds createStudyAndNode(String variantId, String nodeName, UUID stateEstimationParametersUuid) throws Exception {
-        NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         // create a study
         StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.fromString(NETWORK_UUID_STRING), "netId", CASE_LOADFLOW_UUID, "", "", null,
-                LOADFLOW_PARAMETERS_UUID, null, null, null,
-                defaultNonEvacuatedEnergyParametersEntity, stateEstimationParametersUuid);
+                LOADFLOW_PARAMETERS_UUID, null, null, null, stateEstimationParametersUuid);
         studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         // with a node

@@ -90,9 +90,6 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "sensitivityAnalysisResultUuid")
     private UUID sensitivityAnalysisResultUuid;
 
-    @Column(name = "nonEvacuatedEnergyResultUuid")
-    private UUID nonEvacuatedEnergyResultUuid;
-
     @Column(name = "dynamicSimulationResultUuid")
     private UUID dynamicSimulationResultUuid;
 
@@ -129,7 +126,6 @@ public class RootNetworkNodeInfoEntity {
             .loadFlowResultUuid(loadFlowResultUuid)
             .loadFlowWithRatioTapChangers(loadFlowWithRatioTapChangers)
             .nodeBuildStatus(nodeBuildStatus.toDto())
-            .nonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid)
             .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)
             .securityAnalysisResultUuid(securityAnalysisResultUuid)
             .stateEstimationResultUuid(stateEstimationResultUuid)

@@ -31,8 +31,6 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     List<RootNetworkNodeInfoEntity> findAllBySensitivityAnalysisResultUuidNotNull();
 
-    List<RootNetworkNodeInfoEntity> findAllByNonEvacuatedEnergyResultUuidNotNull();
-
     List<RootNetworkNodeInfoEntity> findAllByShortCircuitAnalysisResultUuidNotNull();
 
     List<RootNetworkNodeInfoEntity> findAllByOneBusShortCircuitAnalysisResultUuidNotNull();

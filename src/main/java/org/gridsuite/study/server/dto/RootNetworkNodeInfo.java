@@ -44,8 +44,6 @@ public class RootNetworkNodeInfo {
 
     private UUID sensitivityAnalysisResultUuid;
 
-    private UUID nonEvacuatedEnergyResultUuid;
-
     private UUID dynamicSimulationResultUuid;
 
     private UUID dynamicSecurityAnalysisResultUuid;
@@ -67,7 +65,6 @@ public class RootNetworkNodeInfo {
             .voltageInitResultUuid(voltageInitResultUuid)
             .securityAnalysisResultUuid(securityAnalysisResultUuid)
             .sensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid)
-            .nonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid)
             .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
             .dynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid)
             .stateEstimationResultUuid(stateEstimationResultUuid)

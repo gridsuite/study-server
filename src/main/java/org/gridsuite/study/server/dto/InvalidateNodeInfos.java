@@ -33,7 +33,6 @@ public class InvalidateNodeInfos {
     private Set<UUID> loadFlowResultUuids = new HashSet<>();
     private Set<UUID> securityAnalysisResultUuids = new HashSet<>();
     private Set<UUID> sensitivityAnalysisResultUuids = new HashSet<>();
-    private Set<UUID> nonEvacuatedEnergyResultUuids = new HashSet<>();
     private Set<UUID> shortCircuitAnalysisResultUuids = new HashSet<>();
     private Set<UUID> oneBusShortCircuitAnalysisResultUuids = new HashSet<>();
     private Set<UUID> voltageInitResultUuids = new HashSet<>();
@@ -68,10 +67,6 @@ public class InvalidateNodeInfos {
 
     public List<UUID> getSensitivityAnalysisResultUuids() {
         return sensitivityAnalysisResultUuids.stream().toList();
-    }
-
-    public List<UUID> getNonEvacuatedEnergyResultUuids() {
-        return nonEvacuatedEnergyResultUuids.stream().toList();
     }
 
     public List<UUID> getShortCircuitAnalysisResultUuids() {
@@ -118,10 +113,6 @@ public class InvalidateNodeInfos {
         sensitivityAnalysisResultUuids.add(sensitivityAnalysisResultUuid);
     }
 
-    public void addNonEvacuatedEnergyResultUuid(UUID nonEvacuatedEnergyResultUuid) {
-        nonEvacuatedEnergyResultUuids.add(nonEvacuatedEnergyResultUuid);
-    }
-
     public void addShortCircuitAnalysisResultUuid(UUID shortCircuitAnalysisResultUuid) {
         shortCircuitAnalysisResultUuids.add(shortCircuitAnalysisResultUuid);
     }
@@ -164,7 +155,6 @@ public class InvalidateNodeInfos {
         loadFlowResultUuids.addAll(invalidateNodeInfos.getLoadFlowResultUuids());
         securityAnalysisResultUuids.addAll(invalidateNodeInfos.getSecurityAnalysisResultUuids());
         sensitivityAnalysisResultUuids.addAll(invalidateNodeInfos.getSensitivityAnalysisResultUuids());
-        nonEvacuatedEnergyResultUuids.addAll(invalidateNodeInfos.getNonEvacuatedEnergyResultUuids());
         shortCircuitAnalysisResultUuids.addAll(invalidateNodeInfos.getShortCircuitAnalysisResultUuids());
         oneBusShortCircuitAnalysisResultUuids.addAll(invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids());
         voltageInitResultUuids.addAll(invalidateNodeInfos.getVoltageInitResultUuids());
