@@ -699,7 +699,7 @@ public class StudyController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
-        studyService.assertCanRunLoadFLow(studyUuid, nodeUuid);
+        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNA_FLOW_PROVIDER), studyService::getLoadFlowProvider);
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         if (prevResultUuid != null) {
             handleRerunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers, userId);
@@ -1097,7 +1097,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/provider")
-    @Operation(summary = "Get dynamic simulation provider for a specified study, empty string means default provider")
+    @Operation(summary = "Get dynamic simulation provider for a specified study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is returned")})
     public ResponseEntity<String> getDynamicSimulationProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getDynamicSimulationProvider(studyUuid));
@@ -1111,6 +1111,13 @@ public class StudyController {
                                                                @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.updateDynamicSecurityAnalysisProvider(studyUuid, provider, userId);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-security-analysis/provider")
+    @Operation(summary = "Get dynamic security analysis provider for a specified study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis provider is returned")})
+    public ResponseEntity<String> getDynamicSecurityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getDynamicSecurityAnalysisProvider(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -1932,6 +1939,7 @@ public class StudyController {
                                                      @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSimulationProvider);
         studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
@@ -2022,6 +2030,7 @@ public class StudyController {
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSecurityAnalysisProvider);
         studyService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
