@@ -84,7 +84,7 @@ public class FilterService {
     public List<String> evaluateGlobalFilter(@NonNull final UUID networkUuid, @NonNull final String variantId,
                                              @NonNull final List<EquipmentType> equipmentTypes, @NonNull final GlobalFilter filter) {
         final UriComponents uriComponent = UriComponentsBuilder.fromHttpUrl(getBaseUri())
-                .pathSegment(FILTER_API_VERSION, "global-filter", "evaluate")
+                .pathSegment(FILTER_API_VERSION, "global-filter")
                 .queryParam("networkUuid", networkUuid)
                 .queryParam("variantId", variantId)
                 .queryParam("equipmentTypes", equipmentTypes)
