@@ -7,16 +7,20 @@
 
 package org.gridsuite.study.server.service;
 
+import lombok.Getter;
+import lombok.NonNull;
+import org.gridsuite.filter.globalfilter.GlobalFilter;
+import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.ResolvableType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
@@ -42,12 +46,8 @@ public class FilterService {
 
     private final RestTemplate restTemplate;
 
+    @Getter // getter to facilitate to mock
     private final String baseUri;
-
-    // getter to facilitate to mock
-    public String getBaseUri() {
-        return baseUri;
-    }
 
     @Autowired
     public FilterService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
@@ -64,8 +64,7 @@ public class FilterService {
         if (variantId != null && !variantId.isBlank()) {
             uriComponentsBuilder.queryParam("variantId", variantId);
         }
-        var uriComponent = uriComponentsBuilder
-                .build();
+        var uriComponent = uriComponentsBuilder.build();
 
         var headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -79,6 +78,28 @@ public class FilterService {
                 throw new StudyException(NETWORK_NOT_FOUND);
             } else {
                 throw handleHttpError(e, EVALUATE_FILTER_FAILED);
+            }
+        }
+    }
+
+    public List<String> evaluateGlobalFilter(@NonNull final UUID networkUuid, @NonNull final String variantId,
+                                             @NonNull final List<EquipmentType> equipmentTypes, @NonNull final GlobalFilter filter) {
+        final UriComponents uriComponent = UriComponentsBuilder.fromHttpUrl(getBaseUri())
+                .pathSegment(FILTER_API_VERSION, "global-filter", "evaluate")
+                .queryParam("networkUuid", networkUuid)
+                .queryParam("variantId", variantId)
+                .queryParam("equipmentTypes", equipmentTypes)
+                .build();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        try {
+            return restTemplate.exchange(uriComponent.toUri(), HttpMethod.POST, new HttpEntity<>(filter, headers), new ParameterizedTypeReference<List<String>>() { })
+                               .getBody();
+        } catch (final HttpStatusCodeException ex) {
+            if (HttpStatus.NOT_FOUND.equals(ex.getStatusCode())) {
+                throw new StudyException(NETWORK_NOT_FOUND);
+            } else {
+                throw handleHttpError(ex, EVALUATE_FILTER_FAILED);
             }
         }
     }
