@@ -52,7 +52,6 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -89,6 +88,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -407,7 +407,10 @@ class StudyTest {
 
         // Synchronize for tests
         doAnswer((Answer<CompletableFuture>) invocation -> {
-            ((Runnable) invocation.getArguments()[0]).run();
+            try {
+                CompletableFuture.runAsync((Runnable) invocation.getArguments()[0]).get();
+            } catch (ExecutionException e) { // in complete async mode we ignore exception (log only)
+            }
             return CompletableFuture.completedFuture(null);
         }).when(studyServerExecutionService).runAsyncAndComplete(any(Runnable.class));
     }
@@ -1021,13 +1024,14 @@ class StudyTest {
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
 
+        // We ignore error when remote data async remove
         doAnswer(invocation -> {
             throw new InterruptedException();
         }).when(caseService).deleteCase(any());
 
         UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
-                .andExpectAll(status().isInternalServerError(), content().string(InterruptedException.class.getName()));
+                .andExpectAll(status().isOk());
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 

@@ -81,7 +81,7 @@ class LoadFLowUnitTest {
     void setup() {
         // Synchronize for tests
         doAnswer((Answer<CompletableFuture>) invocation -> {
-            ((Runnable) invocation.getArguments()[0]).run();
+            CompletableFuture.runAsync((Runnable) invocation.getArguments()[0]).get();
             return CompletableFuture.completedFuture(null);
         }).when(studyServerExecutionService).runAsyncAndComplete(any(Runnable.class));
     }

@@ -579,39 +579,19 @@ public class StudyService {
     @Transactional
     public void deleteStudyIfNotCreationInProgress(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
-        try {
-            Optional<DeleteStudyInfos> deleteStudyInfosOpt = doDeleteStudyIfNotCreationInProgress(studyUuid);
-            if (deleteStudyInfosOpt.isPresent()) {
-                DeleteStudyInfos deleteStudyInfos = deleteStudyInfosOpt.get();
-                startTime.set(System.nanoTime());
+        Optional<DeleteStudyInfos> deleteStudyInfosOpt = doDeleteStudyIfNotCreationInProgress(studyUuid);
+        if (deleteStudyInfosOpt.isPresent()) {
+            DeleteStudyInfos deleteStudyInfos = deleteStudyInfosOpt.get();
+            startTime.set(System.nanoTime());
 
-                //TODO: now we have a n-n relation between node and rootNetworks, it's even more important to delete results in a single request
-                CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                    Stream.concat(
-                        // delete all distant resources linked to rootNetworks
-                        rootNetworkService.getDeleteRootNetworkInfosFutures(deleteStudyInfos.getRootNetworkInfosList()),
-                        // delete all distant resources linked to nodes
-                        Stream.of(
-                                studyServerExecutionService.runAsync(
-                                        () -> deleteStudyInfos.getModificationGroupUuids()
-                                                .stream()
-                                                .filter(Objects::nonNull)
-                                                .forEach(networkModificationService::deleteModifications)
-                                )
-                        ) // TODO delete all with one request only
-                    ).toArray(CompletableFuture[]::new)
-                );
+            // delete all distant resources linked to rootNetworks
+            rootNetworkService.deleteRootNetworkRemoteInfos(deleteStudyInfos.getRootNetworkInfosList());
 
-                executeInParallel.get();
-                if (startTime.get() != null) {
-                    LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-                }
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
-        } catch (Exception e) {
-            throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
+            // delete all distant resources linked to nodes
+            studyServerExecutionService.runAsyncAndComplete(() -> deleteStudyInfos.getModificationGroupUuids().stream().filter(Objects::nonNull).forEach(networkModificationService::deleteModifications));
+
+            LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+
         }
     }
 
