@@ -72,7 +72,8 @@ public class RestResponseEntityExceptionHandler {
                     MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED,
                     MAXIMUM_TAG_LENGTH_EXCEEDED,
                     TOO_MANY_NAD_CONFIGS,
-                    TOO_MANY_MAP_CARDS
+                    TOO_MANY_MAP_CARDS,
+                    MOVE_NETWORK_MODIFICATION_FAILED
                     -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(exception.getMessage());
             case CANT_DELETE_ROOT_NODE -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             case CREATE_NETWORK_MODIFICATION_FAILED,

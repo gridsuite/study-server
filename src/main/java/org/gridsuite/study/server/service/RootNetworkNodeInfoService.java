@@ -517,6 +517,14 @@ public class RootNetworkNodeInfoService {
         return new ModificationApplicationContext(networkUuid, variantId, reportUuid, nodeUuid, rootNetworkNodeInfoEntity.getModificationsUuidsToExclude());
     }
 
+    @Transactional
+    public ModificationApplicationContext createModificationApplicationContextAllActivated(UUID rootNetworkUuid, UUID nodeUuid, UUID networkUuid) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        String variantId = rootNetworkNodeInfoEntity.getVariantId();
+        UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
+        return new ModificationApplicationContext(networkUuid, variantId, reportUuid, nodeUuid, new HashSet<>());
+    }
+
     private List<UUID> getReportUuids(RootNetworkNodeInfo rootNetworkNodeInfo) {
         return Stream.of(
             rootNetworkNodeInfo.getModificationReports().values().stream(),
