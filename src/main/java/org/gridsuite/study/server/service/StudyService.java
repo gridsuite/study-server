@@ -1841,6 +1841,14 @@ public class StudyService {
         return networkMapService.getVoltageLevelSwitches(networkUuid, variantId, voltageLevelId, switchesPath);
     }
 
+    public String getVoltageLevelTopology(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId,
+                                          String topologyPath) {
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+
+        return networkMapService.getVoltageLevelTopology(networkUuid, variantId, voltageLevelId, topologyPath);
+    }
+
     public String getVoltageLevelSubstationId(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         return getVoltageLevelSubstationId(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId);
@@ -1854,6 +1862,11 @@ public class StudyService {
     public String getVoltageLevelSwitches(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         return getVoltageLevelSwitches(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, "switches");
+    }
+
+    public String getVoltageLevelTopology(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
+        return getVoltageLevelTopology(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, "topology");
     }
 
     @Transactional
