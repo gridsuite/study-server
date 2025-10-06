@@ -650,8 +650,8 @@ public class StudyController {
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
-        if (!nodeUuid.equals(originNodeUuid)) {
-            if (!studyUuid.equals(originStudyUuid)) {
+        if (originNodeUuid != null && !nodeUuid.equals(originNodeUuid)) {
+            if (originStudyUuid != null && !studyUuid.equals(originStudyUuid)) {
                 studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
                 studyService.assertCanUpdateModifications(originStudyUuid, originNodeUuid);
             } else {
@@ -665,7 +665,7 @@ public class StudyController {
                 break;
             case MOVE:
                 // we don't cut - paste modifications from different studies
-                if (!studyUuid.equals(originStudyUuid)) {
+                if (originStudyUuid != null && !studyUuid.equals(originStudyUuid)) {
                     throw new StudyException(Type.MOVE_NETWORK_MODIFICATION_FAILED);
                 }
                 handleMoveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
