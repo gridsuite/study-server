@@ -9,7 +9,6 @@ package org.gridsuite.study.server.repository;
 import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
-import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 
@@ -67,9 +66,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "sensitivityAnalysisProvider")
     private String sensitivityAnalysisProvider;
 
-    @Column(name = "nonEvacuatedEnergyProvider")
-    private String nonEvacuatedEnergyProvider;
-
     @Column(name = "dynamicSimulationProvider")
     private String dynamicSimulationProvider;
 
@@ -110,14 +106,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @Column(name = "diagramGridLayoutUuid")
     private UUID diagramGridLayoutUuid;
-
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "nonEvacuatedEnergyParametersEntity_id",
-        referencedColumnName = "id",
-        foreignKey = @ForeignKey(
-            name = "nonEvacuatedEnergyParameters_id_fk"
-        ))
-    private NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParameters;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "study_voltage_init_parameters_id",

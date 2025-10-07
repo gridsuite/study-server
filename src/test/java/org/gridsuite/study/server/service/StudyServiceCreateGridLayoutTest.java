@@ -21,9 +21,9 @@ class StudyServiceCreateGridLayoutTest {
         studyConfigService = mock(StudyConfigService.class);
         singleLineDiagramService = mock(SingleLineDiagramService.class);
         directoryService = mock(DirectoryService.class);
-        studyService = new StudyService(null, null, null, null, null, null, null,
+        studyService = new StudyService(null, null, null, null, null, null,
                 null, null, null, null, null, null, null,
-                null, null, singleLineDiagramService, null, null, null, null,
+                null, null, singleLineDiagramService, null, null, null,
                 null, null, null, null, null, null, null,
                 null, studyConfigService, null, null, null, null, null,
                 null, directoryService);

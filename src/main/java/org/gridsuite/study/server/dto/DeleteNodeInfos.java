@@ -32,8 +32,6 @@ public class DeleteNodeInfos {
 
     private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
 
-    private List<UUID> nonEvacuatedEnergyResultUuids = new ArrayList<>();
-
     private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> oneBusShortCircuitAnalysisResultUuids = new ArrayList<>();
@@ -76,10 +74,6 @@ public class DeleteNodeInfos {
 
     public void addSensitivityAnalysisResultUuid(UUID sensitivityAnalysisResultUuid) {
         sensitivityAnalysisResultUuids.add(sensitivityAnalysisResultUuid);
-    }
-
-    public void addNonEvacuatedEnergyResultUuid(UUID nonEvacuatedEnergyResultUuid) {
-        nonEvacuatedEnergyResultUuids.add(nonEvacuatedEnergyResultUuid);
     }
 
     public void addShortCircuitAnalysisResultUuid(UUID shortCircuitAnalysisResultUuid) {
