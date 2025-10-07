@@ -19,7 +19,6 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
@@ -103,7 +102,6 @@ public final class TestUtils {
                                                UUID voltageInitParametersUuid,
                                                UUID securityAnalysisParametersUuid,
                                                UUID sensitivityParametersUuid,
-                                               NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity,
                                                boolean applyModifications) {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
             .loadFlowParametersUuid(loadFlowParametersUuid)
@@ -111,7 +109,6 @@ public final class TestUtils {
             .voltageInitParametersUuid(voltageInitParametersUuid)
             .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
             .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
-            .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
             .voltageInitParameters(new StudyVoltageInitParametersEntity(applyModifications))
             .build();
         RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").tag("dum").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(importReportUuid).build();
@@ -143,14 +140,12 @@ public final class TestUtils {
                                                UUID shortCircuitParametersUuid,
                                                UUID securityAnalysisParametersUuid,
                                                UUID sensitivityParametersUuid,
-                                               NonEvacuatedEnergyParametersEntity nonEvacuatedEnergyParametersEntity,
                                                UUID stateEstimationParametersUuid) {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
                 .loadFlowParametersUuid(loadFlowParametersUuid)
                 .shortCircuitParametersUuid(shortCircuitParametersUuid)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
                 .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
-                .nonEvacuatedEnergyParameters(nonEvacuatedEnergyParametersEntity)
                 .stateEstimationParametersUuid(stateEstimationParametersUuid)
                 .build();
         RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").tag("dum").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();

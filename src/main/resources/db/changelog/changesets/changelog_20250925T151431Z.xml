@@ -1,0 +1,54 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-33">
+        <dropTable tableName="NON_EVACUATED_ENERGY_CONTINGENCIES" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-34">
+        <dropTable tableName="NON_EVACUATED_ENERGY_CONTINGENCY" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-35">
+        <dropTable tableName="NON_EVACUATED_ENERGY_GENERATORS" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-36">
+        <dropTable tableName="NON_EVACUATED_ENERGY_GENERATORS_CAPPINGS" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-37">
+        <dropTable tableName="NON_EVACUATED_ENERGY_GENERATORS_CAPPINGS_BY_TYPE" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-38">
+        <dropTable tableName="NON_EVACUATED_ENERGY_MONITORED_BRANCH" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-39">
+        <dropTable tableName="NON_EVACUATED_ENERGY_MONITORED_BRANCHES" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-40">
+        <dropTable tableName="NON_EVACUATED_ENERGY_PARAMETERS" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-41">
+        <dropTable tableName="NON_EVACUATED_ENERGY_STAGES_SELECTION" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-42">
+        <dropTable tableName="NON_EVACUATED_ENERGY_STAGES_SELECTION_DEFINITION_INDEX" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-43">
+        <dropTable tableName="NON_EVACUATED_ENERGY_STAGE_DEFINITION" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-44">
+        <dropTable tableName="NON_EVACUATED_ENERGY_STAGE_DEFINITION_GENERATORS" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-45">
+        <dropTable tableName="NON_EVACUATED_ENERGY_STAGE_DEFINITION_PMAX_PERCENT" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-46">
+        <dropTable tableName="NON_EVACUATED_ENERGY_STAGE_SELECTION_PMAX_PERCENT_INDEX" cascadeConstraints="true"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-47">
+        <dropColumn columnName="NON_EVACUATED_ENERGY_PARAMETERS_ENTITY_ID" tableName="STUDY"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-48">
+        <dropColumn columnName="NON_EVACUATED_ENERGY_PROVIDER" tableName="STUDY"/>
+    </changeSet>
+    <changeSet author="lecuyerfra (generated)" id="1758813303022-49">
+        <dropColumn columnName="NON_EVACUATED_ENERGY_RESULT_UUID" tableName="ROOT_NETWORK_NODE_INFO"/>
+    </changeSet>
+</databaseChangeLog>

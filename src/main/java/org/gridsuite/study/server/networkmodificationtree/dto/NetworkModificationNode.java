@@ -48,8 +48,6 @@ public class NetworkModificationNode extends AbstractNode {
 
     private UUID sensitivityAnalysisResultUuid;
 
-    private UUID nonEvacuatedEnergyResultUuid;
-
     private UUID dynamicSimulationResultUuid;
 
     private UUID dynamicSecurityAnalysisResultUuid;
@@ -70,7 +68,6 @@ public class NetworkModificationNode extends AbstractNode {
         this.setVoltageInitResultUuid(rootNetworkNodeInfoEntity.getVoltageInitResultUuid());
         this.setSecurityAnalysisResultUuid(rootNetworkNodeInfoEntity.getSecurityAnalysisResultUuid());
         this.setSensitivityAnalysisResultUuid(rootNetworkNodeInfoEntity.getSensitivityAnalysisResultUuid());
-        this.setNonEvacuatedEnergyResultUuid(rootNetworkNodeInfoEntity.getNonEvacuatedEnergyResultUuid());
         this.setDynamicSimulationResultUuid(rootNetworkNodeInfoEntity.getDynamicSimulationResultUuid());
         this.setDynamicSecurityAnalysisResultUuid(rootNetworkNodeInfoEntity.getDynamicSecurityAnalysisResultUuid());
         this.setStateEstimationResultUuid(rootNetworkNodeInfoEntity.getStateEstimationResultUuid());
