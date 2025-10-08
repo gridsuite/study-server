@@ -20,6 +20,8 @@ import java.util.*;
 @Getter
 @Setter
 public class DeleteNodeInfos {
+    private List<UUID> removedNodeUuids = new ArrayList<>();
+
     private List<UUID> modificationGroupUuids = new ArrayList<>();
 
     private List<UUID> reportUuids = new ArrayList<>();
@@ -43,6 +45,10 @@ public class DeleteNodeInfos {
     private List<UUID> dynamicSecurityAnalysisResultUuids = new ArrayList<>();
 
     private List<UUID> stateEstimationResultUuids = new ArrayList<>();
+
+    public void addRemovedNodeUuid(UUID removedNodeUuid) {
+        removedNodeUuids.add(removedNodeUuid);
+    }
 
     public void addModificationGroupUuid(UUID modificationGroupUuid) {
         modificationGroupUuids.add(modificationGroupUuid);
