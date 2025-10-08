@@ -697,21 +697,6 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<String>> consumeNonEvacuatedEnergyResult() {
-        return message -> consumeCalculationResult(message, NON_EVACUATED_ENERGY_ANALYSIS);
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeNonEvacuatedEnergyStopped() {
-        return message -> consumeCalculationStopped(message, NON_EVACUATED_ENERGY_ANALYSIS);
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeNonEvacuatedEnergyFailed() {
-        return message -> consumeCalculationFailed(message, NON_EVACUATED_ENERGY_ANALYSIS);
-    }
-
-    @Bean
     public Consumer<Message<String>> consumeSaResult() {
         return message -> consumeCalculationResult(message, SECURITY_ANALYSIS);
     }
