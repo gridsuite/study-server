@@ -1042,10 +1042,6 @@ public class StudyService {
                 parametersJson, fileName, userId, exportNetworkResponse);
     }
 
-    public void downloadExportNetworkFile(UUID exportUuid, HttpServletResponse exportNetworkResponse) {
-        networkConversionService.downloadExportNetworkFile(exportUuid, exportNetworkResponse);
-    }
-
     @Transactional(readOnly = true)
     public void assertIsNodeNotReadOnly(UUID nodeUuid) {
         Boolean isReadOnly = networkModificationTreeService.isReadOnly(nodeUuid);

@@ -39,9 +39,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.*;
-import static org.gridsuite.study.server.notification.NotificationService.*;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_ROOT_NETWORK_UUID;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_STUDY_UUID;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -825,7 +825,7 @@ public class ConsumerService {
                     String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
                     String fileName = (String) msg.getHeaders().get(HEADER_FILE_NAME);
                     UUID exportUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID)).toString());
-                    String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR_MESSAGE);
+                    String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
                     notificationService.emitNetworkExportSucceeded(studyUuid, nodeUuid, rootNetworkUuid, format, userId, fileName, exportUuid, errorMessage);
                 });
     }

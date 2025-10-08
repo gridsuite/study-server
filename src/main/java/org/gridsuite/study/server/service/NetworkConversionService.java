@@ -13,15 +13,13 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
-
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
-import org.gridsuite.study.server.StudyException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -104,44 +102,13 @@ public class NetworkConversionService {
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public void downloadExportNetworkFile(UUID exportUuid, HttpServletResponse exportNetworkResponse) {
-
-        try (ServletOutputStream outputStream = exportNetworkResponse.getOutputStream()) {
-            var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/download/{exportUuid}");
-            String path = uriComponentsBuilder.buildAndExpand(exportUuid).toUriString();
-
-            restTemplate.execute(
-                    networkConversionServerBaseUri + path,
-                    HttpMethod.GET,
-                    request -> { },
-                    networkConversionServerResponse -> {
-                        String fileNameFromResponse = networkConversionServerResponse.getHeaders().getContentDisposition().getFilename();
-                        long contentLength = networkConversionServerResponse.getHeaders().getContentLength();
-                        exportNetworkResponse.setHeader(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.builder("attachment").filename(fileNameFromResponse).build().toString());
-                        exportNetworkResponse.setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM.toString());
-                        if (contentLength != -1) {
-                            exportNetworkResponse.setContentLengthLong(contentLength);
-                        }
-                        exportNetworkResponse.setStatus(HttpStatus.OK.value());
-                        StreamUtils.copy(networkConversionServerResponse.getBody(), outputStream);
-                        outputStream.flush();
-                        return null;
-                    }
-            );
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, NETWORK_EXPORT_FAILED);
-        } catch (IOException e) {
-            throw new StudyException(NETWORK_EXPORT_FAILED, e.getMessage());
-        }
-    }
-
     public void exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, String format,
                               String parametersJson, String fileName, String userId, HttpServletResponse exportNetworkResponse) {
 
         try (ServletOutputStream outputStream = exportNetworkResponse.getOutputStream()) {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
                 + "/networks/{networkUuid}/export/{format}");
-            if (!variantId.isEmpty()) {
+            if (!StringUtils.isEmpty(variantId)) {
                 uriComponentsBuilder.queryParam("variantId", variantId);
             }
 
@@ -165,8 +132,7 @@ public class NetworkConversionService {
                     networkConversionServerResponse -> {
                         exportNetworkResponse.setStatus(HttpStatus.ACCEPTED.value());
                         exportNetworkResponse.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                        String responseJson = "{\"message\":\"Export started, you will receive a notification when ready\"}";
-                        StreamUtils.copy(responseJson, StandardCharsets.UTF_8, outputStream);
+                        StreamUtils.copy(networkConversionServerResponse.getBody(), outputStream);
                         return null;
                     }
             );

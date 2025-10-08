@@ -941,13 +941,6 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formatsJson);
     }
 
-    @GetMapping(value = "/download-network-file/{exportUuid}")
-    @Operation(summary = "get the export file")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The available export file")})
-    public void downloadExportNetworkFile(@PathVariable("exportUuid") UUID exportUuid, HttpServletResponse response) {
-        studyService.downloadExportNetworkFile(exportUuid, response);
-    }
-
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}")
     @Operation(summary = "export the study's network in the given format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network in the given format")})
