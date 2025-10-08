@@ -66,7 +66,6 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -259,9 +258,6 @@ class StudyTest {
     private static final String DUPLICATED_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON = "\"" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "\"";
 
     private static final String DEFAULT_PROVIDER = "defaultProvider";
-
-    @Value("${non-evacuated-energy.default-provider}")
-    private String defaultNonEvacuatedEnergyProvider;
 
     @Autowired
     private OutputDestination output;
@@ -601,8 +597,6 @@ class StudyTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.matches("/v1/elements/" + PROFILE_DIAGRAM_CONFIG_UUID_STRING + "/name") && GET.equals(request.getMethod())) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(NAD_ELEMENT_NAME));
-                } else if (path.matches("/v1/parameters/.*/provider") && GET.equals(request.getMethod())) {
-                    return new MockResponse.Builder().code(200).body(defaultNonEvacuatedEnergyProvider).build();
                 } else if (path.matches("/v1/parameters/.*/provider")) {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/default-provider")) {
@@ -1616,7 +1610,6 @@ class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
@@ -1668,13 +1661,6 @@ class StudyTest {
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_METADATA_UPDATED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
-    }
-
-    @Test
-    void testCreateStudyWithDefaultLoadflow(final MockWebServer mockWebServer) throws Exception {
-        createStudy(mockWebServer, "userId", CASE_UUID);
-        StudyEntity study = studyRepository.findAll().get(0);
-        assertEquals(study.getNonEvacuatedEnergyProvider(), defaultNonEvacuatedEnergyProvider);
     }
 
     @Test
@@ -1965,13 +1951,11 @@ class StudyTest {
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getLoadFlowResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSecurityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSensitivityAnalysisResultUuid());
-        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getNonEvacuatedEnergyResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getStateEstimationResultUuid());
 
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getLoadFlowResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSecurityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSensitivityAnalysisResultUuid());
-        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getNonEvacuatedEnergyResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getStateEstimationResultUuid());
 
         //Check requests to duplicate modification groups has been emitted (3 nodes)
@@ -2367,8 +2351,6 @@ class StudyTest {
         //securityAnalysis_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //sensitivityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //nonEvacuatedEnergy_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //shortCircuitAnalysis_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -2770,8 +2752,6 @@ class StudyTest {
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //sensitivityAnalysis_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //sensitivityAnalysisonEvacuated_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //shortCircuitAnalysis_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //oneBusShortCircuitAnalysis_status
@@ -2802,8 +2782,6 @@ class StudyTest {
             //securityAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //sensitivityAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //nonEvacuatedEnergy_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //shortCircuitAnalysis_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -2875,10 +2853,6 @@ class StudyTest {
                     content().string(DEFAULT_PROVIDER));
         var requests = TestUtils.getRequestsDone(3, server);
         assertTrue(requests.stream().allMatch(r -> r.matches("/v1/default-provider")));
-
-        mockMvc.perform(get("/v1/non-evacuated-energy-default-provider")).andExpectAll(
-            status().isOk(),
-            content().string(defaultNonEvacuatedEnergyProvider));
     }
 
     private void checkSubtreeMovedMessageSent(UUID studyUuid, UUID movedNodeUuid, UUID referenceNodeUuid) {
@@ -2967,9 +2941,6 @@ class StudyTest {
     void providerTest(final MockWebServer server) throws Exception {
         UUID studyUuid = createStudy(server, USER_ID_HEADER, CASE_UUID);
         assertNotNull(studyUuid);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
-            .andExpectAll(status().isOk(),
-                content().string(defaultNonEvacuatedEnergyProvider));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/provider", studyUuid)
                         .content("SuperLF")
@@ -2998,37 +2969,7 @@ class StudyTest {
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid)
-                .content("SuperNEE")
-                .contentType(MediaType.TEXT_PLAIN)
-                .header(USER_ID_HEADER, USER_ID_HEADER))
-            .andExpect(status().isOk());
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertNotNull(message);
-        assertEquals(NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertNotNull(message);
-        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-
-        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/non-evacuated-energy/provider", studyUuid))
-            .andExpectAll(status().isOk(),
-                content().string("SuperNEE"));
-
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.stream().allMatch(r -> r.matches("/v1/parameters/.*/provider")));
-    }
-
-    @Test
-    void loadFlowProviderTest(final MockWebServer server) throws Exception {
-        UUID studyUuid = createStudy(server, USER_ID_HEADER, CASE_UUID);
-        assertNotNull(studyUuid);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/provider", studyUuid))
-                .andExpectAll(status().isOk(),
-                        content().string(defaultNonEvacuatedEnergyProvider));
-
-        var requests = TestUtils.getRequestsDone(1, server);
         assertTrue(requests.stream().allMatch(r -> r.matches("/v1/parameters/.*/provider")));
     }
 
