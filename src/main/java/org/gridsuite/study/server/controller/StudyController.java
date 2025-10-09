@@ -657,7 +657,7 @@ public class StudyController {
             case MOVE:
                 // we don't cut - paste modifications from different studies
                 if (!studyUuid.equals(originStudyUuid)) {
-                    throw new StudyException(Type.MOVE_NETWORK_MODIFICATION_FAILED);
+                    throw new StudyException(Type.MOVE_NETWORK_MODIFICATION_FORBIDDEN);
                 }
                 handleMoveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
