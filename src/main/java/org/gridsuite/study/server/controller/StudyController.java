@@ -643,28 +643,20 @@ public class StudyController {
     public ResponseEntity<Void> moveOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestParam("action") ModificationsActionType action,
-                                                         @Nullable @RequestParam("originStudyUuid") UUID originStudyUuid,
-                                                         @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
+                                                         @RequestParam("originStudyUuid") UUID originStudyUuid,
+                                                         @RequestParam("originNodeUuid") UUID originNodeUuid,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
-        if (originNodeUuid != null && !nodeUuid.equals(originNodeUuid)) {
-            if (originStudyUuid != null && !studyUuid.equals(originStudyUuid)) {
-                studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
-                studyService.assertCanUpdateModifications(originStudyUuid, originNodeUuid);
-            } else {
-                studyService.assertIsStudyAndNodeExist(studyUuid, originNodeUuid);
-                studyService.assertCanUpdateModifications(studyUuid, originNodeUuid);
-            }
-        }
         switch (action) {
             case COPY, INSERT:
                 handleDuplicateOrInsertNetworkModifications(studyUuid, nodeUuid, originStudyUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
                 break;
             case MOVE:
                 // we don't cut - paste modifications from different studies
-                if (originStudyUuid != null && !studyUuid.equals(originStudyUuid)) {
+                if (!studyUuid.equals(originStudyUuid)) {
                     throw new StudyException(Type.MOVE_NETWORK_MODIFICATION_FAILED);
                 }
                 handleMoveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);

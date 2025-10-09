@@ -2386,35 +2386,30 @@ public class StudyService {
         try {
             checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
 
-            List<RootNetworkEntity> targetStudyRootNetworkEntities = getStudyRootNetworks(targetStudyUuid);
-            UUID targetGroupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
+            List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(targetStudyUuid);
+            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
 
-            List<ModificationApplicationContext> modificationApplicationContexts;
-            if (originNodeUuid == null || targetStudyUuid.equals(originStudyUuid)) {
-                modificationApplicationContexts = targetStudyRootNetworkEntities.stream()
-                    .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
-                    .toList();
-            } else {
-                modificationApplicationContexts = targetStudyRootNetworkEntities.stream()
-                    .map(rootNetworkEntity -> rootNetworkNodeInfoService.createModificationApplicationContextAllActivated(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
-                    .toList();
-            }
+            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
+                .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
+                .toList();
 
-            NetworkModificationsResult networkModificationResults = networkModificationService.duplicateOrInsertModifications(targetGroupUuid, action, Pair.of(modificationsUuis, modificationApplicationContexts));
+            NetworkModificationsResult networkModificationResults = networkModificationService.duplicateOrInsertModifications(groupUuid, action, Pair.of(modificationsUuis, modificationApplicationContexts));
 
             Map<UUID, UUID> originToDuplicateModificationsUuids = new HashMap<>();
             for (int i = 0; i < modificationsUuis.size(); i++) {
                 originToDuplicateModificationsUuids.put(modificationsUuis.get(i), networkModificationResults.modificationUuids().get(i));
             }
 
-            rootNetworkNodeInfoService.copyModificationsToExclude((originNodeUuid != null) ? originNodeUuid : targetNodeUuid, targetNodeUuid, originToDuplicateModificationsUuids);
+            if (targetStudyUuid.equals(originStudyUuid)) {
+                rootNetworkNodeInfoService.copyModificationsToExclude(originNodeUuid, targetNodeUuid, originToDuplicateModificationsUuids);
+            }
 
             if (networkModificationResults != null) {
                 int index = 0;
                 // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
                 for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
-                    if (modificationResultOpt.isPresent() && targetStudyRootNetworkEntities.get(index) != null) {
-                        emitNetworkModificationImpacts(targetStudyUuid, targetNodeUuid, targetStudyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
+                    if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
+                        emitNetworkModificationImpacts(targetStudyUuid, targetNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
                     }
                     index++;
                 }
