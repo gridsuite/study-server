@@ -2257,7 +2257,7 @@ public class StudyController {
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/global-filter/evaluate",
         produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Evaluate a filter to get matched elements")
+    @Operation(summary = "Evaluate a global filter to get matched elements")
     @ApiResponse(responseCode = "200", description = "The list of matched elements")
     public ResponseEntity<List<String>> evaluateGlobalFilter(
             @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
