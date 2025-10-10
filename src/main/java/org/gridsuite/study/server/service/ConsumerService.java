@@ -818,15 +818,13 @@ public class ConsumerService {
         Optional.ofNullable(msg.getHeaders().get(NETWORK_UUID, String.class))
                 .map(UUID::fromString)
                 .ifPresent(networkUuid -> {
-                    UUID studyUuid = UUID.fromString(msg.getHeaders().get(HEADER_STUDY_UUID, String.class));
+                    UUID studyUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_STUDY_UUID, String.class)));
                     UUID nodeUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get("nodeUuid")).toString());
                     UUID rootNetworkUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_ROOT_NETWORK_UUID)).toString());
-                    String format = (String) msg.getHeaders().get("format");
                     String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
-                    String fileName = (String) msg.getHeaders().get(HEADER_FILE_NAME);
                     UUID exportUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID)).toString());
                     String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
-                    notificationService.emitNetworkExportSucceeded(studyUuid, nodeUuid, rootNetworkUuid, format, userId, fileName, exportUuid, errorMessage);
+                    notificationService.emitNetworkExportSucceeded(studyUuid, nodeUuid, rootNetworkUuid, userId, exportUuid, errorMessage);
                 });
     }
 

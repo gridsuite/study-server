@@ -89,8 +89,6 @@ public final class StudyConstants {
     public static final String PATH_PARAM_PARAMETERS = "parameters";
     public static final String DYNA_FLOW_PROVIDER = "DynaFlow";
     public static final String DYNAWO_PROVIDER = "Dynawo";
-    public static final String HEADER_FORMAT = "format";
-    public static final String HEADER_FILE_NAME = "fileName";
     public static final String NETWORK_EXPORT_SUCCEEDED = "networkExportSucceeded";
 
     public enum SldDisplayMode {
