@@ -951,9 +951,10 @@ public class StudyController {
             @PathVariable("format") String format,
             @RequestParam(value = "formatParameters", required = false) String parametersJson,
             @RequestParam(value = "fileName") String fileName,
+            @RequestHeader(HEADER_USER_ID) String userId,
             HttpServletResponse response) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
-        studyService.exportNetwork(nodeUuid, rootNetworkUuid, format, parametersJson, fileName, response);
+        studyService.exportNetwork(studyUuid, nodeUuid, rootNetworkUuid, format, parametersJson, fileName, userId, response);
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run")
