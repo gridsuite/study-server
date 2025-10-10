@@ -1034,12 +1034,11 @@ public class StudyService {
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
     }
 
-    public void exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String format, String parametersJson, String fileName, String userId, HttpServletResponse exportNetworkResponse) {
+    public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String format, String parametersJson, String fileName, String userId) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
 
-        networkConversionService.exportNetwork(studyUuid, nodeUuid, rootNetworkUuid, networkUuid, variantId, format,
-                parametersJson, fileName, userId, exportNetworkResponse);
+        return networkConversionService.exportNetwork(studyUuid, nodeUuid, rootNetworkUuid, networkUuid, variantId, format, parametersJson, fileName, userId);
     }
 
     @Transactional(readOnly = true)
