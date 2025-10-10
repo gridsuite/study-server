@@ -320,14 +320,14 @@ class ModificationToExcludeTest {
             .map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet());
 
         // test duplication on same node : node1
-        studyService.duplicateOrInsertNetworkModifications(studyEntity.getId(), firstNode.getId(), firstNode.getId(), modificationsToDuplicate, USER_ID, StudyConstants.ModificationsActionType.COPY);
+        studyService.duplicateOrInsertNetworkModifications(studyEntity.getId(), firstNode.getId(), studyEntity.getId(), firstNode.getId(), modificationsToDuplicate, USER_ID, StudyConstants.ModificationsActionType.COPY);
         RootNetworkNodeInfoEntity upToDateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
         RootNetworkNodeInfoEntity upToDateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
         assertEquals(Sets.union(expectedExcludedModification1, MODIFICATIONS_TO_EXCLUDE_RN_1), upToDateRootNetworkNodeInfoEntity1.getModificationsUuidsToExclude());
         assertEquals(Sets.union(expectedExcludedModification2, MODIFICATIONS_TO_EXCLUDE_RN_2), upToDateRootNetworkNodeInfoEntity2.getModificationsUuidsToExclude());
 
         // test duplication on different nodes : node1 -> node2
-        studyService.duplicateOrInsertNetworkModifications(studyEntity.getId(), secondNode.getId(), firstNode.getId(), modificationsToDuplicate, USER_ID, StudyConstants.ModificationsActionType.COPY);
+        studyService.duplicateOrInsertNetworkModifications(studyEntity.getId(), secondNode.getId(), studyEntity.getId(), firstNode.getId(), modificationsToDuplicate, USER_ID, StudyConstants.ModificationsActionType.COPY);
         upToDateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNode.getId(), rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
         upToDateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
         assertEquals(expectedExcludedModification1, upToDateRootNetworkNodeInfoEntity1.getModificationsUuidsToExclude());
