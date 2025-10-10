@@ -46,7 +46,6 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -86,8 +85,7 @@ import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.cre
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -2118,6 +2116,8 @@ class NetworkModificationTest {
                         "action", WireMock.equalTo("COPY")),
                 expectedBody);
 
+        verify(rootNetworkNodeInfoService, times(1)).copyModificationsToExclude(any(), any(), any());
+
         // now we do the same but on a built node
         RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid1, studyTestUtils.getOneRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
         rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
@@ -2147,6 +2147,56 @@ class NetworkModificationTest {
         wireMockUtils.verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
                         "action", WireMock.equalTo("COPY")),
                 expectedBody);
+    }
+
+    @Test
+    void testDuplicateModificationBetweenStudies() throws Exception {
+        String userId = "userId";
+
+        // Create first study
+        StudyEntity studyEntity1 = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        NetworkModificationNode node1 = createNetworkModificationNode(studyEntity1.getId(), getRootNode(studyEntity1.getId()).getId(), UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
+
+        // Create another study
+        StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_2_STRING), CASE_UUID, "UCTE");
+        NetworkModificationNode node2 = createNetworkModificationNode(studyEntity2.getId(), getRootNode(studyEntity2.getId()).getId(), UUID.randomUUID(), VARIANT_ID_2, "New node 2", "userId");
+
+        UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
+            .withQueryParam("action", WireMock.equalTo("COPY"))
+            .willReturn(WireMock.ok()
+                .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID(), UUID.randomUUID()), List.of(Optional.empty()))))
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
+
+        // Duplicate modification from node2 (study2) to node1 (study1)
+        List<UUID> modifications = List.of(UUID.randomUUID());
+        String modificationUuidListBody = mapper.writeValueAsString(modifications);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                studyEntity1.getId(), node1.getId(), studyEntity2.getId(), node2.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(modificationUuidListBody)
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isOk());
+        checkUpdateModelsStatusMessagesReceived(studyEntity1.getId(), node1.getId());
+        checkEquipmentUpdatingMessagesReceived(studyEntity1.getId(), node1.getId());
+        checkEquipmentUpdatingFinishedMessagesReceived(studyEntity1.getId(), node1.getId());
+        checkElementUpdatedMessageSent(studyEntity1.getId(), userId);
+
+        Pair<List<UUID>, List<ModificationApplicationContext>> modificationBody = Pair.of(modifications, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(studyTestUtils.getOneRootNetworkUuid(studyEntity1.getId()), node1.getId(), NETWORK_UUID)));
+        String expectedBody = mapper.writeValueAsString(modificationBody);
+        String url = "/v1/groups/" + node1.getModificationGroupUuid();
+        wireMockUtils.verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
+                "action", WireMock.equalTo("COPY")),
+            expectedBody);
+
+        verify(rootNetworkNodeInfoService, times(0)).copyModificationsToExclude(any(), any(), any());
+
+        // Move modification between studies is forbidden
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
+                studyEntity1.getId(), node1.getId(), studyEntity2.getId(), node2.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(modificationUuidListBody)
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isForbidden());
     }
 
     @Test

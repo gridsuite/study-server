@@ -2395,12 +2395,11 @@ public class StudyService {
 
             NetworkModificationsResult networkModificationResults = networkModificationService.duplicateOrInsertModifications(groupUuid, action, Pair.of(modificationsUuis, modificationApplicationContexts));
 
-            Map<UUID, UUID> originToDuplicateModificationsUuids = new HashMap<>();
-            for (int i = 0; i < modificationsUuis.size(); i++) {
-                originToDuplicateModificationsUuids.put(modificationsUuis.get(i), networkModificationResults.modificationUuids().get(i));
-            }
-
             if (targetStudyUuid.equals(originStudyUuid)) {
+                Map<UUID, UUID> originToDuplicateModificationsUuids = new HashMap<>();
+                for (int i = 0; i < modificationsUuis.size(); i++) {
+                    originToDuplicateModificationsUuids.put(modificationsUuis.get(i), networkModificationResults.modificationUuids().get(i));
+                }
                 rootNetworkNodeInfoService.copyModificationsToExclude(originNodeUuid, targetNodeUuid, originToDuplicateModificationsUuids);
             }
 
