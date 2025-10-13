@@ -2110,8 +2110,8 @@ class NetworkModificationTest {
                     .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // duplicate 2 modifications in node1
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
-                studyUuid, nodeUuid1)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                studyUuid, nodeUuid1, studyUuid, nodeUuid1)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(modificationUuidListBody)
                 .header(USER_ID_HEADER, "userId"))
@@ -2128,6 +2128,8 @@ class NetworkModificationTest {
                         "action", WireMock.equalTo("COPY")),
                 expectedBody);
 
+        verify(rootNetworkNodeInfoService, times(1)).copyModificationsToExclude(any(), any(), any());
+
         // now we do the same but on a built node
         RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid1, studyTestUtils.getOneRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
         rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
@@ -2139,8 +2141,8 @@ class NetworkModificationTest {
                         .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID(), UUID.randomUUID()), List.of(Optional.of(NetworkModificationResult.builder().build())))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
-                        studyUuid, nodeUuid1)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                        studyUuid, nodeUuid1, studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
@@ -2160,6 +2162,56 @@ class NetworkModificationTest {
     }
 
     @Test
+    void testDuplicateModificationBetweenStudies() throws Exception {
+        String userId = "userId";
+
+        // Create first study
+        StudyEntity studyEntity1 = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        NetworkModificationNode node1 = createNetworkModificationNode(studyEntity1.getId(), getRootNode(studyEntity1.getId()).getId(), UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
+
+        // Create another study
+        StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_2_STRING), CASE_UUID, "UCTE");
+        NetworkModificationNode node2 = createNetworkModificationNode(studyEntity2.getId(), getRootNode(studyEntity2.getId()).getId(), UUID.randomUUID(), VARIANT_ID_2, "New node 2", "userId");
+
+        UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
+            .withQueryParam("action", WireMock.equalTo("COPY"))
+            .willReturn(WireMock.ok()
+                .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID(), UUID.randomUUID()), List.of(Optional.empty()))))
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
+
+        // Duplicate modification from node2 (study2) to node1 (study1)
+        List<UUID> modifications = List.of(UUID.randomUUID());
+        String modificationUuidListBody = mapper.writeValueAsString(modifications);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                studyEntity1.getId(), node1.getId(), studyEntity2.getId(), node2.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(modificationUuidListBody)
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isOk());
+        checkUpdateModelsStatusMessagesReceived(studyEntity1.getId(), node1.getId());
+        checkEquipmentUpdatingMessagesReceived(studyEntity1.getId(), node1.getId());
+        checkEquipmentUpdatingFinishedMessagesReceived(studyEntity1.getId(), node1.getId());
+        checkElementUpdatedMessageSent(studyEntity1.getId(), userId);
+
+        Pair<List<UUID>, List<ModificationApplicationContext>> modificationBody = Pair.of(modifications, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(studyTestUtils.getOneRootNetworkUuid(studyEntity1.getId()), node1.getId(), NETWORK_UUID)));
+        String expectedBody = mapper.writeValueAsString(modificationBody);
+        String url = "/v1/groups/" + node1.getModificationGroupUuid();
+        wireMockUtils.verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
+                "action", WireMock.equalTo("COPY")),
+            expectedBody);
+
+        verify(rootNetworkNodeInfoService, times(0)).copyModificationsToExclude(any(), any(), any());
+
+        // Move modification between studies is forbidden
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
+                studyEntity1.getId(), node1.getId(), studyEntity2.getId(), node2.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(modificationUuidListBody)
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
     void testDuplicateModificationErrorCase() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -2170,16 +2222,16 @@ class NetworkModificationTest {
         String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
 
         // Random/bad studyId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
-                        UUID.randomUUID(), rootNodeUuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                        UUID.randomUUID(), rootNodeUuid, UUID.randomUUID(), UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
 
         // Random/bad nodeId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
-                        studyUuid, UUID.randomUUID())
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                        studyUuid, UUID.randomUUID(), studyUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
@@ -2211,8 +2263,8 @@ class NetworkModificationTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // move 2 modifications within node 1
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
-                        studyUuid, nodeUuid1, nodeUuid1)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
+                        studyUuid, nodeUuid1, studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
@@ -2231,8 +2283,8 @@ class NetworkModificationTest {
                 expectedBodyStr);
 
         // move 2 modifications from node1 to node2
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
-                        studyUuid, nodeUuid2, nodeUuid1)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
+                        studyUuid, nodeUuid2, studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
@@ -2277,16 +2329,16 @@ class NetworkModificationTest {
         String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
 
         // Random/bad studyId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
-                        UUID.randomUUID(), rootNodeUuid, UUID.randomUUID())
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
+                        UUID.randomUUID(), rootNodeUuid, UUID.randomUUID(), UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
 
         // Random/bad nodeId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
-                        studyUuid, UUID.randomUUID(), UUID.randomUUID())
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
+                        studyUuid, UUID.randomUUID(), studyUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
