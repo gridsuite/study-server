@@ -38,7 +38,6 @@ public class RestResponseEntityExceptionHandler {
                     SECURITY_ANALYSIS_NOT_FOUND,
                     SENSITIVITY_ANALYSIS_NOT_FOUND,
                     SHORT_CIRCUIT_ANALYSIS_NOT_FOUND,
-                    NON_EVACUATED_ENERGY_NOT_FOUND,
                     DYNAMIC_SIMULATION_NOT_FOUND,
                     DYNAMIC_MAPPING_NOT_FOUND,
                     EQUIPMENT_NOT_FOUND,
@@ -59,7 +58,6 @@ public class RestResponseEntityExceptionHandler {
                     LOADFLOW_RUNNING,
                     SECURITY_ANALYSIS_RUNNING,
                     SENSITIVITY_ANALYSIS_RUNNING,
-                    NON_EVACUATED_ENERGY_RUNNING,
                     DYNAMIC_SIMULATION_RUNNING,
                     SHORT_CIRCUIT_ANALYSIS_RUNNING,
                     VOLTAGE_INIT_RUNNING,
@@ -72,7 +70,8 @@ public class RestResponseEntityExceptionHandler {
                     MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED,
                     MAXIMUM_TAG_LENGTH_EXCEEDED,
                     TOO_MANY_NAD_CONFIGS,
-                    TOO_MANY_MAP_CARDS
+                    TOO_MANY_MAP_CARDS,
+                    MOVE_NETWORK_MODIFICATION_FORBIDDEN
                     -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(exception.getMessage());
             case CANT_DELETE_ROOT_NODE -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(NOT_ALLOWED);
             case CREATE_NETWORK_MODIFICATION_FAILED,
@@ -93,7 +92,6 @@ public class RestResponseEntityExceptionHandler {
                     GET_MODIFICATIONS_FAILED,
                     GET_NETWORK_ELEMENT_FAILED,
                     SENSITIVITY_ANALYSIS_ERROR,
-                    NON_EVACUATED_ENERGY_ERROR,
                     SHORT_CIRCUIT_ANALYSIS_ERROR,
                     NODE_BUILD_ERROR, URI_SYNTAX,
                     CREATE_VOLTAGE_INIT_PARAMETERS_FAILED,
