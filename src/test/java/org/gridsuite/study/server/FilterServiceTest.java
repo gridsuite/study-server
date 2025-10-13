@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -167,6 +168,38 @@ class FilterServiceTest {
         assertEquals(responseBody, resultAsString);
 
         wireMockUtils.verifyFilterEvaluate(stubUuid, NETWORK_UUID_STRING);
+    }
+
+    @Test
+    void testEvaluateGlobalFilter() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        // whatever string is allowed but given here a json string for more expressive
+        final String sendBody = """
+                    {
+                      "nominalV" : ["380", "225"],
+                      "countryCode": ["FR", "BE"],
+                      "genericFilter": ["c6c15d08-81e9-47a1-9cdb-7be22f017ad5"],
+                      "substationProperty": {}
+                    }
+                """;
+
+        String responseBody = "[\"GEN\"]";
+
+        UUID stubUuid = wireMockUtils.stubGlobalFilterEvaluate(NETWORK_UUID_STRING, List.of(EquipmentType.GENERATOR), responseBody);
+
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/global-filter/evaluate?equipmentTypes=GENERATOR",
+                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
+                .content(sendBody).contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        assertEquals(responseBody, resultAsString);
+
+        wireMockUtils.verifyGlobalFilterEvaluate(stubUuid, NETWORK_UUID_STRING, List.of(EquipmentType.GENERATOR));
     }
 
     @Test

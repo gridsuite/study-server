@@ -15,6 +15,7 @@ import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import com.powsybl.iidm.network.TwoSides;
+import org.gridsuite.filter.utils.EquipmentType;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
@@ -524,6 +525,15 @@ public class WireMockUtils {
         ).getId();
     }
 
+    public UUID stubGlobalFilterEvaluate(String networkUuid, List<EquipmentType> equipmentTypes, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/global-filter"))
+            .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+            .withQueryParam(QUERY_PARAM_VARIANT_ID, WireMock.equalTo(""))
+            .withQueryParam(QUERY_PARAM_EQUIPMENT_TYPES, WireMock.equalTo(String.join(",", equipmentTypes.stream().map(EquipmentType::name).toList())))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))
+        ).getId();
+    }
+
     public UUID stubFilterEvaluateNotFoundError(String networkUuid) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
                 .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
@@ -541,6 +551,13 @@ public class WireMockUtils {
     public void verifyFilterEvaluate(UUID stubUuid, String networkUuid) {
         verifyPostRequest(stubUuid, "/v1/filters/evaluate",
                 Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid)));
+    }
+
+    public void verifyGlobalFilterEvaluate(UUID stubUuid, String networkUuid, List<EquipmentType> equipmentTypes) {
+        verifyPostRequest(stubUuid, "/v1/global-filter",
+            Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid),
+                QUERY_PARAM_VARIANT_ID, WireMock.equalTo(""),
+                QUERY_PARAM_EQUIPMENT_TYPES, WireMock.equalTo(String.join(",", equipmentTypes.stream().map(EquipmentType::name).toList()))));
     }
 
     public UUID stubFilterExport(String networkUuid, String filterUuid, String responseBody) {
