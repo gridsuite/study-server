@@ -16,6 +16,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
+import org.gridsuite.study.server.StudyConstants.SldDisplayMode;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.StudyException.Type;
 import org.gridsuite.study.server.dto.*;
@@ -640,20 +642,22 @@ public class StudyController {
     public ResponseEntity<Void> moveOrCopyModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestParam("action") ModificationsActionType action,
-                                                         @Nullable @RequestParam("originNodeUuid") UUID originNodeUuid,
+                                                         @RequestParam("originStudyUuid") UUID originStudyUuid,
+                                                         @RequestParam("originNodeUuid") UUID originNodeUuid,
                                                          @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
-        if (originNodeUuid != null) {
-            studyService.assertIsNodeExist(studyUuid, originNodeUuid);
-            studyService.assertCanUpdateModifications(studyUuid, originNodeUuid);
-        }
         switch (action) {
             case COPY, INSERT:
-                handleDuplicateOrInsertNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
+                handleDuplicateOrInsertNetworkModifications(studyUuid, nodeUuid, originStudyUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
                 break;
             case MOVE:
+                // we don't cut - paste modifications from different studies
+                if (!studyUuid.equals(originStudyUuid)) {
+                    throw new StudyException(Type.MOVE_NETWORK_MODIFICATION_FORBIDDEN);
+                }
                 handleMoveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
             default:
@@ -662,13 +666,13 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    private void handleDuplicateOrInsertNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId, ModificationsActionType action) {
-        studyService.assertNoBlockedNodeInStudy(studyUuid, targetNodeUuid);
-        studyService.invalidateNodeTreeWithLF(studyUuid, targetNodeUuid);
+    private void handleDuplicateOrInsertNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, UUID originStudyUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId, ModificationsActionType action) {
+        studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
+        studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
         try {
-            studyService.duplicateOrInsertNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
+            studyService.duplicateOrInsertNetworkModifications(targetStudyUuid, targetNodeUuid, originStudyUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
         } finally {
-            studyService.unblockNodeTree(studyUuid, targetNodeUuid);
+            studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
         }
     }
 
