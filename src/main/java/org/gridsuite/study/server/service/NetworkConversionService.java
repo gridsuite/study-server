@@ -98,7 +98,7 @@ public class NetworkConversionService {
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, String format,
+    public String exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId, String format,
                               String parametersJson, String fileName, String userId) {
 
         try {
@@ -121,11 +121,11 @@ public class NetworkConversionService {
 
             HttpEntity<String> requestEntity = new HttpEntity<>(parametersJson, headers);
 
-            ResponseEntity<UUID> response = restTemplate.exchange(
+            ResponseEntity<String> response = restTemplate.exchange(
                     networkConversionServerBaseUri + path,
                     HttpMethod.POST,
                     requestEntity,
-                    UUID.class
+                    String.class
             );
 
             if (response.getStatusCode() == HttpStatus.ACCEPTED && response.getBody() != null) {
