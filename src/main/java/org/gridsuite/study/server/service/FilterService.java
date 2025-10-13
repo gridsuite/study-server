@@ -28,6 +28,10 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.FILTER_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.IDS;
+import static org.gridsuite.study.server.StudyConstants.NETWORK_UUID;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_EQUIPMENT_TYPES;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyException.Type.EVALUATE_FILTER_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
@@ -59,9 +63,9 @@ public class FilterService {
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EVALUATE;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
-        uriComponentsBuilder.queryParam("networkUuid", networkUuid);
+        uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
         if (variantId != null && !variantId.isBlank()) {
-            uriComponentsBuilder.queryParam("variantId", variantId);
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         var uriComponent = uriComponentsBuilder.build();
 
@@ -85,9 +89,9 @@ public class FilterService {
                                              @NonNull final List<EquipmentType> equipmentTypes, @NonNull final GlobalFilter filter) {
         final UriComponents uriComponent = UriComponentsBuilder.fromHttpUrl(getBaseUri())
                 .pathSegment(FILTER_API_VERSION, "global-filter")
-                .queryParam("networkUuid", networkUuid)
-                .queryParam("variantId", variantId)
-                .queryParam("equipmentTypes", equipmentTypes)
+                .queryParam(NETWORK_UUID, networkUuid)
+                .queryParam(QUERY_PARAM_VARIANT_ID, variantId)
+                .queryParam(QUERY_PARAM_EQUIPMENT_TYPES, equipmentTypes)
                 .build();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -109,7 +113,7 @@ public class FilterService {
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EXPORT;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
-        uriComponentsBuilder.queryParam("networkUuid", networkUuid);
+        uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand(filterUuid);
 
         return restTemplate.getForObject(uriComponent.toUriString(), String.class);
@@ -121,11 +125,11 @@ public class FilterService {
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTERS_END_POINT_EXPORT;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
-        uriComponentsBuilder.queryParam("networkUuid", networkUuid);
+        uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
         if (variantId != null && !variantId.isBlank()) {
-            uriComponentsBuilder.queryParam("variantId", variantId);
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        uriComponentsBuilder.queryParam("ids", filtersUuid);
+        uriComponentsBuilder.queryParam(IDS, filtersUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand();
 
         return restTemplate.getForObject(uriComponent.toUriString(), String.class);
@@ -137,8 +141,8 @@ public class FilterService {
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EVALUATE_IDS;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
-        uriComponentsBuilder.queryParam("networkUuid", networkUuid);
-        uriComponentsBuilder.queryParam("ids", filtersUuid);
+        uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
+        uriComponentsBuilder.queryParam(IDS, filtersUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand();
 
         return restTemplate.getForObject(uriComponent.toUriString(), String.class);
