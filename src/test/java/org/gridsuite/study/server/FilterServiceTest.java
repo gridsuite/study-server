@@ -300,7 +300,7 @@ class FilterServiceTest {
         String filtersBody = """
             {
               "filterAttributes": [{
-                "id": "c6c15d08-81e9-47a1-9cdb-7be22f017ad5",
+                "id": "c6c15d08-81e9-47a1-9cdb-7be22f017ad5"
               }],
               "equipmentTypesByElement": []
             }
