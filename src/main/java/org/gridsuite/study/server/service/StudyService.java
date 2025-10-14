@@ -3246,9 +3246,9 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public String evaluateFiltersFromFirstRootNetwork(UUID studyUuid, String body) {
+    public String evaluateFiltersFromFirstRootNetwork(UUID studyUuid, String filters) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        return filterService.evaluateFilters(studyEntity.getFirstRootNetwork().getNetworkUuid(), body);
+        return filterService.evaluateFilters(studyEntity.getFirstRootNetwork().getNetworkUuid(), filters);
     }
 
     public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {

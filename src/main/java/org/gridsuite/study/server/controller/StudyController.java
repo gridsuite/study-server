@@ -2283,8 +2283,8 @@ public class StudyController {
     public ResponseEntity<String> evaluateFiltersOnFirstRootNetwork(
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
         // the body should match FiltersWithEquipmentTypes in filter-server
-        @RequestBody String body) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFiltersFromFirstRootNetwork(studyUuid, body));
+        @Parameter(description = "Filters to evaluate") @RequestBody String filters) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFiltersFromFirstRootNetwork(studyUuid, filters));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/elements")
