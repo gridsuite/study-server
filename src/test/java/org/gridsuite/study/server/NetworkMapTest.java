@@ -654,7 +654,7 @@ class NetworkMapTest {
     }
 
     private StudyEntity insertDummyStudy(final MockWebServer server, UUID networkUuid, UUID caseUuid) {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, LOADFLOW_PARAMETERS_UUID, null, null, null, null, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, LOADFLOW_PARAMETERS_UUID, null, null, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createBasicTree(studyEntity);
         var requests = TestUtils.getRequestsDone(1, server);
