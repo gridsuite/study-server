@@ -458,8 +458,8 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/topology")
-    @Operation(summary = "get the topology for a given network and a given voltage level")
-    @ApiResponse(responseCode = "200", description = "The topology of given voltage level")
+    @Operation(summary = "get the topology for a given network and voltage level")
+    @ApiResponse(responseCode = "200", description = "The topology of the given voltage level")
     public ResponseEntity<String> getVoltageLevelTopology(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
