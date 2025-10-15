@@ -50,13 +50,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -148,7 +148,7 @@ class NonEvacuatedEnergyTest {
     @Autowired
     private ReportService reportService;
 
-    @MockBean
+    @MockitoBean
     private LoadFlowService loadFlowService;
 
     //output destinations
@@ -285,7 +285,7 @@ class NonEvacuatedEnergyTest {
             status().isOk(),
             content().string(NON_EVACUATED_ENERGY_STATUS_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/non-evacuated-energy/results/%s/status", resultUuid)));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/non-evacuated-energy/results/%s/status".formatted(resultUuid)));
 
         // stop sensitivity analysis non evacuated energy
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/non-evacuated-energy/stop", studyUuid, rootNetworkUuid, nodeUuid)

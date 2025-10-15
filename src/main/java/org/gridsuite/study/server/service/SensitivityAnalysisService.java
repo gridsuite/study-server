@@ -17,7 +17,6 @@ import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileIn
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -54,7 +53,6 @@ public class SensitivityAnalysisService extends AbstractComputationService {
 
     private final ObjectMapper objectMapper;
 
-    @Autowired
     SensitivityAnalysisService(RemoteServicesProperties remoteServicesProperties,
                                RestTemplate restTemplate,
                                ObjectMapper objectMapper) {

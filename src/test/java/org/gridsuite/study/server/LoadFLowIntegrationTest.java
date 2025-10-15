@@ -44,10 +44,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -114,20 +114,20 @@ class LoadFLowIntegrationTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
     ConsumerService consumerService;
-    @MockBean
+    @MockitoBean
     private ReportService reportService;
-    @MockBean
+    @MockitoBean
     private NetworkModificationService networkModificationService;
-    @MockBean
+    @MockitoBean
     private NetworkService networkService;
-    @MockBean
+    @MockitoBean
     private UserAdminService userAdminService;
 
-    @SpyBean
+    @MockitoSpyBean
     StudyService studyService;
-    @SpyBean
+    @MockitoSpyBean
     NetworkModificationTreeService networkModificationTreeService;
-    @SpyBean
+    @MockitoSpyBean
     LoadFlowService loadFlowService;
 
     private WireMockServer wireMockServer;
@@ -164,7 +164,7 @@ class LoadFLowIntegrationTest {
         study.addRootNetwork(firstRootNetworkEntity);
         studyRepository.save(study);
         studyUuid = study.getId();
-        NodeEntity rootNode = insertRootNode(study, UUID.randomUUID());
+        NodeEntity rootNode = insertRootNode(study);
         constructionNodeUuid = insertNode(study, variantId, reportUuid, rootNode, firstRootNetworkEntity, BuildStatus.BUILT, NetworkModificationNodeType.CONSTRUCTION);
         securityNodeUuid = insertNode(study, variantId, reportUuid, rootNode, firstRootNetworkEntity, BuildStatus.BUILT, NetworkModificationNodeType.SECURITY);
 
@@ -308,8 +308,8 @@ class LoadFLowIntegrationTest {
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
     }
 
-    private NodeEntity insertRootNode(StudyEntity study, UUID nodeId) {
-        NodeEntity node = nodeRepository.save(new NodeEntity(nodeId, null, NodeType.ROOT, study, false, null));
+    private NodeEntity insertRootNode(StudyEntity study) {
+        NodeEntity node = nodeRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null));
         RootNodeInfoEntity rootNodeInfo = new RootNodeInfoEntity();
         rootNodeInfo.setIdNode(node.getIdNode());
         rootNodeInfoRepository.save(rootNodeInfo);

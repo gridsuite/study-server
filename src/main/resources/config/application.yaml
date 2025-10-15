@@ -172,7 +172,7 @@ dynamic-simulation:
   default-provider: Dynawo
 
 server:
-  max-http-header-size: 64000
+  max-http-request-header-size: 64000
 
 gridsuite:
   services:

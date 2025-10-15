@@ -14,9 +14,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -44,13 +44,13 @@ class NetworkAreaDiagramTest {
     @Autowired
     private SingleLineDiagramService singleLineDiagramService;
 
-    @MockBean
+    @MockitoBean
     private NetworkModificationTreeService networkModificationTreeService;
 
-    @MockBean
+    @MockitoBean
     private RootNetworkService rootNetworkService;
 
-    @MockBean
+    @MockitoBean
     private NetworkStoreService networkStoreService;
 
     private static final String SINGLE_LINE_DIAGRAM_SERVER_BASE_URL = "/v1/network-area-diagram/";

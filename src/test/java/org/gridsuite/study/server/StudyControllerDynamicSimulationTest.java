@@ -50,13 +50,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -145,7 +145,7 @@ class StudyControllerDynamicSimulationTest {
     private static final UUID NODE_NOT_RUN_UUID = UUID.randomUUID();
     private static final UUID RESULT_UUID = UUID.randomUUID();
 
-    private static final String PARAMETERS = String.format("{\"startTime\": %d, \"stopTime\": %d}", START_TIME, STOP_TIME);
+    private static final String PARAMETERS = "{\"startTime\": %d, \"stopTime\": %d}".formatted(START_TIME, STOP_TIME);
 
     private static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
     private static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
@@ -169,13 +169,13 @@ class StudyControllerDynamicSimulationTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
 
-    @SpyBean
+    @MockitoSpyBean
     StudyService studyService;
 
-    @MockBean
+    @MockitoBean
     private LoadFlowService loadFlowService;
 
-    @SpyBean
+    @MockitoSpyBean
     private DynamicSimulationService dynamicSimulationService;
 
     @Autowired
@@ -193,7 +193,7 @@ class StudyControllerDynamicSimulationTest {
     @Autowired
     private TestUtils studyTestUtils;
 
-    @SpyBean
+    @MockitoSpyBean
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
     //output destinations

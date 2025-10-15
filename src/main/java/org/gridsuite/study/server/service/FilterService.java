@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -48,7 +47,6 @@ public class FilterService {
         return baseUri;
     }
 
-    @Autowired
     public FilterService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.baseUri = remoteServicesProperties.getServiceUri("filter-server");
         this.restTemplate = restTemplate;

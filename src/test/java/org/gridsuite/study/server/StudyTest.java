@@ -33,6 +33,7 @@ import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import okio.Buffer;
+import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
@@ -70,8 +71,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.data.util.Pair;
@@ -81,6 +80,8 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -268,7 +269,7 @@ class StudyTest {
     @Autowired
     private InputDestination input;
 
-    @SpyBean
+    @MockitoSpyBean
     private CaseService caseService;
 
     @Autowired
@@ -313,11 +314,14 @@ class StudyTest {
     @Autowired
     private DirectoryService directoryService;
 
-    @MockBean
+    @MockitoBean
     private EquipmentInfosService equipmentInfosService;
 
-    @MockBean
+    @MockitoBean
     private StudyInfosService studyInfosService;
+
+    @Autowired
+    private RestClient restClient;
 
     @Autowired
     private ObjectMapper mapper;
@@ -345,7 +349,7 @@ class StudyTest {
     //used by testGetStudyCreationRequests to control asynchronous case import
     private CountDownLatch countDownLatch;
 
-    @MockBean
+    @MockitoBean
     private NetworkStoreService networkStoreService;
 
     //output destinations
@@ -380,7 +384,7 @@ class StudyTest {
                 CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").build()
         );
 
-        when(studyInfosService.search(String.format("userId:%s", "userId")))
+        when(studyInfosService.search("userId:%s".formatted("userId")))
                 .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
 
         when(equipmentInfosService.searchEquipments(any(), any(), any(), any(), any())).thenCallRealMethod();
@@ -770,7 +774,7 @@ class StudyTest {
         UUID rootNodeId = getRootNodeUuid(studyUuid);
 
         mvcResult = mockMvc
-                .perform(get("/v1/search?q={request}", String.format("userId:%s", "userId")).header(USER_ID_HEADER, "userId"))
+                .perform(get("/v1/search?q={request}", "userId:%s".formatted("userId")).header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
@@ -861,7 +865,7 @@ class StudyTest {
         assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", result.getResponse().getContentAsString());
 
         assertTrue(TestUtils.getRequestsDone(1, server)
-                       .contains(String.format("/v1/cases/%s/exists", NOT_EXISTING_CASE_UUID)));
+                       .contains("/v1/cases/%s/exists".formatted(NOT_EXISTING_CASE_UUID)));
 
         result = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId"))
                      .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
@@ -912,7 +916,7 @@ class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM"))
             .andExpect(status().isOk());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/XIIDM?fileName=%s", NETWORK_UUID_STRING, "myFileName")));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/networks/%s/export/XIIDM?fileName=%s".formatted(NETWORK_UUID_STRING, "myFileName")));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM"))
             .andExpect(status().isOk());
@@ -935,7 +939,7 @@ class StudyTest {
             .andExpect(status().isOk());
 
         assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/export/XIIDM?variantId=%s&fileName=%s", NETWORK_UUID_STRING, VARIANT_ID, "myFileName")));
+                .contains("/v1/networks/%s/export/XIIDM?variantId=%s&fileName=%s".formatted(NETWORK_UUID_STRING, VARIANT_ID, "myFileName")));
     }
 
     @Test
@@ -948,7 +952,7 @@ class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyUuid, firstRootNetworkUuid, rootNodeUuid, "ERROR"))
             .andExpect(status().isInternalServerError());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/ERROR?fileName=%s", NETWORK_UUID_STRING, "myFileName")));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/networks/%s/export/ERROR?fileName=%s".formatted(NETWORK_UUID_STRING, "myFileName")));
     }
 
     @Test
@@ -1291,7 +1295,7 @@ class StudyTest {
             nbRequest += 7;
         }
         var requests = TestUtils.getRequestsDone(nbRequest, server);
-        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
+        assertTrue(requests.contains("/v1/cases/%s/exists".formatted(caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*" + "&caseFormat=UCTE")));
         if (!parameterDuplicationSuccess) {
             assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
@@ -1301,7 +1305,7 @@ class StudyTest {
             assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/default")));
             assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/network-visualizations-params/default")));
         }
-        assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", caseUuid)));
+        assertTrue(requests.contains("/v1/cases/%s/disableExpiration".formatted(caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
         if (parameterDuplicatedUuid != null) {
             assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + parameterDuplicatedUuid) ||
@@ -1327,9 +1331,9 @@ class StudyTest {
 
         // assert that all http requests have been sent to remote services
         Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(13, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/exists", caseUuid))));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/%s/exists".formatted(caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches(String.format("/v1/cases/%s/disableExpiration", caseUuid))));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/%s/disableExpiration".formatted(caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/default")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/spreadsheet-config-collections/default")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
@@ -1357,11 +1361,11 @@ class StudyTest {
 
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(14, server);
-        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", caseUuid)));
-        assertTrue(requests.contains(String.format("/v1/cases?duplicateFrom=%s&withExpiration=%s", caseUuid, true)));
+        assertTrue(requests.contains("/v1/cases/%s/exists".formatted(caseUuid)));
+        assertTrue(requests.contains("/v1/cases?duplicateFrom=%s&withExpiration=%s".formatted(caseUuid, true)));
         // note : it's a new case UUID
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CLONED_CASE_UUID_STRING + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*&receiver=.*")));
-        assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", CLONED_CASE_UUID_STRING)));
+        assertTrue(requests.contains("/v1/cases/%s/disableExpiration".formatted(CLONED_CASE_UUID_STRING)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/spreadsheet-config-collections/default")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
@@ -1424,7 +1428,7 @@ class StudyTest {
         assertEquals(List.of(), bsiListResult);
 
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_CAUSING_IMPORT_ERROR)));
+        assertTrue(requests.contains("/v1/cases/%s/exists".formatted(CASE_UUID_CAUSING_IMPORT_ERROR)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_IMPORT_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
     }
 
@@ -1474,7 +1478,7 @@ class StudyTest {
         assertEquals(STUDY_CREATION_ERROR_MESSAGE, headers.get(NotificationService.HEADER_ERROR));
 
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", CASE_UUID_CAUSING_STUDY_CREATION_ERROR)));
+        assertTrue(requests.contains("/v1/cases/%s/exists".formatted(CASE_UUID_CAUSING_STUDY_CREATION_ERROR)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + CASE_UUID_CAUSING_STUDY_CREATION_ERROR + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
     }
 
@@ -1577,9 +1581,9 @@ class StudyTest {
 
         // assert that all http requests have been sent to remote services
         var requests = TestUtils.getRequestsDone(13, server);
-        assertTrue(requests.contains(String.format("/v1/cases/%s/exists", NEW_STUDY_CASE_UUID)));
+        assertTrue(requests.contains("/v1/cases/%s/exists".formatted(NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
-        assertTrue(requests.contains(String.format("/v1/cases/%s/disableExpiration", NEW_STUDY_CASE_UUID)));
+        assertTrue(requests.contains("/v1/cases/%s/disableExpiration".formatted(NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains("/v1/parameters/default"));
         assertTrue(requests.contains("/v1/spreadsheet-config-collections/default"));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/userId/profile")));

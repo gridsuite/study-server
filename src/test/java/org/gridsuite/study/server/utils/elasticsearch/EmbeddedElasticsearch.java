@@ -31,7 +31,7 @@ public class EmbeddedElasticsearch {
             return;
         }
 
-        elasticsearchContainer = new ElasticsearchContainer(String.format("%s:%s", ES_DOCKER_IMAGE_NAME, ES_DOCKER_IMAGE_VERSION));
+        elasticsearchContainer = new ElasticsearchContainer("%s:%s".formatted(ES_DOCKER_IMAGE_NAME, ES_DOCKER_IMAGE_VERSION));
         Map<String, String> envMap = elasticsearchContainer.getEnvMap();
         envMap.put("discovery.type", "single-node");
         envMap.put("LOGSPOUT", "ignore");

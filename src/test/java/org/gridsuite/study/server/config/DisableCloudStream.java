@@ -7,7 +7,10 @@
 package org.gridsuite.study.server.config;
 
 import org.gridsuite.study.server.notification.NotificationService;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.mockito.Mockito;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 
 import java.lang.annotation.*;
@@ -15,8 +18,16 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@MockBean(NotificationService.class)
 @TestPropertySource(properties = DisableCloudStream.DISABLE_PROPERTY_NAME + "=true")
+@Import(DisableCloudStream.MockConfig.class)
 public @interface DisableCloudStream {
     String DISABLE_PROPERTY_NAME = "test.disable.cloud-stream";
+
+    @TestConfiguration
+    class MockConfig {
+        @Bean
+        public NotificationService notificationService() {
+            return Mockito.mock(NotificationService.class);
+        }
+    }
 }

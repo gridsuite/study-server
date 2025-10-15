@@ -18,8 +18,8 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -28,8 +28,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -66,7 +66,7 @@ class FilterServiceTest {
 
     private WireMockUtils wireMockUtils;
 
-    @SpyBean
+    @MockitoSpyBean
     private FilterService filterService;
 
     @Autowired
@@ -286,7 +286,7 @@ class FilterServiceTest {
                 .andExpect(status().isOk())
                 .andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
-        Assert.assertEquals(responseBody, resultAsString);
+        Assertions.assertEquals(responseBody, resultAsString);
 
         wireMockUtils.verifyFilterExport(stubUuid, FILTER_UUID_STRING, studyFirstRootNetworkUuid.toString());
     }

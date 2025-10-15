@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.UserProfileInfos;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -32,7 +31,6 @@ public class UserAdminService {
     private final RestTemplate restTemplate;
     private String userAdminServerBaseUri;
 
-    @Autowired
     public UserAdminService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.userAdminServerBaseUri = remoteServicesProperties.getServiceUri("user-admin-server");
         this.restTemplate = restTemplate;
