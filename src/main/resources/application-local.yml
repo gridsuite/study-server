@@ -80,6 +80,9 @@ gridsuite:
       name: state-estimation-server
       base-uri: http://localhost:6040
     -
+      name: pcc-min-server
+      base-uri: http://localhost:6042
+    -
       name: study-config-server
       base-uri: http://localhost:5035/
     -

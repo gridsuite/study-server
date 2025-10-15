@@ -75,6 +75,7 @@ public class ConsumerService {
     private final VoltageInitService voltageInitService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
+    private final PccMinService pccMinService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -91,7 +92,8 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService) {
+                           StateEstimationService stateEstimationService,
+                           PccMinService pccMinService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -106,6 +108,7 @@ public class ConsumerService {
         this.voltageInitService = voltageInitService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
+        this.pccMinService = pccMinService;
     }
 
     @Bean
@@ -813,5 +816,20 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeStateEstimationFailed() {
         return message -> consumeCalculationFailed(message, STATE_ESTIMATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumePccMinResult() {
+        return message -> consumeCalculationResult(message, PCC_MIN);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumePccMinStopped() {
+        return message -> consumeCalculationStopped(message, PCC_MIN);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumePccMinFailed() {
+        return message -> consumeCalculationFailed(message, PCC_MIN);
     }
 }
