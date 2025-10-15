@@ -75,7 +75,6 @@ public class ConsumerService {
     private final VoltageInitService voltageInitService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
-    private final PccMinService pccMinService;
 
     @Autowired
     public ConsumerService(ObjectMapper objectMapper,
@@ -92,8 +91,7 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService,
-                           PccMinService pccMinService) {
+                           StateEstimationService stateEstimationService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -108,7 +106,6 @@ public class ConsumerService {
         this.voltageInitService = voltageInitService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
-        this.pccMinService = pccMinService;
     }
 
     @Bean

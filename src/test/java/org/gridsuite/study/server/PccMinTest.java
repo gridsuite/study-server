@@ -148,7 +148,6 @@ class PccMinTest {
 
         String pccMinResultUuidStr = objectMapper.writeValueAsString(PCC_MIN_RESULT_UUID);
         String pccMinErrorResultUuidStr = objectMapper.writeValueAsString(PCC_MIN_ERROR_RESULT_UUID);
-        String pccMinResultJson = TestUtils.resourceToString("/estim-result.json");
 
         final Dispatcher dispatcher = new Dispatcher() {
             @SneakyThrows
