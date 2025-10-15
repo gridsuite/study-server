@@ -59,6 +59,7 @@ import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -311,6 +312,22 @@ class PccMinTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         // no more result
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
+    }
+
+    @Test
+    void testRunAndCheckStatus(final MockWebServer server) throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+        runPccMin(server, ids);
+
+        // we have one PccMin result
+        assertEquals(1, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
+
+        // get voltage init status
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/status", ids.studyId, ids.rootNetworkUuid, ids.nodeId)).andExpectAll(
+            status().isOk(),
+            content().string(PCC_MIN_STATUS_JSON));
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + PCC_MIN_RESULT_UUID + "/status")));
     }
 
     @Test

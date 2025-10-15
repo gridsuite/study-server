@@ -57,24 +57,6 @@ public class PccMinService extends AbstractComputationService {
         this.restTemplate = restTemplate;
     }
 
-    public String getPccMinResult(UUID resultUuid) {
-        if (resultUuid == null) {
-            return null;
-        }
-
-        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/{resultUuid}");
-        String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
-
-        try {
-            return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(PCC_MIN_NOT_FOUND);
-            }
-            throw e;
-        }
-    }
-
     public UUID runPccMin(UUID networkUuid, String variantId, RunPccMinParametersInfos parametersInfos, ReportInfos reportInfos, String receiver, String userId) {
         var uriComponentsBuilder = UriComponentsBuilder
             .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/networks/{networkUuid}/run-and-save")
