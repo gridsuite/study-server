@@ -77,6 +77,8 @@ public class SupervisionService {
 
     private final StateEstimationService stateEstimationService;
 
+    private final PccMinService pccMinService;
+
     private final ElasticsearchOperations elasticsearchOperations;
 
     private final StudyInfosService studyInfosService;
@@ -96,6 +98,7 @@ public class SupervisionService {
                               VoltageInitService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
                               StateEstimationService stateEstimationService,
+                              PccMinService pccMinService,
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
@@ -113,6 +116,7 @@ public class SupervisionService {
         this.voltageInitService = voltageInitService;
         this.equipmentInfosService = equipmentInfosService;
         this.stateEstimationService = stateEstimationService;
+        this.pccMinService = pccMinService;
         this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
@@ -137,6 +141,8 @@ public class SupervisionService {
                     dryRun ? voltageInitService.getVoltageInitResultsCount() : deleteVoltageInitResults();
             case STATE_ESTIMATION ->
                 dryRun ? stateEstimationService.getStateEstimationResultsCount() : deleteStateEstimationResults();
+            case PCC_MIN ->
+                dryRun ? pccMinService.getPccMinResultsCount() : deletePccMinResults();
             default -> throw new StudyException(ELEMENT_NOT_FOUND);
         };
     }
@@ -317,6 +323,22 @@ public class SupervisionService {
         reportService.deleteReports(reportsToDelete);
         stateEstimationService.deleteAllStateEstimationResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.STATE_ESTIMATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        return rootNetworkNodeInfoEntities.size();
+    }
+
+    private Integer deletePccMinResults() {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull();
+        List<UUID> reportsToDelete = new ArrayList<>();
+        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfo -> {
+            rootNetworkNodeInfo.setStateEstimationResultUuid(null);
+            reportsToDelete.add(rootNetworkNodeInfo.getComputationReports().get(ComputationType.PCC_MIN.name()));
+            rootNetworkNodeInfo.getComputationReports().remove(ComputationType.PCC_MIN.name());
+        });
+        reportService.deleteReports(reportsToDelete);
+        pccMinService.deleteAllPccMinResults();
+        LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.PCC_MIN, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
 
