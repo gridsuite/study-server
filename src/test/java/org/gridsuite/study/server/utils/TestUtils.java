@@ -44,6 +44,22 @@ import static org.junit.jupiter.api.Assertions.*;
 public final class TestUtils {
 
     private static final long TIMEOUT = 100;
+    public static final String USER_DEFAULT_PROFILE_JSON = """
+    {
+        "id":null,
+        "name":"default profile",
+        "loadFlowParameterId":null,
+        "securityAnalysisParameterId":null,
+        "sensitivityAnalysisParameterId":null,
+        "shortcircuitParameterId":null,
+        "voltageInitParameterId":null,
+        "allLinksValid":null,
+        "maxAllowedCases":20,
+        "maxAllowedBuilds":20,
+        "spreadsheetConfigCollectionId":null,
+        "networkVisualizationParameterId":null,
+        "diagramConfigId":null
+    }""";
 
     private final RootNetworkRepository rootNetworkRepository;
 
