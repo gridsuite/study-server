@@ -31,7 +31,6 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.LoadFlowService;
@@ -90,7 +89,7 @@ class SingleLineDiagramTest {
     private static final String VARIANT_ID = "variant_1";
     private static final String NETWORK_UUID_VARIANT_ERROR_STRING = "88400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String VARIANT_ERROR_ID = "noVariant";
-    private static final String BODY_CONTENT = "bodyContent";
+    private static final Map<String, Object> BODY_CONTENT = Map.of("key", "bodyContent");
 
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
@@ -342,7 +341,7 @@ class SingleLineDiagramTest {
 
         // get the network area diagram
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
-                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON))
+                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(
                 content().contentType(MediaType.APPLICATION_JSON),
                 status().isOk(),
@@ -353,7 +352,7 @@ class SingleLineDiagramTest {
 
         // get the network area diagram from a study that doesn't exist
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram", randomUuid, randomUuid, rootNodeUuid)
-                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON))
+                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
                  .andExpect(status().isNotFound());
 
         //get voltage levels
@@ -515,16 +514,14 @@ class SingleLineDiagramTest {
         //get the network area diagram on a non existing variant
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
             studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
-                        .content(BODY_CONTENT).contentType(MediaType.APPLICATION_JSON))
+                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(
             status().isNoContent());
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null,
-                LOADFLOW_PARAMETERS_UUID, null, null, null, null,
-                defaultNonEvacuatedEnergyParametersEntity, false);
+                LOADFLOW_PARAMETERS_UUID, null, null, null, null, false);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;

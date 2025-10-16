@@ -60,7 +60,6 @@ public class RootNetworkNodeInfoService {
     private final LoadFlowService loadFlowService;
     private final SecurityAnalysisService securityAnalysisService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
-    private final NonEvacuatedEnergyService nonEvacuatedEnergyService;
     private final ShortCircuitService shortCircuitService;
     private final VoltageInitService voltageInitService;
     private final DynamicSimulationService dynamicSimulationService;
@@ -74,7 +73,6 @@ public class RootNetworkNodeInfoService {
                                       LoadFlowService loadFlowService,
                                       SecurityAnalysisService securityAnalysisService,
                                       SensitivityAnalysisService sensitivityAnalysisService,
-                                      NonEvacuatedEnergyService nonEvacuatedEnergyService,
                                       ShortCircuitService shortCircuitService,
                                       VoltageInitService voltageInitService,
                                       DynamicSimulationService dynamicSimulationService,
@@ -87,7 +85,6 @@ public class RootNetworkNodeInfoService {
         this.loadFlowService = loadFlowService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
-        this.nonEvacuatedEnergyService = nonEvacuatedEnergyService;
         this.shortCircuitService = shortCircuitService;
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationService = dynamicSimulationService;
@@ -135,7 +132,7 @@ public class RootNetworkNodeInfoService {
             .variantId(UUID.randomUUID().toString())
             .modificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())))
             .modificationsUuidsToExclude(modificationsToExclude)
-            .blockedBuild(false)
+            .blockedNode(false)
             .build();
     }
 
@@ -154,8 +151,6 @@ public class RootNetworkNodeInfoService {
             case SECURITY_ANALYSIS -> rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(computationResultUuid);
             case SENSITIVITY_ANALYSIS ->
                 rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(computationResultUuid);
-            case NON_EVACUATED_ENERGY_ANALYSIS ->
-                rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(computationResultUuid);
             case SHORT_CIRCUIT -> rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(computationResultUuid);
             case SHORT_CIRCUIT_ONE_BUS ->
                 rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(computationResultUuid);
@@ -196,11 +191,6 @@ public class RootNetworkNodeInfoService {
             UUID sensitivityAnalysisResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, SENSITIVITY_ANALYSIS);
             if (sensitivityAnalysisResultUuid != null) {
                 deleteNodeInfos.addSensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid);
-            }
-
-            UUID nonEvacuatedEnergyResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, NON_EVACUATED_ENERGY_ANALYSIS);
-            if (nonEvacuatedEnergyResultUuid != null) {
-                deleteNodeInfos.addNonEvacuatedEnergyResultUuid(nonEvacuatedEnergyResultUuid);
             }
 
             UUID shortCircuitAnalysisResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, SHORT_CIRCUIT);
@@ -244,8 +234,8 @@ public class RootNetworkNodeInfoService {
         boolean notOnlyChildrenBuildStatus = !invalidateTreeParameters.isOnlyChildrenBuildStatus();
 
         // Always update blocked build info
-        if (invalidateTreeParameters.withBlockedNodeBuild()) {
-            rootNetworkNodeInfoEntity.setBlockedBuild(true);
+        if (invalidateTreeParameters.withBlockedNode()) {
+            rootNetworkNodeInfoEntity.setBlockedNode(true);
         }
 
         // No need to delete node results with a status different of "BUILT"
@@ -281,7 +271,6 @@ public class RootNetworkNodeInfoService {
         }
         rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(null);
         rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(null);
-        rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(null);
         rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(null);
         rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(null);
         rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(null);
@@ -329,8 +318,6 @@ public class RootNetworkNodeInfoService {
                 .ifPresent(invalidateNodeInfos::addSecurityAnalysisResultUuid);
         Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SENSITIVITY_ANALYSIS))
                 .ifPresent(invalidateNodeInfos::addSensitivityAnalysisResultUuid);
-        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, NON_EVACUATED_ENERGY_ANALYSIS))
-                .ifPresent(invalidateNodeInfos::addNonEvacuatedEnergyResultUuid);
         Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SHORT_CIRCUIT))
                 .ifPresent(invalidateNodeInfos::addShortCircuitAnalysisResultUuid);
         Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, SHORT_CIRCUIT_ONE_BUS))
@@ -357,7 +344,6 @@ public class RootNetworkNodeInfoService {
             case LOAD_FLOW -> rootNetworkNodeInfoEntity.getLoadFlowResultUuid();
             case SECURITY_ANALYSIS -> rootNetworkNodeInfoEntity.getSecurityAnalysisResultUuid();
             case SENSITIVITY_ANALYSIS -> rootNetworkNodeInfoEntity.getSensitivityAnalysisResultUuid();
-            case NON_EVACUATED_ENERGY_ANALYSIS -> rootNetworkNodeInfoEntity.getNonEvacuatedEnergyResultUuid();
             case SHORT_CIRCUIT -> rootNetworkNodeInfoEntity.getShortCircuitAnalysisResultUuid();
             case SHORT_CIRCUIT_ONE_BUS -> rootNetworkNodeInfoEntity.getOneBusShortCircuitAnalysisResultUuid();
             case VOLTAGE_INITIALIZATION -> rootNetworkNodeInfoEntity.getVoltageInitResultUuid();
@@ -400,14 +386,18 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    public void assertNoBlockedBuild(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndBlockedBuild(rootNetworkUuid, nodesUuids)) {
+    public void assertNoBlockedNode(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndBlockedNode(rootNetworkUuid, nodesUuids)) {
             throw new StudyException(NOT_ALLOWED, "Another action is in progress in this branch !");
         }
     }
 
-    public void invalidateBlockedBuild(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        getRootNetworkNodes(rootNetworkUuid, nodesUuids).stream().forEach(rnn -> rnn.setBlockedBuild(false));
+    public void blockNodes(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        getRootNetworkNodes(rootNetworkUuid, nodesUuids).forEach(rnn -> rnn.setBlockedNode(true));
+    }
+
+    public void unblockNodes(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        getRootNetworkNodes(rootNetworkUuid, nodesUuids).forEach(rnn -> rnn.setBlockedNode(false));
     }
 
     private void addLink(NetworkModificationNodeInfoEntity nodeInfoEntity, RootNetworkEntity rootNetworkEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
@@ -462,9 +452,6 @@ public class RootNetworkNodeInfoService {
         if (rootNetworkNodeInfo.getSensitivityAnalysisResultUuid() != null) {
             rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(rootNetworkNodeInfo.getSensitivityAnalysisResultUuid());
         }
-        if (rootNetworkNodeInfo.getNonEvacuatedEnergyResultUuid() != null) {
-            rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(rootNetworkNodeInfo.getNonEvacuatedEnergyResultUuid());
-        }
         if (rootNetworkNodeInfo.getShortCircuitAnalysisResultUuid() != null) {
             rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(rootNetworkNodeInfo.getShortCircuitAnalysisResultUuid());
         }
@@ -495,7 +482,6 @@ public class RootNetworkNodeInfoService {
             studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(rootNetworkNodeInfo.stream()
                     .map(RootNetworkNodeInfo::getSecurityAnalysisResultUuid).filter(Objects::nonNull).toList())),
             studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getSensitivityAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> nonEvacuatedEnergyService.deleteNonEvacuatedEnergyResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getNonEvacuatedEnergyResultUuid).filter(Objects::nonNull).toList())),
             studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getShortCircuitAnalysisResultUuid).filter(Objects::nonNull).toList())),
             studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getOneBusShortCircuitAnalysisResultUuid).filter(Objects::nonNull).toList())),
             studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).toList())),
@@ -527,7 +513,6 @@ public class RootNetworkNodeInfoService {
         dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
         dynamicSecurityAnalysisService.assertDynamicSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS));
         sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
-        nonEvacuatedEnergyService.assertNonEvacuatedEnergyNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS));
         shortCircuitService.assertShortCircuitAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT), getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT_ONE_BUS));
         voltageInitService.assertVoltageInitNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION));
         stateEstimationService.assertStateEstimationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION));
@@ -598,12 +583,6 @@ public class RootNetworkNodeInfoService {
     public String getSensitivityResultsFilterOptions(UUID nodeUuid, UUID rootNetworkUuid, String selector) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         return sensitivityAnalysisService.getSensitivityResultsFilterOptions(resultUuid, selector);
-    }
-
-    @Transactional(readOnly = true)
-    public String getNonEvacuatedEnergyResult(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS);
-        return nonEvacuatedEnergyService.getNonEvacuatedEnergyResult(resultUuid);
     }
 
     @Transactional(readOnly = true)
@@ -697,12 +676,6 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public String getNonEvacuatedEnergyStatus(UUID nodeUuid, UUID rootNetworkUuid) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS);
-        return nonEvacuatedEnergyService.getNonEvacuatedEnergyStatus(resultUuid);
-    }
-
-    @Transactional(readOnly = true)
     public String getShortCircuitAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
             type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
@@ -740,12 +713,6 @@ public class RootNetworkNodeInfoService {
     public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         sensitivityAnalysisService.stopSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
-    }
-
-    @Transactional
-    public void stopNonEvacuatedEnergy(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, NON_EVACUATED_ENERGY_ANALYSIS);
-        nonEvacuatedEnergyService.stopNonEvacuatedEnergy(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
     }
 
     @Transactional

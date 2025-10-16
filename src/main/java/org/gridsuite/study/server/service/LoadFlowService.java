@@ -267,6 +267,21 @@ public class LoadFlowService extends AbstractComputationService {
         return result;
     }
 
+    public List<LimitViolationInfos> getCurrentLimitViolations(UUID resultUuid) {
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/current-limit-violations");
+        String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
+        try {
+            ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
+            });
+            return responseEntity.getBody();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(LOADFLOW_NOT_FOUND);
+            }
+            throw e;
+        }
+    }
+
     public LoadFlowParametersInfos getLoadFlowParameters(UUID parametersUuid) {
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)

@@ -133,7 +133,7 @@ public class ConsumerService {
             WorkflowType workflowType = WorkflowType.valueOf(workflowTypeStr);
             if (WorkflowType.RERUN_LOAD_FLOW.equals(workflowType)) {
                 RerunLoadFlowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowInfos.class);
-                studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), false, workflowInfos.getUserId());
+                studyService.sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId());
             }
         }
     }
@@ -271,7 +271,7 @@ public class ConsumerService {
             }
             if (caseImportAction == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
                 UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-                networkModificationTreeService.invalidateBlockedBuildNodeTree(rootNetworkUuid, rootNodeUuid);
+                networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNodeUuid);
             }
             LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
                 TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
@@ -530,9 +530,7 @@ public class ConsumerService {
                 LOGGER.error(e.toString());
             } finally {
                 if (receiverObj != null) {
-                    if (computationType == LOAD_FLOW) {
-                        networkModificationTreeService.invalidateBlockedBuildNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
-                    }
+                    handleUnblockNode(receiverObj, computationType);
 
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
@@ -545,7 +543,7 @@ public class ConsumerService {
     public void consumeCalculationStopped(Message<String> msg, ComputationType computationType) {
         String receiver = msg.getHeaders().get(HEADER_RECEIVER, String.class);
         if (!Strings.isBlank(receiver)) {
-            NodeReceiver receiverObj;
+            NodeReceiver receiverObj = null;
             try {
                 receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8), NodeReceiver.class);
 
@@ -558,6 +556,10 @@ public class ConsumerService {
                 LOGGER.info("{} stopped for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
             } catch (JsonProcessingException e) {
                 LOGGER.error(e.toString());
+            } finally {
+                if (receiverObj != null) {
+                    handleUnblockNode(receiverObj, computationType);
+                }
             }
         }
     }
@@ -587,27 +589,12 @@ public class ConsumerService {
         }
     }
 
-    private void consumeLoadFlowResult(Message<String> msg, boolean withRatioTapChangers) {
-        Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
-            .map(UUID::fromString)
-            .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {
-                try {
-                    LOGGER.info("{} result '{}' available for node '{}'",
-                        LOAD_FLOW.getLabel(),
-                        resultUuid,
-                        receiverObj.getNodeUuid());
-
-                    // update DB
-                    rootNetworkNodeInfoService.updateLoadflowResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, withRatioTapChangers);
-                } finally {
-                    networkModificationTreeService.invalidateBlockedBuildNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
-
-                    // send notifications
-                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), LOAD_FLOW.getUpdateStatusType());
-                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), LOAD_FLOW.getUpdateResultType());
-                }
-            }));
+    private void handleUnblockNode(NodeReceiver receiverObj, ComputationType computationType) {
+        if (computationType == ComputationType.LOAD_FLOW && networkModificationTreeService.isSecurityNode(receiverObj.getNodeUuid())) {
+            networkModificationTreeService.unblockNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
+        } else {
+            networkModificationTreeService.unblockNode(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
+        }
     }
 
     public void consumeCalculationDebug(Message<String> msg, ComputationType computationType) {
@@ -632,11 +619,18 @@ public class ConsumerService {
                     receiverObj.getNodeUuid());
 
                 // update DB
-                rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
+                if (computationType == ComputationType.LOAD_FLOW) {
+                    Boolean withRatioTapChangers = msg.getHeaders().get(HEADER_WITH_RATIO_TAP_CHANGERS, Boolean.class);
+                    rootNetworkNodeInfoService.updateLoadflowResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, withRatioTapChangers);
+                } else {
+                    rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
+                }
 
-                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                // unblock node
+                handleUnblockNode(receiverObj, computationType);
 
                 // send notifications
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateResultType());
             }));
@@ -701,21 +695,6 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<String>> consumeNonEvacuatedEnergyResult() {
-        return message -> consumeCalculationResult(message, NON_EVACUATED_ENERGY_ANALYSIS);
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeNonEvacuatedEnergyStopped() {
-        return message -> consumeCalculationStopped(message, NON_EVACUATED_ENERGY_ANALYSIS);
-    }
-
-    @Bean
-    public Consumer<Message<String>> consumeNonEvacuatedEnergyFailed() {
-        return message -> consumeCalculationFailed(message, NON_EVACUATED_ENERGY_ANALYSIS);
-    }
-
-    @Bean
     public Consumer<Message<String>> consumeSaResult() {
         return message -> consumeCalculationResult(message, SECURITY_ANALYSIS);
     }
@@ -747,10 +726,7 @@ public class ConsumerService {
 
     @Bean
     public Consumer<Message<String>> consumeLoadFlowResult() {
-        return message -> {
-            Boolean withRatioTapChangers = message.getHeaders().get(HEADER_WITH_RATIO_TAP_CHANGERS, Boolean.class);
-            consumeLoadFlowResult(message, Boolean.TRUE.equals(withRatioTapChangers));
-        };
+        return message -> consumeCalculationResult(message, LOAD_FLOW);
     }
 
     @Bean
@@ -765,7 +741,11 @@ public class ConsumerService {
 
     @Bean
     public Consumer<Message<String>> consumeShortCircuitAnalysisDebug() {
-        return message -> consumeCalculationDebug(message, SHORT_CIRCUIT);
+        return message -> {
+            String busId = message.getHeaders().get(HEADER_BUS_ID, String.class);
+            ComputationType computationType = !StringUtils.isEmpty(busId) ? SHORT_CIRCUIT_ONE_BUS : SHORT_CIRCUIT;
+            consumeCalculationDebug(message, computationType);
+        };
     }
 
     @Bean

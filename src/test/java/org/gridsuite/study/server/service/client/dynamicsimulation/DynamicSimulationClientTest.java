@@ -90,7 +90,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         String url = DYNAMIC_SIMUALTION_RUN_BASE_URL + DELIMITER + NETWORK_UUID + DELIMITER + "run";
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
                 .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo(VARIANT_ID))
-                .withQueryParam("provider", equalTo("Dynawo"))
+                .withQueryParam("provider", equalTo(DYNAWO_PROVIDER))
                 .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
@@ -102,7 +102,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
                 ));
 
         // call service to test
-        UUID resultUuid = dynamicSimulationClient.run("Dynawo", "receiver", NETWORK_UUID, VARIANT_ID,
+        UUID resultUuid = dynamicSimulationClient.run(DYNAWO_PROVIDER, "receiver", NETWORK_UUID, VARIANT_ID,
                 new ReportInfos(REPORT_UUID, NODE_UUID), parameters, "userId", false);
 
         // check result

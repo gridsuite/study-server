@@ -27,6 +27,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventPropertyInfos
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -41,7 +42,6 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationSer
 import org.gridsuite.study.server.utils.PropertyType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -65,6 +65,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_DEBUG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.any;
@@ -222,57 +223,72 @@ class StudyControllerDynamicSimulationTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", UUID.randomUUID(), UUID.randomUUID(), null, null, null, null, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", UUID.randomUUID(), UUID.randomUUID(), null, null, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;
     }
 
-    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
+    private NetworkModificationNode createNetworkModificationConstructionNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid,
-                modificationGroupUuid, variantId, nodeName, BuildStatus.NOT_BUILT);
+                modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION);
+    }
+
+    private NetworkModificationNode createNetworkModificationSecurityNode(UUID studyUuid, UUID parentNodeUuid,
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
+        return createNetworkModificationNode(studyUuid, parentNodeUuid,
+                modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-                                                                  UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus) throws Exception {
-        NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
-                .description("description").modificationGroupUuid(modificationGroupUuid)
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType) throws Exception {
+        return createNetworkModificationNode(studyUuid, parentNodeUuid,
+                modificationGroupUuid, variantId, nodeName, nodeType, BuildStatus.NOT_BUILT);
+    }
+
+    private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
+                                                                  UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType, BuildStatus buildStatus) throws Exception {
+        NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName).nodeType(nodeType)
+                .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
                 .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
-        // Only for tests
-        String mnBodyJson = objectMapper.writeValueAsString(modificationNode);
-        JSONObject jsonObject = new JSONObject(mnBodyJson);
-        jsonObject.put("modificationGroupUuid", modificationGroupUuid);
-        mnBodyJson = jsonObject.toString();
-
-        studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
+        studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
+                .content(objectMapper.writeValueAsString(modificationNode))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("userId", "userId"))
                 .andExpect(status().isOk());
+
         var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertThat(mess).isNotNull();
         UUID newNodeId = UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE)));
         modificationNode.setId(newNodeId);
         assertThat(mess.getHeaders()).containsEntry(NotificationService.HEADER_INSERT_MODE, InsertMode.CHILD.name());
+
         rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getOneRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
+
         return modificationNode;
     }
 
     @Test
-    void testRunDynamicSimulationGivenRegularNodeAndFailed() throws Exception {
+    void testRunDynamicSimulationGivenSecurityNodeAndFailed() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), eq(true));
+        Mockito.doAnswer(invocation -> RESULT_UUID)
+            .when(dynamicSimulationService).runDynamicSimulation(
+                any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
+                any(), any(), any(), eq(true));
 
         // --- call endpoint to be tested --- //
-        // run on a regular node which allows a run
+        // run in debug mode on a security node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .param(QUERY_PARAM_DEBUG, "true")
@@ -341,13 +357,35 @@ class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    void testRunDynamicSimulationGivenRegularNode() throws Exception {
+    void testRunDynamicSimulationGivenConstructionNode() throws Exception {
+        // create a root node in the db
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+
+        // create a construction node
+        NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        Mockito.doAnswer(invocation -> DYNAWO_PROVIDER).when(studyService).getDynamicSimulationProvider(studyUuid);
+
+        // --- call endpoint to be tested --- //
+        // run on construction node with Dynawo provider => forbidden
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN + "?mappingName={mappingName}",
+                studyUuid, firstRootNetworkUuid, modificationNode1Uuid, MAPPING_NAME_01)
+                .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testRunDynamicSimulationGivenSecurityNode() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         // setup DynamicSimulationService mock
@@ -355,7 +393,7 @@ class StudyControllerDynamicSimulationTest {
 
         MvcResult result;
         // --- call endpoint to be tested --- //
-        // run on a regular node which allows a run
+        // run on a Security node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
@@ -416,13 +454,13 @@ class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    void testRunDynamicSimulationGivenRegularNodeAndStopped() throws Exception {
+    void testRunDynamicSimulationGivenSecurityNodeAndStopped() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
@@ -430,7 +468,7 @@ class StudyControllerDynamicSimulationTest {
         Mockito.doAnswer(invocation -> RESULT_UUID).when(dynamicSimulationService).runDynamicSimulation(any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
-        // run on a regular node which allows a run
+        // run on a security node which allows a run
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
@@ -603,7 +641,7 @@ class StudyControllerDynamicSimulationTest {
                         STUDY_UUID, ROOT_NETWORK_UUID, NODE_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
-        DynamicSimulationStatus statusResult = objectMapper.readValue(result.getResponse().getContentAsString(), DynamicSimulationStatus.class);
+        DynamicSimulationStatus statusResult = DynamicSimulationStatus.valueOf(result.getResponse().getContentAsString());
 
         // --- check result --- //
         DynamicSimulationStatus statusExpected = DynamicSimulationStatus.DIVERGED;
@@ -685,7 +723,7 @@ class StudyControllerDynamicSimulationTest {
         studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_PROVIDER, studyUuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString("Dynawo")))
+                        .content(objectMapper.writeValueAsString(DYNAWO_PROVIDER)))
                 .andExpect(status().isOk());
 
         // check notifications
@@ -810,7 +848,7 @@ class StudyControllerDynamicSimulationTest {
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
+        NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         MvcResult result;

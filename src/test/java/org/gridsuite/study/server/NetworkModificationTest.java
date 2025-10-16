@@ -46,7 +46,6 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -86,8 +85,7 @@ import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.cre
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -127,10 +125,8 @@ class NetworkModificationTest {
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
 
     private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
-    private static final String SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
     private static final LoadFlowStatus LOADFLOW_STATUS = LoadFlowStatus.CONVERGED;
-    private static final String SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
     private static final String SHORTCIRCUIT_ANALYSIS_RESULT_UUID = "72f94d64-4fc6-11ed-bdc3-0242ac120002";
     private static final String ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID = "72f94d88-4fc6-11ed-bdc3-0242ac120009";
@@ -197,9 +193,6 @@ class NetworkModificationTest {
 
     @Autowired
     private SensitivityAnalysisService sensitivityAnalysisService;
-
-    @Autowired
-    private NonEvacuatedEnergyService nonEvacuatedEnergyService;
 
     @Autowired
     private ShortCircuitService shortCircuitService;
@@ -274,7 +267,6 @@ class NetworkModificationTest {
         loadFlowService.setLoadFlowServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
-        nonEvacuatedEnergyService.setSensitivityAnalysisServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         voltageInitService.setVoltageInitServerBaseUri(baseUrl);
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
@@ -357,15 +349,6 @@ class NetworkModificationTest {
                 } else if (("/v1/results?resultsUuids=" + SENSITIVITY_ANALYSIS_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
-                    }
-                    return new MockResponse(500);
-                } else if (("/v1/non-evacuated-energy/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID).equals(path)) {
-                    return new MockResponse(200);
-                } else if (("/v1/non-evacuated-energy/results/" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON);
-                } else if (("/v1/non-evacuated-energy/results?resultsUuids=" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID).equals(path)) {
-                    if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_STATUS_JSON);
                     }
                     return new MockResponse(500);
                 } else if (("/v1/results/invalidate-status?resultUuid=" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
@@ -2115,8 +2098,8 @@ class NetworkModificationTest {
                     .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // duplicate 2 modifications in node1
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
-                studyUuid, nodeUuid1)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                studyUuid, nodeUuid1, studyUuid, nodeUuid1)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(modificationUuidListBody)
                 .header(USER_ID_HEADER, "userId"))
@@ -2133,6 +2116,8 @@ class NetworkModificationTest {
                         "action", WireMock.equalTo("COPY")),
                 expectedBody);
 
+        verify(rootNetworkNodeInfoService, times(1)).copyModificationsToExclude(any(), any(), any());
+
         // now we do the same but on a built node
         RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid1, studyTestUtils.getOneRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
         rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
@@ -2144,8 +2129,8 @@ class NetworkModificationTest {
                         .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID(), UUID.randomUUID()), List.of(Optional.of(NetworkModificationResult.builder().build())))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
-                        studyUuid, nodeUuid1)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                        studyUuid, nodeUuid1, studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
@@ -2165,6 +2150,56 @@ class NetworkModificationTest {
     }
 
     @Test
+    void testDuplicateModificationBetweenStudies() throws Exception {
+        String userId = "userId";
+
+        // Create first study
+        StudyEntity studyEntity1 = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        NetworkModificationNode node1 = createNetworkModificationNode(studyEntity1.getId(), getRootNode(studyEntity1.getId()).getId(), UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
+
+        // Create another study
+        StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_2_STRING), CASE_UUID, "UCTE");
+        NetworkModificationNode node2 = createNetworkModificationNode(studyEntity2.getId(), getRootNode(studyEntity2.getId()).getId(), UUID.randomUUID(), VARIANT_ID_2, "New node 2", "userId");
+
+        UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
+            .withQueryParam("action", WireMock.equalTo("COPY"))
+            .willReturn(WireMock.ok()
+                .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID(), UUID.randomUUID()), List.of(Optional.empty()))))
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
+
+        // Duplicate modification from node2 (study2) to node1 (study1)
+        List<UUID> modifications = List.of(UUID.randomUUID());
+        String modificationUuidListBody = mapper.writeValueAsString(modifications);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                studyEntity1.getId(), node1.getId(), studyEntity2.getId(), node2.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(modificationUuidListBody)
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isOk());
+        checkUpdateModelsStatusMessagesReceived(studyEntity1.getId(), node1.getId());
+        checkEquipmentUpdatingMessagesReceived(studyEntity1.getId(), node1.getId());
+        checkEquipmentUpdatingFinishedMessagesReceived(studyEntity1.getId(), node1.getId());
+        checkElementUpdatedMessageSent(studyEntity1.getId(), userId);
+
+        Pair<List<UUID>, List<ModificationApplicationContext>> modificationBody = Pair.of(modifications, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(studyTestUtils.getOneRootNetworkUuid(studyEntity1.getId()), node1.getId(), NETWORK_UUID)));
+        String expectedBody = mapper.writeValueAsString(modificationBody);
+        String url = "/v1/groups/" + node1.getModificationGroupUuid();
+        wireMockUtils.verifyPutRequestWithUrlMatching(groupStubId, url, Map.of(
+                "action", WireMock.equalTo("COPY")),
+            expectedBody);
+
+        verify(rootNetworkNodeInfoService, times(0)).copyModificationsToExclude(any(), any(), any());
+
+        // Move modification between studies is forbidden
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
+                studyEntity1.getId(), node1.getId(), studyEntity2.getId(), node2.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(modificationUuidListBody)
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
     void testDuplicateModificationErrorCase() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -2175,16 +2210,16 @@ class NetworkModificationTest {
         String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
 
         // Random/bad studyId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
-                        UUID.randomUUID(), rootNodeUuid)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                        UUID.randomUUID(), rootNodeUuid, UUID.randomUUID(), UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
 
         // Random/bad nodeId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=COPY",
-                        studyUuid, UUID.randomUUID())
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                        studyUuid, UUID.randomUUID(), studyUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
@@ -2216,8 +2251,8 @@ class NetworkModificationTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // move 2 modifications within node 1
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
-                        studyUuid, nodeUuid1, nodeUuid1)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
+                        studyUuid, nodeUuid1, studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
@@ -2236,8 +2271,8 @@ class NetworkModificationTest {
                 expectedBodyStr);
 
         // move 2 modifications from node1 to node2
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
-                        studyUuid, nodeUuid2, nodeUuid1)
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
+                        studyUuid, nodeUuid2, studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
@@ -2282,16 +2317,16 @@ class NetworkModificationTest {
         String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
 
         // Random/bad studyId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
-                        UUID.randomUUID(), rootNodeUuid, UUID.randomUUID())
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
+                        UUID.randomUUID(), rootNodeUuid, UUID.randomUUID(), UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isNotFound());
 
         // Random/bad nodeId error case
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originNodeUuid={originNodeUuid}&action=MOVE",
-                        studyUuid, UUID.randomUUID(), UUID.randomUUID())
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
+                        studyUuid, UUID.randomUUID(), studyUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(modificationUuidListBody)
                         .header(USER_ID_HEADER, "userId"))
@@ -2380,7 +2415,6 @@ class NetworkModificationTest {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
         rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
-        rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID));
         rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(UUID.fromString(SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(UUID.fromString(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setVoltageInitResultUuid(UUID.fromString(VOLTAGE_INIT_RESULT_UUID));
@@ -2410,11 +2444,10 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
         wireMockUtils.verifyNetworkModificationPut(stubUuid, MODIFICATION_UUID, generatorAttributesUpdated);
-        var requests = TestUtils.getRequestsWithBodyDone(15, server);
+        var requests = TestUtils.getRequestsWithBodyDone(13, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + SECURITY_ANALYSIS_RESULT_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + SENSITIVITY_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/non-evacuated-energy/results\\?resultsUuids=" + SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + VOLTAGE_INIT_RESULT_UUID)));
@@ -2467,7 +2500,6 @@ class NetworkModificationTest {
         rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(DYNAMIC_SIMULATION_RESULT_UUID);
         rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID);
         rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
-        rootNetworkNodeInfoEntity.setNonEvacuatedEnergyResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID));
         rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(UUID.fromString(SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(UUID.fromString(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setVoltageInitResultUuid(UUID.fromString(VOLTAGE_INIT_RESULT_UUID));
@@ -2478,7 +2510,6 @@ class NetworkModificationTest {
             ComputationType.DYNAMIC_SIMULATION.name(), UUID.randomUUID(),
             ComputationType.DYNAMIC_SECURITY_ANALYSIS.name(), UUID.randomUUID(),
             ComputationType.SENSITIVITY_ANALYSIS.name(), UUID.randomUUID(),
-            ComputationType.NON_EVACUATED_ENERGY_ANALYSIS.name(), UUID.randomUUID(),
             ComputationType.SHORT_CIRCUIT.name(), UUID.randomUUID(),
             ComputationType.SHORT_CIRCUIT_ONE_BUS.name(), UUID.randomUUID(),
             ComputationType.VOLTAGE_INITIALIZATION.name(), UUID.randomUUID(),
@@ -2512,14 +2543,13 @@ class NetworkModificationTest {
         wireMockUtils.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
         wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
 
-        var requests = TestUtils.getRequestsDone(22, server); // 1 status LF + 2 x 10 computations + 1 report
+        var requests = TestUtils.getRequestsDone(20, server); // 1 status LF + 2 x 9 computations + 1 report
         List.of(
                 LOADFLOW_RESULT_UUID,
                 SECURITY_ANALYSIS_RESULT_UUID,
                 DYNAMIC_SIMULATION_RESULT_UUID,
                 DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID,
                 SENSITIVITY_ANALYSIS_RESULT_UUID,
-                SENSITIVITY_ANALYSIS_NON_EVACUATED_ENERGY_RESULT_UUID,
                 SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
                 ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
                 VOLTAGE_INIT_RESULT_UUID,
@@ -2771,7 +2801,6 @@ class NetworkModificationTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_NON_EVACUATED_ENERGY_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
@@ -2872,7 +2901,7 @@ class NetworkModificationTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat) {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, caseFormat, "", null, UUID.randomUUID(), null, null, null, null, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, caseFormat, "", null, UUID.randomUUID(), null, null, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;

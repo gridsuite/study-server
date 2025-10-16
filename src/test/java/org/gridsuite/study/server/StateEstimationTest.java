@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -19,6 +20,7 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
+import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -27,15 +29,8 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
-import org.gridsuite.study.server.repository.nonevacuatedenergy.NonEvacuatedEnergyParametersEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.NonEvacuatedEnergyService;
-import org.gridsuite.study.server.service.ReportService;
-import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
-import org.gridsuite.study.server.service.StateEstimationService;
-import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.UserAdminService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -56,15 +51,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
@@ -150,9 +144,11 @@ class StateEstimationTest {
     private StudyService studyService;
     @Autowired
     private TestUtils studyTestUtils;
+    @Autowired
+    private ConsumerService consumerService;
 
     @AllArgsConstructor
-    private static class StudyNodeIds {
+    private static final class StudyNodeIds {
         UUID studyId;
         UUID rootNetworkUuid;
         UUID nodeId;
@@ -185,10 +181,6 @@ class StateEstimationTest {
 
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID + "&receiver=.*")) {
                     // estim with success
-                    input.send(MessageBuilder.withPayload("")
-                            .setHeader("resultUuid", STATE_ESTIMATION_RESULT_UUID)
-                            .setHeader("receiver", "%7B%22nodeUuid%22%3A%22" + request.getPath().split("%")[5].substring(4) + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + request.getPath().split("%")[11].substring(4) + "%22%2C%20%22userId%22%3A%22userId%22%7D")
-                            .build(), ESTIM_RESULT_JSON_DESTINATION);
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimResultUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID_2 + "&receiver=.*")) {
                     // estim with failure
@@ -251,11 +243,9 @@ class StateEstimationTest {
     }
 
     private StudyNodeIds createStudyAndNode(String variantId, String nodeName, UUID stateEstimationParametersUuid) throws Exception {
-        NonEvacuatedEnergyParametersEntity defaultNonEvacuatedEnergyParametersEntity = NonEvacuatedEnergyService.toEntity(NonEvacuatedEnergyService.getDefaultNonEvacuatedEnergyParametersInfos());
         // create a study
         StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.fromString(NETWORK_UUID_STRING), "netId", CASE_LOADFLOW_UUID, "", "", null,
-                LOADFLOW_PARAMETERS_UUID, null, null, null,
-                defaultNonEvacuatedEnergyParametersEntity, stateEstimationParametersUuid);
+                LOADFLOW_PARAMETERS_UUID, null, null, null, stateEstimationParametersUuid);
         studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         // with a node
@@ -279,10 +269,21 @@ class StateEstimationTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
+        consumeEstimResult(ids, STATE_ESTIMATION_RESULT_UUID);
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID + "&receiver=.*")));
+    }
+
+    private void consumeEstimResult(StudyNodeIds ids, String resultUuid) throws JsonProcessingException {
+        // consume result
+        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(ids.nodeId, ids.rootNetworkUuid));
+        MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", resultUuid, HEADER_RECEIVER, resultUuidJson));
+
+        consumerService.consumeStateEstimationResult().accept(MessageBuilder.createMessage("", messageHeaders));
+
+        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_RESULT);
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID + "&receiver=.*")));
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,

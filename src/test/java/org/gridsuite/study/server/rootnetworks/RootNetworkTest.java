@@ -99,7 +99,6 @@ class RootNetworkTest {
     private static final UUID STATE_ESTIMATION_RESULT_UUID = UUID.randomUUID();
     private static final UUID SENSITIVITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
     private static final UUID VOLTAGE_INIT_RESULT_UUID = UUID.randomUUID();
-    private static final UUID NON_EVACUATED_ENERGY_RESULT_UUID = UUID.randomUUID();
 
     // root network node info 2
     private static final String VARIANT_ID2 = "variantId2";
@@ -160,8 +159,6 @@ class RootNetworkTest {
     private SecurityAnalysisService securityAnalysisService;
     @MockitoBean
     private LoadFlowService loadFlowService;
-    @MockitoBean
-    private NonEvacuatedEnergyService nonEvacuatedEnergyService;
     @MockitoBean
     private ShortCircuitService shortCircuitService;
     @MockitoBean
@@ -515,7 +512,6 @@ class RootNetworkTest {
                 .stateEstimationResultUuid(STATE_ESTIMATION_RESULT_UUID)
                 .sensitivityAnalysisResultUuid(SENSITIVITY_ANALYSIS_RESULT_UUID)
                 .voltageInitResultUuid(VOLTAGE_INIT_RESULT_UUID)
-                .nonEvacuatedEnergyResultUuid(NON_EVACUATED_ENERGY_RESULT_UUID)
             .build());
 
         // updating the other link (secondNode - rootNetworkEntityToDelete) with a few data, needed to check data of all root network node info are indeed deleted
@@ -553,7 +549,6 @@ class RootNetworkTest {
         verify(stateEstimationService, times(1)).deleteStateEstimationResults(List.of(STATE_ESTIMATION_RESULT_UUID));
         verify(sensitivityAnalysisService, times(1)).deleteSensitivityAnalysisResults(List.of(SENSITIVITY_ANALYSIS_RESULT_UUID));
         verify(voltageInitService, times(1)).deleteVoltageInitResults(List.of(VOLTAGE_INIT_RESULT_UUID));
-        verify(nonEvacuatedEnergyService, times(1)).deleteNonEvacuatedEnergyResults(List.of(NON_EVACUATED_ENERGY_RESULT_UUID));
     }
 
     @Test
@@ -735,7 +730,7 @@ class RootNetworkTest {
     private void assertNodeBlocked(UUID nodeUuid, UUID rootNetworkUuid, boolean isNodeBlocked) {
         Optional<RootNetworkNodeInfoEntity> networkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
         assertTrue(networkNodeInfoEntity.isPresent());
-        assertEquals(isNodeBlocked, networkNodeInfoEntity.get().getBlockedBuild());
+        assertEquals(isNodeBlocked, networkNodeInfoEntity.get().getBlockedNode());
     }
 
     private void assertEqualsRootNetworkInDB(RootNetworkInfos rootNetworkInfos) {
