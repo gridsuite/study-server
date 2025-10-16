@@ -317,7 +317,7 @@ class FilterServiceTest {
             .andReturn();
 
         String resultAsString = mvcResult.getResponse().getContentAsString();
-        Assert.assertEquals(responseBody, resultAsString);
+        Assertions.assertEquals(responseBody, resultAsString);
 
         wireMockUtils.verifyFiltersEvaluate(stubUuid, strfilterUuids, studyFirstRootNetworkUuid.toString());
     }
