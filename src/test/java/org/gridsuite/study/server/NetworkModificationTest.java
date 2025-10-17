@@ -83,8 +83,10 @@ import static org.gridsuite.study.server.utils.ImpactUtils.createModificationRes
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
+import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -227,6 +229,9 @@ class NetworkModificationTest {
     @Autowired
     private TestUtils studyTestUtils;
 
+    @SpyBean
+    private StudyServerExecutionService studyServerExecutionService;
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -253,6 +258,8 @@ class NetworkModificationTest {
         network.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
 
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
+
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
 
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
         wireMockUtils = new WireMockUtils(wireMockServer);
