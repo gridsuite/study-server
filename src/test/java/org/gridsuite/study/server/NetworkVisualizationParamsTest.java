@@ -164,7 +164,7 @@ class NetworkVisualizationParamsTest {
 
         var requests = TestUtils.getRequestsDone(1, server);
         // PUT or POST
-        assertTrue(requests.stream().allMatch(r -> r.equals(String.format("/v1/network-visualizations-params%s", withVisuParams ? "/" + NETWORK_VISU_PARAMETERS_UUID_STRING : ""))));
+        assertTrue(requests.stream().allMatch(r -> r.equals("/v1/network-visualizations-params%s".formatted(withVisuParams ? "/" + NETWORK_VISU_PARAMETERS_UUID_STRING : ""))));
     }
 
     @AfterEach

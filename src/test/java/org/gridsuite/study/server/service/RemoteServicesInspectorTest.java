@@ -34,12 +34,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.info.InfoEndpoint;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.web.client.RestTemplateCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.ResponseActions;
 import org.springframework.web.client.RestTemplate;
@@ -75,7 +75,7 @@ class RemoteServicesInspectorTest implements WithAssertions {
 
     private static final JsonNode EMPTY_OBJ = JsonNodeFactory.instance.objectNode();
 
-    @MockBean
+    @MockitoBean
     private InfoEndpoint infoEndpoint;
 
     private MockRestServiceServer server;

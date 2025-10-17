@@ -29,13 +29,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -110,16 +110,16 @@ class StudyServiceTest {
     @Autowired
     private TestUtils studyTestUtils;
 
-    @MockBean
+    @MockitoBean
     private NetworkStoreService networkStoreService;
 
-    @MockBean
+    @MockitoBean
     private LoadFlowService loadFlowService;
 
-    @MockBean
+    @MockitoBean
     private ShortCircuitService shortCircuitService;
 
-    @MockBean
+    @MockitoBean
     private StudyConfigService studyConfigService;
     @Autowired
     private SingleLineDiagramService singleLineDiagramService;
@@ -277,8 +277,9 @@ class StudyServiceTest {
 
     @Test
     void testImportCsv() throws Exception {
-        String csvContent = "voltageLevelId;equipmentType;xPosition;yPosition;xLabelPosition;yLabelPosition\n" +
-                "VL1;4;100;200;110;210";
+        String csvContent = """
+                voltageLevelId;equipmentType;xPosition;yPosition;xLabelPosition;yLabelPosition
+                VL1;4;100;200;110;210""";
 
         MockMultipartFile file = new MockMultipartFile(
                 "file", "positions.csv", "text/csv", csvContent.getBytes(StandardCharsets.UTF_8)

@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.repository;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
@@ -14,5 +15,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
  */
 @Configuration
 @EnableJpaRepositories
+@ConditionalOnProperty(name = "disablejpa", havingValue = "false", matchIfMissing = true)
 public class JPAConfig {
 }

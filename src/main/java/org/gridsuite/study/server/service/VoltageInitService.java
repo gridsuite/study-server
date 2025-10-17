@@ -18,7 +18,6 @@ import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -53,7 +52,6 @@ public class VoltageInitService extends AbstractComputationService {
 
     private final RestTemplate restTemplate;
 
-    @Autowired
     public VoltageInitService(RemoteServicesProperties remoteServicesProperties,
                               RestTemplate restTemplate,
                               ObjectMapper objectMapper) {

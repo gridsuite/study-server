@@ -20,8 +20,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.List;
 import java.util.Optional;
@@ -41,7 +41,7 @@ class LoadFLowUnitTest {
     @Autowired
     private StudyController controller;
 
-    @SpyBean
+    @MockitoSpyBean
     private StudyService studyService;
 
     UUID studyUuid = UUID.randomUUID();
@@ -52,23 +52,23 @@ class LoadFLowUnitTest {
 
     UUID loadflowResultUuid = UUID.randomUUID();
 
-    @MockBean
+    @MockitoBean
     RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    @MockBean
+    @MockitoBean
     private NetworkModificationTreeService networkModificationTreeService;
-    @MockBean
+    @MockitoBean
     private RootNetworkService rootNetworkService;
-    @MockBean
+    @MockitoBean
     private NetworkModificationService networkModificationService;
-    @MockBean
+    @MockitoBean
     private LoadFlowService loadFlowService;
-    @MockBean
+    @MockitoBean
     private NetworkService networkService;
-    @MockBean
+    @MockitoBean
     private UserAdminService userAdminService;
-    @MockBean
+    @MockitoBean
     private NotificationService notificationService;
-    @MockBean
+    @MockitoBean
     StudyRepository studyRepository;
 
     @Test

@@ -13,7 +13,6 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
@@ -33,7 +32,6 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 @Service
 public class TimeSeriesClientImpl extends AbstractRestClient implements TimeSeriesClient {
 
-    @Autowired
     public TimeSeriesClientImpl(RemoteServicesProperties remoteServicesProperties,
                                 RestTemplate restTemplate) {
         super(remoteServicesProperties.getServiceUri("timeseries-server"), restTemplate);

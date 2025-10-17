@@ -10,7 +10,7 @@ package org.gridsuite.study.server.repository.networkmodificationtree;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.NativeQuery;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,8 +28,7 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
 
     List<NodeEntity> findAllByStudyIdAndTypeAndStashed(UUID id, NodeType type, boolean stashed);
 
-    @Query(nativeQuery = true, value =
-        "WITH RECURSIVE NodeHierarchy (id_node) AS ( " +
+    @NativeQuery("WITH RECURSIVE NodeHierarchy (id_node) AS ( " +
             "  SELECT n0.id_node" +
             "  FROM NODE n0 " +
             "  WHERE id_node = :nodeUuid " +
@@ -42,8 +41,7 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
         "FROM NodeHierarchy nh where nh.id_node != :nodeUuid ")
     List<UUID> findAllChildrenUuids(UUID nodeUuid);
 
-    @Query(nativeQuery = true, value =
-        "WITH RECURSIVE NodeHierarchy (id_node) AS ( " +
+    @NativeQuery("WITH RECURSIVE NodeHierarchy (id_node) AS ( " +
             "  SELECT n0.id_node" +
             "  FROM NODE n0 " +
             "  WHERE id_node = :nodeUuid " +

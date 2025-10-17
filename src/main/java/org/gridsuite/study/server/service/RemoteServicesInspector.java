@@ -23,13 +23,13 @@ import org.gridsuite.study.server.dto.ServiceStatusInfos.ServiceStatus;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.service.client.RemoteServiceName;
 import org.gridsuite.study.server.utils.JsonUtils;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.info.InfoEndpoint;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.lang.Nullable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -73,8 +73,8 @@ public class RemoteServicesInspector {
         this.objectMapper = objectMapper;
         this.remoteServicesProperties = remoteServicesProperties;
         this.restTemplate = restTemplateBuilder
-                .setConnectTimeout(Duration.ofMillis(REQUEST_TIMEOUT_IN_MS))
-                .setReadTimeout(Duration.ofMillis(REQUEST_TIMEOUT_IN_MS))
+                .connectTimeout(Duration.ofMillis(REQUEST_TIMEOUT_IN_MS))
+                .readTimeout(Duration.ofMillis(REQUEST_TIMEOUT_IN_MS))
                 .build();
         this.infoEndpoint = infoEndpoint;
         this.asyncSelf = asyncRemoteServicesInspector;

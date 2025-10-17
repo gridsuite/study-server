@@ -13,7 +13,6 @@ package org.gridsuite.study.server.service;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -33,7 +32,6 @@ public class GeoDataService {
 
     private String geoDataServerBaseUri;
 
-    @Autowired
     public GeoDataService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.geoDataServerBaseUri = remoteServicesProperties.getServiceUri("geo-data-server");
         this.restTemplate = restTemplate;

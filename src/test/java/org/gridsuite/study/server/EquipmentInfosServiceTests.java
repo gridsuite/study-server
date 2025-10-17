@@ -34,8 +34,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.elasticsearch.client.elc.Queries;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.HashSet;
 import java.util.List;
@@ -75,13 +75,13 @@ class EquipmentInfosServiceTests implements WithAssertions {
     @Autowired
     private EquipmentInfosService equipmentInfosService;
 
-    @MockBean
+    @MockitoBean
     private NetworkService networkStoreService;
 
-    @MockBean
+    @MockitoBean
     private NetworkModificationTreeService networkModificationTreeService;
 
-    @MockBean
+    @MockitoBean
     private RootNetworkService rootNetworkService;
 
     @Autowired

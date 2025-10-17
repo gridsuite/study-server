@@ -12,14 +12,12 @@ import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.IndexOperations;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Objects;
@@ -30,15 +28,14 @@ import static org.mockito.Mockito.*;
 /**
  * @author Antoine Bouhours <antoine.bouhours at rte-france.com>
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @DisableElasticsearch
 class SupervisionServiceTest {
 
-    @MockBean
+    @MockitoBean
     ElasticsearchOperations elasticsearchOperations;
 
-    @MockBean
+    @MockitoBean
     IndexOperations indexOperations;
 
     @Autowired

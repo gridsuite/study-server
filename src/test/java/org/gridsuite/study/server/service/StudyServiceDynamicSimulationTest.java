@@ -28,8 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -73,13 +73,13 @@ class StudyServiceDynamicSimulationTest {
     private static final UUID ROOTNETWORK_UUID = UUID.randomUUID();
     private static final UUID RESULT_UUID = UUID.randomUUID();
 
-    @MockBean
+    @MockitoBean
     private NetworkModificationTreeService networkModificationTreeService;
 
-    @MockBean
+    @MockitoBean
     private NotificationService notificationService;
 
-    @MockBean
+    @MockitoBean
     private DynamicSimulationService dynamicSimulationService;
 
     @Autowired
@@ -91,10 +91,10 @@ class StudyServiceDynamicSimulationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @SpyBean
+    @MockitoSpyBean
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
-    @MockBean
+    @MockitoBean
     private RootNetworkService rootNetworkService;
 
     @BeforeEach

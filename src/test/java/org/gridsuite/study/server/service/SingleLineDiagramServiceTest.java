@@ -20,7 +20,8 @@ import org.springframework.web.client.RestTemplate;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * @author Mohamed BENREJEB <mohamed.ben-rejeb at rte-france.com>
