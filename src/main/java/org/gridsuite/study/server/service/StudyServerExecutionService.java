@@ -35,16 +35,12 @@ public class StudyServerExecutionService {
     }
 
     public CompletableFuture<Void> runAsync(Runnable runnable) {
-        return CompletableFuture.runAsync(runnable, executorService);
-    }
-
-    public CompletableFuture<Void> runAsyncAndComplete(Runnable runnable) {
-        return CompletableFuture.runAsync(runnable, executorService).whenCompleteAsync((r, t) -> logAsyncError(t));
-    }
-
-    private void logAsyncError(Throwable e) {
-        if (LOGGER.isErrorEnabled() && e != null) {
-            LOGGER.error(e.toString(), e);
-        }
+        return CompletableFuture
+            .runAsync(runnable, executorService)
+            .whenComplete((r, t) -> {
+                if (LOGGER.isErrorEnabled() && t != null) {
+                    LOGGER.error(t.toString(), t);
+                }
+            });
     }
 }

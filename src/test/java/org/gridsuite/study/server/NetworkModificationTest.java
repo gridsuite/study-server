@@ -57,7 +57,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,7 +75,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR_MESSAGE;
@@ -85,6 +83,7 @@ import static org.gridsuite.study.server.utils.ImpactUtils.createModificationRes
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
+import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -260,11 +259,7 @@ class NetworkModificationTest {
 
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
 
-        // Synchronize for tests
-        doAnswer((Answer<CompletableFuture>) invocation -> {
-            CompletableFuture.runAsync((Runnable) invocation.getArguments()[0]).get();
-            return CompletableFuture.completedFuture(null);
-        }).when(studyServerExecutionService).runAsyncAndComplete(any(Runnable.class));
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
 
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
         wireMockUtils = new WireMockUtils(wireMockServer);

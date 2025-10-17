@@ -19,7 +19,6 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -28,10 +27,10 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.mockito.Mockito.*;
 
 /**
@@ -79,11 +78,7 @@ class LoadFLowUnitTest {
 
     @BeforeEach
     void setup() {
-        // Synchronize for tests
-        doAnswer((Answer<CompletableFuture>) invocation -> {
-            CompletableFuture.runAsync((Runnable) invocation.getArguments()[0]).get();
-            return CompletableFuture.completedFuture(null);
-        }).when(studyServerExecutionService).runAsyncAndComplete(any(Runnable.class));
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
     }
 
     @Test

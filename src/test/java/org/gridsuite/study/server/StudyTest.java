@@ -70,6 +70,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.data.util.Pair;
@@ -85,9 +87,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -105,6 +106,7 @@ import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJ
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
+import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -402,13 +404,7 @@ class StudyTest {
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
 
         // Synchronize for tests
-        doAnswer((Answer<CompletableFuture>) invocation -> {
-            try {
-                CompletableFuture.runAsync((Runnable) invocation.getArguments()[0]).get();
-            } catch (ExecutionException e) { // in complete async mode we ignore exception (log only)
-            }
-            return CompletableFuture.completedFuture(null);
-        }).when(studyServerExecutionService).runAsyncAndComplete(any(Runnable.class));
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
     }
 
     private void initMockBeansNetworkNotExisting() {
@@ -1007,7 +1003,8 @@ class StudyTest {
     }
 
     @Test
-    void testDeleteStudyWithError(final MockWebServer server) throws Exception {
+    @ExtendWith(OutputCaptureExtension.class)
+    void testDeleteStudyWithError(final MockWebServer server, final CapturedOutput capturedOutput) throws Exception {
         UUID studyUuid = createStudy(server, "userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
         studyEntity.setLoadFlowParametersUuid(null);
@@ -1019,13 +1016,14 @@ class StudyTest {
         studyRepository.save(studyEntity);
 
         // We ignore error when remote data async remove
+        // Log only
         doAnswer(invocation -> {
             throw new InterruptedException();
         }).when(caseService).deleteCase(any());
-
         UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk());
+        capturedOutput.getOut().contains(StudyServerExecutionService.class.getName() + " - " + CompletionException.class.getName() + ": " + InterruptedException.class.getName());
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
@@ -1894,7 +1892,7 @@ class StudyTest {
         String duplicatedStudyUuid = mapper.readValue(response, String.class);
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
-        assertNull(studyRepository.findById(UUID.fromString(duplicatedStudyUuid)).orElse(null));
+        assertTrue(studyRepository.findById(UUID.fromString(duplicatedStudyUuid)).isEmpty());
 
         //now case are duplicated after parameters, case import error does not prevent parameters from being duplicated
         int numberOfRequests = 0;
@@ -1913,10 +1911,19 @@ class StudyTest {
         if (studyEntity.getShortCircuitParametersUuid() != null) {
             numberOfRequests++;
         }
+        if (studyEntity.getDynamicSecurityAnalysisParametersUuid() != null) {
+            numberOfRequests++;
+        }
+        if (studyEntity.getStateEstimationParametersUuid() != null) {
+            numberOfRequests++;
+        }
         if (studyEntity.getSpreadsheetConfigCollectionUuid() != null) {
             numberOfRequests++;
         }
         TestUtils.getRequestsWithBodyDone(numberOfRequests, mockWebServer);
+
+        assertEquals(1, TestUtils.getRequestsWithBodyDone(1, mockWebServer).stream().filter(r -> r.getPath().matches("/v1/users/.*/profile")).count());
+
     }
 
     private StudyEntity duplicateStudy(final MockWebServer server, UUID studyUuid, String userId) throws Exception {

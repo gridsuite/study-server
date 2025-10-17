@@ -22,20 +22,26 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
+import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.junit.platform.commons.util.StringUtils;
+import org.mockito.stubbing.Answer;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -217,5 +223,16 @@ public final class TestUtils {
                 .isThrownBy(throwingCallable);
         throwableAssert.extracting("type").isEqualTo(type);
         Optional.ofNullable(message).ifPresent(throwableAssert::withMessage);
+    }
+
+    public static void synchronizeStudyServerExecutionService(StudyServerExecutionService studyServerExecutionService) {
+        doAnswer((Answer<CompletableFuture>) invocation -> {
+            CompletableFuture completableFuture = (CompletableFuture) invocation.callRealMethod();
+            try {
+                completableFuture.get();
+            } catch (ExecutionException e) { // in complete async mode we ignore exception (log only)
+            }
+            return completableFuture;
+        }).when(studyServerExecutionService).runAsync(any(Runnable.class));
     }
 }
