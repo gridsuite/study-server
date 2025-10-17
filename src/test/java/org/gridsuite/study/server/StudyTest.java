@@ -1023,7 +1023,7 @@ class StudyTest {
         UUID stubUuid = wireMockUtils.stubNetworkModificationDeleteGroup();
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk());
-        capturedOutput.getOut().contains(StudyServerExecutionService.class.getName() + " - " + CompletionException.class.getName() + ": " + InterruptedException.class.getName());
+        assertTrue(capturedOutput.getOut().contains(StudyServerExecutionService.class.getName() + " - " + CompletionException.class.getName() + ": " + InterruptedException.class.getName()));
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
