@@ -42,15 +42,12 @@ public class UserAdminService {
         this.userAdminServerBaseUri = serverBaseUri;
     }
 
-    public Optional<UserProfileInfos> getUserProfile(String sub) {
+    public UserProfileInfos getUserProfile(String sub) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_PROFILE_URI)
             .buildAndExpand(sub).toUriString();
         try {
-            return Optional.of(restTemplate.getForObject(userAdminServerBaseUri + path, UserProfileInfos.class));
+            return restTemplate.getForObject(userAdminServerBaseUri + path, UserProfileInfos.class);
         } catch (HttpStatusCodeException e) {
-            if (e.getStatusCode().value() == 404) {
-                return Optional.empty(); // a user may not have a profile
-            }
             throw handleHttpError(e, GET_USER_PROFILE_FAILED);
         }
     }
