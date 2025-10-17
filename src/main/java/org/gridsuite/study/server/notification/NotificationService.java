@@ -26,6 +26,8 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.*;
 
+import static org.gridsuite.study.server.StudyConstants.NETWORK_EXPORT_SUCCEEDED;
+
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com
  */
@@ -48,6 +50,7 @@ public class NotificationService {
     public static final String HEADER_MODIFIED_BY = "modifiedBy";
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
+    public static final String HEADER_EXPORT_UUID = "exportUuid";
 
     public static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
     public static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
@@ -474,6 +477,18 @@ public class NotificationService {
                 .setHeader(HEADER_MODIFIED_BY, modifiedBy)
                 .setHeader(HEADER_MODIFICATION_DATE, Instant.now())
                 .build()
+        );
+    }
+
+    @PostCompletion
+    public void emitNetworkExportSucceeded(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid,
+                                           String userId, UUID exportUuid, @Nullable String error) {
+        sendStudyUpdateMessage(studyUuid, NETWORK_EXPORT_SUCCEEDED, MessageBuilder.withPayload("")
+                .setHeader(HEADER_NODE, nodeUuid)
+                .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
+                .setHeader(HEADER_USER_ID, userId)
+                .setHeader(HEADER_EXPORT_UUID, exportUuid)
+                .setHeader(HEADER_ERROR, error)
         );
     }
 }

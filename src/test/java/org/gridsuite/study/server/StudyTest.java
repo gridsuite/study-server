@@ -257,6 +257,7 @@ class StudyTest {
     private static final String DUPLICATED_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON = "\"" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "\"";
 
     private static final String DEFAULT_PROVIDER = "defaultProvider";
+    private static final String EXPORT_UUID = "exportUuid";
 
     @Autowired
     private OutputDestination output;
@@ -608,6 +609,22 @@ class StudyTest {
                     return new MockResponse(404); // config duplication request KO
                 } else if (path.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
+                } else if (path.equals("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=myFileName&receiver=.*")) {
+                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                } else if (path.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=")) {
+                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                } else if (path.equals("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM")) {
+                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                } else if (path.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID + "&fileName=myFileName&receiver=.*")) {
+                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                } else if (path.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID + "&fileName=")) {
+                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                } else if (path.equals("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID)) {
+                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                } else if (path.contains("/export/ERROR")) {
+                    return new MockResponse(500);
+                } else if (path.startsWith("/v1/networks/") && path.contains("/export/XIIDM")) {
+                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
                 }
 
                 switch (path) {
@@ -699,16 +716,6 @@ class StudyTest {
                         return new MockResponse(200);
                     case "/v1/export/formats":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "[\"CGMES\",\"UCTE\",\"XIIDM\"]");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=" + "myFileName":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fileName", HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE), "byteData");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fileName", HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE), "byteData");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID + "&fileName=" + "myFileName":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fileName", HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE), "byteData");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM" + "?variantId=" + VARIANT_ID:
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fileName", HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE), "byteData");
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/export/ERROR" + "?variantId=" + VARIANT_ID:
-                        return new MockResponse(500);
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID:
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_2:
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/" + VARIANT_ID_3:
@@ -903,20 +910,21 @@ class StudyTest {
 
         //export a network
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM"))
-            .andExpect(status().isOk());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
+                        studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isAccepted());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/XIIDM?fileName=%s", NETWORK_UUID_STRING, "myFileName")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=myFileName")
+                        && request.contains("receiver=")));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM"))
-            .andExpect(status().isOk());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM")
+                        .header(HEADER_USER_ID, userId)).andExpect(status().isAccepted());
         TestUtils.getRequestsDone(1, server); // just consume it
 
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 3", userId);
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, "XIIDM"))
-            .andExpect(status().isInternalServerError());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, "XIIDM")
+                        .header(HEADER_USER_ID, userId)).andExpect(status().isInternalServerError());
 
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode1.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid),
             RootNetworkNodeInfo.builder().nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
@@ -925,11 +933,11 @@ class StudyTest {
                         studyNameUserIdUuid,
                         firstRootNetworkUuid,
                         modificationNode1Uuid,
-                        "XIIDM"))
-            .andExpect(status().isOk());
+                        "XIIDM").header(HEADER_USER_ID, userId))
+            .andExpect(status().isAccepted());
 
-        assertTrue(TestUtils.getRequestsDone(1, server)
-                .contains(String.format("/v1/networks/%s/export/XIIDM?variantId=%s&fileName=%s", NETWORK_UUID_STRING, VARIANT_ID, "myFileName")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID + "&fileName=myFileName")
+                        && request.contains("receiver=")));
     }
 
     @Test
@@ -939,10 +947,16 @@ class StudyTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyUuid, firstRootNetworkUuid, rootNodeUuid, "ERROR"))
-            .andExpect(status().isInternalServerError());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
+                        studyUuid, firstRootNetworkUuid, rootNodeUuid, "ERROR")
+                        .param("fileName", "myFileName")
+                        .header(HEADER_USER_ID, "userId"))
+                .andExpect(status().isInternalServerError());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/networks/%s/export/ERROR?fileName=%s", NETWORK_UUID_STRING, "myFileName")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream()
+                .anyMatch(request -> request.contains("/v1/networks/" + NETWORK_UUID_STRING + "/export/ERROR")
+                        && request.contains("fileName=myFileName")
+                        && request.contains("receiver=" + studyUuid.toString())));
     }
 
     @Test
