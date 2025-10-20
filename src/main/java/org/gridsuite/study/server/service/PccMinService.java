@@ -41,6 +41,7 @@ import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_RUNNING;
  */
 @Service
 public class PccMinService extends AbstractComputationService {
+    static final String RESULT_UUID = "resultUuid";
 
     private final RestTemplate restTemplate;
 
@@ -144,6 +145,16 @@ public class PccMinService extends AbstractComputationService {
         String status = getPccMinStatus(resultUuid);
         if (PccMinStatus.RUNNING.name().equals(status)) {
             throw new StudyException(PCC_MIN_RUNNING);
+        }
+    }
+
+    public void invalidatePccMinStatus(List<UUID> uuids) {
+        if (!uuids.isEmpty()) {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/invalidate-status")
+                .queryParam(RESULT_UUID, uuids).build().toUriString();
+
+            restTemplate.put(pccMinServerBaseUri + path, Void.class);
         }
     }
 
