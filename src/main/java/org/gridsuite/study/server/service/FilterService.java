@@ -111,16 +111,19 @@ public class FilterService {
         return restTemplate.getForObject(uriComponent.toUriString(), String.class);
     }
 
-    public String evaluateFilters(UUID networkUuid, List<UUID> filtersUuid) {
+    public String evaluateFilters(UUID networkUuid, String filters) {
         Objects.requireNonNull(networkUuid);
-        Objects.requireNonNull(filtersUuid);
+        Objects.requireNonNull(filters);
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EVALUATE_IDS;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
         uriComponentsBuilder.queryParam("networkUuid", networkUuid);
-        uriComponentsBuilder.queryParam("ids", filtersUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand();
 
-        return restTemplate.getForObject(uriComponent.toUriString(), String.class);
+        var headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> request = new HttpEntity<>(filters, headers);
+
+        return restTemplate.postForObject(uriComponent.toUriString(), request, String.class);
     }
 }
