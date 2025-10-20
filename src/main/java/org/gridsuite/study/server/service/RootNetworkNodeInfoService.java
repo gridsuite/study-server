@@ -288,6 +288,7 @@ public class RootNetworkNodeInfoService {
             rootNetworkNodeInfoEntity.setVoltageInitResultUuid(null);
         }
         rootNetworkNodeInfoEntity.setStateEstimationResultUuid(null);
+        rootNetworkNodeInfoEntity.setPccMinResultUuid(null);
 
         Map<String, UUID> computationReports = rootNetworkNodeInfoEntity.getComputationReports()
             .entrySet()

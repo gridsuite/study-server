@@ -1,0 +1,85 @@
+diff --git a/src/main/java/org/gridsuite/study/server/controller/StudyController.java b/src/main/java/org/gridsuite/study/server/controller/StudyController.java
+index 778794e4..aafccc04 100644
+--- a/src/main/java/org/gridsuite/study/server/controller/StudyController.java
++++ b/src/main/java/org/gridsuite/study/server/controller/StudyController.java
+@@ -2333,6 +2333,19 @@ public class StudyController {
+         return ResponseEntity.ok().build();
+     }
+ 
++    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result")
++    @Operation(summary = "Get a state estimation result on study")
++    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
++        @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
++        @ApiResponse(responseCode = "404", description = "The state estimation has not been found")})
++    public ResponseEntity<String> getPccMinResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
++                                                           @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
++                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
++        String result = rootNetworkNodeInfoService.getPccMinResult(nodeUuid, rootNetworkUuid);
++        return result != null ? ResponseEntity.ok().body(result) :
++            ResponseEntity.noContent().build();
++    }
++
+     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/result")
+     @Operation(summary = "Get a state estimation result on study")
+     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
+diff --git a/src/main/java/org/gridsuite/study/server/service/PccMinService.java b/src/main/java/org/gridsuite/study/server/service/PccMinService.java
+index 61dfb3de..ee02158a 100644
+--- a/src/main/java/org/gridsuite/study/server/service/PccMinService.java
++++ b/src/main/java/org/gridsuite/study/server/service/PccMinService.java
+@@ -33,8 +33,7 @@ import java.util.Objects;
+ import java.util.UUID;
+ 
+ import static org.gridsuite.study.server.StudyConstants.*;
+-import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_NOT_FOUND;
+-import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_RUNNING;
++import static org.gridsuite.study.server.StudyException.Type.*;
+ 
+ /**
+  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
+@@ -126,6 +125,29 @@ public class PccMinService extends AbstractComputationService {
+         }
+     }
+ 
++    public String getPccMinResult(UUID resultUuid) {
++        String result;
++
++        if (resultUuid == null) {
++            return null;
++        }
++
++        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/{resultUuid}");
++        String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
++
++        try {
++            result = restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
++        } catch (HttpStatusCodeException e) {
++            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
++                throw new StudyException(PCC_MIN_NOT_FOUND);
++            } else {
++                throw e;
++            }
++        }
++
++        return result;
++    }
++
+     public void deletePccMinResults(List<UUID> resultsUuids) {
+         deleteCalculationResults(resultsUuids, DELIMITER + PCC_MIN_API_VERSION + "/results", restTemplate, pccMinServerBaseUri);
+     }
+diff --git a/src/main/java/org/gridsuite/study/server/service/RootNetworkNodeInfoService.java b/src/main/java/org/gridsuite/study/server/service/RootNetworkNodeInfoService.java
+index 8bd9b915..74ded144 100644
+--- a/src/main/java/org/gridsuite/study/server/service/RootNetworkNodeInfoService.java
++++ b/src/main/java/org/gridsuite/study/server/service/RootNetworkNodeInfoService.java
+@@ -627,6 +627,12 @@ public class RootNetworkNodeInfoService {
+         return stateEstimationService.getStateEstimationResult(resultUuid);
+     }
+ 
++    @Transactional(readOnly = true)
++    public String getPccMinResult(UUID nodeUuid, UUID rootNetworkUuid) {
++        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
++        return pccMinService.getPccMinResult(resultUuid);
++    }
++
+     /**************************
+      * GET COMPUTATION STATUS *
+      **************************/

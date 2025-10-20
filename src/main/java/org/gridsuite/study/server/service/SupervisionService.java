@@ -332,7 +332,7 @@ public class SupervisionService {
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull();
         List<UUID> reportsToDelete = new ArrayList<>();
         rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfo -> {
-            rootNetworkNodeInfo.setStateEstimationResultUuid(null);
+            rootNetworkNodeInfo.setPccMinResultUuid(null);
             reportsToDelete.add(rootNetworkNodeInfo.getComputationReports().get(ComputationType.PCC_MIN.name()));
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.PCC_MIN.name());
         });
