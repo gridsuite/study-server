@@ -40,7 +40,6 @@ import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_ROOT_NETWORK_UUID;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_STUDY_UUID;
 
 /**
@@ -814,22 +813,20 @@ public class ConsumerService {
         return message -> consumeCalculationFailed(message, STATE_ESTIMATION);
     }
 
-    public void consumeNetworkExportSucceeded(Message<String> msg) {
+    public void consumeNetworkExportFinished(Message<String> msg) {
         Optional.ofNullable(msg.getHeaders().get(NETWORK_UUID, String.class))
                 .map(UUID::fromString)
                 .ifPresent(networkUuid -> {
                     UUID studyUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_STUDY_UUID, String.class)));
-                    UUID nodeUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get("nodeUuid")).toString());
-                    UUID rootNetworkUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_ROOT_NETWORK_UUID)).toString());
                     String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
                     UUID exportUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID)).toString());
                     String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
-                    notificationService.emitNetworkExportSucceeded(studyUuid, nodeUuid, rootNetworkUuid, userId, exportUuid, errorMessage);
+                    notificationService.emitNetworkExportFinished(studyUuid, userId, exportUuid, errorMessage);
                 });
     }
 
     @Bean
-    public Consumer<Message<String>> consumeNetworkExportSucceeded() {
-        return this::consumeNetworkExportSucceeded;
+    public Consumer<Message<String>> consumeNetworkExportFinished() {
+        return this::consumeNetworkExportFinished;
     }
 }

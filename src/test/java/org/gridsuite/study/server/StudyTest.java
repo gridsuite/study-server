@@ -913,8 +913,7 @@ class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
                         studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isAccepted());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=myFileName")
-                        && request.contains("receiver=")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=myFileName")));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM")
                         .header(HEADER_USER_ID, userId)).andExpect(status().isAccepted());
@@ -936,8 +935,7 @@ class StudyTest {
                         "XIIDM").header(HEADER_USER_ID, userId))
             .andExpect(status().isAccepted());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID + "&fileName=myFileName")
-                        && request.contains("receiver=")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID + "&fileName=myFileName")));
     }
 
     @Test
@@ -953,10 +951,8 @@ class StudyTest {
                         .header(HEADER_USER_ID, "userId"))
                 .andExpect(status().isInternalServerError());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream()
-                .anyMatch(request -> request.contains("/v1/networks/" + NETWORK_UUID_STRING + "/export/ERROR")
-                        && request.contains("fileName=myFileName")
-                        && request.contains("receiver=" + studyUuid.toString())));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.contains("/v1/networks/" + NETWORK_UUID_STRING + "/export/ERROR")
+                && request.contains("fileName=myFileName")));
     }
 
     @Test

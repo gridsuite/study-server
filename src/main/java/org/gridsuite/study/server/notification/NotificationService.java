@@ -26,7 +26,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.*;
 
-import static org.gridsuite.study.server.StudyConstants.NETWORK_EXPORT_SUCCEEDED;
+import static org.gridsuite.study.server.StudyConstants.NETWORK_EXPORT_FINISHED;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com
@@ -481,11 +481,8 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitNetworkExportSucceeded(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid,
-                                           String userId, UUID exportUuid, @Nullable String error) {
-        sendStudyUpdateMessage(studyUuid, NETWORK_EXPORT_SUCCEEDED, MessageBuilder.withPayload("")
-                .setHeader(HEADER_NODE, nodeUuid)
-                .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
+    public void emitNetworkExportFinished(UUID studyUuid, String userId, UUID exportUuid, @Nullable String error) {
+        sendStudyUpdateMessage(studyUuid, NETWORK_EXPORT_FINISHED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_EXPORT_UUID, exportUuid)
                 .setHeader(HEADER_ERROR, error)

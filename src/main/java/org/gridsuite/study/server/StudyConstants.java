@@ -89,7 +89,7 @@ public final class StudyConstants {
     public static final String PATH_PARAM_PARAMETERS = "parameters";
     public static final String DYNA_FLOW_PROVIDER = "DynaFlow";
     public static final String DYNAWO_PROVIDER = "Dynawo";
-    public static final String NETWORK_EXPORT_SUCCEEDED = "networkExportSucceeded";
+    public static final String NETWORK_EXPORT_FINISHED = "networkExportFinished";
 
     public enum SldDisplayMode {
         FEEDER_POSITION,
