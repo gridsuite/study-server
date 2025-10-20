@@ -2294,13 +2294,14 @@ public class StudyController {
     }
 
     // temporary - used by grid-explore only to prevent filter conversion from dysfunctioning since it does not have access to root networks yet
-    @GetMapping(value = "/studies/{studyUuid}/filters/elements")
+    @PostMapping(value = "/studies/{studyUuid}/filters/elements")
     @Operation(summary = "Evaluate filters list on first root network of study to get matched identifiables elements")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched identifiables elements")})
     public ResponseEntity<String> evaluateFiltersOnFirstRootNetwork(
         @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-        @Parameter(description = "Filters uuid to be applied") @RequestParam(name = "filtersUuid") List<UUID> filtersUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFiltersFromFirstRootNetwork(studyUuid, filtersUuid));
+        // the body should match FiltersWithEquipmentTypes in filter-server
+        @Parameter(description = "Filters to evaluate") @RequestBody String filters) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFiltersFromFirstRootNetwork(studyUuid, filters));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/elements")
