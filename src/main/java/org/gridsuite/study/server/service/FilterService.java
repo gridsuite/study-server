@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 
 import lombok.Getter;
 import lombok.NonNull;
+import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.RemoteServicesProperties;
@@ -64,7 +65,7 @@ public class FilterService {
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
         uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
-        if (variantId != null && !variantId.isBlank()) {
+        if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         var uriComponent = uriComponentsBuilder.build();
@@ -126,7 +127,7 @@ public class FilterService {
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
         uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
-        if (variantId != null && !variantId.isBlank()) {
+        if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         uriComponentsBuilder.queryParam(IDS, filtersUuid);
