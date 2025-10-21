@@ -14,6 +14,8 @@ import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import org.apache.commons.collections4.CollectionUtils;
+import org.gridsuite.filter.globalfilter.GlobalFilter;
+import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
@@ -294,6 +296,14 @@ public class StudyService {
         }
 
         return basicStudyInfos;
+    }
+
+    @Transactional(readOnly = true)
+    public void assertIsRootNetworkAndNodeInStudy(@NonNull final UUID studyUuid, @NonNull final UUID rootNetworkId, @NonNull final UUID nodeUuid) {
+        this.rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkId);
+        if (!studyUuid.equals(this.networkModificationTreeService.getStudyUuidForNodeId(nodeUuid))) {
+            throw new StudyException(NODE_NOT_FOUND);
+        }
     }
 
     @Transactional
@@ -3200,6 +3210,17 @@ public class StudyService {
     public String evaluateFilter(UUID nodeUuid, UUID rootNetworkUuid, boolean inUpstreamBuiltParentNode, String filter) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         return filterService.evaluateFilter(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid), filter);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> evaluateGlobalFilter(@NonNull final UUID nodeUuid, @NonNull final UUID rootNetworkUuid,
+                                             @NonNull final List<EquipmentType> equipmentTypes, @NonNull final GlobalFilter filter) {
+        return filterService.evaluateGlobalFilter(
+            rootNetworkService.getNetworkUuid(rootNetworkUuid),
+            networkModificationTreeService.getVariantId(getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, true), rootNetworkUuid),
+            equipmentTypes,
+            filter
+        );
     }
 
     @Transactional(readOnly = true)
