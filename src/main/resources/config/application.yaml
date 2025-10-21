@@ -14,7 +14,8 @@ spring:
       consumeShortCircuitAnalysisDebug;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeShortCircuitAnalysisCancelFailed;\
       consumeVoltageInitDebug;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeVoltageInitCancelFailed;\
       consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;consumeLoadFlowCancelFailed;\
-      consumeStateEstimationResult;consumeStateEstimationStopped;consumeStateEstimationFailed"
+      consumeStateEstimationResult;consumeStateEstimationStopped;consumeStateEstimationFailed;\
+      consumePccMinResult;consumePccMinStopped;consumePccMinFailed"
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -134,6 +135,15 @@ spring:
           group: studyStateEstimationStoppedGroup
         consumeStateEstimationFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.run.dlx
+          group: dlq
+        consumePccMinResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}pccmin.result
+          group: studyPccMinResultGroup
+        consumePccMinStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}pccmin.stopped
+          group: studyPccMinStoppedGroup
+        consumePccMinFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}pccmin.run.dlx
           group: dlq
         consumeCaseImportSucceeded-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.succeeded

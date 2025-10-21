@@ -46,6 +46,7 @@ public class RestResponseEntityExceptionHandler {
                     LOADFLOW_PARAMETERS_NOT_FOUND,
                     SENSITIVITY_ANALYSIS_PARAMETERS_NOT_FOUND,
                     STATE_ESTIMATION_NOT_FOUND,
+                    PCC_MIN_NOT_FOUND,
                     STATE_ESTIMATION_PARAMETERS_NOT_FOUND,
                     DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PROVIDER_NOT_FOUND,
                     DYNAMIC_SECURITY_ANALYSIS_PROVIDER_NOT_FOUND,
@@ -61,7 +62,8 @@ public class RestResponseEntityExceptionHandler {
                     DYNAMIC_SIMULATION_RUNNING,
                     SHORT_CIRCUIT_ANALYSIS_RUNNING,
                     VOLTAGE_INIT_RUNNING,
-                    STATE_ESTIMATION_RUNNING
+                    STATE_ESTIMATION_RUNNING,
+                    PCC_MIN_RUNNING
                     -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(type);
             case NOT_ALLOWED,
                     BAD_NODE_TYPE,
@@ -115,6 +117,7 @@ public class RestResponseEntityExceptionHandler {
                     UPDATE_STATE_ESTIMATION_PARAMETERS_FAILED,
                     DELETE_STATE_ESTIMATION_PARAMETERS_FAILED,
                     GET_STATE_ESTIMATION_PARAMETERS_FAILED,
+                    PCC_MIN_ERROR,
                     GET_DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PROVIDER_FAILED,
                     GET_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED,
                     UPDATE_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED,

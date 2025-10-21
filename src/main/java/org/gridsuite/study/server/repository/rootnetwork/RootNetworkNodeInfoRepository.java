@@ -39,6 +39,8 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     List<RootNetworkNodeInfoEntity> findAllByStateEstimationResultUuidNotNull();
 
+    List<RootNetworkNodeInfoEntity> findAllByPccMinResultUuidNotNull();
+
     List<RootNetworkNodeInfoEntity> findAllByNodeInfoId(UUID nodeInfoId);
 
     @EntityGraph(attributePaths = {"rootNetwork"}, type = EntityGraph.EntityGraphType.LOAD)

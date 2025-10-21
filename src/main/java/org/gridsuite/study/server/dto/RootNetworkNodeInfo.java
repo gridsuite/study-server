@@ -50,6 +50,8 @@ public class RootNetworkNodeInfo {
 
     private UUID stateEstimationResultUuid;
 
+    private UUID pccMinResultUuid;
+
     private NodeBuildStatus nodeBuildStatus;
 
     public RootNetworkNodeInfoEntity toEntity() {
@@ -68,6 +70,7 @@ public class RootNetworkNodeInfo {
             .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
             .dynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid)
             .stateEstimationResultUuid(stateEstimationResultUuid)
+            .pccMinResultUuid(pccMinResultUuid)
             .nodeBuildStatus(nodeBuildStatus.toEntity())
             .build();
     }

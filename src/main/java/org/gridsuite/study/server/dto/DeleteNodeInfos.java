@@ -46,6 +46,8 @@ public class DeleteNodeInfos {
 
     private List<UUID> stateEstimationResultUuids = new ArrayList<>();
 
+    private List<UUID> pccMinResultUuids = new ArrayList<>();
+
     public void addRemovedNodeUuid(UUID removedNodeUuid) {
         removedNodeUuids.add(removedNodeUuid);
     }
@@ -97,4 +99,9 @@ public class DeleteNodeInfos {
     public void addStateEstimationResultUuid(UUID stateEstimationResultUuid) {
         stateEstimationResultUuids.add(stateEstimationResultUuid);
     }
+
+    public void addPccMinResultUuid(UUID pccMinResultUuid) {
+        pccMinResultUuids.add(pccMinResultUuid);
+    }
+
 }

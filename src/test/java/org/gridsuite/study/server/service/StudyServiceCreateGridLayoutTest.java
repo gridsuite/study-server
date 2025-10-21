@@ -26,7 +26,7 @@ class StudyServiceCreateGridLayoutTest {
                 null, null, singleLineDiagramService, null, null, null,
                 null, null, null, null, null, null, null,
                 null, studyConfigService, null, null, null, null, null,
-                null, directoryService);
+            null, null, directoryService);
     }
 
     @Test
