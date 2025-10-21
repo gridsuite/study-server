@@ -7,16 +7,20 @@
 
 package org.gridsuite.study.server.service;
 
+import lombok.Getter;
+import lombok.NonNull;
+import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.filter.globalfilter.GlobalFilter;
+import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
@@ -25,6 +29,10 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.FILTER_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.IDS;
+import static org.gridsuite.study.server.StudyConstants.NETWORK_UUID;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_EQUIPMENT_TYPES;
+import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
 import static org.gridsuite.study.server.StudyException.Type.EVALUATE_FILTER_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
@@ -42,12 +50,8 @@ public class FilterService {
 
     private final RestTemplate restTemplate;
 
+    @Getter // getter to facilitate to mock
     private final String baseUri;
-
-    // getter to facilitate to mock
-    public String getBaseUri() {
-        return baseUri;
-    }
 
     @Autowired
     public FilterService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
@@ -60,12 +64,11 @@ public class FilterService {
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EVALUATE;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
-        uriComponentsBuilder.queryParam("networkUuid", networkUuid);
-        if (variantId != null && !variantId.isBlank()) {
-            uriComponentsBuilder.queryParam("variantId", variantId);
+        uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        var uriComponent = uriComponentsBuilder
-                .build();
+        var uriComponent = uriComponentsBuilder.build();
 
         var headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -83,13 +86,35 @@ public class FilterService {
         }
     }
 
+    public List<String> evaluateGlobalFilter(@NonNull final UUID networkUuid, @NonNull final String variantId,
+                                             @NonNull final List<EquipmentType> equipmentTypes, @NonNull final GlobalFilter filter) {
+        final UriComponents uriComponent = UriComponentsBuilder.fromHttpUrl(getBaseUri())
+                .pathSegment(FILTER_API_VERSION, "global-filter")
+                .queryParam(NETWORK_UUID, networkUuid)
+                .queryParam(QUERY_PARAM_VARIANT_ID, variantId)
+                .queryParam(QUERY_PARAM_EQUIPMENT_TYPES, equipmentTypes)
+                .build();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        try {
+            return restTemplate.exchange(uriComponent.toUri(), HttpMethod.POST, new HttpEntity<>(filter, headers), new ParameterizedTypeReference<List<String>>() { })
+                               .getBody();
+        } catch (final HttpStatusCodeException ex) {
+            if (HttpStatus.NOT_FOUND.equals(ex.getStatusCode())) {
+                throw new StudyException(NETWORK_NOT_FOUND);
+            } else {
+                throw handleHttpError(ex, EVALUATE_FILTER_FAILED);
+            }
+        }
+    }
+
     public String exportFilter(UUID networkUuid, UUID filterUuid) {
         Objects.requireNonNull(networkUuid);
         Objects.requireNonNull(filterUuid);
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EXPORT;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
-        uriComponentsBuilder.queryParam("networkUuid", networkUuid);
+        uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand(filterUuid);
 
         return restTemplate.getForObject(uriComponent.toUriString(), String.class);
@@ -101,11 +126,11 @@ public class FilterService {
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTERS_END_POINT_EXPORT;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
-        uriComponentsBuilder.queryParam("networkUuid", networkUuid);
-        if (variantId != null && !variantId.isBlank()) {
-            uriComponentsBuilder.queryParam("variantId", variantId);
+        uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        uriComponentsBuilder.queryParam("ids", filtersUuid);
+        uriComponentsBuilder.queryParam(IDS, filtersUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand();
 
         return restTemplate.getForObject(uriComponent.toUriString(), String.class);
@@ -117,7 +142,7 @@ public class FilterService {
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EVALUATE_IDS;
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
-        uriComponentsBuilder.queryParam("networkUuid", networkUuid);
+        uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand();
 
         var headers = new HttpHeaders();
