@@ -1190,7 +1190,7 @@ public class StudyService {
     public String getDefaultLoadflowProvider(String userId) {
         if (userId != null) {
             UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
-            if (userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+            if (userProfileInfos.getLoadFlowParameterId() != null) {
                 try {
                     return loadflowService.getLoadFlowParameters(userProfileInfos.getLoadFlowParameterId()).getProvider();
                 } catch (Exception e) {
@@ -1259,7 +1259,7 @@ public class StudyService {
     public String getDefaultDynamicSecurityAnalysisProvider(String userId) {
         if (userId != null) {
             UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
-            if (userProfileInfos != null && userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
+            if (userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
                 try {
                     return dynamicSecurityAnalysisService.getProvider(userProfileInfos.getDynamicSecurityAnalysisParameterId());
                 } catch (Exception e) {
@@ -1318,7 +1318,7 @@ public class StudyService {
         boolean userProfileIssue = false;
         UUID existingShortcircuitParametersUuid = studyEntity.getShortCircuitParametersUuid();
         UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos != null && userProfileInfos.getShortcircuitParameterId() != null) {
+        if (parameters == null && userProfileInfos.getShortcircuitParameterId() != null) {
             // reset case, with existing profile, having default short circuit params
             try {
                 UUID shortcircuitParametersFromProfileUuid = shortCircuitService.duplicateParameters(userProfileInfos.getShortcircuitParameterId());
@@ -1586,7 +1586,7 @@ public class StudyService {
         UUID existingLoadFlowParametersUuid = studyEntity.getLoadFlowParametersUuid();
 
         UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+        if (parameters == null && userProfileInfos.getLoadFlowParameterId() != null) {
             // reset case, with existing profile, having default LF params
             try {
                 UUID loadFlowParametersFromProfileUuid = loadflowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
@@ -1638,7 +1638,7 @@ public class StudyService {
         boolean userProfileIssue = false;
         UUID existingVoltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
         UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos != null && userProfileInfos.getVoltageInitParameterId() != null) {
+        if (parameters == null && userProfileInfos.getVoltageInitParameterId() != null) {
             // reset case, with existing profile, having default voltage init params
             try {
                 UUID voltageInitParametersFromProfileUuid = voltageInitService.duplicateVoltageInitParameters(userProfileInfos.getVoltageInitParameterId());
@@ -1681,7 +1681,7 @@ public class StudyService {
         boolean userProfileIssue = false;
         UUID existingSecurityAnalysisParametersUuid = studyEntity.getSecurityAnalysisParametersUuid();
         UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos != null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
+        if (parameters == null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
             // reset case, with existing profile, having default security analysis params
             try {
                 UUID securityAnalysisParametersFromProfileUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId());
@@ -2679,7 +2679,7 @@ public class StudyService {
         UUID existingSpreadsheetConfigCollectionUuid = studyEntity.getSpreadsheetConfigCollectionUuid();
 
         UserProfileInfos userProfileInfos = configCollection == null ? userAdminService.getUserProfile(userId) : null;
-        if (configCollection == null && userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
+        if (configCollection == null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
             // reset case, with existing profile, having default spreadsheet config collection
             try {
                 UUID spreadsheetConfigCollectionFromProfileUuid = studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
@@ -2941,7 +2941,7 @@ public class StudyService {
         boolean userProfileIssue = false;
         UUID existingDynamicSecurityAnalysisParametersUuid = studyEntity.getDynamicSecurityAnalysisParametersUuid();
         UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos != null && userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
+        if (parameters == null && userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
             // reset case, with existing profile, having default dynamic security analysis params
             try {
                 UUID dynamicSecurityAnalysisParametersFromProfileUuid = dynamicSecurityAnalysisService.duplicateParameters(userProfileInfos.getDynamicSecurityAnalysisParameterId());
@@ -3124,7 +3124,7 @@ public class StudyService {
         boolean userProfileIssue = false;
         UUID existingSensitivityAnalysisParametersUuid = studyEntity.getSensitivityAnalysisParametersUuid();
         UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos != null && userProfileInfos.getSensitivityAnalysisParameterId() != null) {
+        if (parameters == null && userProfileInfos.getSensitivityAnalysisParameterId() != null) {
             // reset case, with existing profile, having default sensitivity analysis params
             try {
                 UUID sensitivityAnalysisParametersFromProfileUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId());
