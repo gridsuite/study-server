@@ -566,39 +566,19 @@ public class StudyService {
     @Transactional
     public void deleteStudyIfNotCreationInProgress(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
-        try {
-            Optional<DeleteStudyInfos> deleteStudyInfosOpt = doDeleteStudyIfNotCreationInProgress(studyUuid);
-            if (deleteStudyInfosOpt.isPresent()) {
-                DeleteStudyInfos deleteStudyInfos = deleteStudyInfosOpt.get();
-                startTime.set(System.nanoTime());
+        Optional<DeleteStudyInfos> deleteStudyInfosOpt = doDeleteStudyIfNotCreationInProgress(studyUuid);
+        if (deleteStudyInfosOpt.isPresent()) {
+            DeleteStudyInfos deleteStudyInfos = deleteStudyInfosOpt.get();
+            startTime.set(System.nanoTime());
 
-                //TODO: now we have a n-n relation between node and rootNetworks, it's even more important to delete results in a single request
-                CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                    Stream.concat(
-                        // delete all distant resources linked to rootNetworks
-                        rootNetworkService.getDeleteRootNetworkInfosFutures(deleteStudyInfos.getRootNetworkInfosList()),
-                        // delete all distant resources linked to nodes
-                        Stream.of(
-                                studyServerExecutionService.runAsync(
-                                        () -> deleteStudyInfos.getModificationGroupUuids()
-                                                .stream()
-                                                .filter(Objects::nonNull)
-                                                .forEach(networkModificationService::deleteModifications)
-                                )
-                        ) // TODO delete all with one request only
-                    ).toArray(CompletableFuture[]::new)
-                );
+            // delete all distant resources linked to rootNetworks
+            rootNetworkService.deleteRootNetworkRemoteInfos(deleteStudyInfos.getRootNetworkInfosList());
 
-                executeInParallel.get();
-                if (startTime.get() != null) {
-                    LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-                }
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
-        } catch (Exception e) {
-            throw new StudyException(DELETE_STUDY_FAILED, e.getMessage());
+            // delete all distant resources linked to nodes
+            studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuids().stream().filter(Objects::nonNull).forEach(networkModificationService::deleteModifications));
+
+            LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+
         }
     }
 
@@ -2068,32 +2048,6 @@ public class StudyService {
         );
     }
 
-    private void deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {
-        CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-            studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())),
-            studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())),
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(invalidateNodeInfos.getReportUuids())),
-            studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(invalidateNodeInfos.getLoadFlowResultUuids())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(invalidateNodeInfos.getSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(invalidateNodeInfos.getSensitivityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(invalidateNodeInfos.getVoltageInitResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(invalidateNodeInfos.getDynamicSimulationResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(invalidateNodeInfos.getStateEstimationResultUuids()))
-        );
-        try {
-            executeInParallel.get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
-        } catch (Exception e) {
-            throw new StudyException(INVALIDATE_BUILD_FAILED, e.getMessage());
-        }
-
-    }
-
     @Transactional
     public void deleteNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
@@ -2207,44 +2161,58 @@ public class StudyService {
 
             boolean invalidateChildrenBuild = !deleteChildren && networkModificationTreeService.hasModifications(nodeId, false);
             List<NodeEntity> childrenNodes = networkModificationTreeService.getChildren(nodeId);
-            List<UUID> removedNodes = networkModificationTreeService.doDeleteNode(nodeId, deleteChildren, deleteNodeInfos);
-
-            CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
-                    studyServerExecutionService.runAsync(() -> reportService.deleteReports(deleteNodeInfos.getReportUuids())),
-                    studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(deleteNodeInfos.getLoadFlowResultUuids())),
-                    studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(deleteNodeInfos.getSecurityAnalysisResultUuids())),
-                    studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(deleteNodeInfos.getSensitivityAnalysisResultUuids())),
-                    studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getShortCircuitAnalysisResultUuids())),
-                    studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
-                    studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(deleteNodeInfos.getVoltageInitResultUuids())),
-                    studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(deleteNodeInfos.getDynamicSimulationResultUuids())),
-                    studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(deleteNodeInfos.getDynamicSecurityAnalysisResultUuids())),
-                    studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(deleteNodeInfos.getStateEstimationResultUuids())),
-                    studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)),
-                    studyServerExecutionService.runAsync(() -> removedNodes.forEach(dynamicSimulationEventService::deleteEventsByNodeId))
-            );
-
-            try {
-                executeInParallel.get();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
-            } catch (Exception e) {
-                throw new StudyException(DELETE_NODE_FAILED, e.getMessage());
-            }
-
-            if (startTime.get() != null && LOGGER.isTraceEnabled()) {
-                LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
-                        TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
-            }
+            networkModificationTreeService.doDeleteNode(nodeId, deleteChildren, deleteNodeInfos);
 
             if (invalidateChildrenBuild) {
                 childrenNodes.forEach(nodeEntity -> invalidateNodeTree(studyUuid, nodeEntity.getIdNode()));
             }
+
+            if (startTime.get() != null && LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId.toString().replaceAll("[\n\r]", "_"), studyUuid,
+                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+            }
         }
 
+        deleteNodesInfos(deleteNodeInfos);
+
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    // /!\ Do not wait completion and do not throw exception
+    private void deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {
+        CompletableFuture.allOf(
+            studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())),
+            studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())),
+            studyServerExecutionService.runAsync(() -> reportService.deleteReports(invalidateNodeInfos.getReportUuids())),
+            studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(invalidateNodeInfos.getLoadFlowResultUuids())),
+            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(invalidateNodeInfos.getSecurityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(invalidateNodeInfos.getSensitivityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getShortCircuitAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(invalidateNodeInfos.getVoltageInitResultUuids())),
+            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(invalidateNodeInfos.getDynamicSimulationResultUuids())),
+            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(invalidateNodeInfos.getStateEstimationResultUuids()))
+        );
+    }
+
+    // /!\ Do not wait completion and do not throw exception
+    private void deleteNodesInfos(DeleteNodeInfos deleteNodeInfos) {
+        CompletableFuture.allOf(
+            studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)),
+            studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
+            studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)),
+            studyServerExecutionService.runAsync(() -> reportService.deleteReports(deleteNodeInfos.getReportUuids())),
+            studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(deleteNodeInfos.getLoadFlowResultUuids())),
+            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(deleteNodeInfos.getSecurityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(deleteNodeInfos.getSensitivityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getShortCircuitAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(deleteNodeInfos.getVoltageInitResultUuids())),
+            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(deleteNodeInfos.getDynamicSimulationResultUuids())),
+            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(deleteNodeInfos.getDynamicSecurityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(deleteNodeInfos.getStateEstimationResultUuids()))
+        );
     }
 
     @Transactional
@@ -3244,9 +3212,9 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public String evaluateFiltersFromFirstRootNetwork(UUID studyUuid, List<UUID> filtersUuid) {
+    public String evaluateFiltersFromFirstRootNetwork(UUID studyUuid, String filters) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
-        return filterService.evaluateFilters(studyEntity.getFirstRootNetwork().getNetworkUuid(), filtersUuid);
+        return filterService.evaluateFilters(studyEntity.getFirstRootNetwork().getNetworkUuid(), filters);
     }
 
     public String exportFilters(UUID rootNetworkUuid, List<UUID> filtersUuid, UUID nodeUuid, boolean inUpstreamBuiltParentNode) {
