@@ -33,8 +33,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_RUNNING;
+import static org.gridsuite.study.server.StudyException.Type.*;
 
 /**
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
@@ -125,6 +124,29 @@ public class PccMinService extends AbstractComputationService {
             }
             throw e;
         }
+    }
+
+    public String getPccMinResult(UUID resultUuid) {
+        String result;
+
+        if (resultUuid == null) {
+            return null;
+        }
+
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/{resultUuid}");
+        String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
+
+        try {
+            result = restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(PCC_MIN_NOT_FOUND);
+            } else {
+                throw e;
+            }
+        }
+
+        return result;
     }
 
     public void deletePccMinResults(List<UUID> resultsUuids) {

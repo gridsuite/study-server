@@ -2334,6 +2334,19 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result")
+    @Operation(summary = "Get pcc min result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
+        @ApiResponse(responseCode = "204", description = "No pcc min has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The pcc min has not been found")})
+    public ResponseEntity<String> getPccMinResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                           @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String result = rootNetworkNodeInfoService.getPccMinResult(nodeUuid, rootNetworkUuid);
+        return result != null ? ResponseEntity.ok().body(result) :
+            ResponseEntity.noContent().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/result")
     @Operation(summary = "Get a state estimation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
