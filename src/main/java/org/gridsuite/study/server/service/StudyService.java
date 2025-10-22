@@ -14,6 +14,8 @@ import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import org.apache.commons.collections4.CollectionUtils;
+import org.gridsuite.filter.globalfilter.GlobalFilter;
+import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
@@ -298,6 +300,14 @@ public class StudyService {
         }
 
         return basicStudyInfos;
+    }
+
+    @Transactional(readOnly = true)
+    public void assertIsRootNetworkAndNodeInStudy(@NonNull final UUID studyUuid, @NonNull final UUID rootNetworkId, @NonNull final UUID nodeUuid) {
+        this.rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkId);
+        if (!studyUuid.equals(this.networkModificationTreeService.getStudyUuidForNodeId(nodeUuid))) {
+            throw new StudyException(NODE_NOT_FOUND);
+        }
     }
 
     @Transactional
@@ -650,7 +660,7 @@ public class StudyService {
 
     public UserProfileInfos getUserProfile(String userId) {
         try {
-            return userAdminService.getUserProfile(userId).orElse(null);
+            return userAdminService.getUserProfile(userId);
         } catch (Exception e) {
             LOGGER.error(String.format("Could not access to profile for user '%s'", userId), e);
         }
@@ -1193,8 +1203,8 @@ public class StudyService {
 
     public String getDefaultLoadflowProvider(String userId) {
         if (userId != null) {
-            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId).orElse(null);
-            if (userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
+            if (userProfileInfos.getLoadFlowParameterId() != null) {
                 try {
                     return loadflowService.getLoadFlowParameters(userProfileInfos.getLoadFlowParameterId()).getProvider();
                 } catch (Exception e) {
@@ -1262,8 +1272,8 @@ public class StudyService {
 
     public String getDefaultDynamicSecurityAnalysisProvider(String userId) {
         if (userId != null) {
-            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId).orElse(null);
-            if (userProfileInfos != null && userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
+            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
+            if (userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
                 try {
                     return dynamicSecurityAnalysisService.getProvider(userProfileInfos.getDynamicSecurityAnalysisParameterId());
                 } catch (Exception e) {
@@ -1323,8 +1333,8 @@ public class StudyService {
          */
         boolean userProfileIssue = false;
         UUID existingShortcircuitParametersUuid = studyEntity.getShortCircuitParametersUuid();
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
-        if (parameters == null && userProfileInfos != null && userProfileInfos.getShortcircuitParameterId() != null) {
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
+        if (parameters == null && userProfileInfos.getShortcircuitParameterId() != null) {
             // reset case, with existing profile, having default short circuit params
             try {
                 UUID shortcircuitParametersFromProfileUuid = shortCircuitService.duplicateParameters(userProfileInfos.getShortcircuitParameterId());
@@ -1595,8 +1605,8 @@ public class StudyService {
         boolean userProfileIssue = false;
         UUID existingLoadFlowParametersUuid = studyEntity.getLoadFlowParametersUuid();
 
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
-        if (parameters == null && userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
+        if (parameters == null && userProfileInfos.getLoadFlowParameterId() != null) {
             // reset case, with existing profile, having default LF params
             try {
                 UUID loadFlowParametersFromProfileUuid = loadflowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
@@ -1647,8 +1657,8 @@ public class StudyService {
     public boolean createOrUpdateVoltageInitParameters(StudyEntity studyEntity, VoltageInitParametersInfos parameters, String userId) {
         boolean userProfileIssue = false;
         UUID existingVoltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
-        if (parameters == null && userProfileInfos != null && userProfileInfos.getVoltageInitParameterId() != null) {
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
+        if (parameters == null && userProfileInfos.getVoltageInitParameterId() != null) {
             // reset case, with existing profile, having default voltage init params
             try {
                 UUID voltageInitParametersFromProfileUuid = voltageInitService.duplicateVoltageInitParameters(userProfileInfos.getVoltageInitParameterId());
@@ -1690,8 +1700,8 @@ public class StudyService {
     public boolean createOrUpdateSecurityAnalysisParameters(UUID studyUuid, StudyEntity studyEntity, String parameters, String userId) {
         boolean userProfileIssue = false;
         UUID existingSecurityAnalysisParametersUuid = studyEntity.getSecurityAnalysisParametersUuid();
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
-        if (parameters == null && userProfileInfos != null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
+        if (parameters == null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
             // reset case, with existing profile, having default security analysis params
             try {
                 UUID securityAnalysisParametersFromProfileUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId());
@@ -2690,8 +2700,8 @@ public class StudyService {
         boolean userProfileIssue = false;
         UUID existingSpreadsheetConfigCollectionUuid = studyEntity.getSpreadsheetConfigCollectionUuid();
 
-        UserProfileInfos userProfileInfos = configCollection == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
-        if (configCollection == null && userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
+        UserProfileInfos userProfileInfos = configCollection == null ? userAdminService.getUserProfile(userId) : null;
+        if (configCollection == null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
             // reset case, with existing profile, having default spreadsheet config collection
             try {
                 UUID spreadsheetConfigCollectionFromProfileUuid = studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
@@ -2952,8 +2962,8 @@ public class StudyService {
 
         boolean userProfileIssue = false;
         UUID existingDynamicSecurityAnalysisParametersUuid = studyEntity.getDynamicSecurityAnalysisParametersUuid();
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
-        if (parameters == null && userProfileInfos != null && userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
+        if (parameters == null && userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
             // reset case, with existing profile, having default dynamic security analysis params
             try {
                 UUID dynamicSecurityAnalysisParametersFromProfileUuid = dynamicSecurityAnalysisService.duplicateParameters(userProfileInfos.getDynamicSecurityAnalysisParameterId());
@@ -3135,8 +3145,8 @@ public class StudyService {
 
         boolean userProfileIssue = false;
         UUID existingSensitivityAnalysisParametersUuid = studyEntity.getSensitivityAnalysisParametersUuid();
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId).orElse(null) : null;
-        if (parameters == null && userProfileInfos != null && userProfileInfos.getSensitivityAnalysisParameterId() != null) {
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
+        if (parameters == null && userProfileInfos.getSensitivityAnalysisParameterId() != null) {
             // reset case, with existing profile, having default sensitivity analysis params
             try {
                 UUID sensitivityAnalysisParametersFromProfileUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId());
@@ -3213,6 +3223,17 @@ public class StudyService {
     public String evaluateFilter(UUID nodeUuid, UUID rootNetworkUuid, boolean inUpstreamBuiltParentNode, String filter) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         return filterService.evaluateFilter(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid), filter);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> evaluateGlobalFilter(@NonNull final UUID nodeUuid, @NonNull final UUID rootNetworkUuid,
+                                             @NonNull final List<EquipmentType> equipmentTypes, @NonNull final GlobalFilter filter) {
+        return filterService.evaluateGlobalFilter(
+            rootNetworkService.getNetworkUuid(rootNetworkUuid),
+            networkModificationTreeService.getVariantId(getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, true), rootNetworkUuid),
+            equipmentTypes,
+            filter
+        );
     }
 
     @Transactional(readOnly = true)

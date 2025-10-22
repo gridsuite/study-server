@@ -16,6 +16,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.filter.globalfilter.GlobalFilter;
+import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
 import org.gridsuite.study.server.StudyConstants.SldDisplayMode;
@@ -54,6 +56,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
@@ -2254,6 +2257,20 @@ public class StudyController {
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode,
             @RequestBody String filter) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFilter(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, filter));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/global-filter/evaluate",
+        produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Evaluate a global filter to get matched elements")
+    @ApiResponse(responseCode = "200", description = "The list of matched elements")
+    public ResponseEntity<List<String>> evaluateGlobalFilter(
+            @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "The equipments types to filter and return") @RequestParam(name = "equipmentTypes") @NonNull final List<EquipmentType> equipmentTypes,
+            @RequestBody @NonNull GlobalFilter filter) {
+        this.studyService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
+        return ResponseEntity.ok(studyService.evaluateGlobalFilter(nodeUuid, rootNetworkUuid, equipmentTypes, filter));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/filters/{filterUuid}/elements")
