@@ -60,7 +60,6 @@ import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
-import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
 import static org.gridsuite.study.server.utils.TestUtils.getBinaryAsBuffer;
 import static org.junit.jupiter.api.Assertions.*;
@@ -300,7 +299,9 @@ class ShortCircuitTest implements WithAssertions {
                         .header(HEADER_USER_ID, "testUserId")
                         .content("{\"dumb\": \"json\"}").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
-        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_PCC_MIN_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/parameters/" + SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID)));
     }
 
@@ -768,10 +769,13 @@ class ShortCircuitTest implements WithAssertions {
                     .contentType(MediaType.ALL)
                     .content(parameters))
             .andExpect(status().is(status.value()));
-
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_PCC_MIN_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         message = output.receive(TIMEOUT, elementUpdateDestination);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
