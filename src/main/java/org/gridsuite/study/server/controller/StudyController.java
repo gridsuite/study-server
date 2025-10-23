@@ -959,7 +959,7 @@ public class StudyController {
             @RequestParam(value = "fileName") String fileName,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
-        String exportUuid = studyService.exportNetwork(nodeUuid, rootNetworkUuid, fileName, format, userId, parametersJson);
+        String exportUuid = studyService.exportNetwork(studyUuid, nodeUuid, rootNetworkUuid, fileName, format, userId, parametersJson);
         return ResponseEntity.accepted().body(exportUuid);
     }
 

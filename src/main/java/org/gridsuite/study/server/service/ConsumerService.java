@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.networkExport.NetworkExportReceiver;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -40,7 +41,6 @@ import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
-import static org.gridsuite.study.server.notification.NotificationService.HEADER_STUDY_UUID;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -817,11 +817,20 @@ public class ConsumerService {
         Optional.ofNullable(msg.getHeaders().get(NETWORK_UUID, String.class))
                 .map(UUID::fromString)
                 .ifPresent(networkUuid -> {
-                    UUID studyUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_STUDY_UUID, String.class)));
-                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
-                    UUID exportUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID)).toString());
-                    String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
-                    notificationService.emitNetworkExportFinished(studyUuid, userId, exportUuid, errorMessage);
+                    String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
+                    if (receiverString != null) {
+                        NetworkExportReceiver receiver;
+                        try {
+                            receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8), NetworkExportReceiver.class);
+                            UUID studyUuid = receiver.getStudyUuid();
+                            String userId = receiver.getUserId();
+                            UUID exportUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID)).toString());
+                            String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
+                            notificationService.emitNetworkExportFinished(studyUuid, userId, exportUuid, errorMessage);
+                        } catch (Exception e) {
+                            LOGGER.error(e.toString(), e);
+                        }
+                    }
                 });
     }
 

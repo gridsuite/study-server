@@ -18,6 +18,7 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
+import org.gridsuite.study.server.dto.networkExport.NetworkExportReceiver;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -98,7 +99,7 @@ public class NetworkConversionService {
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public String exportNetwork(UUID networkUuid, String variantId, String fileName, String format, String userId, String parametersJson) {
+    public String exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, String fileName, String format, String userId, String parametersJson) {
 
         try {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
@@ -110,9 +111,9 @@ public class NetworkConversionService {
             if (!StringUtils.isEmpty(fileName)) {
                 uriComponentsBuilder.queryParam("fileName", fileName);
             }
-            uriComponentsBuilder.queryParam("userId", userId);
-            String path = uriComponentsBuilder.buildAndExpand(networkUuid, format)
-                .toUriString();
+            String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NetworkExportReceiver(studyUuid, userId)), StandardCharsets.UTF_8);
+            uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver);
+            String path = uriComponentsBuilder.buildAndExpand(networkUuid, format).toUriString();
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
