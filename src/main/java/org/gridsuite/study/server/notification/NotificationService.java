@@ -481,7 +481,7 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitNetworkExportFinished(UUID studyUuid, String userId, UUID exportUuid, @Nullable String error) {
+    public void emitNetworkExportFinished(UUID studyUuid, String userId, String exportUuid, @Nullable String error) {
         sendStudyUpdateMessage(studyUuid, NETWORK_EXPORT_FINISHED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_EXPORT_UUID, exportUuid)
