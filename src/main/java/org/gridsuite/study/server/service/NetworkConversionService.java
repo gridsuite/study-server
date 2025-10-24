@@ -120,18 +120,12 @@ public class NetworkConversionService {
 
             HttpEntity<String> requestEntity = new HttpEntity<>(parametersJson, headers);
 
-            ResponseEntity<UUID> response = restTemplate.exchange(
+            return restTemplate.exchange(
                     networkConversionServerBaseUri + path,
                     HttpMethod.POST,
                     requestEntity,
                     UUID.class
-            );
-
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                return response.getBody();
-            } else {
-                throw new StudyException(NETWORK_EXPORT_FAILED);
-            }
+            ).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, NETWORK_EXPORT_FAILED);
         } catch (Exception e) {
