@@ -127,7 +127,7 @@ public class NetworkConversionService {
                     UUID.class
             );
 
-            if (response.getStatusCode() == HttpStatus.ACCEPTED && response.getBody() != null) {
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return response.getBody();
             } else {
                 throw new StudyException(NETWORK_EXPORT_FAILED);

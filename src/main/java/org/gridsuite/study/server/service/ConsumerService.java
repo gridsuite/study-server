@@ -821,7 +821,7 @@ public class ConsumerService {
                 receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8), NetworkExportReceiver.class);
                 UUID studyUuid = receiver.getStudyUuid();
                 String userId = receiver.getUserId();
-                UUID exportUuid = msg.getHeaders().get(HEADER_EXPORT_UUID, UUID.class);
+                UUID exportUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID, String.class)));
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
                 notificationService.emitNetworkExportFinished(studyUuid, exportUuid, userId, errorMessage);
             } catch (Exception e) {
