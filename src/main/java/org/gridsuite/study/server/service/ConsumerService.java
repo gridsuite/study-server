@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.networkExport.NetworkExportReceiver;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -34,10 +35,7 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -59,7 +57,7 @@ public class ConsumerService {
     private static final String HEADER_CASE_NAME = "caseName";
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
-
+    private static final String HEADER_EXPORT_UUID = "exportUuid";
     private final ObjectMapper objectMapper;
 
     private final NotificationService notificationService;
@@ -813,5 +811,27 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeStateEstimationFailed() {
         return message -> consumeCalculationFailed(message, STATE_ESTIMATION);
+    }
+
+    public void consumeNetworkExportFinished(Message<String> msg) {
+        String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
+        if (receiverString != null) {
+            NetworkExportReceiver receiver;
+            try {
+                receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8), NetworkExportReceiver.class);
+                UUID studyUuid = receiver.getStudyUuid();
+                String userId = receiver.getUserId();
+                UUID exportUuid = UUID.fromString(Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID, String.class)));
+                String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
+                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, userId, errorMessage);
+            } catch (Exception e) {
+                LOGGER.error(e.toString(), e);
+            }
+        }
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeNetworkExportFinished() {
+        return this::consumeNetworkExportFinished;
     }
 }
