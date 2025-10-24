@@ -814,24 +814,20 @@ public class ConsumerService {
     }
 
     public void consumeNetworkExportFinished(Message<String> msg) {
-        Optional.ofNullable(msg.getHeaders().get(NETWORK_UUID, String.class))
-                .map(UUID::fromString)
-                .ifPresent(networkUuid -> {
-                    String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
-                    if (receiverString != null) {
-                        NetworkExportReceiver receiver;
-                        try {
-                            receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8), NetworkExportReceiver.class);
-                            UUID studyUuid = receiver.getStudyUuid();
-                            String userId = receiver.getUserId();
-                            String exportUuid = msg.getHeaders().get(HEADER_EXPORT_UUID, String.class);
-                            String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
-                            notificationService.emitNetworkExportFinished(studyUuid, userId, exportUuid, errorMessage);
-                        } catch (Exception e) {
-                            LOGGER.error(e.toString(), e);
-                        }
-                    }
-                });
+        String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
+        if (receiverString != null) {
+            NetworkExportReceiver receiver;
+            try {
+                receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8), NetworkExportReceiver.class);
+                UUID studyUuid = receiver.getStudyUuid();
+                String userId = receiver.getUserId();
+                UUID exportUuid = msg.getHeaders().get(HEADER_EXPORT_UUID, UUID.class);
+                String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
+                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, userId, errorMessage);
+            } catch (Exception e) {
+                LOGGER.error(e.toString(), e);
+            }
+        }
     }
 
     @Bean

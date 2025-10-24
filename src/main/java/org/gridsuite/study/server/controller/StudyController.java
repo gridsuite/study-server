@@ -950,7 +950,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}")
     @Operation(summary = "export the study's network in the given format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network in the given format")})
-    public ResponseEntity<String> exportNetwork(
+    public ResponseEntity<UUID> exportNetwork(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
@@ -959,7 +959,7 @@ public class StudyController {
             @RequestParam(value = "fileName") String fileName,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
-        String exportUuid = studyService.exportNetwork(studyUuid, nodeUuid, rootNetworkUuid, fileName, format, userId, parametersJson);
+        UUID exportUuid = studyService.exportNetwork(studyUuid, nodeUuid, rootNetworkUuid, fileName, format, userId, parametersJson);
         return ResponseEntity.accepted().body(exportUuid);
     }
 

@@ -260,7 +260,7 @@ class StudyTest {
     private static final String DUPLICATED_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON = "\"" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "\"";
 
     private static final String DEFAULT_PROVIDER = "defaultProvider";
-    private static final String EXPORT_UUID = "exportUuid";
+    private static final UUID EXPORT_UUID = UUID.randomUUID();
 
     @Autowired
     private OutputDestination output;
@@ -619,21 +619,21 @@ class StudyTest {
                 } else if (path.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.equals("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=myFileName&receiver=.*")) {
-                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                    return new MockResponse.Builder().code(202).body(EXPORT_UUID.toString()).build();
                 } else if (path.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=")) {
-                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                    return new MockResponse(202, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.equals("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM")) {
-                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                    return new MockResponse(202, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID + "&fileName=myFileName&receiver=.*")) {
-                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                    return new MockResponse(202, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID + "&fileName=")) {
-                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                    return new MockResponse(202, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.equals("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID)) {
-                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                    return new MockResponse(202, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.contains("/export/ERROR")) {
                     return new MockResponse(500);
                 } else if (path.startsWith("/v1/networks/") && path.contains("/export/XIIDM")) {
-                    return new MockResponse.Builder().code(202).body(EXPORT_UUID).build();
+                    return new MockResponse(202, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 }
 
                 switch (path) {
