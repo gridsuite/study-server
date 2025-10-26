@@ -26,8 +26,6 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.*;
 
-import static org.gridsuite.study.server.StudyConstants.NETWORK_EXPORT_FINISHED;
-
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com
  */
@@ -51,6 +49,7 @@ public class NotificationService {
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
     public static final String HEADER_EXPORT_UUID = "exportUuid";
+    public static final String NETWORK_EXPORT_FINISHED = "networkExportFinished";
 
     public static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
     public static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
