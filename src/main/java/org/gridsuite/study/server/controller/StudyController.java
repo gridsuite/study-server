@@ -2379,7 +2379,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/status")
     @Operation(summary = "Get the pcc min status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min status"),
-        @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
+        @ApiResponse(responseCode = "204", description = "No pcc min has been done yet"),
         @ApiResponse(responseCode = "404", description = "The pcc min status has not been found")})
     public ResponseEntity<String> getPccMinStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                   @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,

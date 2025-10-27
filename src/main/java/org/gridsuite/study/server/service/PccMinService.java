@@ -42,6 +42,8 @@ import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_RUNNING;
 @Service
 public class PccMinService extends AbstractComputationService {
     static final String RESULT_UUID = "resultUuid";
+    static final String FILTER_UUID = "filterUuid";
+    static final String BUS_ID = "busId";
 
     private final RestTemplate restTemplate;
 
@@ -69,13 +71,13 @@ public class PccMinService extends AbstractComputationService {
             uriComponentsBuilder.queryParam("shortCircuitParametersUuid", parametersInfos.getShortCircuitParametersUuid());
         }
         if (parametersInfos.getFilterUuid() != null) {
-            uriComponentsBuilder.queryParam("filterUuid", parametersInfos.getFilterUuid());
+            uriComponentsBuilder.queryParam(FILTER_UUID, parametersInfos.getFilterUuid());
         }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         if (!StringUtils.isBlank(parametersInfos.getBusId())) {
-            uriComponentsBuilder.queryParam("busId", parametersInfos.getBusId());
+            uriComponentsBuilder.queryParam(BUS_ID, parametersInfos.getBusId());
         }
         var path = uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 
