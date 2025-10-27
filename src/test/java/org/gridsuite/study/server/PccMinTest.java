@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import lombok.AllArgsConstructor;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -86,6 +87,7 @@ class PccMinTest {
     @Autowired private StudyRepository studyRepository;
     @Autowired private UserAdminService userAdminService;
     @Autowired private ReportService reportService;
+    @Autowired private SupervisionService supervisionService;
     @Autowired private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     @Autowired private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired private TestUtils studyTestUtils;
@@ -114,10 +116,25 @@ class PccMinTest {
     }
 
     private void stubCommon() {
+        // Status check for PCC_MIN result
         wireMockServer.stubFor(get(urlPathMatching("/v1/results/" + PCC_MIN_RESULT_UUID + "/status"))
             .willReturn(okJson(PCC_MIN_STATUS_JSON)));
+
+        // Report server stub
         wireMockServer.stubFor(post(urlPathEqualTo("/v1/reports")).willReturn(ok()));
-        wireMockServer.stubFor(get(urlPathEqualTo("/v1/supervision/results-count")).willReturn(okJson("1")));
+
+        // Supervision: results count stub
+        wireMockServer.stubFor(get(urlPathEqualTo("/v1/supervision/results-count"))
+            .willReturn(okJson("1")));
+
+        // PCC_MIN results: handle GET by UUIDs (for dry-run) and DELETE (for actual deletion)
+        wireMockServer.stubFor(get(urlPathEqualTo("/v1/results"))
+            .withQueryParam("resultsUuids", matching(".*"))
+            .willReturn(okJson("[" + PCC_MIN_RESULT_UUID + "]")));
+
+        wireMockServer.stubFor(delete(urlPathEqualTo("/v1/results"))
+            .withQueryParam("resultsUuids", matching(".*"))
+            .willReturn(ok()));
     }
 
     @AfterEach
@@ -320,5 +337,36 @@ class PccMinTest {
             null,
             1
         );
+    }
+
+    @Test
+    void testResultsDeletion() throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+        runPccMinWithSuccess(ids);
+
+        assertEquals(1, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
+
+        wireMockServer.stubFor(get(urlPathEqualTo("/v1/supervision/results-count"))
+            .willReturn(okJson("1")));
+
+        wireMockServer.stubFor(get(urlPathEqualTo("/v1/results"))
+            .withQueryParam("resultsUuids", matching(".*"))
+            .willReturn(okJson("[" + PCC_MIN_RESULT_UUID + "]")));
+
+        wireMockServer.stubFor(delete(urlPathEqualTo("/v1/results"))
+            .withQueryParam("resultsUuids", matching(".*"))
+            .willReturn(ok()));
+
+        Integer dryRunCount = supervisionService.deleteComputationResults(ComputationType.PCC_MIN, true);
+        assertEquals(1, dryRunCount);
+        wireMockServer.verify(1, getRequestedFor(urlPathEqualTo("/v1/supervision/results-count")));
+
+        Integer deletedCount = supervisionService.deleteComputationResults(ComputationType.PCC_MIN, false);
+        assertEquals(1, deletedCount);
+
+        wireMockServer.verify(1, deleteRequestedFor(urlPathEqualTo("/v1/results"))
+            .withQueryParam("resultsUuids", matching(".*")));
+
+        assertEquals(0, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
     }
 }

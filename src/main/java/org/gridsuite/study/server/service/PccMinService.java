@@ -63,9 +63,9 @@ public class PccMinService extends AbstractComputationService {
     public UUID runPccMin(UUID networkUuid, String variantId, RunPccMinParametersInfos parametersInfos, ReportInfos reportInfos, String receiver, String userId) {
         var uriComponentsBuilder = UriComponentsBuilder
             .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/networks/{networkUuid}/run-and-save")
-            .queryParam("reportUuid", reportInfos.reportUuid().toString())
-            .queryParam("reporterId", reportInfos.nodeUuid())
-            .queryParam("reportType", StudyService.ReportType.PCC_MIN.reportKey);
+            .queryParam(QUERY_PARAM_REPORT_UUID, reportInfos.reportUuid().toString())
+            .queryParam(QUERY_PARAM_REPORTER_ID, reportInfos.nodeUuid())
+            .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.PCC_MIN.reportKey);
 
         if (parametersInfos.getShortCircuitParametersUuid() != null) {
             uriComponentsBuilder.queryParam("shortCircuitParametersUuid", parametersInfos.getShortCircuitParametersUuid());
