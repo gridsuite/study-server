@@ -59,7 +59,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfigurationWithTestChannel
 class PccMinTest {
 
-    // ==================== Constants ====================
     private static final String PCC_MIN_URL_BASE = "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/";
     private static final UUID CASE_LOADFLOW_UUID = UUID.fromString("11a91c11-2c2d-83bb-b45f-20b83e4ef00c");
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -77,7 +76,6 @@ class PccMinTest {
     private static final String PCC_MIN_STOPPED_DESTINATION = "pccmin.stopped";
     private static final String PCC_MIN_FAILED_DESTINATION = "pccmin.run.dlx";
 
-    // ==================== Autowired Beans ====================
     @Autowired private MockMvc mockMvc;
     @Autowired private OutputDestination output;
     @Autowired private InputDestination input;
@@ -148,7 +146,6 @@ class PccMinTest {
         );
     }
 
-    // ==================== Helper Classes ====================
     @AllArgsConstructor
     private static final class StudyNodeIds {
         UUID studyId;
@@ -156,7 +153,6 @@ class PccMinTest {
         UUID nodeId;
     }
 
-    // ==================== Helper Methods ====================
     private StudyNodeIds createStudyAndNode(String variantId, String nodeName) throws Exception {
         StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.fromString(NETWORK_UUID_STRING),
             "netId", CASE_LOADFLOW_UUID, "", "", null, null, SHORTCIRCUIT_PARAMETERS_UUID, null, null, null);
