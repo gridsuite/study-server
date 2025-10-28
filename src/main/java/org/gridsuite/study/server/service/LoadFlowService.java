@@ -104,10 +104,6 @@ public class LoadFlowService extends AbstractComputationService {
         deleteCalculationResults(resultsUuids, DELIMITER + LOADFLOW_API_VERSION + "/results", restTemplate, loadFlowServerBaseUri);
     }
 
-    public void deleteAllLoadFlowResults() {
-        deleteLoadFlowResults(null);
-    }
-
     public Integer getLoadFlowResultsCount() {
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/supervision/results-count").toUriString();

@@ -10,6 +10,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import org.gridsuite.filter.utils.EquipmentType;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -32,14 +35,13 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -60,6 +62,7 @@ class FilterServiceTest {
     private static final String FILTER_UUID_STRING = "c6c15d08-81e9-47a1-9cdb-7be22f017ad5";
     private static final List<String> FILTERS_UUID_STRING = List.of("fc3aa057-5fa4-4173-b1a8-16028f5eefd1", "f8773f32-f77c-4126-8c6f-a4af8bf6f788");
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
+    private static final String NODE_1_NAME = "node1";
 
     @Autowired
     private MockMvc mockMvc;
@@ -128,6 +131,7 @@ class FilterServiceTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNodeUuid, createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         // whatever string is allowed but given here a json string for more expressive
         final String sendBody = """
@@ -167,6 +171,49 @@ class FilterServiceTest {
         assertEquals(responseBody, resultAsString);
 
         wireMockUtils.verifyFilterEvaluate(stubUuid, NETWORK_UUID_STRING);
+
+        // evaluate on first node
+        mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/evaluate",
+                        studyNameUserIdUuid, firstRootNetworkUuid, firstNode.getId())
+                        .content(sendBody).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        assertEquals(responseBody, resultAsString);
+
+        wireMockUtils.verifyFilterEvaluate(stubUuid, NETWORK_UUID_STRING);
+    }
+
+    @Test
+    void testEvaluateGlobalFilter() throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        // whatever string is allowed but given here a json string for more expressive
+        final String sendBody = """
+                    {
+                      "nominalV" : ["380", "225"],
+                      "countryCode": ["FR", "BE"],
+                      "genericFilter": ["c6c15d08-81e9-47a1-9cdb-7be22f017ad5"],
+                      "substationProperty": {}
+                    }
+                """;
+
+        String responseBody = "[\"GEN\"]";
+
+        UUID stubUuid = wireMockUtils.stubGlobalFilterEvaluate(NETWORK_UUID_STRING, List.of(EquipmentType.GENERATOR), responseBody);
+
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/global-filter/evaluate?equipmentTypes=GENERATOR",
+                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
+                .content(sendBody).contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        assertEquals(responseBody, resultAsString);
+
+        wireMockUtils.verifyGlobalFilterEvaluate(stubUuid, NETWORK_UUID_STRING, List.of(EquipmentType.GENERATOR));
     }
 
     @Test
@@ -294,32 +341,36 @@ class FilterServiceTest {
     }
 
     @Test
-    void evaluateFiltersOnFirstRootNetworkTest() throws Exception {
+    void evaluateFiltersWithEquipmentsOnFirstRootNetworkTest() throws Exception {
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID studyUuid = studyEntity.getId();
         UUID studyFirstRootNetworkUuid = studyTestUtils.getOneRootNetwork(studyUuid).getNetworkUuid();
+        String filtersBody = """
+            {
+              "filterAttributes": [{
+                "id": "c6c15d08-81e9-47a1-9cdb-7be22f017ad5"
+              }],
+              "equipmentTypesByElement": []
+            }
+            """;
         String responseBody = """
                 [
                     {"id":"MANDA7COND.41","type":"SHUNT_COMPENSATOR","distributionKey":null},
                     {"id":"MANDA7COND.31","type":"SHUNT_COMPENSATOR","distributionKey":null}
                 ]
             """;
-        List<UUID> filtersUuids = List.of(UUID.fromString(FILTER_UUID_STRING));
-        UUID stubUuid = wireMockUtils.stubFiltersEvaluate(studyFirstRootNetworkUuid.toString(), filtersUuids, responseBody);
+        UUID stubUuid = wireMockUtils.stubFiltersEvaluate(studyFirstRootNetworkUuid.toString(), filtersBody, responseBody);
 
-        List<String> strfilterUuids = filtersUuids.stream().map(Object::toString).collect(Collectors.toList());
-        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.addAll("filtersUuid", strfilterUuids);
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/filters/elements",
-                studyUuid).params(params).contentType(MediaType.APPLICATION_JSON))
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/filters/elements", studyUuid)
+                .content(filtersBody).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andReturn();
 
         String resultAsString = mvcResult.getResponse().getContentAsString();
         Assertions.assertEquals(responseBody, resultAsString);
 
-        wireMockUtils.verifyFiltersEvaluate(stubUuid, strfilterUuids, studyFirstRootNetworkUuid.toString());
+        wireMockUtils.verifyFiltersEvaluate(stubUuid, filtersBody, studyFirstRootNetworkUuid.toString());
     }
 
     @Test
@@ -328,6 +379,8 @@ class FilterServiceTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNodeUuid, createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
+
         String responseBody = """
             [
                {
@@ -366,6 +419,16 @@ class FilterServiceTest {
             .andExpect(status().isOk())
             .andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
+        assertEquals(responseBody, resultAsString);
+
+        wireMockUtils.verifyFiltersExport(stubUuid, FILTERS_UUID_STRING, NETWORK_UUID_STRING);
+
+        // export on first node
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/elements?filtersUuid=" + FILTERS_UUID_STRING.stream().collect(Collectors.joining(",")),
+                studyUuid, firstRootNetworkUuid, firstNode.getId()))
+            .andExpect(status().isOk())
+            .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
         assertEquals(responseBody, resultAsString);
 
         wireMockUtils.verifyFiltersExport(stubUuid, FILTERS_UUID_STRING, NETWORK_UUID_STRING);

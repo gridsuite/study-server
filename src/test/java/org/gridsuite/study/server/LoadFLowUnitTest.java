@@ -16,6 +16,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.mockito.Mockito.*;
 
 /**
@@ -70,6 +72,14 @@ class LoadFLowUnitTest {
     private NotificationService notificationService;
     @MockitoBean
     StudyRepository studyRepository;
+
+    @SpyBean
+    private StudyServerExecutionService studyServerExecutionService;
+
+    @BeforeEach
+    void setup() {
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
+    }
 
     @Test
     void testRunLoadFlow() {

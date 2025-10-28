@@ -235,35 +235,22 @@ public class RootNetworkService {
     }
 
     public void deleteRootNetworks(StudyEntity studyEntity, List<RootNetworkInfos> rootNetworksInfos) {
-        CompletableFuture<Void> executeInParallel = CompletableFuture.allOf(
-            getDeleteRootNetworkInfosFutures(rootNetworksInfos).toArray(CompletableFuture[]::new)
-        );
-
-        try {
-            executeInParallel.get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new StudyException(DELETE_ROOT_NETWORK_FAILED, e.getMessage());
-        } catch (Exception e) {
-            throw new StudyException(DELETE_ROOT_NETWORK_FAILED, e.getMessage());
-        }
+        deleteRootNetworkRemoteInfos(rootNetworksInfos);
 
         studyEntity.deleteRootNetworks(rootNetworksInfos.stream().map(RootNetworkInfos::getId).collect(Collectors.toSet()));
     }
 
-    public Stream<CompletableFuture<Void>> getDeleteRootNetworkInfosFutures(List<RootNetworkInfos> rootNetworkInfos) {
-        return Stream
-            .concat(
-                // delete remote data ids set in root network
-                Stream.of(
-                    studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())),
-                    studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes)),
-                    studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)),
-                    studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getCaseInfos().getCaseUuid()).filter(Objects::nonNull).forEach(caseService::deleteCase))
-                ),
-                // delete remote data ids set in root network node infos
-                rootNetworkNodeInfoService.getDeleteRootNetworkNodeInfosFutures(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList())
-            );
+    public void deleteRootNetworkRemoteInfos(List<RootNetworkInfos> rootNetworkInfos) {
+        CompletableFuture.allOf(
+            // delete remote data ids set in root network
+            studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())),
+            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes)),
+            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)),
+            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getCaseInfos().getCaseUuid()).filter(Objects::nonNull).forEach(caseService::deleteCase))
+        );
+
+        // delete remote data ids set in root network node infos
+        rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList());
     }
 
     public Optional<RootNetworkRequestEntity> getRootNetworkRequest(UUID rootNetworkUuid) {
