@@ -192,20 +192,11 @@ class PccMinTest {
         return modificationNode;
     }
 
-    private void checkPccMinMessagesReceived(UUID studyUuid, String updateTypeToCheck, String otherUpdateTypeToCheck) {
+    private void checkPccMinMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        if (otherUpdateTypeToCheck == null) {
-            assertEquals(updateTypeToCheck, updateType);
-        } else {
-            assertNotNull(updateType);
-            assertTrue(updateType.equals(updateTypeToCheck) || updateType.equals(otherUpdateTypeToCheck));
-        }
-    }
-
-    private void checkPccMinMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
-        checkPccMinMessagesReceived(studyUuid, updateTypeToCheck, null);
+        assertEquals(updateType, updateTypeToCheck);
     }
 
     private void consumePccMinResult(StudyNodeIds ids, String resultUuid) throws JsonProcessingException {
@@ -285,9 +276,7 @@ class PccMinTest {
             .setHeader("resultUuid", PCC_MIN_RESULT_UUID)
             .build();
         consumerService.consumePccMinStopped().accept(stoppedMessage);
-
-        checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS, NotificationService.UPDATE_TYPE_PCC_MIN_RESULT);
-
+        checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
         wireMockUtils.verifyPccMinStop(stubId, PCC_MIN_RESULT_UUID);
     }
 
