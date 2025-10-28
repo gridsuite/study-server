@@ -41,7 +41,6 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.*;
-import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -76,21 +75,32 @@ class PccMinTest {
     private static final String PCC_MIN_STOPPED_DESTINATION = "pccmin.stopped";
     private static final String PCC_MIN_FAILED_DESTINATION = "pccmin.run.dlx";
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private OutputDestination output;
-    @Autowired private InputDestination input;
-    @Autowired private ObjectMapper objectMapper;
-    @Autowired private NetworkModificationTreeService networkModificationTreeService;
-    @SpyBean private PccMinService pccMinService;
-    @Autowired private StudyRepository studyRepository;
-    @Autowired private UserAdminService userAdminService;
-    @Autowired private ReportService reportService;
-    @Autowired private SupervisionService supervisionService;
-    @Autowired private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
-    @Autowired private RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    @Autowired private TestUtils studyTestUtils;
-    @Autowired private ConsumerService consumerService;
-    @Autowired private Consumer<Message<String>> consumePccMinFailed;
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private OutputDestination output;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private NetworkModificationTreeService networkModificationTreeService;
+    @SpyBean
+    private PccMinService pccMinService;
+    @Autowired
+    private StudyRepository studyRepository;
+    @Autowired
+    private UserAdminService userAdminService;
+    @Autowired
+    private ReportService reportService;
+    @Autowired
+    private SupervisionService supervisionService;
+    @Autowired
+    private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+    @Autowired
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    @Autowired
+    private TestUtils studyTestUtils;
+    @Autowired
+    private ConsumerService consumerService;
 
     private ObjectWriter objectWriter;
     private WireMockServer wireMockServer;
@@ -110,29 +120,6 @@ class PccMinTest {
         reportService.setReportServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 
-        stubCommon();
-    }
-
-    private void stubCommon() {
-        // Status check for PCC_MIN result
-        wireMockServer.stubFor(get(urlPathMatching("/v1/results/" + PCC_MIN_RESULT_UUID + "/status"))
-            .willReturn(okJson(PCC_MIN_STATUS_JSON)));
-
-        // Report server stub
-        wireMockServer.stubFor(post(urlPathEqualTo("/v1/reports")).willReturn(ok()));
-
-        // Supervision: results count stub
-        wireMockServer.stubFor(get(urlPathEqualTo("/v1/supervision/results-count"))
-            .willReturn(okJson("1")));
-
-        // PCC_MIN results: handle GET by UUIDs (for dry-run) and DELETE (for actual deletion)
-        wireMockServer.stubFor(get(urlPathEqualTo("/v1/results"))
-            .withQueryParam("resultsUuids", matching(".*"))
-            .willReturn(okJson("[" + PCC_MIN_RESULT_UUID + "]")));
-
-        wireMockServer.stubFor(delete(urlPathEqualTo("/v1/results"))
-            .withQueryParam("resultsUuids", matching(".*"))
-            .willReturn(ok()));
     }
 
     @AfterEach
@@ -210,7 +197,7 @@ class PccMinTest {
         return modificationNode;
     }
 
-    private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck, String otherUpdateTypeToCheck) {
+    private void checkPccMinMessagesReceived(UUID studyUuid, String updateTypeToCheck, String otherUpdateTypeToCheck) {
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
@@ -221,8 +208,8 @@ class PccMinTest {
         }
     }
 
-    private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
-        checkUpdateModelStatusMessagesReceived(studyUuid, updateTypeToCheck, null);
+    private void checkPccMinMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
+        checkPccMinMessagesReceived(studyUuid, updateTypeToCheck, null);
     }
 
     private void consumePccMinResult(StudyNodeIds ids, String resultUuid) throws JsonProcessingException {
@@ -230,16 +217,16 @@ class PccMinTest {
         MessageHeaders headers = new MessageHeaders(Map.of("resultUuid", resultUuid, HEADER_RECEIVER, resultUuidJson));
         consumerService.consumePccMinResult().accept(MessageBuilder.createMessage("", headers));
 
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_RESULT);
+        checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_RESULT);
 
         wireMockServer.verify(postRequestedFor(urlPathMatching(
             "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
             .withQueryParam("variantId", equalTo(VARIANT_ID)));
     }
 
-    private void runPccMinWithSuccess(StudyNodeIds ids) throws Exception {
+    private void runPccMin(StudyNodeIds ids) throws Exception {
         UUID stubId = wireMockServer.stubFor(post(urlPathMatching("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
                 .willReturn(okJson(objectMapper.writeValueAsString(PCC_MIN_RESULT_UUID))))
             .getId();
@@ -263,24 +250,36 @@ class PccMinTest {
     @Test
     void testRunAndCheckStatus() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1");
-        runPccMinWithSuccess(ids);
-        assertEquals(1, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
 
+        // Run Pcc min
+        UUID stubRun = wireMockUtils.stubPccMinRun(NETWORK_UUID_STRING, VARIANT_ID, PCC_MIN_RESULT_UUID);
+        mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                .header("userId", "userId"))
+            .andExpect(status().isOk());
+
+        consumePccMinResult(ids, PCC_MIN_RESULT_UUID);
+        wireMockUtils.verifyPccMinRun(stubRun, NETWORK_UUID_STRING, VARIANT_ID);
+
+        // verify pcc min status
+        UUID stubStatus = wireMockUtils.stubPccMinStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON);
         mockMvc.perform(get(PCC_MIN_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk())
-            .andExpect(content().string(PCC_MIN_STATUS_JSON));
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(PCC_MIN_STATUS_JSON));
+
+        wireMockUtils.verifyPccMinStatus(stubStatus, PCC_MIN_RESULT_UUID);
     }
 
     @Test
     void testStop() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 2");
-        runPccMinWithSuccess(ids);
+        runPccMin(ids);
 
         UUID stubId = wireMockServer.stubFor(
             put(urlPathMatching("/v1/results/" + PCC_MIN_RESULT_UUID + "/stop.*"))
                 .willReturn(ok())
         ).getId();
 
+        // stop pcc min
         mockMvc.perform(put(PCC_MIN_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk());
 
@@ -291,30 +290,21 @@ class PccMinTest {
             .build();
         consumerService.consumePccMinStopped().accept(stoppedMessage);
 
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
 
-        wireMockUtils.verifyPutRequest(
-            stubId,
-            "/v1/results/" + PCC_MIN_RESULT_UUID + "/stop",
-            true,
-            Map.of(),
-            null
-        );
+        wireMockUtils.verifyPccMinStop(stubId, PCC_MIN_RESULT_UUID);
     }
 
     @Test
     void testFailure() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2");
-
-        UUID stubId = wireMockServer.stubFor(post(urlPathMatching("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
-                .withQueryParam("variantId", equalTo(VARIANT_ID_2))
-                .willReturn(okJson(objectMapper.writeValueAsString(PCC_MIN_ERROR_RESULT_UUID))))
-            .getId();
+        UUID stubFail = wireMockUtils.stubPccMinFailed(NETWORK_UUID_STRING, VARIANT_ID_2, PCC_MIN_ERROR_RESULT_UUID);
 
         mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
+        // pcc min failed
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(ids.nodeId, ids.rootNetworkUuid));
         Message<String> failedMessage = MessageBuilder.withPayload("")
             .setHeader(HEADER_RECEIVER, resultUuidJson)
@@ -322,23 +312,16 @@ class PccMinTest {
             .build();
         consumerService.consumePccMinFailed().accept(failedMessage);
 
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
-        checkUpdateModelStatusMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_FAILED);
+        checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_FAILED);
 
-        wireMockUtils.verifyPostRequest(
-            stubId,
-            "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save",
-            true,
-            Map.of("variantId", WireMock.equalTo(VARIANT_ID_2)),
-            null,
-            1
-        );
+        wireMockUtils.verifyPccMinFail(stubFail, NETWORK_UUID_STRING, VARIANT_ID_2);
     }
 
     @Test
     void testResultsDeletion() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
-        runPccMinWithSuccess(ids);
+        runPccMin(ids);
 
         assertEquals(1, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
 
@@ -347,7 +330,7 @@ class PccMinTest {
 
         wireMockServer.stubFor(get(urlPathEqualTo("/v1/results"))
             .withQueryParam("resultsUuids", matching(".*"))
-            .willReturn(okJson("[" + PCC_MIN_RESULT_UUID + "]")));
+            .willReturn(WireMock.ok().withBody(PCC_MIN_RESULT_UUID)));
 
         wireMockServer.stubFor(delete(urlPathEqualTo("/v1/results"))
             .withQueryParam("resultsUuids", matching(".*"))
