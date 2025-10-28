@@ -32,7 +32,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
-import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
@@ -204,6 +203,7 @@ class PccMinTest {
         if (otherUpdateTypeToCheck == null) {
             assertEquals(updateTypeToCheck, updateType);
         } else {
+            assertNotNull(updateType);
             assertTrue(updateType.equals(updateTypeToCheck) || updateType.equals(otherUpdateTypeToCheck));
         }
     }
@@ -290,7 +290,7 @@ class PccMinTest {
             .build();
         consumerService.consumePccMinStopped().accept(stoppedMessage);
 
-        checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS, NotificationService.UPDATE_TYPE_PCC_MIN_RESULT);
 
         wireMockUtils.verifyPccMinStop(stubId, PCC_MIN_RESULT_UUID);
     }
