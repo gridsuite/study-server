@@ -9,7 +9,6 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import lombok.AllArgsConstructor;
 import org.gridsuite.study.server.dto.ComputationType;
@@ -101,14 +100,11 @@ class PccMinTest {
     @Autowired
     private ConsumerService consumerService;
 
-    private ObjectWriter objectWriter;
     private WireMockServer wireMockServer;
     private WireMockUtils wireMockUtils;
 
     @BeforeEach
-    void setup() throws Exception {
-        objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
-
+    void setup() {
         wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
         wireMockServer.start();
         wireMockUtils = new WireMockUtils(wireMockServer);
@@ -172,7 +168,7 @@ class PccMinTest {
             .children(Collections.emptyList())
             .build();
 
-        String mnBodyJson = objectWriter.writeValueAsString(modificationNode);
+        String mnBodyJson = objectMapper.writeValueAsString(modificationNode);
         JSONObject jsonObject = new JSONObject(mnBodyJson);
         jsonObject.put("variantId", variantId);
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
