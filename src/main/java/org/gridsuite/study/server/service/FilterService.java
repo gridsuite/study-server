@@ -53,11 +53,6 @@ public class FilterService {
     @Getter // getter to facilitate to mock
     private final String baseUri;
 
-    // getter to facilitate to mock
-    public String getBaseUri() {
-        return baseUri;
-    }
-
     @Autowired
     public FilterService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.baseUri = remoteServicesProperties.getServiceUri("filter-server");

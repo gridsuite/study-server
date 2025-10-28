@@ -73,7 +73,7 @@ class LoadFLowUnitTest {
     @MockitoBean
     StudyRepository studyRepository;
 
-    @SpyBean
+    @MockitoSpyBean
     private StudyServerExecutionService studyServerExecutionService;
 
     @BeforeEach

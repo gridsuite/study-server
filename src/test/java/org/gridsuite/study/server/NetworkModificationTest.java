@@ -229,7 +229,7 @@ class NetworkModificationTest {
     @Autowired
     private TestUtils studyTestUtils;
 
-    @SpyBean
+    @MockitoSpyBean
     private StudyServerExecutionService studyServerExecutionService;
 
     @Autowired

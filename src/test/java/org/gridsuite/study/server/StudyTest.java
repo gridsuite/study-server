@@ -364,7 +364,7 @@ class StudyTest {
     @Autowired
     private TestUtils studyTestUtils;
 
-    @SpyBean
+    @MockitoSpyBean
     private StudyServerExecutionService studyServerExecutionService;
 
     private static EquipmentInfos toEquipmentInfos(Line line) {
