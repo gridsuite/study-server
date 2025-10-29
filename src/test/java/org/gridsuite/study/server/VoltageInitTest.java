@@ -235,6 +235,9 @@ class VoltageInitTest {
     private StateEstimationService stateEstimationService;
 
     @Autowired
+    private PccMinService pccMinService;
+
+    @Autowired
     private VoltageInitService voltageInitService;
 
     @Autowired
@@ -298,6 +301,7 @@ class VoltageInitTest {
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
+        pccMinService.setPccMinServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 
         String voltageInitResultUuidStr = objectMapper.writeValueAsString(VOLTAGE_INIT_RESULT_UUID);
@@ -916,6 +920,7 @@ class VoltageInitTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
     }
 
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpactsInfos expectedPayload) throws Exception {

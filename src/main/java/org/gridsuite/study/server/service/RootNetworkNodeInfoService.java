@@ -65,6 +65,7 @@ public class RootNetworkNodeInfoService {
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
+    private final PccMinService pccMinService;
     private final ReportService reportService;
 
     public RootNetworkNodeInfoService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
@@ -78,6 +79,7 @@ public class RootNetworkNodeInfoService {
                                       DynamicSimulationService dynamicSimulationService,
                                       DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                                       StateEstimationService stateEstimationService,
+                                      PccMinService pccMinService,
                                       ReportService reportService) {
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
@@ -90,6 +92,7 @@ public class RootNetworkNodeInfoService {
         this.dynamicSimulationService = dynamicSimulationService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
+        this.pccMinService = pccMinService;
         this.reportService = reportService;
     }
 
@@ -158,6 +161,7 @@ public class RootNetworkNodeInfoService {
             case DYNAMIC_SIMULATION -> rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(computationResultUuid);
             case DYNAMIC_SECURITY_ANALYSIS -> rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(computationResultUuid);
             case STATE_ESTIMATION -> rootNetworkNodeInfoEntity.setStateEstimationResultUuid(computationResultUuid);
+            case PCC_MIN -> rootNetworkNodeInfoEntity.setPccMinResultUuid(computationResultUuid);
         }
     }
 
@@ -222,6 +226,11 @@ public class RootNetworkNodeInfoService {
             if (stateEstimationResultUuid != null) {
                 deleteNodeInfos.addStateEstimationResultUuid(stateEstimationResultUuid);
             }
+
+            UUID pccMinResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, PCC_MIN);
+            if (pccMinResultUuid != null) {
+                deleteNodeInfos.addPccMinResultUuid(pccMinResultUuid);
+            }
         });
     }
 
@@ -279,6 +288,7 @@ public class RootNetworkNodeInfoService {
             rootNetworkNodeInfoEntity.setVoltageInitResultUuid(null);
         }
         rootNetworkNodeInfoEntity.setStateEstimationResultUuid(null);
+        rootNetworkNodeInfoEntity.setPccMinResultUuid(null);
 
         Map<String, UUID> computationReports = rootNetworkNodeInfoEntity.getComputationReports()
             .entrySet()
@@ -332,6 +342,8 @@ public class RootNetworkNodeInfoService {
                 .ifPresent(invalidateNodeInfos::addDynamicSecurityAnalysisResultUuid);
         Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, STATE_ESTIMATION))
                 .ifPresent(invalidateNodeInfos::addStateEstimationResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, PCC_MIN))
+                .ifPresent(invalidateNodeInfos::addPccMinResultUuid);
     }
 
     // TODO : Remove optionnal and throws ROOT_NETWORK_NOT_FOUND exception
@@ -350,6 +362,7 @@ public class RootNetworkNodeInfoService {
             case DYNAMIC_SIMULATION -> rootNetworkNodeInfoEntity.getDynamicSimulationResultUuid();
             case DYNAMIC_SECURITY_ANALYSIS -> rootNetworkNodeInfoEntity.getDynamicSecurityAnalysisResultUuid();
             case STATE_ESTIMATION -> rootNetworkNodeInfoEntity.getStateEstimationResultUuid();
+            case PCC_MIN -> rootNetworkNodeInfoEntity.getPccMinResultUuid();
         };
     }
 
@@ -461,6 +474,9 @@ public class RootNetworkNodeInfoService {
         if (rootNetworkNodeInfo.getStateEstimationResultUuid() != null) {
             rootNetworkNodeInfoEntity.setStateEstimationResultUuid(rootNetworkNodeInfo.getStateEstimationResultUuid());
         }
+        if (rootNetworkNodeInfo.getPccMinResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setPccMinResultUuid(rootNetworkNodeInfo.getPccMinResultUuid());
+        }
         if (rootNetworkNodeInfo.getDynamicSimulationResultUuid() != null) {
             rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(rootNetworkNodeInfo.getDynamicSimulationResultUuid());
         }
@@ -487,7 +503,8 @@ public class RootNetworkNodeInfoService {
             studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).toList())),
             studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicSimulationResultUuid).filter(Objects::nonNull).toList())),
             studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicSecurityAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).toList()))
+            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).toList())),
+            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getPccMinResultUuid).filter(Objects::nonNull).toList()))
         );
     }
 
@@ -516,6 +533,7 @@ public class RootNetworkNodeInfoService {
         shortCircuitService.assertShortCircuitAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT), getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT_ONE_BUS));
         voltageInitService.assertVoltageInitNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION));
         stateEstimationService.assertStateEstimationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION));
+        pccMinService.assertPccMinNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN));
     }
 
     /***************************
@@ -694,6 +712,12 @@ public class RootNetworkNodeInfoService {
         return stateEstimationService.getStateEstimationStatus(resultUuid);
     }
 
+    @Transactional(readOnly = true)
+    public String getPccMinStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
+        return pccMinService.getPccMinStatus(resultUuid);
+    }
+
     /*******************************
      * STOP COMPUTATION EXECUTIONS *
      *******************************/
@@ -731,5 +755,11 @@ public class RootNetworkNodeInfoService {
     public void stopStateEstimation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
         stateEstimationService.stopStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
+    }
+
+    @Transactional
+    public void stopPccMin(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
+        pccMinService.stopPccMin(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
     }
 }

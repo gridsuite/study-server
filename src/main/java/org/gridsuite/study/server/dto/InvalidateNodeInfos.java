@@ -37,7 +37,7 @@ public class InvalidateNodeInfos {
     private Set<UUID> oneBusShortCircuitAnalysisResultUuids = new HashSet<>();
     private Set<UUID> voltageInitResultUuids = new HashSet<>();
     private Set<UUID> stateEstimationResultUuids = new HashSet<>();
-
+    private Set<UUID> pccMinResultUuids = new HashSet<>();
     private Set<UUID> dynamicSimulationResultUuids = new HashSet<>();
     private Set<UUID> dynamicSecurityAnalysisResultUuids = new HashSet<>();
 
@@ -83,6 +83,10 @@ public class InvalidateNodeInfos {
 
     public List<UUID> getStateEstimationResultUuids() {
         return stateEstimationResultUuids.stream().toList();
+    }
+
+    public List<UUID> getPccMinResultUuids() {
+        return pccMinResultUuids.stream().toList();
     }
 
     public List<UUID> getDynamicSimulationResultUuids() {
@@ -137,6 +141,10 @@ public class InvalidateNodeInfos {
         stateEstimationResultUuids.add(stateEstimationResultUuid);
     }
 
+    public void addPccMinResultUuid(UUID pccMinResultUuid) {
+        pccMinResultUuids.add(pccMinResultUuid);
+    }
+
     public void addGroupUuids(List<UUID> groupUuids) {
         this.groupUuids.addAll(groupUuids);
     }
@@ -159,7 +167,7 @@ public class InvalidateNodeInfos {
         oneBusShortCircuitAnalysisResultUuids.addAll(invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids());
         voltageInitResultUuids.addAll(invalidateNodeInfos.getVoltageInitResultUuids());
         stateEstimationResultUuids.addAll(invalidateNodeInfos.getStateEstimationResultUuids());
-
+        pccMinResultUuids.addAll(invalidateNodeInfos.getPccMinResultUuids());
         dynamicSimulationResultUuids.addAll(invalidateNodeInfos.getDynamicSimulationResultUuids());
         dynamicSecurityAnalysisResultUuids.addAll(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids());
     }
