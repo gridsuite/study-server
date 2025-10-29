@@ -253,25 +253,11 @@ public class NetworkMapService {
                 }, networkUuid, voltageLevelId).getBody();
     }
 
-    public String getVoltageLevelSwitches(UUID networkUuid, String variantId,
-                                                           String voltageLevelId,
-                                                           String switchesPath) {
+    public String getVoltageLevelInformation(UUID networkUuid, String variantId,
+                                             String voltageLevelId,
+                                             String switchesPath) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION
                 + "/networks/{networkUuid}/voltage-levels/{voltageLevelId}/" + switchesPath);
-        if (!StringUtils.isBlank(variantId)) {
-            builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-
-        return restTemplate.exchange(networkMapServerBaseUri + builder.build().toUriString(), HttpMethod.GET, null,
-                new ParameterizedTypeReference<String>() {
-                }, networkUuid, voltageLevelId).getBody();
-    }
-
-    public String getVoltageLevelTopology(UUID networkUuid, String variantId,
-                                          String voltageLevelId,
-                                          String topologyPath) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION
-                + "/networks/{networkUuid}/voltage-levels/{voltageLevelId}/" + topologyPath);
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }

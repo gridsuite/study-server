@@ -97,7 +97,8 @@ class NetworkMapTest {
     private static final String LOADFLOW_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString(LOADFLOW_PARAMETERS_UUID_STRING);
     private static final String SWITCHES_INFOS_JSON = "[{\"id\":\".ABRE 6_.ABRE6TR615 SA.1_OC\",\"open\":false\"},{\"id\":\".ABRE 6_.ABRE6SEC..12 SS.1.12_OC\",\"open\":false\"}]";
-    private static final String TOPOLOGY_INFO_JSON = "{\"topologyKind\": \"NODE_BREAKER\", \"busbarCount\": 1, \"sectionCount\": 1,  \"switchKinds\": [],  \"isRetrievedBusbarSections\": false,  \"isBusbarSectionPositionFound\": true,  \"busBarSectionInfos\": {    \"1\": [      \"NGEN5\"    ],    \"2\": [      \"NGEN5_2_1\",      \"NGEN5_2_2\"    ]  },  \"feederBaysInfos\": {}}";
+    private static final String BUSBAR_SECTIONS_INFO_JSON = "{\"topologyKind\":\"NODE_BREAKER\",\"switchKinds\":[\"DISCONNECTOR\"],\"isSymmetrical\":true,\"isBusbarSectionPositionFound\":true,\"busBarSections\":{\"1\":[\"NGEN4\"]}}";
+    private static final String FEEDER_BAYS_BUSBAR_SECTIONS_INFO_JSON = "{\"feederBaysInfos\":{\"SHUNT_VLNB\":[{\"busbarSectionId\":\"NGEN4\",\"connectablePositionInfos\":{\"connectionDirection\":null},\"connectionSide\":null}],\"LINE7\":[{\"busbarSectionId\":\"NGEN4\",\"connectablePositionInfos\":{\"connectionDirection\":\"BOTTOM\",\"connectionPosition\":5,\"connectionName\":\"LINE7_Side_VLGEN4\"},\"connectionSide\":\"ONE\"}],\"SHUNT_NON_LINEAR\":[{\"busbarSectionId\":\"NGEN4\",\"connectablePositionInfos\":{\"connectionDirection\":null},\"connectionSide\":null}]},\"busBarSectionsInfos\":{\"topologyKind\":\"NODE_BREAKER\",\"switchKinds\":[\"DISCONNECTOR\"],\"isSymmetrical\":true,\"isBusbarSectionPositionFound\":true,\"busBarSections\":{\"1\":[\"NGEN4\"]}}}";
 
     @Autowired
     private MockMvc mockMvc;
@@ -182,8 +183,10 @@ class NetworkMapTest {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), busbarSectionsDataAsString);
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/switches?variantId=first_variant_id":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SWITCHES_INFOS_JSON);
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/topology?variantId=first_variant_id":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), TOPOLOGY_INFO_JSON);
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/bus-bar-sections?variantId=first_variant_id":
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), BUSBAR_SECTIONS_INFO_JSON);
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/feeder-bays-and-bus-bar-sections?variantId=first_variant_id":
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), FEEDER_BAYS_BUSBAR_SECTIONS_INFO_JSON);
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/substation-id?variantId=first_variant_id":
                         return new MockResponse.Builder().code(200).body(SUBSTATION_ID_1).build();
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VL_ID_1 + "/equipments?variantId=first_variant_id":
@@ -574,23 +577,44 @@ class NetworkMapTest {
     }
 
     @Test
-    void testGetVoltageLevelTopology(final MockWebServer server) throws Exception {
+    void testGetBusBarSectionsInfo(final MockWebServer server) throws Exception {
         MvcResult mvcResult;
         String resultAsString;
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
         AbstractNode node = getRootNode(studyEntity.getId()).getChildren().stream().findFirst().orElseThrow();
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/topology",
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/bus-bar-sections",
                         studyEntity.getId(), firstRootNetworkUuid, node.getId(), VOLTAGE_LEVEL_ID))
                 .andExpect(status().isOk())
                 .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        assertEquals(TOPOLOGY_INFO_JSON, resultAsString);
+        assertEquals(BUSBAR_SECTIONS_INFO_JSON, resultAsString);
 
         var requests = TestUtils.getRequestsDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches(
-                "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/topology\\?variantId=first_variant_id")));
+                "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/bus-bar-sections\\?variantId=first_variant_id")));
+
+    }
+
+    @Test
+    void testGetFeederBaysBusBarSectionsInfo(final MockWebServer server) throws Exception {
+        MvcResult mvcResult;
+        String resultAsString;
+        StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
+        AbstractNode node = getRootNode(studyEntity.getId()).getChildren().stream().findFirst().orElseThrow();
+
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/feeder-bays-and-bus-bar-sections",
+                        studyEntity.getId(), firstRootNetworkUuid, node.getId(), VOLTAGE_LEVEL_ID))
+                .andExpect(status().isOk())
+                .andReturn();
+        resultAsString = mvcResult.getResponse().getContentAsString();
+        assertEquals(FEEDER_BAYS_BUSBAR_SECTIONS_INFO_JSON, resultAsString);
+
+        var requests = TestUtils.getRequestsDone(1, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches(
+                "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/feeder-bays-and-bus-bar-sections\\?variantId=first_variant_id")));
 
     }
 
