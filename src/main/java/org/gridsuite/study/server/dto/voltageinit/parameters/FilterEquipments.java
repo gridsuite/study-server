@@ -27,5 +27,8 @@ public class FilterEquipments {
 
     @Schema(description = "filter name")
     private String filterName;
+
+    @Schema(description = "flag indicating whether the filter still exists in the filter server")
+    private Boolean isValid;
 }
 
