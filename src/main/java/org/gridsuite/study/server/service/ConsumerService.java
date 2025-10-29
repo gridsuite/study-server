@@ -17,7 +17,7 @@ import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.networkExport.NetworkExportReceiver;
+import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -811,6 +811,21 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeStateEstimationFailed() {
         return message -> consumeCalculationFailed(message, STATE_ESTIMATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumePccMinResult() {
+        return message -> consumeCalculationResult(message, PCC_MIN);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumePccMinStopped() {
+        return message -> consumeCalculationStopped(message, PCC_MIN);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumePccMinFailed() {
+        return message -> consumeCalculationFailed(message, PCC_MIN);
     }
 
     public void consumeNetworkExportFinished(Message<String> msg) {

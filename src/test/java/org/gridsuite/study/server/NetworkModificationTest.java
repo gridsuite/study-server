@@ -138,10 +138,13 @@ class NetworkModificationTest {
 
     private static final String VOLTAGE_INIT_RESULT_UUID = "37cf33ad-f4a0-4ab8-84c5-6ad2e22d9866";
 
+    private static final String PCC_MIN_RESULT_UUID = "37cf33ad-f4a0-4ab8-84c5-6ad2e22d9863";
+
     private static final String VOLTAGE_INIT_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
     private static final String STATE_ESTIMATION_RESULT_UUID = "d3a85e9b-9894-4255-8ec7-07ea965d24eb";
     private static final String STATE_ESTIMATION_STATUS_JSON = "\"COMPLETED\"";
+    private static final String PCC_MIN_STATUS_JSON = "\"COMPLETED\"";
 
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
 
@@ -250,6 +253,9 @@ class NetworkModificationTest {
 
     private static final String ERROR_MESSAGE = "nullPointerException: unexpected null somewhere";
 
+    @Autowired
+    private PccMinService pccMinService;
+
     @BeforeEach
     void setup(final MockWebServer server) {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
@@ -277,6 +283,7 @@ class NetworkModificationTest {
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         voltageInitService.setVoltageInitServerBaseUri(baseUrl);
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
+        pccMinService.setPccMinServerBaseUri(baseUrl);
 
         doReturn(baseUrl).when(dynamicSimulationClient).getBaseUri();
         doReturn(baseUrl).when(dynamicSecurityAnalysisClient).getBaseUri();
@@ -401,6 +408,15 @@ class NetworkModificationTest {
                 } else if (("/v1/results?resultsUuids=" + STATE_ESTIMATION_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), STATE_ESTIMATION_STATUS_JSON);
+                    }
+                    return new MockResponse(500);
+                    } else if (("/v1/results/invalidate-status?resultUuid=" + PCC_MIN_RESULT_UUID).equals(path)) {
+                    return new MockResponse(200);
+                } else if (("/v1/results/" + PCC_MIN_RESULT_UUID + "/status").equals(path)) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), STATE_ESTIMATION_STATUS_JSON);
+                } else if (("/v1/results?resultsUuids=" + PCC_MIN_RESULT_UUID).equals(path)) {
+                    if (request.getMethod().equals("DELETE")) {
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), PCC_MIN_STATUS_JSON);
                     }
                     return new MockResponse(500);
                 } else {
@@ -2426,6 +2442,7 @@ class NetworkModificationTest {
         rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(UUID.fromString(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setVoltageInitResultUuid(UUID.fromString(VOLTAGE_INIT_RESULT_UUID));
         rootNetworkNodeInfoEntity.setStateEstimationResultUuid(UUID.fromString(STATE_ESTIMATION_RESULT_UUID));
+        rootNetworkNodeInfoEntity.setPccMinResultUuid(UUID.fromString(PCC_MIN_RESULT_UUID));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
 
         networkModificationTreeService.updateNode(studyNameUserIdUuid, modificationNode1, userId);
@@ -2451,13 +2468,14 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
         wireMockUtils.verifyNetworkModificationPut(stubUuid, MODIFICATION_UUID, generatorAttributesUpdated);
-        var requests = TestUtils.getRequestsWithBodyDone(13, server);
+        var requests = TestUtils.getRequestsWithBodyDone(15, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + SECURITY_ANALYSIS_RESULT_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + SENSITIVITY_ANALYSIS_RESULT_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + VOLTAGE_INIT_RESULT_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + PCC_MIN_RESULT_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + STATE_ESTIMATION_RESULT_UUID)));
 
         // Mark nodes 2 and 3 status as built
@@ -2814,6 +2832,7 @@ class NetworkModificationTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
     }
 
     private void checkNodesBuildStatusUpdatedMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {

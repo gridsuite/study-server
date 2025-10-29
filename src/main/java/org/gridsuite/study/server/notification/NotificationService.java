@@ -87,6 +87,9 @@ public class NotificationService {
     public static final String UPDATE_TYPE_STATE_ESTIMATION_FAILED = "stateEstimation_failed";
     public static final String UPDATE_TYPE_STATE_ESTIMATION_RESULT = "stateEstimationResult";
     public static final String UPDATE_TYPE_STATE_ESTIMATION_STATUS = "stateEstimation_status";
+    public static final String UPDATE_TYPE_PCC_MIN_FAILED = "pccMin_failed";
+    public static final String UPDATE_TYPE_PCC_MIN_RESULT = "pccMinResult";
+    public static final String UPDATE_TYPE_PCC_MIN_STATUS = "pccMin_status";
     public static final String UPDATE_TYPE_COMPUTATION_PARAMETERS = "computationParametersUpdated";
     public static final String UPDATE_NETWORK_VISUALIZATION_PARAMETERS = "networkVisualizationParametersUpdated";
     public static final String UPDATE_SPREADSHEET_NODE_ALIASES = "nodeAliasesUpdated";

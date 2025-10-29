@@ -308,6 +308,9 @@ class StudyTest {
     private StateEstimationService stateEstimationService;
 
     @Autowired
+    private PccMinService pccMinService;
+
+    @Autowired
     private StudyConfigService studyConfigService;
 
     @Autowired
@@ -457,6 +460,7 @@ class StudyTest {
         loadflowService.setLoadFlowServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
+        pccMinService.setPccMinServerBaseUri(baseUrl);
         studyConfigService.setStudyConfigServerBaseUri(baseUrl);
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
         directoryService.setDirectoryServerServerBaseUri(baseUrl);
@@ -1649,6 +1653,7 @@ class StudyTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
     }
 
     private void checkNodeBuildStatusUpdatedMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
@@ -1819,6 +1824,7 @@ class StudyTest {
                 .dynamicSecurityAnalysisResultUuid(UUID.randomUUID())
                 .voltageInitResultUuid(UUID.randomUUID())
                 .stateEstimationResultUuid(UUID.randomUUID())
+                .pccMinResultUuid(UUID.randomUUID())
                 .build()
         );
 
@@ -1994,11 +2000,13 @@ class StudyTest {
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSecurityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getSensitivityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getStateEstimationResultUuid());
+        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(0)).getPccMinResultUuid());
 
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getLoadFlowResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSecurityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getSensitivityAnalysisResultUuid());
         assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getStateEstimationResultUuid());
+        assertNull(((NetworkModificationNode) duplicatedModificationNode.getChildren().get(1)).getPccMinResultUuid());
 
         //Check requests to duplicate modification groups has been emitted (3 nodes)
         wireMockUtils.verifyDuplicateModificationGroup(stubUuid, 3);
@@ -2149,6 +2157,7 @@ class StudyTest {
                 .loadFlowResultUuid(UUID.randomUUID())
                 .securityAnalysisResultUuid(UUID.randomUUID())
                 .stateEstimationResultUuid(UUID.randomUUID())
+                .pccMinResultUuid(UUID.randomUUID())
                 .build()
         );
 
@@ -2387,25 +2396,7 @@ class StudyTest {
         wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
 
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(emptyNode.getId(), emptyNodeChild.getId()));
-
-        //loadflow_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //securityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //sensitivityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //shortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //oneBusShortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicSimulation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicSecurityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //voltageInit_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //stateEstimation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        checkComputationStatusMessageReceived();
 
         checkSubtreeMovedMessageSent(study1Uuid, emptyNode.getId(), node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2426,6 +2417,29 @@ class StudyTest {
                         "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
                 study1Uuid, UUID.randomUUID())
                 .header(USER_ID_HEADER, "userId")).andExpect(status().isNotFound());
+    }
+
+    private void checkComputationStatusMessageReceived() {
+        //loadflow_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //securityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //sensitivityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //shortCircuitAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //oneBusShortCircuitAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //dynamicSimulation_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //dynamicSecurityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //voltageInit_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //stateEstimation_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //pccMin_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
     }
 
     @Test
@@ -2475,6 +2489,7 @@ class StudyTest {
                 .loadFlowResultUuid(UUID.randomUUID())
                 .securityAnalysisResultUuid(UUID.randomUUID())
                 .stateEstimationResultUuid(UUID.randomUUID())
+                .pccMinResultUuid(UUID.randomUUID())
                 .build()
         );
 
@@ -2609,6 +2624,7 @@ class StudyTest {
                 .loadFlowResultUuid(UUID.randomUUID())
                 .securityAnalysisResultUuid(UUID.randomUUID())
                 .stateEstimationResultUuid(UUID.randomUUID())
+                .pccMinResultUuid(UUID.randomUUID())
                 .build()
         );
 
@@ -2806,6 +2822,8 @@ class StudyTest {
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //stateEstimation_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //pccMin_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
         if (!nodeHasModifications) {
             return;
@@ -2836,6 +2854,8 @@ class StudyTest {
             //voltageInit_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //stateEstimation_status
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            //pccMin_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         });
 

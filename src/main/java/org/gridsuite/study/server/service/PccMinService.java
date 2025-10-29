@@ -1,0 +1,167 @@
+/**
+ * Copyright (c) 2025, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+package org.gridsuite.study.server.service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.io.UncheckedIOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
+import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_RUNNING;
+
+/**
+ * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
+ */
+@Service
+public class PccMinService extends AbstractComputationService {
+    static final String RESULT_UUID = "resultUuid";
+    static final String FILTER_UUID = "filterUuid";
+    static final String BUS_ID = "busId";
+
+    private final RestTemplate restTemplate;
+
+    private final ObjectMapper objectMapper;
+
+    @Setter
+    private String pccMinServerBaseUri;
+
+    @Autowired
+    public PccMinService(RemoteServicesProperties remoteServicesProperties,
+                         ObjectMapper objectMapper, RestTemplate restTemplate) {
+        this.pccMinServerBaseUri = remoteServicesProperties.getServiceUri("pcc-min-server");
+        this.objectMapper = objectMapper;
+        this.restTemplate = restTemplate;
+    }
+
+    public UUID runPccMin(UUID networkUuid, String variantId, RunPccMinParametersInfos parametersInfos, ReportInfos reportInfos, String receiver, String userId) {
+        var uriComponentsBuilder = UriComponentsBuilder
+            .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/networks/{networkUuid}/run-and-save")
+            .queryParam(QUERY_PARAM_REPORT_UUID, reportInfos.reportUuid().toString())
+            .queryParam(QUERY_PARAM_REPORTER_ID, reportInfos.nodeUuid())
+            .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.PCC_MIN.reportKey);
+
+        if (parametersInfos.getShortCircuitParametersUuid() != null) {
+            uriComponentsBuilder.queryParam("shortCircuitParametersUuid", parametersInfos.getShortCircuitParametersUuid());
+        }
+        if (parametersInfos.getFilterUuid() != null) {
+            uriComponentsBuilder.queryParam(FILTER_UUID, parametersInfos.getFilterUuid());
+        }
+        if (!StringUtils.isBlank(variantId)) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        if (!StringUtils.isBlank(parametersInfos.getBusId())) {
+            uriComponentsBuilder.queryParam(BUS_ID, parametersInfos.getBusId());
+        }
+        var path = uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
+
+        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+    }
+
+    public void stopPccMin(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(nodeUuid);
+
+        if (resultUuid == null) {
+            return;
+        }
+
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/{resultUuid}/stop")
+            .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
+
+        restTemplate.put(pccMinServerBaseUri + path, Void.class);
+    }
+
+    public String getPccMinStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
+        try {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/{resultUuid}/status")
+                .buildAndExpand(resultUuid).toUriString();
+            return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(PCC_MIN_NOT_FOUND);
+            }
+            throw e;
+        }
+    }
+
+    public void deletePccMinResults(List<UUID> resultsUuids) {
+        deleteCalculationResults(resultsUuids, DELIMITER + PCC_MIN_API_VERSION + "/results", restTemplate, pccMinServerBaseUri);
+    }
+
+    public void deleteAllPccMinResults() {
+        deletePccMinResults(null);
+    }
+
+    public Integer getPccMinResultsCount() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/supervision/results-count").toUriString();
+        return restTemplate.getForObject(pccMinServerBaseUri + path, Integer.class);
+    }
+
+    public void assertPccMinNotRunning(UUID resultUuid) {
+        String status = getPccMinStatus(resultUuid);
+        if (PccMinStatus.RUNNING.name().equals(status)) {
+            throw new StudyException(PCC_MIN_RUNNING);
+        }
+    }
+
+    public void invalidatePccMinStatus(List<UUID> uuids) {
+        if (!uuids.isEmpty()) {
+            String path = UriComponentsBuilder
+                .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/invalidate-status")
+                .queryParam(RESULT_UUID, uuids).build().toUriString();
+
+            restTemplate.put(pccMinServerBaseUri + path, Void.class);
+        }
+    }
+
+    @Override
+    public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
+        return List.of();
+    }
+}
