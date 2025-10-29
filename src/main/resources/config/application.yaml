@@ -15,7 +15,8 @@ spring:
       consumeVoltageInitDebug;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeVoltageInitCancelFailed;\
       consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;consumeLoadFlowCancelFailed;\
       consumeStateEstimationResult;consumeStateEstimationStopped;consumeStateEstimationFailed;\
-      consumePccMinResult;consumePccMinStopped;consumePccMinFailed"
+      consumePccMinResult;consumePccMinStopped;consumePccMinFailed;\
+      consumeNetworkExportFinished"
     stream:
       bindings:
         publishStudyUpdate-out-0:
@@ -150,6 +151,9 @@ spring:
           group: studyCaseImportSucceededGroup
         consumeCaseImportFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}case.import.start.dlx
+          group: dlq
+        consumeNetworkExportFinished-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}network.export.finished
           group: dlq
       output-bindings: publishStudyUpdate-out-0;publishElementUpdate-out-0
 
