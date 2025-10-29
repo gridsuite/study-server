@@ -366,8 +366,6 @@ class StudyTest {
 
     @SpyBean
     private StudyServerExecutionService studyServerExecutionService;
-    @Autowired
-    private NotificationService notificationService;
 
     @SpyBean
     ConsumerService consumeService;
