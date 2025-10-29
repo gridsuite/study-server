@@ -33,7 +33,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_RUNNING;
 
 /**
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
@@ -41,6 +42,8 @@ import static org.gridsuite.study.server.StudyException.Type.*;
 @Service
 public class PccMinService extends AbstractComputationService {
     static final String RESULT_UUID = "resultUuid";
+    static final String FILTER_UUID = "filterUuid";
+    static final String BUS_ID = "busId";
 
     private final RestTemplate restTemplate;
 
@@ -60,21 +63,21 @@ public class PccMinService extends AbstractComputationService {
     public UUID runPccMin(UUID networkUuid, String variantId, RunPccMinParametersInfos parametersInfos, ReportInfos reportInfos, String receiver, String userId) {
         var uriComponentsBuilder = UriComponentsBuilder
             .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/networks/{networkUuid}/run-and-save")
-            .queryParam("reportUuid", reportInfos.reportUuid().toString())
-            .queryParam("reporterId", reportInfos.nodeUuid())
-            .queryParam("reportType", StudyService.ReportType.PCC_MIN.reportKey);
+            .queryParam(QUERY_PARAM_REPORT_UUID, reportInfos.reportUuid().toString())
+            .queryParam(QUERY_PARAM_REPORTER_ID, reportInfos.nodeUuid())
+            .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.PCC_MIN.reportKey);
 
         if (parametersInfos.getShortCircuitParametersUuid() != null) {
             uriComponentsBuilder.queryParam("shortCircuitParametersUuid", parametersInfos.getShortCircuitParametersUuid());
         }
         if (parametersInfos.getFilterUuid() != null) {
-            uriComponentsBuilder.queryParam("filterUuid", parametersInfos.getFilterUuid());
+            uriComponentsBuilder.queryParam(FILTER_UUID, parametersInfos.getFilterUuid());
         }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         if (!StringUtils.isBlank(parametersInfos.getBusId())) {
-            uriComponentsBuilder.queryParam("busId", parametersInfos.getBusId());
+            uriComponentsBuilder.queryParam(BUS_ID, parametersInfos.getBusId());
         }
         var path = uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 

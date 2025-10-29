@@ -12,5 +12,5 @@ package org.gridsuite.study.server.dto;
 public enum PccMinStatus {
     NOT_DONE,
     RUNNING,
-    COMPLETED,
+    COMPLETED
 }

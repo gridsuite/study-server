@@ -2361,27 +2361,7 @@ class StudyTest {
         wireMockUtils.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
 
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(emptyNode.getId(), emptyNodeChild.getId()));
-
-        //loadflow_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //securityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //sensitivityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //shortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //oneBusShortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicSimulation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicSecurityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //voltageInit_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //stateEstimation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //pccMin_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        checkComputationStatusMessageReceived();
 
         checkSubtreeMovedMessageSent(study1Uuid, emptyNode.getId(), node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2402,6 +2382,29 @@ class StudyTest {
                         "/{studyUuid}/subtree?parentNodeUuid={parentSubtreeNode}",
                 study1Uuid, UUID.randomUUID())
                 .header(USER_ID_HEADER, "userId")).andExpect(status().isNotFound());
+    }
+
+    private void checkComputationStatusMessageReceived() {
+        //loadflow_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //securityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //sensitivityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //shortCircuitAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //oneBusShortCircuitAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //dynamicSimulation_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //dynamicSecurityAnalysis_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //voltageInit_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //stateEstimation_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //pccMin_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
     }
 
     @Test

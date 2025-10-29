@@ -144,6 +144,7 @@ class NetworkModificationTest {
 
     private static final String STATE_ESTIMATION_RESULT_UUID = "d3a85e9b-9894-4255-8ec7-07ea965d24eb";
     private static final String STATE_ESTIMATION_STATUS_JSON = "\"COMPLETED\"";
+    private static final String PCC_MIN_STATUS_JSON = "\"COMPLETED\"";
 
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
 
@@ -415,7 +416,7 @@ class NetworkModificationTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), STATE_ESTIMATION_STATUS_JSON);
                 } else if (("/v1/results?resultsUuids=" + PCC_MIN_RESULT_UUID).equals(path)) {
                     if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), STATE_ESTIMATION_STATUS_JSON);
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), PCC_MIN_STATUS_JSON);
                     }
                     return new MockResponse(500);
                 } else {

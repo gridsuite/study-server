@@ -16,6 +16,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.filter.globalfilter.GlobalFilter;
+import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
 import org.gridsuite.study.server.StudyConstants.SldDisplayMode;
@@ -54,6 +56,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
@@ -2256,6 +2259,20 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.evaluateFilter(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode, filter));
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/global-filter/evaluate",
+        produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Evaluate a global filter to get matched elements")
+    @ApiResponse(responseCode = "200", description = "The list of matched elements")
+    public ResponseEntity<List<String>> evaluateGlobalFilter(
+            @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "The equipments types to filter and return") @RequestParam(name = "equipmentTypes") @NonNull final List<EquipmentType> equipmentTypes,
+            @RequestBody @NonNull GlobalFilter filter) {
+        this.studyService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
+        return ResponseEntity.ok(studyService.evaluateGlobalFilter(nodeUuid, rootNetworkUuid, equipmentTypes, filter));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/filters/{filterUuid}/elements")
     @Operation(summary = "Evaluate a filter on root node to get matched elements")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of matched elements")})
@@ -2336,7 +2353,7 @@ public class StudyController {
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result")
     @Operation(summary = "Get pcc min result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min result"),
         @ApiResponse(responseCode = "204", description = "No pcc min has been done yet"),
         @ApiResponse(responseCode = "404", description = "The pcc min has not been found")})
     public ResponseEntity<String> getPccMinResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
@@ -2375,7 +2392,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/status")
     @Operation(summary = "Get the pcc min status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min status"),
-        @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
+        @ApiResponse(responseCode = "204", description = "No pcc min has been done yet"),
         @ApiResponse(responseCode = "404", description = "The pcc min status has not been found")})
     public ResponseEntity<String> getPccMinStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                   @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,

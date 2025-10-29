@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -184,7 +185,7 @@ class SpreadsheetConfigCollectionTest {
                     }
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
                 } else if (path.matches("/v1/users/" + NO_PROFILE_USER_ID + "/profile")) {
-                    return new MockResponse(404);
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_DEFAULT_PROFILE_JSON);
                 } else if (path.matches("/v1/users/" + VALID_PROFILE_USER_ID + "/profile")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), USER_PROFILE_VALID_PARAMS_JSON);
                 }
