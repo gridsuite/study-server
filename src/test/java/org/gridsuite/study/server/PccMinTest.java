@@ -43,6 +43,7 @@ import java.util.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import org.springframework.test.web.servlet.MvcResult;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
@@ -157,6 +158,7 @@ class PccMinTest {
             new TypeReference<>() {
             });
     }
+
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
@@ -333,4 +335,21 @@ class PccMinTest {
 
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
     }
+
+    @Test
+    void testComputation() throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+        runPccMin(ids);
+
+        wireMockServer.stubFor(get("/v1/results/" + PCC_MIN_RESULT_UUID)
+            .willReturn(okJson(TestUtils.resourceToString("/pccmin-result.json"))));
+
+        MvcResult mvcResult = mockMvc.perform(get(PCC_MIN_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
+            .andExpect(status().isOk())
+            .andReturn();
+        assertEquals(TestUtils.resourceToString("/pccmin-result.json"), mvcResult.getResponse().getContentAsString());
+
+        wireMockServer.stubFor(get("/v1/results/" + PCC_MIN_RESULT_UUID + "/status")
+            .willReturn(okJson(PCC_MIN_STATUS_JSON)));
+   }
 }
