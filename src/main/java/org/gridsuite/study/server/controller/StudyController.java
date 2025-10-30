@@ -2351,7 +2351,7 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result/paged")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result")
     @Operation(summary = "Get a pcc min result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min result"),
         @ApiResponse(responseCode = "204", description = "No pcc min  has been done yet"),

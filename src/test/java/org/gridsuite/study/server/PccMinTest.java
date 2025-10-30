@@ -344,7 +344,7 @@ class PccMinTest {
 
         //get pages, sorted and filtered results
         UUID stubId = wireMockUtils.stubPagedPccMinResult(PCC_MIN_RESULT_UUID, TestUtils.resourceToString("/pccmin-result-paged.json"));
-        mockMvc.perform(get(PCC_MIN_URL_BASE + "result/paged", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+        mockMvc.perform(get(PCC_MIN_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                 .param("page", "0")
                 .param("size", "20")
                 .param("sort", "id,DESC")
@@ -360,7 +360,7 @@ class PccMinTest {
 
         // results NOT FOUND
         wireMockServer.stubFor(
-            WireMock.get("/v1/pcc-min/results/" + resultUuid + "/paged")
+            WireMock.get("/v1/pcc-min/results/" + resultUuid)
                 .willReturn(WireMock.notFound())
         );
         assertThrows(StudyException.class, () ->
@@ -373,14 +373,14 @@ class PccMinTest {
 
         // No Content result
         wireMockServer.stubFor(
-            WireMock.get("/v1/pcc-min/results/" + resultUuid + "/paged")
+            WireMock.get("/v1/pcc-min/results/" + resultUuid)
                 .willReturn(WireMock.noContent())
         );
         String result = pccMinService.getPccMinResultsPage(params2, null, null, PageRequest.of(0, 20));
         assertNull(result);
 
         wireMockServer.verify(
-            WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/paged"))
+            WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/results/" + resultUuid))
                 .withQueryParam("page", WireMock.equalTo("0"))
                 .withQueryParam("size", WireMock.equalTo("20"))
         );

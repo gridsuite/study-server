@@ -684,7 +684,7 @@ public class WireMockUtils {
     }
 
     public UUID stubPagedPccMinResult(String resultUuid, String responseBody) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/paged"))
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid))
             .withQueryParam("page", WireMock.equalTo("0"))
             .withQueryParam("size", WireMock.equalTo("20"))
             .withQueryParam("sort", WireMock.equalTo("id,DESC"))
@@ -696,7 +696,7 @@ public class WireMockUtils {
 
     public void verifyPccMinPagedGet(UUID stubId, String resultUuid) {
         verifyGetRequest(stubId,
-            "/v1/results/" + resultUuid + "/paged",
+            "/v1/results/" + resultUuid,
             Map.of(
                 "page", WireMock.equalTo("0"),
                 "size", WireMock.equalTo("20"),

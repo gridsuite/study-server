@@ -173,7 +173,7 @@ public class PccMinService extends AbstractComputationService {
         if (resultUuid == null) {
             return null;
         }
-        return UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results" + "/{resultUuid}/paged").buildAndExpand(resultUuid).toUriString();
+        return UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results" + "/{resultUuid}").buildAndExpand(resultUuid).toUriString();
     }
 
     public String getPccMinResultsPage(ResultParameters resultParameters, String filters, String globalFilters, Pageable pageable) {
