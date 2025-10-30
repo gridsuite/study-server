@@ -61,6 +61,7 @@ class PccMinTest {
     private static final UUID CASE_LOADFLOW_UUID = UUID.fromString("11a91c11-2c2d-83bb-b45f-20b83e4ef00c");
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String PCC_MIN_RESULT_UUID = "cf203721-6150-4203-8960-d61d815a9d16";
+    private static final UUID RESULT_NOT_FOUND_UUID = UUID.randomUUID();
     private static final String PCC_MIN_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
     private static final UUID SHORTCIRCUIT_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
     private static final String PCC_MIN_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
@@ -255,6 +256,13 @@ class PccMinTest {
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(PCC_MIN_STATUS_JSON));
 
         wireMockUtils.verifyPccMinStatus(stubStatus, PCC_MIN_RESULT_UUID);
+
+        // test get status with wrong result uuid
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching("/v1/results/" + RESULT_NOT_FOUND_UUID + "/status"))
+            .withQueryParam("resultUuid", equalTo(RESULT_NOT_FOUND_UUID.toString()))
+            .willReturn(WireMock.notFound()
+            ));
+        assertThrows(StudyException.class, () -> pccMinService.getPccMinStatus(RESULT_NOT_FOUND_UUID));
     }
 
     @Test
@@ -350,5 +358,13 @@ class PccMinTest {
 
         wireMockServer.stubFor(get("/v1/results/" + PCC_MIN_RESULT_UUID + "/status")
             .willReturn(okJson(PCC_MIN_STATUS_JSON)));
+
+        // test with wrong result uuid
+        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching("/v1/results/" + RESULT_NOT_FOUND_UUID))
+            .withQueryParam("resultUuid", equalTo(RESULT_NOT_FOUND_UUID.toString()))
+            .willReturn(WireMock.notFound()
+            ));
+        assertThrows(StudyException.class, () -> pccMinService.getPccMinResult(RESULT_NOT_FOUND_UUID));
+
     }
 }
