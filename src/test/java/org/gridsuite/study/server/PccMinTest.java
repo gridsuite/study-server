@@ -159,7 +159,6 @@ class PccMinTest {
             });
     }
 
-
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder()
@@ -337,7 +336,7 @@ class PccMinTest {
     }
 
     @Test
-    void testComputation() throws Exception {
+    void testResultComputation() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
         runPccMin(ids);
 
@@ -351,5 +350,5 @@ class PccMinTest {
 
         wireMockServer.stubFor(get("/v1/results/" + PCC_MIN_RESULT_UUID + "/status")
             .willReturn(okJson(PCC_MIN_STATUS_JSON)));
-   }
+    }
 }
