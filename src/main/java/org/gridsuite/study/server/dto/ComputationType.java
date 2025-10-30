@@ -31,7 +31,10 @@ public enum ComputationType {
             NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_FAILED),
     STATE_ESTIMATION("State estimation", "stateEstimationResultUuid",
         NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_RESULT,
-        NotificationService.UPDATE_TYPE_STATE_ESTIMATION_FAILED);
+        NotificationService.UPDATE_TYPE_STATE_ESTIMATION_FAILED),
+    PCC_MIN("Pcc min", "pccMinResultUuid",
+        NotificationService.UPDATE_TYPE_PCC_MIN_STATUS, NotificationService.UPDATE_TYPE_PCC_MIN_RESULT,
+        NotificationService.UPDATE_TYPE_PCC_MIN_FAILED);
 
     private final String label; // used for logs
     private final String resultUuidLabel;
