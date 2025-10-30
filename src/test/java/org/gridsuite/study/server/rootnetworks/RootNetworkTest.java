@@ -170,7 +170,7 @@ class RootNetworkTest {
     private VoltageInitService voltageInitService;
     @MockitoBean
     private NetworkService networkService;
-    @MockBean
+    @MockitoBean
     private PccMinService pccMinService;
 
     @BeforeEach
