@@ -153,6 +153,9 @@ class NetworkModificationTreeTest {
     private StateEstimationService stateEstimationService;
 
     @Autowired
+    private PccMinService pccMinService;
+
+    @Autowired
     private SingleLineDiagramService singleLineDiagramService;
 
     @Autowired
@@ -257,6 +260,7 @@ class NetworkModificationTreeTest {
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
+        pccMinService.setPccMinServerBaseUri(baseUrl);
 
         doReturn(baseUrl).when(dynamicSimulationClient).getBaseUri();
         doReturn(baseUrl).when(dynamicSecurityAnalysisClient).getBaseUri();
@@ -1341,6 +1345,7 @@ class NetworkModificationTreeTest {
                 .shortCircuitAnalysisResultUuid(newNode.getShortCircuitAnalysisResultUuid())
                 .oneBusShortCircuitAnalysisResultUuid(newNode.getOneBusShortCircuitAnalysisResultUuid())
                 .stateEstimationResultUuid(newNode.getStateEstimationResultUuid())
+                .pccMinResultUuid(newNode.getPccMinResultUuid())
                 .build()
         );
     }
@@ -1459,6 +1464,7 @@ class NetworkModificationTreeTest {
         assertEquals(expectedModificationNode.getShortCircuitAnalysisResultUuid(), currentModificationNode.getShortCircuitAnalysisResultUuid());
         assertEquals(expectedModificationNode.getOneBusShortCircuitAnalysisResultUuid(), currentModificationNode.getOneBusShortCircuitAnalysisResultUuid());
         assertEquals(expectedModificationNode.getStateEstimationResultUuid(), currentModificationNode.getStateEstimationResultUuid());
+        assertEquals(expectedModificationNode.getPccMinResultUuid(), currentModificationNode.getPccMinResultUuid());
         assertEquals(expectedModificationNode.getNodeBuildStatus(), currentModificationNode.getNodeBuildStatus());
     }
 
@@ -1582,6 +1588,7 @@ class NetworkModificationTreeTest {
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION));
     }
 
@@ -1613,6 +1620,7 @@ class NetworkModificationTreeTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
@@ -1876,6 +1884,8 @@ class NetworkModificationTreeTest {
         //dynamicSecurityAnalysis_status
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         //voltageInit_status
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        //stateEstimation_status
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         //stateEstimation_status
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));

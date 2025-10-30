@@ -811,4 +811,19 @@ public class ConsumerService {
     public Consumer<Message<String>> consumeStateEstimationFailed() {
         return message -> consumeCalculationFailed(message, STATE_ESTIMATION);
     }
+
+    @Bean
+    public Consumer<Message<String>> consumePccMinResult() {
+        return message -> consumeCalculationResult(message, PCC_MIN);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumePccMinStopped() {
+        return message -> consumeCalculationStopped(message, PCC_MIN);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumePccMinFailed() {
+        return message -> consumeCalculationFailed(message, PCC_MIN);
+    }
 }

@@ -2328,6 +2328,29 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/run")
+    @Operation(summary = "run pcc min on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min has started")})
+    public ResponseEntity<Void> runPccMin(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                    @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                          @RequestHeader(HEADER_USER_ID) String userId) {
+
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/stop")
+    @Operation(summary = "stop pcc min on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min has been stopped")})
+    public ResponseEntity<Void> stopPccMin(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                    @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                    @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        rootNetworkNodeInfoService.stopPccMin(studyUuid, nodeUuid, rootNetworkUuid);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/result")
     @Operation(summary = "Get a state estimation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
@@ -2350,6 +2373,18 @@ public class StudyController {
                                                             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String status = rootNetworkNodeInfoService.getStateEstimationStatus(nodeUuid, rootNetworkUuid);
+        return status != null ? ResponseEntity.ok().body(status) : ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/status")
+    @Operation(summary = "Get the pcc min status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min status"),
+        @ApiResponse(responseCode = "204", description = "No pcc min has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The pcc min status has not been found")})
+    public ResponseEntity<String> getPccMinStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                  @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                  @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String status = rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid);
         return status != null ? ResponseEntity.ok().body(status) : ResponseEntity.noContent().build();
     }
 

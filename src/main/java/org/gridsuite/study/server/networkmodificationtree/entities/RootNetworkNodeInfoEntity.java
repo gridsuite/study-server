@@ -99,6 +99,9 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "stateEstimationResultUuid")
     private UUID stateEstimationResultUuid;
 
+    @Column(name = "pccMinResultUuid")
+    private UUID pccMinResultUuid;
+
     @Column(name = "blockedNode")
     private Boolean blockedNode;
 
@@ -129,6 +132,7 @@ public class RootNetworkNodeInfoEntity {
             .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)
             .securityAnalysisResultUuid(securityAnalysisResultUuid)
             .stateEstimationResultUuid(stateEstimationResultUuid)
+            .pccMinResultUuid(pccMinResultUuid)
             .sensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid)
             .voltageInitResultUuid(voltageInitResultUuid)
             .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)
