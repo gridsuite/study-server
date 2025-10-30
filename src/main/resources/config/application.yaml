@@ -167,6 +167,8 @@ dynamic-simulation:
 
 server:
   max-http-header-size: 64000
+  compression:
+    enabled: true
 
 gridsuite:
   services:
