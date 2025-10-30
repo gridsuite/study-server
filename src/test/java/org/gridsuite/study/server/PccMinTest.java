@@ -62,6 +62,7 @@ class PccMinTest {
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String PCC_MIN_RESULT_UUID = "cf203721-6150-4203-8960-d61d815a9d16";
     private static final UUID RESULT_NOT_FOUND_UUID = UUID.randomUUID();
+    private static final UUID RESULT_NO_CONTENT_UUID = UUID.randomUUID();
     private static final String PCC_MIN_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
     private static final UUID SHORTCIRCUIT_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
     private static final String PCC_MIN_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
@@ -215,7 +216,7 @@ class PccMinTest {
             .withQueryParam("variantId", equalTo(VARIANT_ID)));
     }
 
-    private void runPccMin(StudyNodeIds ids) throws Exception {
+    private void runPccMinComputation(StudyNodeIds ids) throws Exception {
         UUID stubId = wireMockServer.stubFor(post(urlPathMatching("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
                 .willReturn(okJson(objectMapper.writeValueAsString(PCC_MIN_RESULT_UUID))))
             .getId();
@@ -268,7 +269,7 @@ class PccMinTest {
     @Test
     void testStop() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 2");
-        runPccMin(ids);
+        runPccMinComputation(ids);
 
         UUID stubId = wireMockServer.stubFor(
             put(urlPathMatching("/v1/results/" + PCC_MIN_RESULT_UUID + "/stop.*"))
@@ -315,7 +316,7 @@ class PccMinTest {
     @Test
     void testResultsDeletion() throws Exception {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
-        runPccMin(ids);
+        runPccMinComputation(ids);
 
         assertEquals(1, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
 
@@ -345,9 +346,11 @@ class PccMinTest {
 
     @Test
     void testResultComputation() throws Exception {
+        // create study and run pcc min computation
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
-        runPccMin(ids);
+        runPccMinComputation(ids);
 
+        //get computation results
         wireMockServer.stubFor(get("/v1/results/" + PCC_MIN_RESULT_UUID)
             .willReturn(okJson(TestUtils.resourceToString("/pccmin-result.json"))));
 
@@ -356,9 +359,6 @@ class PccMinTest {
             .andReturn();
         assertEquals(TestUtils.resourceToString("/pccmin-result.json"), mvcResult.getResponse().getContentAsString());
 
-        wireMockServer.stubFor(get("/v1/results/" + PCC_MIN_RESULT_UUID + "/status")
-            .willReturn(okJson(PCC_MIN_STATUS_JSON)));
-
         // test with wrong result uuid
         wireMockServer.stubFor(WireMock.get(WireMock.urlMatching("/v1/results/" + RESULT_NOT_FOUND_UUID))
             .withQueryParam("resultUuid", equalTo(RESULT_NOT_FOUND_UUID.toString()))
@@ -366,5 +366,11 @@ class PccMinTest {
             ));
         assertThrows(StudyException.class, () -> pccMinService.getPccMinResult(RESULT_NOT_FOUND_UUID));
 
+        // no content results
+        wireMockServer.stubFor(WireMock.get("/v1/results/" + RESULT_NO_CONTENT_UUID)
+            .willReturn(WireMock.aResponse().withStatus(204)));
+
+        mockMvc.perform(get(PCC_MIN_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, RESULT_NO_CONTENT_UUID))
+            .andExpect(status().isNoContent());
     }
 }
