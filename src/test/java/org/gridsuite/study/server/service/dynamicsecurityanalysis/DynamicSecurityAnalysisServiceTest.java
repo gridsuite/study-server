@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service.dynamicsecurityanalysis;
 
+import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.*;
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @SpringBootTest
+@ContextConfigurationWithTestChannel
 @DisableElasticsearch
 class DynamicSecurityAnalysisServiceTest {
     private static final String VARIANT_1_ID = "variant_1";

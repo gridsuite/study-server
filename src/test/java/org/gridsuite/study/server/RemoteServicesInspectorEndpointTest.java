@@ -32,6 +32,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -51,9 +52,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableElasticsearch
 @DisableCloudStream
 @DisableJpa
-@SpringBootTest(classes = StudyApplication.class)
+@SpringBootTest(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})
 @ExtendWith({MockitoExtension.class})
 @TestMethodOrder(MethodOrderer.MethodName.class)
+@ContextConfigurationWithTestChannel
 class RemoteServicesInspectorEndpointTest {
     @Autowired
     private MockMvc mockMvc;

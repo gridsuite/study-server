@@ -36,6 +36,7 @@ import static org.mockito.Mockito.*;
  */
 @SpringBootTest
 @DisableElasticsearch
+@ContextConfigurationWithTestChannel
 class WorkflowTest {
 
     UUID studyUuid = UUID.randomUUID();

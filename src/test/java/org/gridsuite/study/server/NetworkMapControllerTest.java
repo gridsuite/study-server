@@ -5,6 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest
+@ContextConfigurationWithTestChannel
 public class NetworkMapControllerTest {
 
     @MockitoBean

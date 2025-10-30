@@ -52,6 +52,7 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(SoftAssertionsExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ContextConfigurationWithTestChannel
 class EquipmentInfosServiceTests implements WithAssertions {
 
     private static final String TEST_FILE = "testCase.xiidm";

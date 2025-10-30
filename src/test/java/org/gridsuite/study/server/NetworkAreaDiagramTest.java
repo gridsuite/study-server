@@ -41,6 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ContextConfigurationWithTestChannel
 class NetworkAreaDiagramTest {
 
     @Autowired

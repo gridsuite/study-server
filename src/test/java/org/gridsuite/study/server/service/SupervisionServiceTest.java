@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
+import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.*;
  * @author Antoine Bouhours <antoine.bouhours at rte-france.com>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ContextConfigurationWithTestChannel
 @DisableElasticsearch
 class SupervisionServiceTest {
 

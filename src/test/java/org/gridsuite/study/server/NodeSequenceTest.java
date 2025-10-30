@@ -43,6 +43,7 @@ import static org.mockito.Mockito.verify;
  */
 @SpringBootTest
 @DisableElasticsearch
+@ContextConfigurationWithTestChannel
 class NodeSequenceTest {
     UUID studyUuid;
     UUID networkUuid = UUID.randomUUID();

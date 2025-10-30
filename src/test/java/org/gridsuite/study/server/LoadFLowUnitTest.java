@@ -38,6 +38,7 @@ import static org.mockito.Mockito.*;
  */
 @SpringBootTest
 @DisableElasticsearch
+@ContextConfigurationWithTestChannel
 class LoadFLowUnitTest {
 
     @Autowired

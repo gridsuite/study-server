@@ -10,6 +10,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.timeseries.*;
+
+import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.ReportInfos;
@@ -54,6 +56,7 @@ import static org.mockito.BDDMockito.given;
  */
 @SpringBootTest
 @DisableElasticsearch
+@ContextConfigurationWithTestChannel
 class DynamicSimulationServiceTest {
 
     private static final String MAPPING_NAME_01 = "_01";

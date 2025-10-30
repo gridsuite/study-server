@@ -36,6 +36,7 @@ import static org.mockito.Mockito.when;
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ContextConfigurationWithTestChannel
 class StudyServiceSearchTests {
 
     private static final UUID NETWORK_UUID = UUID.randomUUID();
