@@ -333,4 +333,24 @@ class PccMinTest {
 
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
     }
+
+    @Test
+    void testGetPccMinResults() throws Exception {
+        // --- create study and node ---
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+        runPccMin(ids);
+
+        //get pages, sorted and filtered results
+        UUID stubr = wireMockUtils.stubPagedPccMinResult(PCC_MIN_RESULT_UUID, TestUtils.resourceToString("/pccmin-result-paged.json"));
+        mockMvc.perform(get(PCC_MIN_URL_BASE + "result/paged", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                .param("page", "0")
+                .param("size", "20")
+                .param("sort", "id,DESC")
+                .param("filters", "fakeFilters")
+                .param("globalFilters", "fakeGlobalFilters"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(TestUtils.resourceToString("/pccmin-result-paged.json")));
+
+        wireMockUtils.verifyPccMinPagedGet(stubr, PCC_MIN_RESULT_UUID);
+    }
 }

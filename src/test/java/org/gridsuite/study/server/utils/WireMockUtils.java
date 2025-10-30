@@ -682,4 +682,27 @@ public class WireMockUtils {
     public void verifyPccMinStatus(UUID stubUuid, String resultUuid) {
         verifyGetRequest(stubUuid, "/v1/results/" + resultUuid + "/status", Map.of());
     }
+
+    public UUID stubPagedPccMinResult(String resultUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/paged"))
+            .withQueryParam("page", WireMock.equalTo("0"))
+            .withQueryParam("size", WireMock.equalTo("20"))
+            .withQueryParam("sort", WireMock.equalTo("id,DESC"))
+            .withQueryParam("filters", WireMock.equalTo("fakeFilters"))
+            .withQueryParam("globalFilters", WireMock.equalTo("fakeGlobalFilters"))
+            .willReturn(WireMock.okJson(responseBody))
+        ).getId();
+    }
+
+    public void verifyPccMinPagedGet(UUID stubId, String resultUuid) {
+        verifyGetRequest(stubId,
+            "/v1/results/" + resultUuid + "/paged",
+            Map.of(
+                "page", WireMock.equalTo("0"),
+                "size", WireMock.equalTo("20"),
+                "sort", WireMock.equalTo("id,DESC"),
+                "filters", WireMock.equalTo("fakeFilters"),
+                "globalFilters", WireMock.equalTo("fakeGlobalFilters")
+            ));
+    }
 }

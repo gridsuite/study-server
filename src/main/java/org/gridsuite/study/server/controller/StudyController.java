@@ -2351,15 +2351,18 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result")
-    @Operation(summary = "Get pcc min result on study")
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result/paged")
+    @Operation(summary = "Get a pcc min result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min result"),
-        @ApiResponse(responseCode = "204", description = "No pcc min has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The pcc min has not been found")})
+        @ApiResponse(responseCode = "204", description = "No pcc min  has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The pcc min  has not been found")})
     public ResponseEntity<String> getPccMinResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                           @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getPccMinResult(nodeUuid, rootNetworkUuid);
+                                                  @Parameter(description = "rootNetwork Uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                  @Parameter(description = "node Uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                  @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                                  @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
+                                                  Pageable pageable) {
+        String result = rootNetworkNodeInfoService.getPccMinResult(nodeUuid, rootNetworkUuid, filters, globalFilters, pageable);
         return result != null ? ResponseEntity.ok().body(result) :
             ResponseEntity.noContent().build();
     }

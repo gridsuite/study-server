@@ -14,6 +14,8 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.utils.ResultParameters;
+import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -26,11 +28,13 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_NOT_FOUND;
@@ -129,29 +133,6 @@ public class PccMinService extends AbstractComputationService {
         }
     }
 
-    public String getPccMinResult(UUID resultUuid) {
-        String result;
-
-        if (resultUuid == null) {
-            return null;
-        }
-
-        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/{resultUuid}");
-        String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
-
-        try {
-            result = restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(PCC_MIN_NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-
-        return result;
-    }
-
     public void deletePccMinResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + PCC_MIN_API_VERSION + "/results", restTemplate, pccMinServerBaseUri);
     }
@@ -186,5 +167,45 @@ public class PccMinService extends AbstractComputationService {
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
         return List.of();
+    }
+
+    private String gePccMinResultsPageResourcePath(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
+        return UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results" + "/{resultUuid}/paged").buildAndExpand(resultUuid).toUriString();
+    }
+
+    public String getPccMinResultsPage(ResultParameters resultParameters, String filters, String globalFilters, Pageable pageable) {
+        String resultsPath = gePccMinResultsPageResourcePath(resultParameters.getResultUuid());
+        if (resultsPath == null) {
+            return null;
+        }
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(pccMinServerBaseUri + resultsPath);
+        if (filters != null && !filters.isEmpty()) {
+            builder.queryParam("filters", filters);
+        }
+        if (globalFilters != null && !globalFilters.isEmpty()) {
+            builder.queryParam("globalFilters", URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
+            builder.queryParam(QUERY_PARAM_NETWORK_UUID, resultParameters.getNetworkUuid());
+            if (!StringUtils.isBlank(resultParameters.getVariantId())) {
+                builder.queryParam(QUERY_PARAM_VARIANT_ID, resultParameters.getVariantId());
+            }
+        }
+        StudyUtils.addPageableToQueryParams(builder, pageable);
+        return getPccMinResource(builder.build().encode().toUri());
+    }
+
+    public String getPccMinResource(URI resourcePath) {
+        String result;
+        try {
+            result = restTemplate.getForObject(resourcePath, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(PCC_MIN_NOT_FOUND);
+            }
+            throw e;
+        }
+        return result;
     }
 }
