@@ -45,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @SpringBootTest
 @AutoConfigureMockMvc
 @DisableElasticsearch
+@ContextConfigurationWithTestChannel
 class DiagramGridLayoutTest {
 
     @Autowired

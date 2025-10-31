@@ -13,7 +13,11 @@ import org.gridsuite.study.server.repository.dynamicsimulation.EventRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.mockito.Mockito;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 
 import java.lang.annotation.*;
@@ -21,15 +25,56 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@MockBean(StudyRepository.class)
-@MockBean(StudyCreationRequestRepository.class)
-@MockBean(EventRepository.class)
-@MockBean(NetworkModificationNodeInfoRepository.class)
-@MockBean(NodeRepository.class)
-@MockBean(RootNodeInfoRepository.class)
-@MockBean(value = EntityManagerFactory.class, name = "jpaSharedEM_entityManagerFactory") //because of SpringBoot @EnableJpaRepositories...
-//TODO found how to disable @EnableJpaRepositories when in SpringBootTest
 @TestPropertySource(properties = DisableJpa.DISABLE_PROPERTY_NAME + "=true")
+@Import(DisableJpa.MockConfig.class)
 public @interface DisableJpa {
-    String DISABLE_PROPERTY_NAME = "test.disable.data-jpa";
+    String DISABLE_PROPERTY_NAME = "disablejpa";
+
+    @TestConfiguration
+    class MockConfig {
+        @Bean
+        public StudyRepository studyRepository() {
+            return Mockito.mock(StudyRepository.class);
+        }
+
+        @Bean
+        public StudyCreationRequestRepository studyCreationRequestRepository() {
+            return Mockito.mock(StudyCreationRequestRepository.class);
+        }
+
+        @Bean
+        public EventRepository eventRepository() {
+            return Mockito.mock(EventRepository.class);
+        }
+
+        @Bean
+        public NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository() {
+            return Mockito.mock(NetworkModificationNodeInfoRepository.class);
+        }
+
+        @Bean
+        public NodeRepository nodeRepository() {
+            return Mockito.mock(NodeRepository.class);
+        }
+
+        @Bean
+        public RootNodeInfoRepository rootNodeInfoRepository() {
+            return Mockito.mock(RootNodeInfoRepository.class);
+        }
+
+        @Bean
+        public RootNetworkRepository rootNetworkRepository() {
+            return Mockito.mock(RootNetworkRepository.class);
+        }
+
+        @Bean
+        public EntityManagerFactory entityManagerFactory() {
+            return Mockito.mock(EntityManagerFactory.class);
+        }
+
+        @Bean(name = "jpaSharedEM_entityManagerFactory")
+        public EntityManagerFactory jpaSharedEntityManagerFactory() {
+            return entityManagerFactory();
+        }
+    }
 }

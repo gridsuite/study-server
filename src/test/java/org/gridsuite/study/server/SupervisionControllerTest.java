@@ -36,8 +36,9 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -58,7 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 
 @AutoConfigureMockMvc
-@SpringBootTest(classes = {StudyApplication.class})
+@SpringBootTest(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})
 class SupervisionControllerTest {
 
     @Autowired
@@ -72,7 +73,7 @@ class SupervisionControllerTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
 
-    @MockBean
+    @MockitoBean
     private NetworkConversionService networkConversionService;
 
     @Autowired
@@ -84,10 +85,10 @@ class SupervisionControllerTest {
     @Autowired
     private ObjectMapper mapper;
 
-    @SpyBean
+    @MockitoSpyBean
     private RootNetworkService rootNetworkService;
 
-    @SpyBean
+    @MockitoSpyBean
     private StudyService studyService;
 
     @Autowired
@@ -96,7 +97,7 @@ class SupervisionControllerTest {
     @Autowired
     private TestUtils studyTestUtils;
 
-    @MockBean
+    @MockitoBean
     private NetworkService networkService;
 
     @Autowired
