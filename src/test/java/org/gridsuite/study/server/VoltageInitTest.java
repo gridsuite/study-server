@@ -138,11 +138,11 @@ class VoltageInitTest {
                     .priority(0)
                     .lowVoltageLimit(24.)
                     .highVoltageLimit(552.)
-                    .filters(List.of(FilterEquipments.builder().filterId(UUID.fromString("6754396b-3791-4b80-9971-defbf5968fb7")).filterName("testfp").build()))
+                    .filters(List.of(FilterEquipments.builder().filterId(UUID.fromString("6754396b-3791-4b80-9971-defbf5968fb7")).filterName("testfp").isValid(true).build()))
                     .build()))
         .variableQGenerators(
             List.of(
-                FilterEquipments.builder().filterId(UUID.fromString("ff915f2f-578c-4d8c-a267-0135a4323462")).filterName("testf1").build())
+                FilterEquipments.builder().filterId(UUID.fromString("ff915f2f-578c-4d8c-a267-0135a4323462")).filterName("testf1").isValid(true).build())
         )
         .generatorsSelectionType(EquipmentsSelectionType.ALL_EXCEPT)
         .twoWindingsTransformersSelectionType(EquipmentsSelectionType.NONE_EXCEPT)
@@ -156,7 +156,7 @@ class VoltageInitTest {
                     .priority(0)
                     .lowVoltageLimit(24.)
                     .highVoltageLimit(552.)
-                    .filters(List.of(FilterEquipments.builder().filterId(UUID.fromString("6754396b-3791-4b80-9971-defbf5968fb7")).filterName("testfp").build()))
+                    .filters(List.of(FilterEquipments.builder().filterId(UUID.fromString("6754396b-3791-4b80-9971-defbf5968fb7")).filterName("testfp").isValid(true).build()))
                     .build()))
         .build();
 
