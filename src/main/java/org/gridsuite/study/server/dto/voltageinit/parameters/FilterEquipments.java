@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.dto.voltageinit.parameters;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
@@ -29,6 +30,7 @@ public class FilterEquipments {
     private String filterName;
 
     @Schema(description = "flag indicating whether the filter still exists in the filter server")
-    private Boolean isValid;
+    @JsonProperty("isValid")
+    private boolean isValid;
 }
 
