@@ -129,6 +129,29 @@ public class PccMinService extends AbstractComputationService {
         }
     }
 
+    public String getPccMinResult(UUID resultUuid) {
+        String result;
+
+        if (resultUuid == null) {
+            return null;
+        }
+
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/{resultUuid}");
+        String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
+
+        try {
+            result = restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(PCC_MIN_NOT_FOUND);
+            } else {
+                throw e;
+            }
+        }
+
+        return result;
+    }
+
     public void deletePccMinResults(List<UUID> resultsUuids) {
         deleteCalculationResults(resultsUuids, DELIMITER + PCC_MIN_API_VERSION + "/results", restTemplate, pccMinServerBaseUri);
     }

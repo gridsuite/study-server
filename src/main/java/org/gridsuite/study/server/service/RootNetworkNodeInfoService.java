@@ -628,6 +628,12 @@ public class RootNetworkNodeInfoService {
         return stateEstimationService.getStateEstimationResult(resultUuid);
     }
 
+    @Transactional(readOnly = true)
+    public String getPccMinResult(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
+        return pccMinService.getPccMinResult(resultUuid);
+    }
+
     /**************************
      * GET COMPUTATION STATUS *
      **************************/
