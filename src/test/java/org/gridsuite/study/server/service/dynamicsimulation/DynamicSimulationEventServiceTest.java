@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service.dynamicsimulation;
 
+import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventPropertyInfos;
 import org.gridsuite.study.server.repository.dynamicsimulation.EventRepository;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 @SpringBootTest
 @DisableElasticsearch
+@ContextConfigurationWithTestChannel
 class DynamicSimulationEventServiceTest {
 
     private static final String NODE_UUID_STRING = "00000000-0000-0000-0000-000000000000";

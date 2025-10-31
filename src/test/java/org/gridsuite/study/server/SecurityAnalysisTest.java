@@ -503,28 +503,28 @@ class SecurityAnalysisTest {
                 status().isOk(),
                 content().string(SECURITY_ANALYSIS_N_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(String.format("/v1/results/%s/n-result\\?page=.*size=.*filters=.*globalFilters=.*sort=.*", resultUuid))));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/%s/n-result\\?page=.*size=.*filters=.*globalFilters=.*sort=.*".formatted(resultUuid))));
 
         // get NMK_CONTINGENCIES security analysis result
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&globalFilters=random_globalfilters&sort=random_sort", studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_CONTINGENCIES)).andExpectAll(
             status().isOk(),
             content().string(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(String.format("/v1/results/%s/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*globalFilters=.*sort=.*", resultUuid))));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/%s/nmk-contingencies-result/paged\\?page=.*size=.*filters=.*globalFilters=.*sort=.*".formatted(resultUuid))));
 
         // get NMK_CONSTRAINTS security analysis result
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&globalFilters=random_globalfilters&sort=random_sort", studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_LIMIT_VIOLATIONS)).andExpectAll(
             status().isOk(),
             content().string(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(String.format("/v1/results/%s/nmk-constraints-result/paged\\?page=.*size=.*filters=.*globalFilters=.*sort=.*", resultUuid))));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/%s/nmk-constraints-result/paged\\?page=.*size=.*filters=.*globalFilters=.*sort=.*".formatted(resultUuid))));
 
         // get security analysis status
         MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/status", studyUuid, rootNetworkUuid, nodeUuid)).andExpectAll(
                 status().isOk()).andReturn();
         assertEquals("CONVERGED", result.getResponse().getContentAsString());
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/results/%s/status", resultUuid)));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/results/%s/status".formatted(resultUuid)));
 
         // stop security analysis
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/stop", studyUuid, rootNetworkUuid, nodeUuid).header("userId", "userId")).andExpect(status().isOk());
@@ -725,7 +725,7 @@ class SecurityAnalysisTest {
         assertArrayEquals(SECURITY_ANALYSIS_N_RESULT_CSV_ZIPPED, byteArrayResult);
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
-            r.getPath().matches(String.format("/v1/results/%s/n-result/csv", SECURITY_ANALYSIS_RESULT_UUID))
+            r.getPath().matches("/v1/results/%s/n-result/csv".formatted(SECURITY_ANALYSIS_RESULT_UUID))
                 && CSV_TRANSLATION_DTO_STRING.equals(r.getBody())
         ));
 
@@ -736,7 +736,7 @@ class SecurityAnalysisTest {
         assertArrayEquals(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_CSV_ZIPPED, byteArrayResult);
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
-            r.getPath().matches(String.format("/v1/results/%s/nmk-contingencies-result/csv", SECURITY_ANALYSIS_RESULT_UUID))
+            r.getPath().matches("/v1/results/%s/nmk-contingencies-result/csv".formatted(SECURITY_ANALYSIS_RESULT_UUID))
                 && CSV_TRANSLATION_DTO_STRING.equals(r.getBody())
         ));
 
@@ -747,7 +747,7 @@ class SecurityAnalysisTest {
         assertArrayEquals(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED, byteArrayResult);
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
-            r.getPath().matches(String.format("/v1/results/%s/nmk-constraints-result/csv", SECURITY_ANALYSIS_RESULT_UUID))
+            r.getPath().matches("/v1/results/%s/nmk-constraints-result/csv".formatted(SECURITY_ANALYSIS_RESULT_UUID))
                 && CSV_TRANSLATION_DTO_STRING.equals(r.getBody())
         ));
     }
@@ -779,7 +779,7 @@ class SecurityAnalysisTest {
             status().isNotFound());
 
         assertTrue(TestUtils.getRequestsWithBodyDone(1, server).stream().anyMatch(r ->
-            r.getPath().matches(String.format("/v1/results/%s/n-result/csv", SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID))
+            r.getPath().matches("/v1/results/%s/n-result/csv".formatted(SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID))
                 && CSV_TRANSLATION_DTO_STRING.equals(r.getBody())
         ));
     }
