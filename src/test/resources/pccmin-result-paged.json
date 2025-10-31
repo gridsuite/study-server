@@ -1,0 +1,38 @@
+{
+  "content": [
+    {
+      "singlePccMinResultUuid": "908c51a6-f41a-4dc9-8c0d-150e99400602",
+      "busId": "1ARGOP7_0",
+      "pccMinTri": 999999.0,
+      "iccMinTri": 999999.0,
+      "limitingEquipment": "M.NIC.TG1",
+      "r": 999999.0,
+      "x": 999999.0
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 25,
+    "sort": {
+      "sorted": true,
+      "empty": false,
+      "unsorted": false
+    },
+    "offset": 0,
+    "paged": true,
+    "unpaged": false
+  },
+  "last": false,
+  "totalElements": 800,
+  "totalPages": 32,
+  "first": true,
+  "size": 25,
+  "number": 0,
+  "sort": {
+    "sorted": true,
+    "empty": false,
+    "unsorted": false
+  },
+  "numberOfElements": 25,
+  "empty": false
+}

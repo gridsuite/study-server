@@ -22,6 +22,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -32,6 +33,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
@@ -332,5 +334,55 @@ class PccMinTest {
             .withQueryParam("resultsUuids", matching(".*")));
 
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
+    }
+
+    @Test
+    void testGetPccMinResults() throws Exception {
+        // --- create study and node ---
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+        runPccMin(ids);
+
+        //get pages, sorted and filtered results
+        UUID stubId = wireMockUtils.stubPagedPccMinResult(PCC_MIN_RESULT_UUID, TestUtils.resourceToString("/pccmin-result-paged.json"));
+        mockMvc.perform(get(PCC_MIN_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                .param("page", "0")
+                .param("size", "20")
+                .param("sort", "id,DESC")
+                .param("filters", "fakeFilters")
+                .param("globalFilters", "fakeGlobalFilters"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(TestUtils.resourceToString("/pccmin-result-paged.json")));
+
+        wireMockUtils.verifyPccMinPagedGet(stubId, PCC_MIN_RESULT_UUID);
+
+        UUID resultUuid = UUID.randomUUID();
+        ResultParameters params = new ResultParameters(UUID.randomUUID(), UUID.randomUUID(), "variantId", UUID.randomUUID(), resultUuid);
+
+        // results NOT FOUND
+        wireMockServer.stubFor(
+            WireMock.get("/v1/pcc-min/results/" + resultUuid)
+                .willReturn(WireMock.notFound())
+        );
+        assertThrows(StudyException.class, () ->
+            pccMinService.getPccMinResultsPage(params, null, null, PageRequest.of(0, 20))
+        );
+
+        ResultParameters params2 = new ResultParameters(
+            UUID.randomUUID(), UUID.randomUUID(), "variantId", UUID.randomUUID(), null
+        );
+
+        // No Content result
+        wireMockServer.stubFor(
+            WireMock.get("/v1/pcc-min/results/" + resultUuid)
+                .willReturn(WireMock.noContent())
+        );
+        String result = pccMinService.getPccMinResultsPage(params2, null, null, PageRequest.of(0, 20));
+        assertNull(result);
+
+        wireMockServer.verify(
+            WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/results/" + resultUuid))
+                .withQueryParam("page", WireMock.equalTo("0"))
+                .withQueryParam("size", WireMock.equalTo("20"))
+        );
     }
 }
