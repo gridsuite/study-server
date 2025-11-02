@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service.dynamicsecurityanalysis;
 
+import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
@@ -13,7 +14,7 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.*;
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @SpringBootTest
+@ContextConfigurationWithTestChannel
 @DisableElasticsearch
 class DynamicSecurityAnalysisServiceTest {
     private static final String VARIANT_1_ID = "variant_1";
@@ -50,7 +52,7 @@ class DynamicSecurityAnalysisServiceTest {
     // running node
     private static final UUID RESULT_UUID_RUNNING = UUID.randomUUID();
 
-    @MockBean
+    @MockitoBean
     DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
     @Autowired
     private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;

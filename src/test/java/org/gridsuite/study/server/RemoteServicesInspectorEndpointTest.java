@@ -32,8 +32,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.HashMap;
@@ -51,14 +52,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableElasticsearch
 @DisableCloudStream
 @DisableJpa
-@MockBean(NetworkModificationTreeService.class) //strange error during bean initialization
-@MockBean(RootNetworkService.class)
-@MockBean(RootNetworkRepository.class)
-@MockBean(RootNetworkNodeInfoRepository.class)
-@MockBean(RootNetworkRequestRepository.class)
-@SpringBootTest(classes = StudyApplication.class)
+@SpringBootTest(classes = {StudyApplication.class, TestChannelBinderConfiguration.class})
 @ExtendWith({MockitoExtension.class})
 @TestMethodOrder(MethodOrderer.MethodName.class)
+@ContextConfigurationWithTestChannel
 class RemoteServicesInspectorEndpointTest {
     @Autowired
     private MockMvc mockMvc;
@@ -66,8 +63,23 @@ class RemoteServicesInspectorEndpointTest {
     @Autowired
     private RemoteServicesProperties remoteServicesProperties;
 
-    @MockBean
+    @MockitoBean
     private RemoteServicesInspector remoteServicesInspector;
+
+    @MockitoBean
+    private NetworkModificationTreeService networkModificationTreeService;
+
+    @MockitoBean
+    private RootNetworkService rootNetworkService;
+
+    @MockitoBean
+    private RootNetworkRepository rootNetworkRepository;
+
+    @MockitoBean
+    private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+
+    @MockitoBean
+    private RootNetworkRequestRepository rootNetworkRequestRepository;
 
     @Test
     void testActuatorHealthUp() throws Exception {
