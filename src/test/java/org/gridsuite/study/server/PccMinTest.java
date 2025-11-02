@@ -31,13 +31,13 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.*;
@@ -83,7 +83,7 @@ class PccMinTest {
     private ObjectMapper objectMapper;
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
-    @SpyBean
+    @MockitoSpyBean
     private PccMinService pccMinService;
     @Autowired
     private StudyRepository studyRepository;
@@ -363,8 +363,9 @@ class PccMinTest {
             WireMock.get("/v1/pcc-min/results/" + resultUuid)
                 .willReturn(WireMock.notFound())
         );
+        PageRequest pageRequest = PageRequest.of(0, 20);
         assertThrows(StudyException.class, () ->
-            pccMinService.getPccMinResultsPage(params, null, null, PageRequest.of(0, 20))
+            pccMinService.getPccMinResultsPage(params, null, null, pageRequest)
         );
 
         ResultParameters params2 = new ResultParameters(
