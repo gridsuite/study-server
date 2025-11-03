@@ -18,11 +18,11 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,6 +36,7 @@ import static org.mockito.Mockito.*;
  */
 @SpringBootTest
 @DisableElasticsearch
+@ContextConfigurationWithTestChannel
 class WorkflowTest {
 
     UUID studyUuid = UUID.randomUUID();
@@ -48,11 +49,11 @@ class WorkflowTest {
     ConsumerService consumerService;
     @Autowired
     private ObjectMapper objectMapper;
-    @MockBean
+    @MockitoBean
     private NetworkModificationTreeService networkModificationTreeService;
-    @MockBean
+    @MockitoBean
     private StudyService studyService;
-    @MockBean
+    @MockitoBean
     private NotificationService notificationService;
 
     @Test

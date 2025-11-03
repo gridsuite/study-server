@@ -21,7 +21,7 @@ import java.util.Map;
 public class EmbeddedElasticsearch {
 
     private static final String ES_DOCKER_IMAGE_NAME = "docker.elastic.co/elasticsearch/elasticsearch";
-    private static final String ES_DOCKER_IMAGE_VERSION = "8.7.1";
+    private static final String ES_DOCKER_IMAGE_VERSION = "8.15.5";
 
     private static ElasticsearchContainer elasticsearchContainer;
 
@@ -31,7 +31,7 @@ public class EmbeddedElasticsearch {
             return;
         }
 
-        elasticsearchContainer = new ElasticsearchContainer(String.format("%s:%s", ES_DOCKER_IMAGE_NAME, ES_DOCKER_IMAGE_VERSION));
+        elasticsearchContainer = new ElasticsearchContainer("%s:%s".formatted(ES_DOCKER_IMAGE_NAME, ES_DOCKER_IMAGE_VERSION));
         Map<String, String> envMap = elasticsearchContainer.getEnvMap();
         envMap.put("discovery.type", "single-node");
         envMap.put("LOGSPOUT", "ignore");
