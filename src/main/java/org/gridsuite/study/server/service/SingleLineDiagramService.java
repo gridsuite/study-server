@@ -16,12 +16,17 @@ import org.gridsuite.study.server.dto.DiagramParameters;
 import org.gridsuite.study.server.dto.SvgGenerationMetadata;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
 import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
+import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.dto.BaseVoltagesConfigInfos;
+import org.gridsuite.study.server.dto.SldRequestParameters;
+import org.gridsuite.study.server.dto.CurrentLimitViolationInfos;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -90,6 +95,7 @@ public class SingleLineDiagramService {
         HttpEntity<SvgGenerationMetadata> httpEntity = new HttpEntity<>(svgGenerationMetadata, headers);
 
         return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, byte[].class);
+
     }
 
     public String generateVoltageLevelSvgAndMetadata(UUID networkUuid, String variantId, String voltageLevelId, DiagramParameters diagramParameters, SvgGenerationMetadata svgGenerationMetadata) {
