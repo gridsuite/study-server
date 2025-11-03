@@ -383,7 +383,8 @@ public class StudyController {
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
             @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
-            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
+            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
+            @RequestBody(required = false) BaseVoltagesConfigInfos baseVoltagesConfig) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
                 .labelCentered(centerLabel)
@@ -397,7 +398,8 @@ public class StudyController {
                 voltageLevelId,
                 diagramParameters,
                 nodeUuid,
-                rootNetworkUuid);
+                rootNetworkUuid,
+                baseVoltagesConfig);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -417,7 +419,8 @@ public class StudyController {
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
             @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
-            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
+            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
+            @RequestBody(required = false) BaseVoltagesConfigInfos baseVoltagesConfig) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
                 .labelCentered(centerLabel)
@@ -431,7 +434,8 @@ public class StudyController {
                 voltageLevelId,
                 diagramParameters,
                 nodeUuid,
-                rootNetworkUuid);
+                rootNetworkUuid,
+                baseVoltagesConfig);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1181,7 +1185,8 @@ public class StudyController {
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
+            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
+            @RequestBody(required = false) BaseVoltagesConfigInfos baseVoltagesConfig) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
                 .labelCentered(centerLabel)
@@ -1191,7 +1196,7 @@ public class StudyController {
                 .language(language)
                 .build();
         byte[] result = studyService.generateSubstationSvg(substationId,
-                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid);
+                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid, baseVoltagesConfig);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -1211,7 +1216,8 @@ public class StudyController {
             @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
+            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
+            @RequestBody(required = false) BaseVoltagesConfigInfos baseVoltagesConfig) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
                 .labelCentered(centerLabel)
@@ -1225,7 +1231,8 @@ public class StudyController {
                 diagramParameters,
                 substationLayout,
                 nodeUuid,
-                rootNetworkUuid);
+                rootNetworkUuid,
+                baseVoltagesConfig);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
