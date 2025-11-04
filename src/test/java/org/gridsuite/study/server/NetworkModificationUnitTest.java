@@ -38,13 +38,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
@@ -79,13 +79,13 @@ class NetworkModificationUnitTest {
     @Autowired
     private StudyController studyController;
 
-    @MockBean
+    @MockitoBean
     private NetworkService networkService;
-    @MockBean
+    @MockitoBean
     private RestTemplate restTemplate;
-    @SpyBean
+    @MockitoSpyBean
     private RootNetworkService rootNetworkService;
-    @SpyBean
+    @MockitoSpyBean
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     private static final String CASE_LOADFLOW_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
@@ -151,7 +151,7 @@ class NetworkModificationUnitTest {
         study.addRootNetwork(firstRootNetworkEntity);
         studyRepository.save(study);
         studyUuid = study.getId();
-        NodeEntity rootNode = insertRootNode(study, UUID.randomUUID());
+        NodeEntity rootNode = insertRootNode(study);
         NodeEntity node1 = insertNode(study, node1Uuid, NetworkModificationNodeType.SECURITY, VARIANT_1, REPORT_UUID_1, rootNode, firstRootNetworkEntity, BuildStatus.BUILT);
         NodeEntity node2 = insertNode(study, node2Uuid, NetworkModificationNodeType.SECURITY, VARIANT_2, REPORT_UUID_2, node1, firstRootNetworkEntity, BuildStatus.BUILT);
         NodeEntity node3 = insertNode(study, node3Uuid, NetworkModificationNodeType.SECURITY, VARIANT_3, REPORT_UUID_3, node1, firstRootNetworkEntity, BuildStatus.NOT_BUILT);
@@ -316,6 +316,7 @@ class NetworkModificationUnitTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
     }
 
     private StudyEntity insertStudy() {
@@ -341,8 +342,8 @@ class NetworkModificationUnitTest {
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
     }
 
-    private NodeEntity insertRootNode(StudyEntity study, UUID nodeId) {
-        NodeEntity node = nodeRepository.save(new NodeEntity(nodeId, null, NodeType.ROOT, study, false, null));
+    private NodeEntity insertRootNode(StudyEntity study) {
+        NodeEntity node = nodeRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null));
         RootNodeInfoEntity rootNodeInfo = new RootNodeInfoEntity();
         rootNodeInfo.setIdNode(node.getIdNode());
         rootNodeInfoRepository.save(rootNodeInfo);

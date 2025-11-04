@@ -50,8 +50,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpHeaders;
@@ -61,6 +59,8 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -170,11 +170,11 @@ class LoadFlowTest {
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     @Autowired
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    @SpyBean
+    @MockitoSpyBean
     private StudyService studyService;
-    @MockBean
+    @MockitoBean
     private NetworkModificationService networkModificationService;
-    @MockBean
+    @MockitoBean
     private NetworkService networkService;
     @Autowired
     private TestUtils studyTestUtils;
@@ -1078,6 +1078,7 @@ class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, UPDATE_TYPE_PCC_MIN_STATUS);
     }
 
     private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid) {

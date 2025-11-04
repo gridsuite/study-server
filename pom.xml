@@ -42,8 +42,7 @@
     </developers>
 
     <properties>
-
-        <gridsuite-dependencies.version>43.0.0</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>43.2.0</gridsuite-dependencies.version>
         <gridsuite-filter.version>1.12.0</gridsuite-filter.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
         <mockwebserver3.version>5.0.0-alpha.14</mockwebserver3.version>

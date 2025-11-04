@@ -21,8 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,12 +38,13 @@ import static org.mockito.Mockito.*;
  */
 @SpringBootTest
 @DisableElasticsearch
+@ContextConfigurationWithTestChannel
 class LoadFLowUnitTest {
 
     @Autowired
     private StudyController controller;
 
-    @SpyBean
+    @MockitoSpyBean
     private StudyService studyService;
 
     UUID studyUuid = UUID.randomUUID();
@@ -54,26 +55,26 @@ class LoadFLowUnitTest {
 
     UUID loadflowResultUuid = UUID.randomUUID();
 
-    @MockBean
+    @MockitoBean
     RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    @MockBean
+    @MockitoBean
     private NetworkModificationTreeService networkModificationTreeService;
-    @MockBean
+    @MockitoBean
     private RootNetworkService rootNetworkService;
-    @MockBean
+    @MockitoBean
     private NetworkModificationService networkModificationService;
-    @MockBean
+    @MockitoBean
     private LoadFlowService loadFlowService;
-    @MockBean
+    @MockitoBean
     private NetworkService networkService;
-    @MockBean
+    @MockitoBean
     private UserAdminService userAdminService;
-    @MockBean
+    @MockitoBean
     private NotificationService notificationService;
-    @MockBean
+    @MockitoBean
     StudyRepository studyRepository;
 
-    @SpyBean
+    @MockitoSpyBean
     private StudyServerExecutionService studyServerExecutionService;
 
     @BeforeEach
@@ -170,7 +171,7 @@ class LoadFLowUnitTest {
         // node invalidation
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters);
         verify(networkModificationService, times(1)).deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), networkUuid);
-        verify(notificationService, times(8)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
+        verify(notificationService, times(9)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
 
         // node build
         ArgumentCaptor<RerunLoadFlowInfos> rerunLoadFlowWorkflowInfosArgumentCaptor = ArgumentCaptor.forClass(RerunLoadFlowInfos.class);

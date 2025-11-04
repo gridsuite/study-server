@@ -43,10 +43,10 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.GenericMessage;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -97,6 +97,7 @@ class RootNetworkTest {
     private static final UUID SHORT_CIRCUIT_ANALYSIS_RESULT_UUID = UUID.randomUUID();
     private static final UUID ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID = UUID.randomUUID();
     private static final UUID STATE_ESTIMATION_RESULT_UUID = UUID.randomUUID();
+    private static final UUID PCC_MIN_RESULT_UUID = UUID.randomUUID();
     private static final UUID SENSITIVITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
     private static final UUID VOLTAGE_INIT_RESULT_UUID = UUID.randomUUID();
 
@@ -127,7 +128,7 @@ class RootNetworkTest {
     private ObjectMapper objectMapper;
     @Autowired
     private StudyRepository studyRepository;
-    @SpyBean
+    @MockitoSpyBean
     private RootNetworkService rootNetworkService;
     @Autowired
     private RootNetworkRequestRepository rootNetworkRequestRepository;
@@ -140,35 +141,37 @@ class RootNetworkTest {
     @Autowired
     private TestUtils testUtils;
 
-    @SpyBean
+    @MockitoSpyBean
     private StudyService studyService;
 
-    @MockBean
+    @MockitoBean
     private ReportService reportService;
-    @MockBean
+    @MockitoBean
     private EquipmentInfosService equipmentInfosService;
-    @MockBean
+    @MockitoBean
     private NetworkStoreService networkStoreService;
-    @MockBean
+    @MockitoBean
     private CaseService caseService;
-    @MockBean
+    @MockitoBean
     private DynamicSimulationService dynamicSimulationService;
-    @MockBean
+    @MockitoBean
     private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
-    @MockBean
+    @MockitoBean
     private SecurityAnalysisService securityAnalysisService;
-    @MockBean
+    @MockitoBean
     private LoadFlowService loadFlowService;
-    @MockBean
+    @MockitoBean
     private ShortCircuitService shortCircuitService;
-    @MockBean
+    @MockitoBean
     private SensitivityAnalysisService sensitivityAnalysisService;
-    @MockBean
+    @MockitoBean
     private StateEstimationService stateEstimationService;
-    @MockBean
+    @MockitoBean
     private VoltageInitService voltageInitService;
-    @MockBean
+    @MockitoBean
     private NetworkService networkService;
+    @MockitoBean
+    private PccMinService pccMinService;
 
     @BeforeEach
     void setUp() {
@@ -510,6 +513,7 @@ class RootNetworkTest {
                 .shortCircuitAnalysisResultUuid(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
                 .oneBusShortCircuitAnalysisResultUuid(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
                 .stateEstimationResultUuid(STATE_ESTIMATION_RESULT_UUID)
+                .pccMinResultUuid(PCC_MIN_RESULT_UUID)
                 .sensitivityAnalysisResultUuid(SENSITIVITY_ANALYSIS_RESULT_UUID)
                 .voltageInitResultUuid(VOLTAGE_INIT_RESULT_UUID)
             .build());
@@ -547,6 +551,7 @@ class RootNetworkTest {
         verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
         verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
         verify(stateEstimationService, times(1)).deleteStateEstimationResults(List.of(STATE_ESTIMATION_RESULT_UUID));
+        verify(pccMinService, times(1)).deletePccMinResults(List.of(PCC_MIN_RESULT_UUID));
         verify(sensitivityAnalysisService, times(1)).deleteSensitivityAnalysisResults(List.of(SENSITIVITY_ANALYSIS_RESULT_UUID));
         verify(voltageInitService, times(1)).deleteVoltageInitResults(List.of(VOLTAGE_INIT_RESULT_UUID));
     }

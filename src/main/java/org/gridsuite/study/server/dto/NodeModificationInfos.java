@@ -44,5 +44,7 @@ public class NodeModificationInfos {
 
     private UUID stateEstimationUuid;
 
+    private UUID pccMinUuid;
+
     private NodeType nodeType;
 }

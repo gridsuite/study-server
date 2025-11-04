@@ -27,7 +27,6 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationSer
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -76,7 +75,6 @@ public class ConsumerService {
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
 
-    @Autowired
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
                            StudyService studyService,
@@ -84,7 +82,6 @@ public class ConsumerService {
                            CaseService caseService,
                            LoadFlowService loadFlowService,
                            ShortCircuitService shortCircuitService,
-                           UserAdminService userAdminService,
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
                            StudyConfigService studyConfigService,
@@ -813,5 +810,20 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeStateEstimationFailed() {
         return message -> consumeCalculationFailed(message, STATE_ESTIMATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumePccMinResult() {
+        return message -> consumeCalculationResult(message, PCC_MIN);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumePccMinStopped() {
+        return message -> consumeCalculationStopped(message, PCC_MIN);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumePccMinFailed() {
+        return message -> consumeCalculationFailed(message, PCC_MIN);
     }
 }

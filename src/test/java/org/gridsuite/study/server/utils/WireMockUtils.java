@@ -637,4 +637,49 @@ public class WireMockUtils {
     public void verifyStubCreatePositionsFromCsv(UUID stubUuid) {
         verifyPostRequest(stubUuid, URI_NETWORK_AREA_DIAGRAM, true, Map.of(), null);
     }
+
+    public UUID stubPccMinRun(String networkUuid, String variantId, String resultUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/networks/" + networkUuid + "/run-and-save.*"))
+            .withQueryParam("variantId", WireMock.equalTo(variantId))
+            .willReturn(WireMock.okJson("\"" + resultUuid + "\""))
+
+        ).getId();
+    }
+
+    public UUID stubPccMinStatus(String resultUuid, String statusJson) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + resultUuid + "/status"))
+            .willReturn(WireMock.okJson(statusJson))
+        ).getId();
+    }
+
+    public void verifyPccMinRun(UUID stubUuid, String networkUuid, String variantId) {
+        verifyPostRequest(stubUuid, "/v1/networks/" + networkUuid + "/run-and-save",
+            Map.of("variantId", WireMock.equalTo(variantId)));
+    }
+
+    public void verifyPccMinStop(UUID stubUuid, String resultUuid) {
+        verifyPutRequest(stubUuid, "/v1/results/" + resultUuid + "/stop", true, Map.of(), null);
+    }
+
+    public UUID stubPccMinFailed(String networkUuid, String variantId, String resultUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/networks/" + networkUuid + "/run-and-save.*"))
+            .withQueryParam("variantId", WireMock.equalTo(variantId))
+            .willReturn(WireMock.okJson("\"" + resultUuid + "\""))
+        ).getId();
+    }
+
+    public void verifyPccMinFail(UUID stubUuid, String networkUuid, String variantId) {
+        verifyPostRequest(
+            stubUuid,
+            "/v1/networks/" + networkUuid + "/run-and-save",
+            true,
+            Map.of("variantId", WireMock.equalTo(variantId)),
+            null,
+            1
+        );
+    }
+
+    public void verifyPccMinStatus(UUID stubUuid, String resultUuid) {
+        verifyGetRequest(stubUuid, "/v1/results/" + resultUuid + "/status", Map.of());
+    }
 }

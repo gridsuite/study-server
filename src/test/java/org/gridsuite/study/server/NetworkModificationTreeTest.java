@@ -61,8 +61,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpHeaders;
@@ -70,6 +68,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.*;
@@ -94,6 +94,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
 class NetworkModificationTreeTest {
+    private AutoCloseable mocks;
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkModificationTreeTest.class);
     private static final String NODE_EDITED = "nodeEdited";
     private static final long TIMEOUT = 1000;
@@ -152,6 +153,9 @@ class NetworkModificationTreeTest {
     private StateEstimationService stateEstimationService;
 
     @Autowired
+    private PccMinService pccMinService;
+
+    @Autowired
     private SingleLineDiagramService singleLineDiagramService;
 
     @Autowired
@@ -163,16 +167,16 @@ class NetworkModificationTreeTest {
     @Autowired
     private ActionsService actionsService;
 
-    @SpyBean
+    @MockitoSpyBean
     private DynamicSimulationClient dynamicSimulationClient;
 
-    @SpyBean
+    @MockitoSpyBean
     DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
 
-    @MockBean
+    @MockitoBean
     private NetworkStoreService networkStoreService;
 
-    @MockBean
+    @MockitoBean
     private VariantManager variantManager;
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -186,7 +190,7 @@ class NetworkModificationTreeTest {
     private static final String MODIFICATION_GROUP_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef222";
     private static final String USER_ID_HEADER = "userId";
 
-    @MockBean
+    @MockitoBean
     private Network network;
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
@@ -206,7 +210,7 @@ class NetworkModificationTreeTest {
     @BeforeEach
     void setUp(final MockWebServer server) {
         Configuration.defaultConfiguration();
-        MockitoAnnotations.initMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
         objectMapper.enable(DeserializationFeature.USE_LONG_FOR_INTS);
         objectMapper.enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);
         objectMapper.disable(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE);
@@ -256,6 +260,7 @@ class NetworkModificationTreeTest {
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
+        pccMinService.setPccMinServerBaseUri(baseUrl);
 
         doReturn(baseUrl).when(dynamicSimulationClient).getBaseUri();
         doReturn(baseUrl).when(dynamicSecurityAnalysisClient).getBaseUri();
@@ -296,13 +301,15 @@ class NetworkModificationTreeTest {
     }
 
     @AfterEach
-    void tearDown() {
+    void tearDown() throws Exception {
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, ELEMENT_UPDATE_DESTINATION);
         networkModificationNodeInfoRepository.deleteAll();
         rootNodeInfoRepository.deleteAll();
         nodeRepository.deleteAll();
         studyRepository.deleteAll();
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
+        output.clear();
+        mocks.close();
     }
 
     private static StudyEntity createDummyStudy(UUID networkUuid) {
@@ -1338,6 +1345,7 @@ class NetworkModificationTreeTest {
                 .shortCircuitAnalysisResultUuid(newNode.getShortCircuitAnalysisResultUuid())
                 .oneBusShortCircuitAnalysisResultUuid(newNode.getOneBusShortCircuitAnalysisResultUuid())
                 .stateEstimationResultUuid(newNode.getStateEstimationResultUuid())
+                .pccMinResultUuid(newNode.getPccMinResultUuid())
                 .build()
         );
     }
@@ -1456,6 +1464,7 @@ class NetworkModificationTreeTest {
         assertEquals(expectedModificationNode.getShortCircuitAnalysisResultUuid(), currentModificationNode.getShortCircuitAnalysisResultUuid());
         assertEquals(expectedModificationNode.getOneBusShortCircuitAnalysisResultUuid(), currentModificationNode.getOneBusShortCircuitAnalysisResultUuid());
         assertEquals(expectedModificationNode.getStateEstimationResultUuid(), currentModificationNode.getStateEstimationResultUuid());
+        assertEquals(expectedModificationNode.getPccMinResultUuid(), currentModificationNode.getPccMinResultUuid());
         assertEquals(expectedModificationNode.getNodeBuildStatus(), currentModificationNode.getNodeBuildStatus());
     }
 
@@ -1579,6 +1588,7 @@ class NetworkModificationTreeTest {
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION));
     }
 
@@ -1610,6 +1620,7 @@ class NetworkModificationTreeTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
@@ -1873,6 +1884,8 @@ class NetworkModificationTreeTest {
         //dynamicSecurityAnalysis_status
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         //voltageInit_status
+        assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
+        //stateEstimation_status
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));
         //stateEstimation_status
         assertNotNull(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION));

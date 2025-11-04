@@ -48,6 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableElasticsearch
 @SpringBootTest
 @AutoConfigureMockMvc
+@ContextConfigurationWithTestChannel
 class ModificationSearchTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(ModificationSearchTest.class);
 

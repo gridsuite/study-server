@@ -54,6 +54,8 @@ public class NetworkModificationNode extends AbstractNode {
 
     private UUID stateEstimationResultUuid;
 
+    private UUID pccMinResultUuid;
+
     private NodeBuildStatus nodeBuildStatus;
 
     @Builder.Default
@@ -71,6 +73,7 @@ public class NetworkModificationNode extends AbstractNode {
         this.setDynamicSimulationResultUuid(rootNetworkNodeInfoEntity.getDynamicSimulationResultUuid());
         this.setDynamicSecurityAnalysisResultUuid(rootNetworkNodeInfoEntity.getDynamicSecurityAnalysisResultUuid());
         this.setStateEstimationResultUuid(rootNetworkNodeInfoEntity.getStateEstimationResultUuid());
+        this.setPccMinResultUuid(rootNetworkNodeInfoEntity.getPccMinResultUuid());
         this.setNodeBuildStatus(rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto());
         this.setComputationsReports(new HashMap<>(rootNetworkNodeInfoEntity.getComputationReports()));
         this.setModificationReports(new HashMap<>(rootNetworkNodeInfoEntity.getModificationReports()));

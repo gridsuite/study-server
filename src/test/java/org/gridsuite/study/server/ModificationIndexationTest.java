@@ -36,6 +36,7 @@ import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeI
  */
 @DisableElasticsearch
 @SpringBootTest
+@ContextConfigurationWithTestChannel
 class ModificationIndexationTest {
 
     private static final UUID NETWORK_UUID = UUID.randomUUID();
