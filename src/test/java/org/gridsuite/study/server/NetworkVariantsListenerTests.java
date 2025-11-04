@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ContextConfigurationWithTestChannel
 class NetworkVariantsListenerTests {
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final String VARIANT_ID = "variant_1";

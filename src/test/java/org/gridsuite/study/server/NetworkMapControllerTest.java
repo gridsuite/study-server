@@ -2,11 +2,12 @@ package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.service.LoadFlowService;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest
+@ContextConfigurationWithTestChannel
 public class NetworkMapControllerTest {
 
-    @MockBean
+    @MockitoBean
     private LoadFlowService loadFlowService;
 }

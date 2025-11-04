@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@ContextConfigurationWithTestChannel
 class StudyInfosServiceTests {
 
     private static final UUID STUDY_UUID_1 = UUID.fromString("11888888-0000-0000-0000-111111111111");
