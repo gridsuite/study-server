@@ -793,7 +793,7 @@ public class StudyService {
     }
 
     public byte[] generateVoltageLevelSvg(String voltageLevelId, DiagramParameters diagramParameters,
-                                     UUID nodeUuid, UUID rootNetworkUuid, BaseVoltagesConfigInfos baseVoltagesConfig) {
+                                     UUID nodeUuid, UUID rootNetworkUuid, Map<String, Object> sldRequestInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(NOT_FOUND, "Root network not found");
@@ -807,7 +807,7 @@ public class StudyService {
     }
 
     public String generateVoltageLevelSvgAndMetadata(String voltageLevelId, DiagramParameters diagramParameters,
-                                                UUID nodeUuid, UUID rootNetworkUuid, BaseVoltagesConfigInfos baseVoltagesConfig) {
+                                                UUID nodeUuid, UUID rootNetworkUuid, Map<String, Object> sldRequestInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(NOT_FOUND, "Root network not found");
@@ -1438,7 +1438,7 @@ public class StudyService {
     }
 
     public byte[] generateSubstationSvg(String substationId, DiagramParameters diagramParameters,
-                                   String substationLayout, UUID nodeUuid, UUID rootNetworkUuid, BaseVoltagesConfigInfos baseVoltagesConfig) {
+                                   String substationLayout, UUID nodeUuid, UUID rootNetworkUuid, Map<String, Object> sldRequestInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(NOT_FOUND, "Root network not found");
@@ -1453,7 +1453,7 @@ public class StudyService {
     }
 
     public String generateSubstationSvgAndMetadata(String substationId, DiagramParameters diagramParameters,
-                                              String substationLayout, UUID nodeUuid, UUID rootNetworkUuid, BaseVoltagesConfigInfos baseVoltagesConfig) {
+                                              String substationLayout, UUID nodeUuid, UUID rootNetworkUuid, Map<String, Object> sldRequestInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(NOT_FOUND, "Root network not found");

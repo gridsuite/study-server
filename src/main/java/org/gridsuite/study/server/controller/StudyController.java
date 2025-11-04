@@ -385,7 +385,7 @@ public class StudyController {
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
             @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
             @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
-            @RequestBody(required = false) BaseVoltagesConfigInfos baseVoltagesConfig) {
+            @RequestBody(required = false) Map<String, Object> sldRequestInfos) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
                 .labelCentered(centerLabel)
@@ -400,12 +400,12 @@ public class StudyController {
                 diagramParameters,
                 nodeUuid,
                 rootNetworkUuid,
-                baseVoltagesConfig);
+                sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
     @Operation(summary = "get the voltage level diagram for the given network and voltage level")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg and metadata"),
         @ApiResponse(responseCode = "404", description = "The voltage level has not been found")})
@@ -421,7 +421,7 @@ public class StudyController {
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
             @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
             @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
-            @RequestBody(required = false) BaseVoltagesConfigInfos baseVoltagesConfig) {
+            @RequestBody(required = false) Map<String, Object> sldRequestInfos) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
                 .labelCentered(centerLabel)
@@ -436,7 +436,7 @@ public class StudyController {
                 diagramParameters,
                 nodeUuid,
                 rootNetworkUuid,
-                baseVoltagesConfig);
+                sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1210,7 +1210,7 @@ public class StudyController {
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
             @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
-            @RequestBody(required = false) BaseVoltagesConfigInfos baseVoltagesConfig) {
+            @RequestBody(required = false) Map<String, Object> sldRequestInfos) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
                 .labelCentered(centerLabel)
@@ -1220,12 +1220,12 @@ public class StudyController {
                 .language(language)
                 .build();
         byte[] result = studyService.generateSubstationSvg(substationId,
-                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid, baseVoltagesConfig);
+                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid, sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata")
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg and metadata"),
         @ApiResponse(responseCode = "404", description = "The substation has not been found")})
@@ -1241,7 +1241,7 @@ public class StudyController {
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
             @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
-            @RequestBody(required = false) BaseVoltagesConfigInfos baseVoltagesConfig) {
+            @RequestBody(required = false) Map<String, Object> sldRequestInfos) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
                 .labelCentered(centerLabel)
@@ -1256,7 +1256,7 @@ public class StudyController {
                 substationLayout,
                 nodeUuid,
                 rootNetworkUuid,
-                baseVoltagesConfig);
+                sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
