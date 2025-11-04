@@ -6,6 +6,8 @@
  */
 package org.gridsuite.study.server.dto;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,6 +23,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class BaseVoltagesConfigInfos {
-    private BaseVoltageInfos baseVoltages;
+    private List<BaseVoltageInfos> baseVoltages;
     private String defaultProfile;
 }

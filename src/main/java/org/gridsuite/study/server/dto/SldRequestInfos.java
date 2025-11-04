@@ -22,7 +22,7 @@ import lombok.Setter;
 @Builder
 @Getter
 @Setter
-public class SldRequestParameters {
+public class SldRequestInfos {
     private List<CurrentLimitViolationInfos> currentLimitViolations;
     private BaseVoltagesConfigInfos baseVoltagesConfigInfos;
 }
