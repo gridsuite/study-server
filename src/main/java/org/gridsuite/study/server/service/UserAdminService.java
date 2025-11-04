@@ -18,8 +18,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.Optional;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.GET_USER_PROFILE_FAILED;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -45,23 +43,12 @@ public class UserAdminService {
     public UserProfileInfos getUserProfile(String sub) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_PROFILE_URI)
             .buildAndExpand(sub).toUriString();
-        try {
-            return restTemplate.getForObject(userAdminServerBaseUri + path, UserProfileInfos.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, GET_USER_PROFILE_FAILED);
-        }
+        return restTemplate.getForObject(userAdminServerBaseUri + path, UserProfileInfos.class);
     }
 
     public Optional<Integer> getUserMaxAllowedBuilds(String sub) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_MAX_ALLOWED_BUILDS_URI)
             .buildAndExpand(sub).toUriString();
-        try {
-            return Optional.ofNullable(restTemplate.getForObject(userAdminServerBaseUri + path, Integer.class));
-        } catch (HttpStatusCodeException e) {
-            if (e.getStatusCode().value() == 404) {
-                return Optional.empty(); // no profile == unlimited builds
-            }
-            throw handleHttpError(e, GET_USER_PROFILE_FAILED);
-        }
+        return Optional.ofNullable(restTemplate.getForObject(userAdminServerBaseUri + path, Integer.class));
     }
 }

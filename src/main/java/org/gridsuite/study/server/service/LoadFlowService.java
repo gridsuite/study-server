@@ -21,7 +21,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -35,7 +34,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -113,8 +111,6 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     public String getLoadFlowResult(UUID resultUuid, String filters, Sort sort) {
-        String result;
-
         if (resultUuid == null) {
             return null;
         }
@@ -128,37 +124,17 @@ public class LoadFlowService extends AbstractComputationService {
         }
         String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
 
-        try {
-            result = restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(LOADFLOW_NOT_FOUND);
-            }
-            throw e;
-        }
-        return result;
+        return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
     }
 
     public String getLoadFlowModifications(UUID resultUuid) {
-        String result;
-
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/modifications");
         String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
 
-        try {
-            result = restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(LOADFLOW_NOT_FOUND);
-            }
-            throw e;
-        }
-        return result;
+        return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
     }
 
     public LoadFlowStatus getLoadFlowStatus(UUID resultUuid) {
-        LoadFlowStatus result;
-
         if (resultUuid == null) {
             return null;
         }
@@ -166,15 +142,7 @@ public class LoadFlowService extends AbstractComputationService {
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/status");
         String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
 
-        try {
-            result = restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowStatus.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(LOADFLOW_NOT_FOUND);
-            }
-            throw e;
-        }
-        return result;
+        return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowStatus.class);
     }
 
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
@@ -251,16 +219,9 @@ public class LoadFlowService extends AbstractComputationService {
                 sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
             }
             String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
-            try {
-                ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
-                });
-                result = responseEntity.getBody();
-            } catch (HttpStatusCodeException e) {
-                if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                    throw new StudyException(LOADFLOW_NOT_FOUND);
-                }
-                throw e;
-            }
+            ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
+            });
+            result = responseEntity.getBody();
         }
         return result;
     }
@@ -268,34 +229,18 @@ public class LoadFlowService extends AbstractComputationService {
     public List<LimitViolationInfos> getCurrentLimitViolations(UUID resultUuid) {
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/current-limit-violations");
         String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
-        try {
-            ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
-            });
-            return responseEntity.getBody();
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(LOADFLOW_NOT_FOUND);
-            }
-            throw e;
-        }
+        ResponseEntity<List<LimitViolationInfos>> responseEntity = restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<>() {
+        });
+        return responseEntity.getBody();
     }
 
     public LoadFlowParametersInfos getLoadFlowParameters(UUID parametersUuid) {
-
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid).toUriString();
-        try {
-            return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersInfos.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(LOADFLOW_PARAMETERS_NOT_FOUND);
-            }
-            throw handleHttpError(e, GET_LOADFLOW_PARAMETERS_FAILED);
-        }
+        return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersInfos.class);
     }
 
     public UUID createLoadFlowParameters(String parameters) {
-
         Objects.requireNonNull(parameters);
 
         var path = UriComponentsBuilder
@@ -308,11 +253,7 @@ public class LoadFlowService extends AbstractComputationService {
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        try {
-            return restTemplate.postForObject(loadFlowServerBaseUri + path, httpEntity, UUID.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_LOADFLOW_PARAMETERS_FAILED);
-        }
+        return restTemplate.postForObject(loadFlowServerBaseUri + path, httpEntity, UUID.class);
     }
 
     public UUID duplicateLoadFlowParameters(UUID sourceParametersUuid) {
@@ -324,11 +265,7 @@ public class LoadFlowService extends AbstractComputationService {
                 .queryParam("duplicateFrom", sourceParametersUuid)
                 .buildAndExpand(sourceParametersUuid).toUriString();
 
-        try {
-            return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_LOADFLOW_PARAMETERS_FAILED);
-        }
+        return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
     }
 
     public void updateLoadFlowParameters(UUID parametersUuid, @Nullable String parameters) {
@@ -342,11 +279,7 @@ public class LoadFlowService extends AbstractComputationService {
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        try {
-            restTemplate.put(loadFlowServerBaseUri + path, httpEntity);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_LOADFLOW_PARAMETERS_FAILED);
-        }
+        restTemplate.put(loadFlowServerBaseUri + path, httpEntity);
     }
 
     public void deleteLoadFlowParameters(UUID uuid) {
@@ -355,11 +288,7 @@ public class LoadFlowService extends AbstractComputationService {
                 .buildAndExpand(uuid)
                 .toUriString();
 
-        try {
-            restTemplate.delete(loadFlowServerBaseUri + path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_LOADFLOW_PARAMETERS_FAILED);
-        }
+        restTemplate.delete(loadFlowServerBaseUri + path);
     }
 
     public void updateLoadFlowProvider(UUID parameterUuid, String provider) {
@@ -374,11 +303,7 @@ public class LoadFlowService extends AbstractComputationService {
 
         HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
 
-        try {
-            restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_LOADFLOW_PROVIDER_FAILED);
-        }
+        restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
     public String getLoadFlowDefaultProvider() {
@@ -387,25 +312,16 @@ public class LoadFlowService extends AbstractComputationService {
                 .buildAndExpand()
                 .toUriString();
 
-        try {
-            return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, GET_LOADFLOW_DEFAULT_PROVIDER_FAILED);
-        }
+        return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
     }
 
     public UUID createDefaultLoadFlowParameters() {
-
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/default")
                 .buildAndExpand()
                 .toUriString();
 
-        try {
-            return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_LOADFLOW_PARAMETERS_FAILED);
-        }
+        return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
     }
 
     public UUID getLoadFlowParametersOrDefaultsUuid(StudyEntity studyEntity) {
@@ -416,15 +332,10 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     public String getLoadFlowProvider(UUID parametersUuid) {
-
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI + "/provider")
                 .buildAndExpand(parametersUuid).toUriString();
 
-        try {
-            return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, GET_LOADFLOW_PROVIDER_FAILED);
-        }
+        return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
     }
 
     @Override

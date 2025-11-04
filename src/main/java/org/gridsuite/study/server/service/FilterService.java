@@ -33,9 +33,6 @@ import static org.gridsuite.study.server.StudyConstants.IDS;
 import static org.gridsuite.study.server.StudyConstants.NETWORK_UUID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_EQUIPMENT_TYPES;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyException.Type.EVALUATE_FILTER_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -75,15 +72,7 @@ public class FilterService {
         HttpEntity<String> request = new HttpEntity<>(filter, headers);
 
         // call filter-server REST API
-        try {
-            return restTemplate.postForObject(uriComponent.toUriString(), request, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(NETWORK_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, EVALUATE_FILTER_FAILED);
-            }
-        }
+        return restTemplate.postForObject(uriComponent.toUriString(), request, String.class);
     }
 
     public List<String> evaluateGlobalFilter(@NonNull final UUID networkUuid, @NonNull final String variantId,
@@ -96,16 +85,8 @@ public class FilterService {
                 .build();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        try {
-            return restTemplate.exchange(uriComponent.toUri(), HttpMethod.POST, new HttpEntity<>(filter, headers), new ParameterizedTypeReference<List<String>>() { })
-                               .getBody();
-        } catch (final HttpStatusCodeException ex) {
-            if (HttpStatus.NOT_FOUND.equals(ex.getStatusCode())) {
-                throw new StudyException(NETWORK_NOT_FOUND);
-            } else {
-                throw handleHttpError(ex, EVALUATE_FILTER_FAILED);
-            }
-        }
+        return restTemplate.exchange(uriComponent.toUri(), HttpMethod.POST, new HttpEntity<>(filter, headers), new ParameterizedTypeReference<List<String>>() { })
+            .getBody();
     }
 
     public String exportFilter(UUID networkUuid, UUID filterUuid) {

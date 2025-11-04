@@ -35,7 +35,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
 public class SingleLineDiagramService {
@@ -93,17 +92,7 @@ public class SingleLineDiagramService {
 
         HttpEntity<List<CurrentLimitViolationInfos>> httpEntity = new HttpEntity<>(limitViolations, headers);
 
-        byte[] result;
-        try {
-            result = restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, byte[].class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelId + NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-        return result;
+        return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, byte[].class);
     }
 
     public String generateVoltageLevelSvgAndMetadata(UUID networkUuid, String variantId, String voltageLevelId, DiagramParameters diagramParameters, List<CurrentLimitViolationInfos> limitViolations) {
@@ -122,18 +111,8 @@ public class SingleLineDiagramService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<List<CurrentLimitViolationInfos>> httpEntity = new HttpEntity<>(limitViolations, headers);
-        String result;
-        try {
-            var path = uriComponentsBuilder.buildAndExpand(networkUuid, voltageLevelId).toUriString();
-            result = restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + voltageLevelId + NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-        return result;
+        var path = uriComponentsBuilder.buildAndExpand(networkUuid, voltageLevelId).toUriString();
+        return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, String.class);
     }
 
     public byte[] generateSubstationSvg(UUID networkUuid, String variantId, String substationId, DiagramParameters diagramParameters, String substationLayout, List<CurrentLimitViolationInfos> limitViolations) {
@@ -152,16 +131,7 @@ public class SingleLineDiagramService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<List<CurrentLimitViolationInfos>> httpEntity = new HttpEntity<>(limitViolations, headers);
-        try {
-            result = restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, byte[].class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-        return result;
+        return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, byte[].class);
     }
 
     public String generateSubstationSvgAndMetadata(UUID networkUuid, String variantId, String substationId, DiagramParameters diagramParameters, String substationLayout, List<CurrentLimitViolationInfos> limitViolations) {
@@ -175,21 +145,11 @@ public class SingleLineDiagramService {
             .queryParam(LANGUAGE, diagramParameters.getLanguage());
         addParameters(diagramParameters, uriComponentsBuilder, variantId);
 
-        String result;
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<List<CurrentLimitViolationInfos>> httpEntity = new HttpEntity<>(limitViolations, headers);
-        try {
-            result = restTemplate.postForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), httpEntity, String.class, networkUuid, substationId).getBody();
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, "Substation " + substationId + NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-        return result;
+        return restTemplate.postForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), httpEntity, String.class, networkUuid, substationId).getBody();
     }
 
     public String generateNetworkAreaDiagram(UUID networkUuid, String variantId, Map<String, Object> nadRequestInfos) {
@@ -206,19 +166,7 @@ public class SingleLineDiagramService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(nadRequestInfos, headers);
 
-        try {
-            return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, request, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + NOT_FOUND);
-            } else if (HttpStatus.BAD_REQUEST.equals(e.getStatusCode())) {
-                throw new StudyException(BAD_PARAMETER, e.getMessage());
-            } else if (HttpStatus.FORBIDDEN.equals(e.getStatusCode())) {
-                throw handleHttpError(e, NOT_ALLOWED);
-            } else {
-                throw e;
-            }
-        }
+        return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, request, String.class);
     }
 
     public void createMultipleDiagramConfigs(List<NadConfigInfos> nadConfigs) {
@@ -275,11 +223,7 @@ public class SingleLineDiagramService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<NetworkAreaDiagramLayoutDetails> httpEntity = new HttpEntity<>(headers);
 
-        try {
-            return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, UUID.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED);
-        }
+        return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, UUID.class);
     }
 
     public void createNadPositionsConfigFromCsv(MultipartFile file) {

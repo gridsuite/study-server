@@ -88,7 +88,6 @@ import java.util.stream.Stream;
 import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -341,7 +340,7 @@ public class StudyService {
             persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParametersRaw(), CaseImportAction.ROOT_NETWORK_CREATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntity);
-            throw new StudyException(ROOT_NETWORK_CREATION_FAILED);
+            throw e;
         }
 
         notificationService.emitRootNetworksUpdated(studyUuid);
@@ -402,7 +401,7 @@ public class StudyService {
             persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParametersRaw(), CaseImportAction.ROOT_NETWORK_MODIFICATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkModificationRequestEntity);
-            throw new StudyException(ROOT_NETWORK_MODIFICATION_FAILED);
+            throw e;
         }
     }
 
@@ -805,11 +804,7 @@ public class StudyService {
     }
 
     private void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, String userId, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
-        try {
-            networkConversionService.persistNetwork(rootNetworkInfos, studyUuid, variantId, userId, UUID.randomUUID(), importParameters, caseImportAction);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, STUDY_CREATION_FAILED);
-        }
+        networkConversionService.persistNetwork(rootNetworkInfos, studyUuid, variantId, userId, UUID.randomUUID(), importParameters, caseImportAction);
     }
 
     public String getLinesGraphics(UUID networkUuid, UUID nodeUuid, UUID rootNetworkUuid, List<String> linesIds) {
@@ -1832,7 +1827,7 @@ public class StudyService {
             networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, workflowInfos);
         } catch (Exception e) {
             networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
-            throw new StudyException(NODE_BUILD_ERROR, e.getMessage());
+            throw e;
         }
     }
 

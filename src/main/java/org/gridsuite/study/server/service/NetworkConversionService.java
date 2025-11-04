@@ -41,7 +41,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
 public class NetworkConversionService {
@@ -142,8 +141,6 @@ public class NetworkConversionService {
                     return null;
                 }
             );
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, NETWORK_EXPORT_FAILED);
         } catch (IOException e) {
             throw new StudyException(NETWORK_EXPORT_FAILED, e.getMessage());
         }
@@ -157,15 +154,7 @@ public class NetworkConversionService {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/reindex-all")
             .buildAndExpand(networkUuid)
             .toUriString();
-        try {
-            restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null, Void.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(NETWORK_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, STUDY_INDEXATION_FAILED);
-            }
-        }
+        restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null, Void.class);
     }
 
     public boolean checkStudyIndexationStatus(UUID networkUuid) {
@@ -175,14 +164,6 @@ public class NetworkConversionService {
 
         ParameterizedTypeReference<String> typeRef = new ParameterizedTypeReference<>() {
         };
-        try {
-            return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(NETWORK_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, STUDY_CHECK_INDEXATION_FAILED);
-            }
-        }
+        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
     }
 }

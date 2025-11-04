@@ -39,9 +39,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
 import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_RUNNING;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -177,11 +175,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public void deleteResults(List<UUID> resultUuids) {
-        try {
-            dynamicSimulationClient.deleteResults(resultUuids);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
+        dynamicSimulationClient.deleteResults(resultUuids);
     }
 
     @Override

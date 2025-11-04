@@ -35,7 +35,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -100,8 +99,6 @@ public class VoltageInitService extends AbstractComputationService {
     }
 
     private String getVoltageInitResultOrStatus(UUID resultUuid, String suffix, UUID networkUuid, String variantId, String globalFilters) {
-        String result;
-
         if (resultUuid == null) {
             return null;
         }
@@ -115,15 +112,7 @@ public class VoltageInitService extends AbstractComputationService {
             }
         }
         String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
-        try {
-            result = restTemplate.getForObject(voltageInitServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(VOLTAGE_INIT_NOT_FOUND);
-            }
-            throw e;
-        }
-        return result;
+        return restTemplate.getForObject(voltageInitServerBaseUri + path, String.class);
     }
 
     public String getVoltageInitResult(UUID resultUuid, UUID networkUuid, String variantId, String globalFilters) {
@@ -137,14 +126,7 @@ public class VoltageInitService extends AbstractComputationService {
     public VoltageInitParametersInfos getVoltageInitParameters(UUID parametersUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid).toUriString();
-        try {
-            return restTemplate.getForObject(voltageInitServerBaseUri + path, VoltageInitParametersInfos.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(VOLTAGE_INIT_PARAMETERS_NOT_FOUND);
-            }
-            throw e;
-        }
+        return restTemplate.getForObject(voltageInitServerBaseUri + path, VoltageInitParametersInfos.class);
     }
 
     public UUID createVoltageInitParameters(@Nullable VoltageInitParametersInfos parameters) {
@@ -158,15 +140,7 @@ public class VoltageInitService extends AbstractComputationService {
 
         HttpEntity<VoltageInitParametersInfos> httpEntity = new HttpEntity<>(parameters, headers);
 
-        UUID parametersUuid;
-
-        try {
-            parametersUuid = restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_VOLTAGE_INIT_PARAMETERS_FAILED);
-        }
-
-        return parametersUuid;
+        return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public void updateVoltageInitParameters(UUID parametersUuid, @Nullable VoltageInitParametersInfos parameters) {
@@ -180,11 +154,7 @@ public class VoltageInitService extends AbstractComputationService {
 
         HttpEntity<VoltageInitParametersInfos> httpEntity = new HttpEntity<>(parameters, headers);
 
-        try {
-            restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_VOLTAGE_INIT_PARAMETERS_FAILED);
-        }
+        restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
     }
 
     public UUID duplicateVoltageInitParameters(UUID sourceParametersUuid) {
@@ -201,11 +171,7 @@ public class VoltageInitService extends AbstractComputationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
-        try {
-            return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_VOLTAGE_INIT_PARAMETERS_FAILED);
-        }
+        return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public void deleteVoltageInitParameters(UUID parametersUuid) {
@@ -268,18 +234,9 @@ public class VoltageInitService extends AbstractComputationService {
     }
 
     public UUID getModificationsGroupUuid(UUID nodeUuid, UUID resultUuid) {
-        UUID modificationsGroupUuid;
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/modifications-group-uuid")
             .buildAndExpand(resultUuid).toUriString();
-        try {
-            modificationsGroupUuid = restTemplate.getForObject(voltageInitServerBaseUri + path, UUID.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(NO_VOLTAGE_INIT_MODIFICATIONS_GROUP_FOR_NODE, THE_NODE + nodeUuid + " has no voltage init modifications group");
-            }
-            throw e;
-        }
-        return modificationsGroupUuid;
+        return restTemplate.getForObject(voltageInitServerBaseUri + path, UUID.class);
     }
 
     public void invalidateVoltageInitStatus(List<UUID> uuids) {
