@@ -788,7 +788,7 @@ public class StudyService {
     }
 
     public byte[] generateVoltageLevelSvg(String voltageLevelId, DiagramParameters diagramParameters,
-                                     UUID nodeUuid, UUID rootNetworkUuid, BaseVoltagesConfigInfos baseVoltagesConfig) {
+                                     UUID nodeUuid, UUID rootNetworkUuid, Map<String, Object> sldRequestInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(NOT_FOUND, "Root network not found");
@@ -796,14 +796,15 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
             List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
-            return singleLineDiagramService.generateVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters, violations, baseVoltagesConfig);
+            sldRequestInfos.put("currentLimitViolations", violations);
+            return singleLineDiagramService.generateVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters, sldRequestInfos);
         } else {
             return null;
         }
     }
 
     public String generateVoltageLevelSvgAndMetadata(String voltageLevelId, DiagramParameters diagramParameters,
-                                                UUID nodeUuid, UUID rootNetworkUuid, BaseVoltagesConfigInfos baseVoltagesConfig) {
+                                                UUID nodeUuid, UUID rootNetworkUuid, Map<String, Object> sldRequestInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(NOT_FOUND, "Root network not found");
@@ -811,7 +812,8 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
             List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
-            return singleLineDiagramService.generateVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters, violations, baseVoltagesConfig);
+            sldRequestInfos.put("currentLimitViolationsInfos", violations);
+            return singleLineDiagramService.generateVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters, sldRequestInfos);
         } else {
             return null;
         }
@@ -1426,7 +1428,7 @@ public class StudyService {
     }
 
     public byte[] generateSubstationSvg(String substationId, DiagramParameters diagramParameters,
-                                   String substationLayout, UUID nodeUuid, UUID rootNetworkUuid, BaseVoltagesConfigInfos baseVoltagesConfig) {
+                                   String substationLayout, UUID nodeUuid, UUID rootNetworkUuid, Map<String, Object> sldRequestInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(NOT_FOUND, "Root network not found");
@@ -1434,14 +1436,15 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
             List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
-            return singleLineDiagramService.generateSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout, violations, baseVoltagesConfig);
+            sldRequestInfos.put("currentLimitViolations", violations);
+            return singleLineDiagramService.generateSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout, sldRequestInfos);
         } else {
             return null;
         }
     }
 
     public String generateSubstationSvgAndMetadata(String substationId, DiagramParameters diagramParameters,
-                                              String substationLayout, UUID nodeUuid, UUID rootNetworkUuid, BaseVoltagesConfigInfos baseVoltagesConfig) {
+                                              String substationLayout, UUID nodeUuid, UUID rootNetworkUuid, Map<String, Object> sldRequestInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         if (networkUuid == null) {
             throw new StudyException(NOT_FOUND, "Root network not found");
@@ -1449,7 +1452,8 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
             List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
-            return singleLineDiagramService.generateSubstationSvgAndMetadata(networkUuid, variantId, substationId, diagramParameters, substationLayout, violations, baseVoltagesConfig);
+            sldRequestInfos.put("currentLimitViolations", violations);
+            return singleLineDiagramService.generateSubstationSvgAndMetadata(networkUuid, variantId, substationId, diagramParameters, substationLayout, sldRequestInfos);
         } else {
             return null;
         }

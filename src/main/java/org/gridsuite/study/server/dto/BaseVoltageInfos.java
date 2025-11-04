@@ -22,7 +22,7 @@ import lombok.Setter;
 @Setter
 public class BaseVoltageInfos {
     String name;
-    String minValue;
-    String maxValue;
+    Integer minValue;
+    Integer maxValue;
     String profile;
 }
