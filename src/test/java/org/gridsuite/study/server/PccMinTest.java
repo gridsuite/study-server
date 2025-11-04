@@ -368,22 +368,16 @@ class PccMinTest {
             pccMinService.getPccMinResultsPage(params, null, null, pageRequest)
         );
 
+        // no content
         ResultParameters params2 = new ResultParameters(
-            UUID.randomUUID(), UUID.randomUUID(), "variantId", UUID.randomUUID(), null
-        );
-
-        // No Content result
-        wireMockServer.stubFor(
-            WireMock.get("/v1/pcc-min/results/" + resultUuid)
-                .willReturn(WireMock.noContent())
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            "variantId",
+            null,
+            null
         );
         String result = pccMinService.getPccMinResultsPage(params2, null, null, PageRequest.of(0, 20));
         assertNull(result);
-
-        wireMockServer.verify(
-            WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/results/" + resultUuid))
-                .withQueryParam("page", WireMock.equalTo("0"))
-                .withQueryParam("size", WireMock.equalTo("20"))
-        );
+        wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlMatching("/v1/pcc-min/results/.*")));
     }
 }

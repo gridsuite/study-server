@@ -183,10 +183,10 @@ public class PccMinService extends AbstractComputationService {
         }
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(pccMinServerBaseUri + resultsPath);
         if (filters != null && !filters.isEmpty()) {
-            builder.queryParam("filters", filters);
+            builder.queryParam(QUERY_PARAM_FILTERS, filters);
         }
         if (globalFilters != null && !globalFilters.isEmpty()) {
-            builder.queryParam("globalFilters", URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
+            builder.queryParam(QUERY_PARAM_GLOBAL_FILTERS, URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
             builder.queryParam(QUERY_PARAM_NETWORK_UUID, resultParameters.getNetworkUuid());
             if (!StringUtils.isBlank(resultParameters.getVariantId())) {
                 builder.queryParam(QUERY_PARAM_VARIANT_ID, resultParameters.getVariantId());
