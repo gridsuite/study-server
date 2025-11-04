@@ -1795,11 +1795,11 @@ public class StudyService {
     }
 
     public String getVoltageLevelInformation(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId,
-                                             String switchesPath) {
+                                             String path) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
 
-        return networkMapService.getVoltageLevelInformation(networkUuid, variantId, voltageLevelId, switchesPath);
+        return networkMapService.getVoltageLevelInformation(networkUuid, variantId, voltageLevelId, path);
     }
 
     public String getVoltageLevelSubstationId(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {

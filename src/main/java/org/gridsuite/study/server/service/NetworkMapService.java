@@ -253,9 +253,9 @@ public class NetworkMapService {
 
     public String getVoltageLevelInformation(UUID networkUuid, String variantId,
                                              String voltageLevelId,
-                                             String switchesPath) {
+                                             String path) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION
-                + "/networks/{networkUuid}/voltage-levels/{voltageLevelId}/" + switchesPath);
+                + "/networks/{networkUuid}/voltage-levels/{voltageLevelId}/" + path);
         if (!StringUtils.isBlank(variantId)) {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
