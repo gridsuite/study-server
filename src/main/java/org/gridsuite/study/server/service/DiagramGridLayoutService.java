@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import lombok.RequiredArgsConstructor;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.AbstractDiagramLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.MapLayout;
@@ -21,8 +21,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 
-import static org.gridsuite.study.server.StudyBusinessErrorCode.TOO_MANY_MAP_CARDS;
-import static org.gridsuite.study.server.StudyBusinessErrorCode.TOO_MANY_NAD_CONFIGS;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.TOO_MANY_MAP_CARDS;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.TOO_MANY_NAD_CONFIGS;
 
 /**
  * Service responsible for managing diagram grid layout operations.

@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
@@ -37,8 +37,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyBusinessErrorCode.ELEMENT_NOT_FOUND;
-import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.ELEMENT_NOT_FOUND;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>

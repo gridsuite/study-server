@@ -19,7 +19,7 @@ import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -53,7 +53,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyBusinessErrorCode.STUDY_NOT_FOUND;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_DEFAULT_NAME;
 import static org.gridsuite.study.server.utils.TestUtils.checkReports;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;

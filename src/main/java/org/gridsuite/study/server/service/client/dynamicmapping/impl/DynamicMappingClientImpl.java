@@ -9,7 +9,7 @@ package org.gridsuite.study.server.service.client.dynamicmapping.impl;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
@@ -24,7 +24,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 
-import static org.gridsuite.study.server.StudyBusinessErrorCode.DYNAMIC_MAPPING_NOT_FOUND;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.DYNAMIC_MAPPING_NOT_FOUND;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 
 /**

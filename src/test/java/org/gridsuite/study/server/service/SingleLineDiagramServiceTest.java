@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpEntity;
@@ -18,7 +18,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyBusinessErrorCode.DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;

@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,8 +33,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyBusinessErrorCode.PCC_MIN_NOT_FOUND;
-import static org.gridsuite.study.server.StudyBusinessErrorCode.PCC_MIN_RUNNING;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.PCC_MIN_NOT_FOUND;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.PCC_MIN_RUNNING;
 
 /**
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>

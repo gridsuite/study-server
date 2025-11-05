@@ -14,7 +14,7 @@ package org.gridsuite.study.server.service;
 import com.powsybl.iidm.network.ThreeSides;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.InfoTypeParameters;
 import org.springframework.core.ParameterizedTypeReference;
@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service

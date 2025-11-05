@@ -10,7 +10,7 @@ package org.gridsuite.study.server.service.dynamicsecurityanalysis;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections4.CollectionUtils;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -24,7 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyBusinessErrorCode.DYNAMIC_SECURITY_ANALYSIS_RUNNING;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.DYNAMIC_SECURITY_ANALYSIS_RUNNING;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>

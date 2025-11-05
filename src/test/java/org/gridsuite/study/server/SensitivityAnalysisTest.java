@@ -26,6 +26,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
@@ -64,8 +65,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.StudyBusinessErrorCode.ROOT_NETWORK_NOT_FOUND;
-import static org.gridsuite.study.server.StudyBusinessErrorCode.STUDY_NOT_FOUND;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.ROOT_NETWORK_NOT_FOUND;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
