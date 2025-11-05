@@ -31,7 +31,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.RUN_DYNAMIC_SIMULATION_FAILED;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.RUN_DYNAMIC_SIMULATION_FAILED;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
 import static org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient.*;

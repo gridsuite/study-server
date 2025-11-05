@@ -32,7 +32,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.*;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com

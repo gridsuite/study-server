@@ -29,8 +29,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.RUN_DYNAMIC_SIMULATION_FAILED;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.DYNAMIC_SIMULATION_NOT_FOUND;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.RUN_DYNAMIC_SIMULATION_FAILED;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;

@@ -37,13 +37,13 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.CREATE_STATE_ESTIMATION_PARAMETERS_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.DELETE_STATE_ESTIMATION_PARAMETERS_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.GET_STATE_ESTIMATION_PARAMETERS_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.STATE_ESTIMATION_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.STATE_ESTIMATION_PARAMETERS_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.STATE_ESTIMATION_RUNNING;
-import static org.gridsuite.study.server.StudyException.Type.UPDATE_STATE_ESTIMATION_PARAMETERS_FAILED;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.CREATE_STATE_ESTIMATION_PARAMETERS_FAILED;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.DELETE_STATE_ESTIMATION_PARAMETERS_FAILED;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.GET_STATE_ESTIMATION_PARAMETERS_FAILED;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.STATE_ESTIMATION_NOT_FOUND;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.STATE_ESTIMATION_PARAMETERS_NOT_FOUND;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.STATE_ESTIMATION_RUNNING;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.UPDATE_STATE_ESTIMATION_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**

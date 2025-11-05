@@ -24,7 +24,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 
-import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_MAPPING_NOT_FOUND;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.DYNAMIC_MAPPING_NOT_FOUND;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 
 /**

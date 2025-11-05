@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
@@ -94,7 +94,7 @@ public class NetworkMapService {
                 throw new StudyException(EQUIPMENT_NOT_FOUND);
             }
             if (HttpStatus.NOT_IMPLEMENTED.equals(e.getStatusCode())) {
-                throw new StudyException(StudyException.Type.NOT_IMPLEMENTED, e.getMessage());
+                throw new StudyException(NOT_IMPLEMENTED, e.getMessage());
             }
             throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
         }

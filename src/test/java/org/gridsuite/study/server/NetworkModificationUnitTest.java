@@ -55,6 +55,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static org.gridsuite.study.server.StudyBusinessErrorCode.ROOT_NETWORK_NOT_FOUND;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_INFOS;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_TYPE;
 import static org.junit.jupiter.api.Assertions.*;
@@ -220,7 +221,7 @@ class NetworkModificationUnitTest {
     }
 
     private void assertNodeBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeInfoId(nodeUuid).stream().findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeInfoId(nodeUuid).stream().findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         assertEquals(buildStatus, rootNetworkNodeInfoEntity.getNodeBuildStatus().getLocalBuildStatus());
     }
 

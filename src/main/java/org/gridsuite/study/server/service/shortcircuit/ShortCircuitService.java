@@ -39,7 +39,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.utils.StudyUtils.addPageableToQueryParams;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 

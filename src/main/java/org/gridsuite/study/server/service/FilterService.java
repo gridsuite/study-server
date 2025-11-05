@@ -33,8 +33,8 @@ import static org.gridsuite.study.server.StudyConstants.IDS;
 import static org.gridsuite.study.server.StudyConstants.NETWORK_UUID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_EQUIPMENT_TYPES;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyException.Type.EVALUATE_FILTER_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.EVALUATE_FILTER_FAILED;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.NETWORK_NOT_FOUND;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**

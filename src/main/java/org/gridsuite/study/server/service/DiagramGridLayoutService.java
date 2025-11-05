@@ -21,6 +21,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+import static org.gridsuite.study.server.StudyBusinessErrorCode.TOO_MANY_MAP_CARDS;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.TOO_MANY_NAD_CONFIGS;
+
 /**
  * Service responsible for managing diagram grid layout operations.
  * Handles the complete lifecycle of diagram configurations including creation, update, and deletion
@@ -152,7 +155,7 @@ public class DiagramGridLayoutService {
                 .count();
 
             if (mapCardsCount > MAX_MAP_CARDS_ALLOWED) {
-                throw new StudyException(StudyException.Type.TOO_MANY_MAP_CARDS,
+                throw new StudyException(TOO_MANY_MAP_CARDS,
                     "Maximum " + MAX_MAP_CARDS_ALLOWED + " map card allowed, but " + mapCardsCount + " provided");
             }
         }
@@ -169,7 +172,7 @@ public class DiagramGridLayoutService {
                 .count();
 
             if (nadConfigCount > MAX_NAD_CONFIGS_ALLOWED) {
-                throw new StudyException(StudyException.Type.TOO_MANY_NAD_CONFIGS,
+                throw new StudyException(TOO_MANY_NAD_CONFIGS,
                     "Maximum " + MAX_NAD_CONFIGS_ALLOWED + " NAD configurations allowed, but " + nadConfigCount + " provided");
             }
         }

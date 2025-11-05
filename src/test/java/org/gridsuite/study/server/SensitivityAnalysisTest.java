@@ -63,6 +63,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
@@ -704,7 +705,7 @@ class SensitivityAnalysisTest {
         wireMock.verify(WireMock.putRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID)));
 
         // Get sensitivity analysis (not existing, so it will create default)
-        StudyEntity studyEntityToUpdate = studyRepository.findById(studyNameUserIdUuid).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
+        StudyEntity studyEntityToUpdate = studyRepository.findById(studyNameUserIdUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         studyEntityToUpdate.setSensitivityAnalysisParametersUuid(null);
         studyRepository.save(studyEntityToUpdate);
 

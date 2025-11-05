@@ -24,7 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SECURITY_ANALYSIS_RUNNING;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.DYNAMIC_SECURITY_ANALYSIS_RUNNING;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>

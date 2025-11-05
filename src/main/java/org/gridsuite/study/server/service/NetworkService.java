@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.NETWORK_NOT_FOUND;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com

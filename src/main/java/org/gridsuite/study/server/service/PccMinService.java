@@ -33,8 +33,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_RUNNING;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.PCC_MIN_NOT_FOUND;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.PCC_MIN_RUNNING;
 
 /**
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>

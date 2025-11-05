@@ -25,7 +25,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.CASE_NOT_FOUND;
 
 @Service
 public class CaseService {

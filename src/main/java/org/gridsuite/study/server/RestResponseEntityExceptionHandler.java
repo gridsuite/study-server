@@ -13,7 +13,8 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ServerWebInputException;
 
-import static org.gridsuite.study.server.StudyException.Type.NOT_ALLOWED;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.MAX_NODE_BUILDS_EXCEEDED;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.NOT_ALLOWED;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -28,7 +29,7 @@ public class RestResponseEntityExceptionHandler {
         if (LOGGER.isErrorEnabled()) {
             LOGGER.error(MESSAGE, exception);
         }
-        StudyException.Type type = exception.getType();
+        StudyBusinessErrorCode type = exception.getType();
         return switch (type) {
             case ELEMENT_NOT_FOUND,
                     STUDY_NOT_FOUND,
@@ -139,7 +140,7 @@ public class RestResponseEntityExceptionHandler {
                     MISSING_PARAMETER
                     -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getType());
             case NOT_IMPLEMENTED -> ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(exception.getMessage());
-            case MAX_NODE_BUILDS_EXCEEDED -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(StudyException.Type.MAX_NODE_BUILDS_EXCEEDED + " " + exception.getMessage());
+            case MAX_NODE_BUILDS_EXCEEDED -> ResponseEntity.status(HttpStatus.FORBIDDEN).body(MAX_NODE_BUILDS_EXCEEDED + " " + exception.getMessage());
             case DIAGRAM_GRID_LAYOUT_NOT_FOUND -> ResponseEntity.noContent().build();
             default -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         };

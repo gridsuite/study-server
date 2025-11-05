@@ -13,7 +13,7 @@ import org.gridsuite.study.server.StudyException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import static org.gridsuite.study.server.StudyException.Type.URI_SYNTAX;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.URI_SYNTAX;
 import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
 
 /**

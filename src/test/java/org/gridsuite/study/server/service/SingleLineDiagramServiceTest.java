@@ -19,6 +19,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyBusinessErrorCode.DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -59,7 +60,7 @@ class SingleLineDiagramServiceTest {
             httpEntity, UUID.class)).thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
 
         StudyException e = assertThrows(StudyException.class, () -> service.duplicateNadConfig(source));
-        assertEquals(StudyException.Type.DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED,
+        assertEquals(DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED,
             ReflectionTestUtils.invokeMethod(e, "getType"));
     }
 }

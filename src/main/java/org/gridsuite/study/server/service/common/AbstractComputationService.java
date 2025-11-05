@@ -1,5 +1,6 @@
 package org.gridsuite.study.server.service.common;
 
+import org.gridsuite.study.server.StudyBusinessErrorCode;
 import org.gridsuite.study.server.StudyException;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -14,14 +15,14 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RESULTS_UUIDS;
-import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
+import static org.gridsuite.study.server.StudyBusinessErrorCode.DELETE_COMPUTATION_RESULTS_FAILED;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 public abstract class AbstractComputationService {
 
     public abstract List<String> getEnumValues(String enumName, UUID resultUuidOpt);
 
-    public List<String> getEnumValues(String enumName, UUID resultUuid, String apiVersion, String computingTypeBaseUri, StudyException.Type type, RestTemplate restTemplate) {
+    public List<String> getEnumValues(String enumName, UUID resultUuid, String apiVersion, String computingTypeBaseUri, StudyBusinessErrorCode type, RestTemplate restTemplate) {
         List<String> result;
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + apiVersion + "/results/{resultUuid}/{enumName}");
         String path = uriComponentsBuilder.buildAndExpand(resultUuid, enumName).toUriString();
