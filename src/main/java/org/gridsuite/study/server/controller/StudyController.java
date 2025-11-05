@@ -400,7 +400,7 @@ public class StudyController {
                 diagramParameters,
                 nodeUuid,
                 rootNetworkUuid,
-                sldRequestInfos);
+                Objects.requireNonNullElse(sldRequestInfos, Collections.emptyMap()));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -436,7 +436,7 @@ public class StudyController {
                 diagramParameters,
                 nodeUuid,
                 rootNetworkUuid,
-                sldRequestInfos);
+                Objects.requireNonNullElse(sldRequestInfos, Collections.emptyMap()));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1220,7 +1220,7 @@ public class StudyController {
                 .language(language)
                 .build();
         byte[] result = studyService.generateSubstationSvg(substationId,
-                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid, sldRequestInfos);
+                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid, Objects.requireNonNullElse(sldRequestInfos, Collections.emptyMap()));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -1256,7 +1256,7 @@ public class StudyController {
                 substationLayout,
                 nodeUuid,
                 rootNetworkUuid,
-                sldRequestInfos);
+                Objects.requireNonNullElse(sldRequestInfos, Collections.emptyMap()));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
