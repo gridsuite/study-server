@@ -457,7 +457,31 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelSwitches(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelInformation(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "switches"));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/bus-bar-sections")
+    @Operation(summary = "get bus bar sections information for a given network and voltage level")
+    @ApiResponse(responseCode = "200", description = "Bus bar sections information of the given voltage level retrieved")
+    public ResponseEntity<String> getBusBarSectionsInfo(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @PathVariable("voltageLevelId") String voltageLevelId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelInformation(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "bus-bar-sections"));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/feeder-bays-and-bus-bar-sections")
+    @Operation(summary = "get feeder bays and bus bar sections information for a given network and voltage level")
+    @ApiResponse(responseCode = "200", description = "Feeder bays and bus bar sections information of the given voltage level retrieved")
+    public ResponseEntity<String> getFeederBaysBusBarSectionsInfo(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @PathVariable("voltageLevelId") String voltageLevelId,
+            @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelInformation(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "feeder-bays-and-bus-bar-sections"));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/substation-id")
