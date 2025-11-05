@@ -368,7 +368,7 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg")
     @Operation(summary = "get the voltage level diagram for the given network and voltage level")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
         @ApiResponse(responseCode = "404", description = "The voltage level has not been found")})
@@ -399,7 +399,7 @@ public class StudyController {
                 diagramParameters,
                 nodeUuid,
                 rootNetworkUuid,
-                Objects.requireNonNullElse(sldRequestInfos, Collections.emptyMap()));
+                Objects.requireNonNullElse(sldRequestInfos, new HashMap<>()));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -435,7 +435,7 @@ public class StudyController {
                 diagramParameters,
                 nodeUuid,
                 rootNetworkUuid,
-                Objects.requireNonNullElse(sldRequestInfos, Collections.emptyMap()));
+                Objects.requireNonNullElse(sldRequestInfos, new HashMap<>()));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1170,7 +1170,7 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getShortCircuitParametersInfo(studyUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
         @ApiResponse(responseCode = "404", description = "The substation has not been found")})
@@ -1196,7 +1196,7 @@ public class StudyController {
                 .language(language)
                 .build();
         byte[] result = studyService.generateSubstationSvg(substationId,
-                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid, Objects.requireNonNullElse(sldRequestInfos, Collections.emptyMap()));
+                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid, Objects.requireNonNullElse(sldRequestInfos, new HashMap<>()));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -1232,7 +1232,7 @@ public class StudyController {
                 substationLayout,
                 nodeUuid,
                 rootNetworkUuid,
-                Objects.requireNonNullElse(sldRequestInfos, Collections.emptyMap()));
+                Objects.requireNonNullElse(sldRequestInfos, new HashMap<>()));
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
