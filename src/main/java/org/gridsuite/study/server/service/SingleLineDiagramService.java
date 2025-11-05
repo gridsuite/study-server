@@ -206,7 +206,7 @@ public class SingleLineDiagramService {
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(nadRequestInfos, headers);
 
         try {
-            return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, request, String.class); // dans le restTemplate ?
+            return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, request, String.class);
         } catch (HttpStatusCodeException e) {
             if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                 throw new StudyException(SVG_NOT_FOUND, VOLTAGE_LEVEL + NOT_FOUND);
