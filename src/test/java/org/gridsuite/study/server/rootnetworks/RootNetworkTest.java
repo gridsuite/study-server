@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
@@ -299,9 +300,8 @@ class RootNetworkTest {
                         .header("content-type", "application/json"))
                 .andExpect(status().isForbidden())
                 .andReturn();
-
-        assertTrue(result.getResponse().getContentAsString().equalsIgnoreCase(MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED.name()
-        ));
+        var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertEquals(MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED.value(), problemDetail.getBusinessErrorCode());
 
         assertEquals(1, rootNetworkRequestRepository.countAllByStudyUuid(studyEntity.getId()));
         assertEquals(3, rootNetworkRepository.countAllByStudyId(studyEntity.getId()));
@@ -758,8 +758,7 @@ class RootNetworkTest {
         UUID newCaseUuid = UUID.randomUUID();
         String newCaseFormat = "newCaseFormat";
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
-
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/?caseUuid={caseUuid}&caseFormat={newCaseFormat}", studyEntity.getId(), UUID.randomUUID(), newCaseUuid, newCaseFormat)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network?caseFormat={newCaseFormat}", studyEntity.getId(), UUID.randomUUID(), newCaseUuid, newCaseFormat)
                 .header("userId", "userId"))
             .andExpect(status().isNotFound());
 

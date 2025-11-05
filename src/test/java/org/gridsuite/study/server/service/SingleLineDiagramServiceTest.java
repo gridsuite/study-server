@@ -13,7 +13,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -60,8 +59,7 @@ class SingleLineDiagramServiceTest {
             httpEntity, UUID.class)).thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
 
         StudyException e = assertThrows(StudyException.class, () -> service.duplicateNadConfig(source));
-        assertEquals(DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED,
-            ReflectionTestUtils.invokeMethod(e, "getType"));
+        assertEquals(DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED, e.getBusinessErrorCode());
     }
 }
 

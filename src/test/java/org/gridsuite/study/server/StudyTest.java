@@ -24,6 +24,7 @@ import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import com.powsybl.network.store.model.VariantInfos;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import lombok.SneakyThrows;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
@@ -811,11 +812,13 @@ class StudyTest {
         equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus",
+        var result = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus",
                         studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
-                .andExpectAll(status().isBadRequest(),
-                        content().string("Enum unknown entry 'bogus' should be among NAME, ID"))
+                .andExpect(status().isInternalServerError())
                 .andReturn();
+        var problemDetail = mapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertNotNull(problemDetail.getDetail());
+        assertTrue(problemDetail.getDetail().contains("Enum unknown entry 'bogus' should be among NAME, ID"));
     }
 
     @Test
@@ -868,8 +871,9 @@ class StudyTest {
         //insert a study with a non-existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
                 NOT_EXISTING_CASE_UUID, "false").header(USER_ID_HEADER, "userId").param(CASE_FORMAT, "XIIDM"))
-                     .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.valueOf("text/plain;charset=UTF-8"))).andReturn();
-        assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", result.getResponse().getContentAsString());
+                     .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE)).andReturn();
+        var problemDetail = mapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", problemDetail.getDetail());
 
         assertTrue(TestUtils.getRequestsDone(1, server)
                        .contains("/v1/cases/%s/exists".formatted(NOT_EXISTING_CASE_UUID)));
@@ -896,10 +900,12 @@ class StudyTest {
 
         UUID randomUuid = UUID.randomUUID();
         //get a non-existing study -> 404 not found
-        mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header(USER_ID_HEADER, "userId"))
+        result = mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header(USER_ID_HEADER, "userId"))
             .andExpectAll(status().isNotFound(),
-                content().contentType(MediaType.APPLICATION_JSON),
-                jsonPath("$").value(STUDY_NOT_FOUND.name()));
+                content().contentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+            .andReturn();
+        problemDetail = mapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertEquals(STUDY_NOT_FOUND.name(), problemDetail.getDetail());
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 

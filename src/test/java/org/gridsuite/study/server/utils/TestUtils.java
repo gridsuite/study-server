@@ -238,7 +238,7 @@ public final class TestUtils {
     public static void assertStudyException(ThrowableAssert.ThrowingCallable throwingCallable, StudyBusinessErrorCode type, String message) {
         ThrowableAssertAlternative<StudyException> throwableAssert = Assertions.assertThatExceptionOfType(StudyException.class)
                 .isThrownBy(throwingCallable);
-        throwableAssert.extracting("type").isEqualTo(type);
+        throwableAssert.extracting("errorCode").isEqualTo(type);
         Optional.ofNullable(message).ifPresent(throwableAssert::withMessage);
     }
 

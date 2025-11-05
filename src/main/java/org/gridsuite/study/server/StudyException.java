@@ -6,26 +6,31 @@
  */
 package org.gridsuite.study.server;
 
+import com.powsybl.ws.commons.error.AbstractBusinessException;
+import com.powsybl.ws.commons.error.BusinessErrorCode;
+import lombok.NonNull;
+
 import java.util.Objects;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
-public class StudyException extends RuntimeException {
+public class StudyException extends AbstractBusinessException {
 
-    private final StudyBusinessErrorCode type;
+    private final StudyBusinessErrorCode errorCode;
 
-    public StudyException(StudyBusinessErrorCode type) {
-        super(Objects.requireNonNull(type.name()));
-        this.type = type;
+    public StudyException(StudyBusinessErrorCode errorCode) {
+        super(Objects.requireNonNull(errorCode.name()));
+        this.errorCode = errorCode;
     }
 
-    public StudyException(StudyBusinessErrorCode type, String message) {
+    public StudyException(StudyBusinessErrorCode errorCode, String message) {
         super(message);
-        this.type = type;
+        this.errorCode = errorCode;
     }
 
-    StudyBusinessErrorCode getType() {
-        return type;
+    @Override
+    public @NonNull BusinessErrorCode getBusinessErrorCode() {
+        return errorCode;
     }
 }
