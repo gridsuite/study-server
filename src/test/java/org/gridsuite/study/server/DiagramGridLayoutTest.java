@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.StudyConfigService;
@@ -27,6 +26,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.UUID;
 import java.util.List;
@@ -36,7 +36,6 @@ import java.util.ArrayList;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.DIAGRAM_GRID_LAYOUT_NOT_FOUND;
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.STUDY_CONFIG_API_VERSION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -165,8 +164,7 @@ class DiagramGridLayoutTest {
         wireMockServer.stubFor(WireMock.get(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + diagramGridLayoutUuid)
             .willReturn(WireMock.notFound()));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/diagram-grid-layout", studyUuid))
-            .andExpect(status().isNoContent());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/diagram-grid-layout", studyUuid)).andExpect(status().isNotFound());
     }
 
     @Test
@@ -189,18 +187,18 @@ class DiagramGridLayoutTest {
         wireMockServer.stubFor(WireMock.delete(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + diagramGridLayoutUuid)
             .willReturn(WireMock.notFound()));
 
-        StudyException exception = assertThrows(StudyException.class, () -> {
-            studyConfigService.deleteDiagramGridLayout(diagramGridLayoutUuid);
-        });
-
-        assertEquals(DIAGRAM_GRID_LAYOUT_NOT_FOUND, exception.getBusinessErrorCode());
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> studyConfigService.deleteDiagramGridLayout(diagramGridLayoutUuid)
+        );
 
         wireMockServer.stubFor(WireMock.delete(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + diagramGridLayoutUuid)
             .willReturn(WireMock.serverError()));
 
-        assertThrows(Exception.class, () -> {
-            studyConfigService.deleteDiagramGridLayout(diagramGridLayoutUuid);
-        });
+        assertThrows(
+            Exception.class,
+            () -> studyConfigService.deleteDiagramGridLayout(diagramGridLayoutUuid)
+        );
     }
 
     @Test
@@ -210,18 +208,18 @@ class DiagramGridLayoutTest {
         wireMockServer.stubFor(WireMock.post(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout")
             .willReturn(WireMock.notFound()));
 
-        StudyException exception = assertThrows(StudyException.class, () -> {
-            studyConfigService.saveDiagramGridLayout(diagramGridLayout);
-        });
-
-        assertEquals(DIAGRAM_GRID_LAYOUT_NOT_FOUND, exception.getBusinessErrorCode());
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> studyConfigService.saveDiagramGridLayout(diagramGridLayout)
+        );
 
         wireMockServer.stubFor(WireMock.post(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout")
             .willReturn(WireMock.serverError()));
 
-        assertThrows(Exception.class, () -> {
-            studyConfigService.saveDiagramGridLayout(diagramGridLayout);
-        });
+        assertThrows(
+            Exception.class,
+            () -> studyConfigService.saveDiagramGridLayout(diagramGridLayout)
+        );
     }
 
     @Test
@@ -232,18 +230,18 @@ class DiagramGridLayoutTest {
         wireMockServer.stubFor(WireMock.put(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + diagramGridLayoutUuid)
             .willReturn(WireMock.notFound()));
 
-        StudyException exception = assertThrows(StudyException.class, () -> {
-            studyConfigService.updateDiagramGridLayout(diagramGridLayoutUuid, diagramGridLayout);
-        });
-
-        assertEquals(DIAGRAM_GRID_LAYOUT_NOT_FOUND, exception.getBusinessErrorCode());
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> studyConfigService.updateDiagramGridLayout(diagramGridLayoutUuid, diagramGridLayout)
+        );
 
         wireMockServer.stubFor(WireMock.put(DELIMITER + STUDY_CONFIG_API_VERSION + "/diagram-grid-layout/" + diagramGridLayoutUuid)
             .willReturn(WireMock.serverError()));
 
-        assertThrows(Exception.class, () -> {
-            studyConfigService.updateDiagramGridLayout(diagramGridLayoutUuid, diagramGridLayout);
-        });
+        assertThrows(
+            Exception.class,
+            () -> studyConfigService.updateDiagramGridLayout(diagramGridLayoutUuid, diagramGridLayout)
+        );
     }
 
     @Test

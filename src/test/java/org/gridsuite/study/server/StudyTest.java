@@ -978,7 +978,7 @@ class StudyTest {
                         studyUuid, firstRootNetworkUuid, rootNodeUuid, "ERROR")
                         .param("fileName", "myFileName")
                         .header(HEADER_USER_ID, "userId"))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isIAmATeapot());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.contains("/v1/networks/" + NETWORK_UUID_STRING + "/export/ERROR")
                 && request.contains("fileName=myFileName")));
@@ -1139,14 +1139,10 @@ class StudyTest {
     @Test
     void testNotifyStudyMetadataUpdated() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=metadata_updated", studyUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/notification", studyUuid)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkStudyMetadataUpdatedMessagesReceived();
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=NOT_EXISTING_TYPE", UUID.randomUUID())
-                .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -1461,7 +1457,7 @@ class StudyTest {
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR)
                         .header("userId", userId)
                         .param(CASE_FORMAT, "UCTE"))
-            .andExpect(status().is5xxServerError());
+            .andExpect(status().isIAmATeapot());
 
        // assert that the broker message has been sent a study creation request message
         Message<byte[]> message = output.receive(TIMEOUT, "study.update");
@@ -2981,7 +2977,7 @@ class StudyTest {
         UUID notExistingNetworkRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(notExistingNetworkStudyUuid);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", notExistingNetworkStudyUuid, notExistingNetworkRootNetworkUuid))
-            .andExpect(status().isInternalServerError());
+            .andExpect(status().isNotFound());
         Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
         Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
 
@@ -2989,7 +2985,7 @@ class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/reindex-all")));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", notExistingNetworkStudyUuid, notExistingNetworkRootNetworkUuid))
-            .andExpectAll(status().isInternalServerError());
+            .andExpectAll(status().isNotFound());
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/indexed-equipments")).count());

@@ -68,7 +68,6 @@ import org.springframework.data.util.Pair;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.UncheckedIOException;
@@ -86,7 +85,6 @@ import java.util.stream.Stream;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -339,7 +337,7 @@ public class StudyService {
             persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParametersRaw(), CaseImportAction.ROOT_NETWORK_CREATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntity);
-            throw new StudyException(ROOT_NETWORK_CREATION_FAILED);
+            throw e;
         }
 
         notificationService.emitRootNetworksUpdated(studyUuid);
@@ -400,7 +398,7 @@ public class StudyService {
             persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParametersRaw(), CaseImportAction.ROOT_NETWORK_MODIFICATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkModificationRequestEntity);
-            throw new StudyException(ROOT_NETWORK_MODIFICATION_FAILED);
+            throw e;
         }
     }
 
@@ -820,11 +818,7 @@ public class StudyService {
     }
 
     private void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, String userId, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
-        try {
-            networkConversionService.persistNetwork(rootNetworkInfos, studyUuid, variantId, userId, UUID.randomUUID(), importParameters, caseImportAction);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, STUDY_CREATION_FAILED);
-        }
+        networkConversionService.persistNetwork(rootNetworkInfos, studyUuid, variantId, userId, UUID.randomUUID(), importParameters, caseImportAction);
     }
 
     public String getLinesGraphics(UUID networkUuid, UUID nodeUuid, UUID rootNetworkUuid, List<String> linesIds) {
@@ -1111,10 +1105,7 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public void assertNoBlockedNodeInStudy(UUID studyUuid, UUID nodeUuid) {
-        if (nodeUuid == null) {
-            throw new StudyException(MISSING_PARAMETER, "The parameter 'nodeUuid' must be defined !");
-        }
+    public void assertNoBlockedNodeInStudy(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
         List<UUID> nodesUuids = networkModificationTreeService.getNodeTreeUuids(nodeUuid);
         getStudyRootNetworks(studyUuid).stream().forEach(rootNetwork ->
             rootNetworkNodeInfoService.assertNoBlockedNode(rootNetwork.getId(), nodesUuids)
@@ -1848,7 +1839,7 @@ public class StudyService {
             networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, workflowInfos);
         } catch (Exception e) {
             networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
-            throw new StudyException(NODE_BUILD_ERROR, e.getMessage());
+            throw e;
         }
     }
 
@@ -2331,11 +2322,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void moveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, boolean isTargetInDifferentNodeTree, String userId) {
-        if (originNodeUuid == null) {
-            throw new StudyException(MISSING_PARAMETER, "The parameter 'originNodeUuid' must be defined when moving modifications");
-        }
-
+    public void moveNetworkModifications(@NonNull UUID studyUuid, UUID targetNodeUuid, @NonNull UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, boolean isTargetInDifferentNodeTree, String userId) {
         boolean isTargetDifferentNode = !targetNodeUuid.equals(originNodeUuid);
 
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
@@ -2571,12 +2558,8 @@ public class StudyService {
         );
     }
 
-    public void notify(@NonNull String notificationName, @NonNull UUID studyUuid) {
-        if (notificationName.equals(NotificationService.UPDATE_TYPE_STUDY_METADATA_UPDATED)) {
-            notificationService.emitStudyMetadataChanged(studyUuid);
-        } else {
-            throw new StudyException(UNKNOWN_NOTIFICATION_TYPE);
-        }
+    public void notify(@NonNull UUID studyUuid) {
+        notificationService.emitStudyMetadataChanged(studyUuid);
     }
 
     @Transactional
