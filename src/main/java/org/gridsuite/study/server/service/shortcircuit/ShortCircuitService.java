@@ -26,7 +26,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -41,7 +40,6 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.utils.StudyUtils.addPageableToQueryParams;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -150,15 +148,7 @@ public class ShortCircuitService extends AbstractComputationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headersCsv, headers);
-        try {
-            return restTemplate.exchange(resourcePath, HttpMethod.POST, entity, byte[].class).getBody();
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, SHORT_CIRCUIT_ANALYSIS_ERROR);
-            }
-        }
+        return restTemplate.exchange(resourcePath, HttpMethod.POST, entity, byte[].class).getBody();
     }
 
     public byte[] getShortCircuitAnalysisCsvResult(UUID resultUuid, String headersCsv) {
@@ -214,16 +204,7 @@ public class ShortCircuitService extends AbstractComputationService {
     }
 
     public String getShortCircuitAnalysisResource(URI resourcePath) {
-        String result;
-        try {
-            result = restTemplate.getForObject(resourcePath, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
-            }
-            throw e;
-        }
-        return result;
+        return restTemplate.getForObject(resourcePath, String.class);
     }
 
     public void stopShortCircuitAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
@@ -239,7 +220,7 @@ public class ShortCircuitService extends AbstractComputationService {
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
+            throw new UncheckedIOException("Failed to serialize node receiver", e);
         }
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/stop")
@@ -286,7 +267,7 @@ public class ShortCircuitService extends AbstractComputationService {
 
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuid) {
-        return getEnumValues(enumName, resultUuid, SHORT_CIRCUIT_API_VERSION, shortCircuitServerBaseUri, SHORT_CIRCUIT_ANALYSIS_NOT_FOUND, restTemplate);
+        return getEnumValues(enumName, resultUuid, SHORT_CIRCUIT_API_VERSION, shortCircuitServerBaseUri, restTemplate);
     }
 
     private UriComponentsBuilder getBaseUriForParameters() {
@@ -295,57 +276,41 @@ public class ShortCircuitService extends AbstractComputationService {
 
     public UUID createParameters(@Nullable final String parametersInfos) {
         final UriComponentsBuilder uri = getBaseUriForParameters();
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-            if (StringUtils.isBlank(parametersInfos)) {
-                return restTemplate.postForObject(uri.pathSegment("default").build().toUri(), new HttpEntity<>(headers), UUID.class);
-            } else {
-                headers.setContentType(MediaType.APPLICATION_JSON);
-                return restTemplate.postForObject(uri.build().toUri(), new HttpEntity<>(parametersInfos, headers), UUID.class);
-            }
-        } catch (final HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_SHORTCIRCUIT_PARAMETERS_FAILED);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        if (StringUtils.isBlank(parametersInfos)) {
+            return restTemplate.postForObject(uri.pathSegment("default").build().toUri(), new HttpEntity<>(headers), UUID.class);
+        } else {
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            return restTemplate.postForObject(uri.build().toUri(), new HttpEntity<>(parametersInfos, headers), UUID.class);
         }
     }
 
     public void updateParameters(final UUID parametersUuid, @Nullable final String parametersInfos) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        try {
-            restTemplate.put(getBaseUriForParameters()
-                .pathSegment("{parametersUuid}")
-                .buildAndExpand(parametersUuid)
-                .toUri(), new HttpEntity<>(parametersInfos, headers));
-        } catch (final HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_SHORTCIRCUIT_PARAMETERS_FAILED);
-        }
+        restTemplate.put(getBaseUriForParameters()
+            .pathSegment("{parametersUuid}")
+            .buildAndExpand(parametersUuid)
+            .toUri(), new HttpEntity<>(parametersInfos, headers));
     }
 
     public String getParameters(UUID parametersUuid) {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-            return restTemplate.exchange(getBaseUriForParameters()
-                .pathSegment("{parametersUuid}")
-                .buildAndExpand(parametersUuid)
-                .toUri(), HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
-        } catch (final HttpStatusCodeException e) {
-            throw handleHttpError(e, GET_SHORTCIRCUIT_PARAMETERS_FAILED);
-        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        return restTemplate.exchange(getBaseUriForParameters()
+            .pathSegment("{parametersUuid}")
+            .buildAndExpand(parametersUuid)
+            .toUri(), HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
     }
 
     public UUID duplicateParameters(UUID parametersUuid) {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-            return restTemplate.postForObject(getBaseUriForParameters()
-                .queryParam("duplicateFrom", parametersUuid)
-                .build()
-                .toUri(), new HttpEntity<>(headers), UUID.class);
-        } catch (final HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_SHORTCIRCUIT_PARAMETERS_FAILED);
-        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        return restTemplate.postForObject(getBaseUriForParameters()
+            .queryParam("duplicateFrom", parametersUuid)
+            .build()
+            .toUri(), new HttpEntity<>(headers), UUID.class);
     }
 
     public void deleteShortcircuitParameters(UUID uuid) {

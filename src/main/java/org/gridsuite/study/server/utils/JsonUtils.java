@@ -55,10 +55,14 @@ public final class JsonUtils {
         return nodeAt(node, jsonNode -> !jsonNode.isMissingNode(), pointers);
     }
 
-    public static String getModificationContextJsonString(ObjectMapper objectMapper, Pair<String, List<ModificationApplicationContext>> modificationContextInfos) throws JsonProcessingException, NoSuchFieldException {
-        ObjectNode modificationJson = (ObjectNode) objectMapper.readTree(modificationContextInfos.getFirst());
-        ObjectNode modificationContextJson = objectMapper.valueToTree(modificationContextInfos);
-        modificationContextJson.set(Pair.class.getDeclaredField("first").getName(), modificationJson);
-        return modificationContextJson.toString();
+    public static String getModificationContextJsonString(ObjectMapper objectMapper, Pair<String, List<ModificationApplicationContext>> modificationContextInfos) {
+        try {
+            ObjectNode modificationJson = (ObjectNode) objectMapper.readTree(modificationContextInfos.getFirst());
+            ObjectNode modificationContextJson = objectMapper.valueToTree(modificationContextInfos);
+            modificationContextJson.set(Pair.class.getDeclaredField("first").getName(), modificationJson);
+            return modificationContextJson.toString();
+        } catch (JsonProcessingException | NoSuchFieldException e) {
+            throw new IllegalStateException("Impossible to parse modification context", e);
+        }
     }
 }

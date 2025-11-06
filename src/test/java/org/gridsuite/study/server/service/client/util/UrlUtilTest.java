@@ -22,7 +22,9 @@ class UrlUtilTest {
 
     @Test
     void testBuildEndPointUrlBadUri() {
-        assertThrows(StudyException.class, () ->
-            UrlUtil.buildEndPointUrl(BASE_URI, API_VERSION, END_POINT_BAD_FORMAT));
+        assertThrows(
+            IllegalStateException.class,
+            () -> UrlUtil.buildEndPointUrl(BASE_URI, API_VERSION, END_POINT_BAD_FORMAT)
+        );
     }
 }

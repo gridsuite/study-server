@@ -248,7 +248,7 @@ class FilterServiceTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/evaluate",
                         studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
                         .content(sendBody).contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
+                .andExpect(status().is4xxClientError())
                 .andReturn();
 
         wireMockUtils.verifyFilterEvaluate(stubUuid, NETWORK_UUID_STRING);

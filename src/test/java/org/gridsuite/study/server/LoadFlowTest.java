@@ -23,7 +23,6 @@ import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -64,6 +63,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.*;
 
@@ -904,7 +904,7 @@ class LoadFlowTest {
     @Test
     void testGetStatusNotFound(final MockWebServer server) {
         UUID notExistingNetworkUuid = UUID.fromString(LOADFLOW_ERROR_RESULT_UUID);
-        assertThrows(StudyException.class, () -> loadFlowService.getLoadFlowStatus(notExistingNetworkUuid), LOADFLOW_NOT_FOUND.name());
+        assertThrows(HttpClientErrorException.NotFound.class, () -> loadFlowService.getLoadFlowStatus(notExistingNetworkUuid), LOADFLOW_NOT_FOUND.name());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_ERROR_RESULT_UUID + "/status")));
     }
 
