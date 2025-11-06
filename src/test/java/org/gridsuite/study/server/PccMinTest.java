@@ -50,9 +50,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import org.springframework.web.client.HttpClientErrorException;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.junit.jupiter.api.Assertions.*;
@@ -372,7 +372,7 @@ class PccMinTest {
                 .willReturn(WireMock.notFound())
         );
         PageRequest pageRequest = PageRequest.of(0, 20);
-        assertThrows(StudyException.class, () ->
+        assertThrows(HttpClientErrorException.NotFound.class, () ->
             pccMinService.getPccMinResultsPage(params, null, null, pageRequest)
         );
 
@@ -444,11 +444,10 @@ class PccMinTest {
         wireMockServer.stubFor(WireMock.get("v1/parameters/" + wrongParamUuid)
             .willReturn(WireMock.notFound()));
 
-        StudyException exception = assertThrows(StudyException.class, () -> {
-            pccMinService.getPccMinParameters(wrongParamUuid);
-        });
-
-        assertEquals(PCC_MIN_PARAMETERS_NOT_FOUND, exception.getBusinessErrorCode());
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> pccMinService.getPccMinParameters(wrongParamUuid)
+        );
     }
 
     @Test
@@ -466,10 +465,10 @@ class PccMinTest {
         UUID wrongParamUuid = UUID.randomUUID();
         wireMockServer.stubFor(WireMock.put("v1/parameters/" + wrongParamUuid)
             .willReturn(WireMock.notFound()));
-        StudyException exception = assertThrows(StudyException.class, () -> {
-            pccMinService.updatePccMinParameters(wrongParamUuid, "parameterToUpdate");
-        });
-        assertEquals(UPDATE_PCC_MIN_PARAMETERS_FAILED, exception.getBusinessErrorCode());
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> pccMinService.updatePccMinParameters(wrongParamUuid, "parameterToUpdate")
+        );
     }
 
     @Test
@@ -489,10 +488,10 @@ class PccMinTest {
         //failure
         wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters"))
             .willReturn(notFound()));
-        StudyException exception = assertThrows(StudyException.class, () -> {
-            pccMinService.createPccMinParameters(parameterToCreate);
-        });
-        assertEquals(CREATE_PCC_MIN_PARAMETERS_FAILED, exception.getBusinessErrorCode());
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> pccMinService.createPccMinParameters(parameterToCreate)
+        );
     }
 
     @Test
@@ -522,9 +521,9 @@ class PccMinTest {
         // Fail case
         wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters/default"))
             .willReturn(WireMock.notFound()));
-        StudyException exception = assertThrows(StudyException.class, () -> {
-            pccMinService.createDefaultPccMinParameters();
-        });
-        assertEquals(CREATE_PCC_MIN_PARAMETERS_FAILED, exception.getBusinessErrorCode());
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> pccMinService.createDefaultPccMinParameters()
+        );
     }
 }
