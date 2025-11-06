@@ -36,6 +36,7 @@ public class RestResponseEntityExceptionHandler extends AbstractBaseRestExceptio
                  SECURITY_ANALYSIS_NOT_FOUND,
                  SENSITIVITY_ANALYSIS_NOT_FOUND,
                  SHORT_CIRCUIT_ANALYSIS_NOT_FOUND,
+                 PCC_MIN_NOT_FOUND,
                  NO_VOLTAGE_INIT_RESULTS_FOR_NODE
                 -> HttpStatus.NOT_FOUND;
             case CASE_NOT_FOUND -> HttpStatus.FAILED_DEPENDENCY;
