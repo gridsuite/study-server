@@ -37,7 +37,8 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.PCC_MIN_RUNNING;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.PCC_MIN_NOT_FOUND;
 
 /**
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
@@ -144,7 +145,7 @@ public class PccMinService extends AbstractComputationService {
     public void assertPccMinNotRunning(UUID resultUuid) {
         String status = getPccMinStatus(resultUuid);
         if (PccMinStatus.RUNNING.name().equals(status)) {
-            throw new StudyException(PCC_MIN_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

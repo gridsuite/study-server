@@ -39,14 +39,7 @@ public class RestResponseEntityExceptionHandler extends AbstractBaseRestExceptio
                  NO_VOLTAGE_INIT_RESULTS_FOR_NODE
                 -> HttpStatus.NOT_FOUND;
             case CASE_NOT_FOUND -> HttpStatus.FAILED_DEPENDENCY;
-            case LOADFLOW_RUNNING,
-                 SECURITY_ANALYSIS_RUNNING,
-                 SENSITIVITY_ANALYSIS_RUNNING,
-                 DYNAMIC_SIMULATION_RUNNING,
-                 SHORT_CIRCUIT_ANALYSIS_RUNNING,
-                 VOLTAGE_INIT_RUNNING,
-                 STATE_ESTIMATION_RUNNING,
-                 PCC_MIN_RUNNING,
+            case COMPUTATION_RUNNING,
                  NOT_ALLOWED,
                  BAD_NODE_TYPE,
                  NODE_NAME_ALREADY_EXIST,

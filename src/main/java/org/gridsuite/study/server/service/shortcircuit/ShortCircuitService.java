@@ -251,7 +251,7 @@ public class ShortCircuitService extends AbstractComputationService {
         String scs = getShortCircuitAnalysisStatus(scsResultUuid);
         String oneBusScs = getShortCircuitAnalysisStatus(oneBusScsResultUuid);
         if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(oneBusScs)) {
-            throw new StudyException(SHORT_CIRCUIT_ANALYSIS_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

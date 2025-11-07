@@ -21,7 +21,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.DYNAMIC_SECURITY_ANALYSIS_RUNNING;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 import static org.gridsuite.study.server.utils.TestUtils.assertStudyException;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
@@ -192,7 +192,7 @@ class DynamicSecurityAnalysisServiceTest {
 
         // test running
         assertStudyException(() -> dynamicSecurityAnalysisService.assertDynamicSecurityAnalysisNotRunning(RESULT_UUID_RUNNING),
-                DYNAMIC_SECURITY_ANALYSIS_RUNNING, null);
+            COMPUTATION_RUNNING, null);
     }
 
     @Test
