@@ -20,10 +20,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -38,7 +36,6 @@ import org.springframework.data.domain.Pageable;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.PCC_MIN_NOT_FOUND;
 
 /**
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
@@ -120,17 +117,10 @@ public class PccMinService extends AbstractComputationService {
         if (resultUuid == null) {
             return null;
         }
-        try {
-            String path = UriComponentsBuilder
-                .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/{resultUuid}/status")
-                .buildAndExpand(resultUuid).toUriString();
-            return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(PCC_MIN_NOT_FOUND);
-            }
-            throw e;
-        }
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/{resultUuid}/status")
+            .buildAndExpand(resultUuid).toUriString();
+        return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
     }
 
     public void deletePccMinResults(List<UUID> resultsUuids) {

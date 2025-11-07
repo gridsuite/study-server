@@ -130,7 +130,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
 
     public byte[] exportSensitivityResultsAsCsv(UUID resultUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos, UUID networkUuid, String variantId, String selector, String filters, String globalFilters) {
         if (resultUuid == null) {
-            throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
+            throw new StudyException(NOT_FOUND, "Result of sensitivity analysis was not found");
         }
 
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)

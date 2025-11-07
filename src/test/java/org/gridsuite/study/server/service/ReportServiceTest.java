@@ -53,7 +53,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STUDY_NOT_FOUND;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_DEFAULT_NAME;
 import static org.gridsuite.study.server.utils.TestUtils.checkReports;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
@@ -169,7 +169,7 @@ class ReportServiceTest {
     @Test
     void testReport(final MockWebServer server) throws Exception {
         RootNode rootNode = createRoot();
-        StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(NOT_FOUND));
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
         List<Report> expectedRootReports = List.of(getNodeReport(ROOT_NODE_REPORT_UUID, rootNode.getId().toString()));
 
@@ -204,7 +204,7 @@ class ReportServiceTest {
     @Test
     void testMultipleReport(final MockWebServer server) throws Exception {
         RootNode rootNode = createRoot();
-        StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        StudyEntity studyEntity = studyRepository.findById(rootNode.getStudyId()).orElseThrow(() -> new StudyException(NOT_FOUND));
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
         NetworkModificationNode node = studyService.createNode(studyEntity.getId(), rootNode.getId(), createModificationNodeInfo("Modification Node"), InsertMode.AFTER, null);
         NetworkModificationNode child1 = studyService.createNode(studyEntity.getId(), node.getId(), createModificationNodeInfo("Child 1"), InsertMode.AFTER, null);
