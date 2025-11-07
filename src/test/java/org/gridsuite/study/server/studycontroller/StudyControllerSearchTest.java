@@ -1,4 +1,4 @@
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.studycontroller;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import com.fasterxml.jackson.core.type.TypeReference;

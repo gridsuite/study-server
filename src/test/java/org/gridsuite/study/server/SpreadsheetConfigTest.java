@@ -11,8 +11,9 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyConfigService;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.WireMockUtils;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,7 +65,7 @@ class SpreadsheetConfigTest {
     private StudyConfigService studyConfigService;
 
     private WireMockServer wireMockServer;
-    private WireMockUtils wireMockUtils;
+    private WireMockStubs wireMockStubs;
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
     private static final UUID NETWORK_UUID = UUID.fromString("052f64fd-775f-4eb8-89ae-de76b713e349");
@@ -78,7 +79,7 @@ class SpreadsheetConfigTest {
         wireMockServer.start();
         String baseUrlWireMock = wireMockServer.baseUrl();
         studyConfigService.setStudyConfigServerBaseUri(baseUrlWireMock);
-        wireMockUtils = new WireMockUtils(wireMockServer);
+        wireMockStubs = new WireMockStubs(wireMockServer);
     }
 
     @Test
@@ -97,7 +98,7 @@ class SpreadsheetConfigTest {
                 .andReturn();
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
-        wireMockUtils.verifyPutRequest(stubId, configServerUrl, false, Map.of(), newOrder);
+        WireMockUtils.verifyPutRequest(wireMockServer, stubId, configServerUrl, false, Map.of(), newOrder);
     }
 
     @Test
@@ -120,7 +121,7 @@ class SpreadsheetConfigTest {
                 .andReturn();
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
-        wireMockUtils.verifyPutRequest(stubId, configServerUrl, false, Map.of(), columnsStates);
+        WireMockUtils.verifyPutRequest(wireMockServer, stubId, configServerUrl, false, Map.of(), columnsStates);
     }
 
     @Test
@@ -139,7 +140,7 @@ class SpreadsheetConfigTest {
                 .andReturn();
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
-        wireMockUtils.verifyPutRequest(stubId, configServerUrl, false, Map.of(), body);
+        WireMockUtils.verifyPutRequest(wireMockServer, stubId, configServerUrl, false, Map.of(), body);
     }
 
     @Test
@@ -156,7 +157,7 @@ class SpreadsheetConfigTest {
                 .andReturn();
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
-        wireMockUtils.verifyDeleteRequest(stubId, configServerUrl, false, Map.of());
+        WireMockUtils.verifyDeleteRequest(wireMockServer, stubId, configServerUrl, false, Map.of());
     }
 
     @Test
@@ -173,7 +174,7 @@ class SpreadsheetConfigTest {
                 .andReturn();
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
-        wireMockUtils.verifyPostRequest(stubId, configServerUrl, Map.of(), 1);
+        WireMockUtils.verifyPostRequest(wireMockServer, stubId, configServerUrl, Map.of(), 1);
     }
 
     @Test
@@ -192,7 +193,7 @@ class SpreadsheetConfigTest {
                 .andReturn();
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
-        wireMockUtils.verifyPutRequest(stubId, configServerUrl, false, Map.of(), columnDto);
+        WireMockUtils.verifyPutRequest(wireMockServer, stubId, configServerUrl, false, Map.of(), columnDto);
     }
 
     @Test
@@ -212,7 +213,7 @@ class SpreadsheetConfigTest {
         JSONAssert.assertEquals(newColumnUuidJsonResult, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
-        wireMockUtils.verifyPostRequest(stubId, configServerUrl, false, Map.of(), columnDto);
+        WireMockUtils.verifyPostRequest(wireMockServer, stubId, configServerUrl, false, Map.of(), columnDto);
     }
 
     @Test
@@ -236,7 +237,7 @@ class SpreadsheetConfigTest {
                 .andReturn();
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
-        wireMockUtils.verifyPostRequest(stubId, configServerUrl, false, Map.of(), globalFilters);
+        WireMockUtils.verifyPostRequest(wireMockServer, stubId, configServerUrl, false, Map.of(), globalFilters);
     }
 
     @Test
@@ -253,7 +254,7 @@ class SpreadsheetConfigTest {
                 .andReturn();
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
-        wireMockUtils.verifyPutRequest(stubId, configServerUrl, false, Map.of(), null);
+        WireMockUtils.verifyPutRequest(wireMockServer, stubId, configServerUrl, false, Map.of(), null);
     }
 
     @Test
@@ -283,7 +284,7 @@ class SpreadsheetConfigTest {
                 .andReturn();
 
         checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
-        wireMockUtils.verifyPutRequest(stubId, configServerUrl, false, Map.of(), spreadsheetConfig);
+        WireMockUtils.verifyPutRequest(wireMockServer, stubId, configServerUrl, false, Map.of(), spreadsheetConfig);
     }
 
     private StudyEntity insertStudy() {

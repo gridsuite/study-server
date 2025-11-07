@@ -33,8 +33,9 @@ import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurit
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.WireMockUtils;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -116,7 +117,7 @@ class RootNetworkTest {
 
     private WireMockServer wireMockServer;
 
-    private WireMockUtils wireMockUtils;
+    private WireMockStubs wireMockStubs;
 
     @Autowired
     private NetworkConversionService networkConversionService;
@@ -181,7 +182,7 @@ class RootNetworkTest {
         wireMockServer.start();
         String baseUrlWireMock = wireMockServer.baseUrl();
         networkConversionService.setNetworkConversionServerBaseUri(baseUrlWireMock);
-        wireMockUtils = new WireMockUtils(wireMockServer);
+        wireMockStubs = new WireMockStubs(wireMockServer);
     }
 
     @Test
@@ -209,7 +210,7 @@ class RootNetworkTest {
                 .andReturn().getResponse().getContentAsString();
         RootNetworkRequestInfos result = objectMapper.readValue(response, RootNetworkRequestInfos.class);
 
-        wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
+        WireMockUtils.verifyPostRequest(wireMockServer, stubId, "/v1/networks",
             false,
             Map.of("caseUuid", WireMock.equalTo(DUPLICATE_CASE_UUID.toString()),
                 "caseFormat", WireMock.equalTo(caseFormat),
@@ -260,7 +261,7 @@ class RootNetworkTest {
                .header("content-type", "application/json"))
             .andExpect(status().isInternalServerError());
 
-        wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
+        WireMockUtils.verifyPostRequest(wireMockServer, stubId, "/v1/networks",
             false,
             Map.of("caseUuid", WireMock.equalTo(DUPLICATE_CASE_UUID.toString()),
                 "caseFormat", WireMock.equalTo(caseFormat),
@@ -710,7 +711,7 @@ class RootNetworkTest {
         verify(rootNetworkService, times(1)).insertModificationRequest(eq(studyEntity.getId()), rootNetworkInfosCaptor.capture(), eq(USER_ID));
         rootNetworkInfosCaptor.getValue().getCaseInfos().setCaseUuid(null);
         assertThat(rootNetworkInfosCaptor.getValue()).usingRecursiveComparison().isEqualTo(rootNetworkUpdateInfos);
-        wireMockUtils.verifyPostRequest(stubId, "/v1/networks",
+        WireMockUtils.verifyPostRequest(wireMockServer, stubId, "/v1/networks",
                 false,
                 Map.of(
                         "caseUuid", WireMock.equalTo(DUPLICATE_CASE_UUID.toString()),
