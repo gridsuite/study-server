@@ -76,7 +76,7 @@ public class RootNetworkService {
     }
 
     public UUID getNetworkUuid(UUID rootNetworkUuid) {
-        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
 
     public UUID getRootReportUuid(UUID rootNetworkUuid) {
@@ -93,7 +93,7 @@ public class RootNetworkService {
 
     public void updateRootNetwork(@NonNull RootNetworkInfos rootNetworkInfos, boolean updateCase) {
         RootNetworkEntity rootNetworkEntity = getRootNetwork(rootNetworkInfos.getId())
-                .orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
         UUID oldCaseUuid = rootNetworkEntity.getCaseUuid();
         updateRootNetworkInfos(rootNetworkEntity, rootNetworkInfos, updateCase);
@@ -161,11 +161,11 @@ public class RootNetworkService {
     }
 
     public String getCaseName(UUID rootNetworkUuid) {
-        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
 
     public Map<String, String> getImportParameters(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
 
     public List<RootNetworkInfos> getRootNetworkInfosWithLinksInfos(UUID studyUuid) {
@@ -216,7 +216,7 @@ public class RootNetworkService {
 
     public void assertIsRootNetworkInStudy(UUID studyUuid, UUID rootNetworkUuid) {
         if (!rootNetworkRepository.existsByIdAndStudyId(rootNetworkUuid, studyUuid)) {
-            throw new StudyException(ROOT_NETWORK_NOT_FOUND);
+            throw new StudyException(NOT_FOUND, "Root network not found");
         }
     }
 
@@ -227,7 +227,7 @@ public class RootNetworkService {
      */
     public void deleteRootNetworks(StudyEntity studyEntity, Stream<UUID> rootNetworksUuids) {
         List<RootNetworkInfos> rootNetworksInfos = rootNetworksUuids.map(rootNetworkRepository::findWithRootNetworkNodeInfosById)
-            .map(o -> o.orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)))
+            .map(o -> o.orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")))
             .map(RootNetworkEntity::toDto)
             .toList();
 

@@ -96,7 +96,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
     public byte[] getSecurityAnalysisResultCsv(UUID resultUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
 
         if (resultUuid == null) {
-            throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
+            throw new StudyException(NOT_FOUND, "Result for security analysis not found");
         }
 
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getExportPathFromResultType(resultType));
@@ -221,7 +221,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
     public void assertSecurityAnalysisNotRunning(UUID resultUuid) {
         SecurityAnalysisStatus sas = getSecurityAnalysisStatus(resultUuid);
         if (sas == SecurityAnalysisStatus.RUNNING) {
-            throw new StudyException(SECURITY_ANALYSIS_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

@@ -138,7 +138,7 @@ public class ShortCircuitService extends AbstractComputationService {
 
     private String getShortCircuitAnalysisCsvResultResourcePath(UUID resultUuid) {
         if (resultUuid == null) {
-            throw new StudyException(SHORT_CIRCUIT_ANALYSIS_NOT_FOUND);
+            throw new StudyException(NOT_FOUND, "Result of short circuit analysis was not found");
         }
         String path = DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/csv";
         return UriComponentsBuilder.fromPath(path).buildAndExpand(resultUuid).toUriString();
@@ -251,7 +251,7 @@ public class ShortCircuitService extends AbstractComputationService {
         String scs = getShortCircuitAnalysisStatus(scsResultUuid);
         String oneBusScs = getShortCircuitAnalysisStatus(oneBusScsResultUuid);
         if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(oneBusScs)) {
-            throw new StudyException(SHORT_CIRCUIT_ANALYSIS_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

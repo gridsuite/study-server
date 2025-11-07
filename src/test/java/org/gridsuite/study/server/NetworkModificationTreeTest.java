@@ -776,14 +776,14 @@ class NetworkModificationTreeTest {
         RootNode root = getRootNode(rootStudyId, firstRootNetworkUuid);
         UUID rootId = root.getId();
 
-        RootNodeInfoEntity rootInfos = rootNodeInfoRepository.findById(rootId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
+        RootNodeInfoEntity rootInfos = rootNodeInfoRepository.findById(rootId).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found"));
         assertEquals(rootId, rootInfos.getId());
 
         List<AbstractNode> children = root.getChildren();
         assertEquals(2, children.size());
         NetworkModificationNode n1 = (NetworkModificationNode) (children.stream().filter(c -> c.getName().equals("n1")).findFirst().orElseThrow());
         NetworkModificationNodeInfoEntity n1Infos = networkModificationTreeService.getNetworkModificationNodeInfoEntity(n1.getId());
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(n1.getId(), firstRootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(n1.getId(), firstRootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
         assertEquals("n1", n1.getName());
         assertEquals("zzz", n1.getDescription());

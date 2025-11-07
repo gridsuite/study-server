@@ -32,7 +32,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -198,7 +198,7 @@ public class LoadFlowService extends AbstractComputationService {
     public void assertLoadFlowNotRunning(UUID resultUuid) {
         LoadFlowStatus loadFlowStatus = getLoadFlowStatus(resultUuid);
         if (LoadFlowStatus.RUNNING.equals(loadFlowStatus)) {
-            throw new StudyException(LOADFLOW_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

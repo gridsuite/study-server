@@ -69,8 +69,8 @@ import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.LOADFLOW_NOT_FOUND;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
 import static org.junit.jupiter.api.Assertions.*;
@@ -904,7 +904,7 @@ class LoadFlowTest {
     @Test
     void testGetStatusNotFound(final MockWebServer server) {
         UUID notExistingNetworkUuid = UUID.fromString(LOADFLOW_ERROR_RESULT_UUID);
-        assertThrows(HttpClientErrorException.NotFound.class, () -> loadFlowService.getLoadFlowStatus(notExistingNetworkUuid), LOADFLOW_NOT_FOUND.name());
+        assertThrows(HttpClientErrorException.NotFound.class, () -> loadFlowService.getLoadFlowStatus(notExistingNetworkUuid), NOT_FOUND.name());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_ERROR_RESULT_UUID + "/status")));
     }
 
