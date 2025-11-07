@@ -251,7 +251,7 @@ public class NetworkMapService {
                 }, networkUuid, voltageLevelId).getBody();
     }
 
-    public String getVoltageLevelInformation(UUID networkUuid, String variantId,
+    public String getFeederBaysInfos(UUID networkUuid, String variantId,
                                              String voltageLevelId,
                                              String path) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION
