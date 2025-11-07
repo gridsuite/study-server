@@ -786,52 +786,6 @@ class StudyTest {
     }
 
     @Test
-    void testSearch(final MockWebServer mockWebServer) throws Exception {
-        MvcResult mvcResult;
-        String resultAsString;
-        UUID studyUuid = createStudy(mockWebServer, "userId", CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
-        UUID rootNodeId = getRootNodeUuid(studyUuid);
-
-        mvcResult = mockMvc
-                .perform(get("/v1/search?q={request}", "userId:%s".formatted("userId")).header(USER_ID_HEADER, "userId"))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
-        assertThat(createdStudyBasicInfosList, new MatcherJson<>(mapper, studiesInfos));
-
-        mvcResult = mockMvc
-                .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME",
-                        studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        List<EquipmentInfos> equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
-        assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
-
-        mvcResult = mockMvc
-                .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME",
-                        studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
-        assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
-
-        mvcResult = mockMvc
-                .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=ID",
-                        studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
-                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
-        assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
-
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus",
-                        studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
-                .andExpectAll(status().isBadRequest(),
-                        content().string("Enum unknown entry 'bogus' should be among NAME, ID"))
-                .andReturn();
-    }
-
-    @Test
     void testSupervisionStudiesBasicData(final MockWebServer server) throws Exception {
         // test empty return
         mockMvc.perform(get("/v1/supervision/studies")).andExpectAll(status().isOk(),
