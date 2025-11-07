@@ -24,7 +24,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.CASE_NOT_FOUND;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 @Service
 public class CaseService {
@@ -80,7 +80,7 @@ public class CaseService {
 
     public void assertCaseExists(UUID caseUuid) {
         if (caseUuid != null && Boolean.FALSE.equals(caseExists(caseUuid))) {
-            throw new StudyException(CASE_NOT_FOUND, "The case '" + caseUuid + "' does not exist");
+            throw new StudyException(NOT_FOUND, "The case '" + caseUuid + "' does not exist");
         }
     }
 

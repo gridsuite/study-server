@@ -28,17 +28,9 @@ public class RestResponseEntityExceptionHandler extends AbstractBaseRestExceptio
     @Override
     protected HttpStatus mapStatus(StudyBusinessErrorCode studyBusinessErrorCode) {
         return switch (studyBusinessErrorCode) {
-            case ELEMENT_NOT_FOUND,
-                 STUDY_NOT_FOUND,
-                 NODE_NOT_FOUND,
-                 ROOT_NETWORK_NOT_FOUND,
-                 LOADFLOW_NOT_FOUND,
-                 SECURITY_ANALYSIS_NOT_FOUND,
-                 SENSITIVITY_ANALYSIS_NOT_FOUND,
-                 SHORT_CIRCUIT_ANALYSIS_NOT_FOUND,
+            case NOT_FOUND,
                  NO_VOLTAGE_INIT_RESULTS_FOR_NODE
                 -> HttpStatus.NOT_FOUND;
-            case CASE_NOT_FOUND -> HttpStatus.FAILED_DEPENDENCY;
             case COMPUTATION_RUNNING,
                  NOT_ALLOWED,
                  BAD_NODE_TYPE,

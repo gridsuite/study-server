@@ -38,7 +38,6 @@ import org.springframework.data.domain.Pageable;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.PCC_MIN_NOT_FOUND;
 
 /**
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
