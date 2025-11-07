@@ -221,7 +221,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
     public void assertSecurityAnalysisNotRunning(UUID resultUuid) {
         SecurityAnalysisStatus sas = getSecurityAnalysisStatus(resultUuid);
         if (sas == SecurityAnalysisStatus.RUNNING) {
-            throw new StudyException(SECURITY_ANALYSIS_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

@@ -232,7 +232,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
     public void assertSensitivityAnalysisNotRunning(UUID resultUuid) {
         String sas = getSensitivityAnalysisStatus(resultUuid);
         if (SensitivityAnalysisStatus.RUNNING.name().equals(sas)) {
-            throw new StudyException(SENSITIVITY_ANALYSIS_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

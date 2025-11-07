@@ -227,7 +227,7 @@ public class VoltageInitService extends AbstractComputationService {
     public void assertVoltageInitNotRunning(UUID resultUuid) {
         String scs = getVoltageInitStatus(resultUuid);
         if (VoltageInitStatus.RUNNING.name().equals(scs)) {
-            throw new StudyException(VOLTAGE_INIT_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 
