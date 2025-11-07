@@ -334,10 +334,6 @@ class StudyTest {
 
     private ObjectWriter objectWriter;
 
-    private List<EquipmentInfos> linesInfos;
-
-    private List<CreatedStudyBasicInfos> studiesInfos;
-
     // new mock server (use this one to mock API calls)
     private WireMockServer wireMockServer;
 
@@ -389,18 +385,6 @@ class StudyTest {
     }
 
     private void initMockBeans(Network network) {
-        linesInfos = network.getLineStream().map(StudyTest::toEquipmentInfos).collect(Collectors.toList());
-
-        studiesInfos = List.of(
-                CreatedStudyBasicInfos.builder().id(UUID.fromString(DUPLICATED_STUDY_UUID)).userId("userId1").build(),
-                CreatedStudyBasicInfos.builder().id(UUID.fromString("11888888-0000-0000-0000-111111111112")).userId("userId1").build()
-        );
-
-        when(studyInfosService.search("userId:%s".formatted("userId")))
-                .then((Answer<List<CreatedStudyBasicInfos>>) invocation -> studiesInfos);
-
-        when(equipmentInfosService.searchEquipments(any(), any(), any(), any(), any())).thenCallRealMethod();
-        when(equipmentInfosService.searchEquipments(any(BoolQuery.class))).then((Answer<List<EquipmentInfos>>) invocation -> linesInfos);
         when(equipmentInfosService.getEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("32"));
         when(equipmentInfosService.getEquipmentInfosCount(NETWORK_UUID)).then((Answer<Long>) invocation -> Long.parseLong("16"));
         when(equipmentInfosService.getTombstonedEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("8"));
