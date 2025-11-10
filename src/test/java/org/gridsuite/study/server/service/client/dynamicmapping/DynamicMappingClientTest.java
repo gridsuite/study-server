@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service.client.dynamicmapping;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfos;
@@ -21,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
@@ -108,7 +108,10 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.notFound()
                 ));
         // call method to be tested
-        assertThrows(StudyException.class, () -> dynamicMappingClient.getAllMappings());
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicMappingClient.getAllMappings()
+        );
     }
 
     @Test
@@ -162,7 +165,10 @@ class DynamicMappingClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.notFound()
                 ));
         // call method to be tested
-        assertThrows(StudyException.class, () -> dynamicMappingClient.getModels(MAPPING_NAMES[0]));
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicMappingClient.getModels(MAPPING_NAMES[0])
+        );
     }
 
     @Test

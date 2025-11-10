@@ -28,7 +28,6 @@ import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimula
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -40,7 +39,6 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -153,7 +151,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
                             try {
                                 return objectMapper.readValue(eventJson, TimelineEventInfos.class);
                             } catch (JsonProcessingException e) {
-                                throw new StudyException(TIMELINE_BAD_TYPE, "Error while deserializing timeline event: " + eventJson);
+                                throw new IllegalStateException("Error while deserializing timeline event: " + eventJson, e);
                             }
                         }).toList();
             }
@@ -176,11 +174,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public void deleteResults(List<UUID> resultUuids) {
-        try {
-            dynamicSimulationClient.deleteResults(resultUuids);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
+        dynamicSimulationClient.deleteResults(resultUuids);
     }
 
     @Override

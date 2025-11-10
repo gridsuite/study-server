@@ -25,7 +25,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -38,7 +37,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -66,8 +64,6 @@ public class SecurityAnalysisService extends AbstractComputationService {
     }
 
     public String getSecurityAnalysisResult(UUID resultUuid, UUID networkUuid, String variantId, SecurityAnalysisResultType resultType, String filters, String globalFilters, Pageable pageable) {
-        String result;
-
         if (resultUuid == null) {
             return null;
         }
@@ -94,21 +90,10 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
         String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
-        try {
-            result = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-
-        return result;
+        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
     }
 
     public byte[] getSecurityAnalysisResultCsv(UUID resultUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
-        ResponseEntity<byte[]> result;
 
         if (resultUuid == null) {
             throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
@@ -121,17 +106,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(csvTranslations, headers);
-        try {
-            result = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, entity, byte[].class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-
-        return result.getBody();
+        return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, entity, byte[].class).getBody();
     }
 
     private String getPagedPathFromResultType(SecurityAnalysisResultType resultType) {
@@ -207,26 +182,16 @@ public class SecurityAnalysisService extends AbstractComputationService {
     }
 
     public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID resultUuid) {
-        SecurityAnalysisStatus status;
 
         if (resultUuid == null) {
             return null;
         }
 
-        try {
-            String path = UriComponentsBuilder
-                    .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
-                    .buildAndExpand(resultUuid).toUriString();
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
+            .buildAndExpand(resultUuid).toUriString();
 
-            status = restTemplate.getForObject(securityAnalysisServerBaseUri + path, SecurityAnalysisStatus.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SECURITY_ANALYSIS_NOT_FOUND);
-            }
-            throw e;
-        }
-
-        return status;
+        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, SecurityAnalysisStatus.class);
     }
 
     public void deleteSecurityAnalysisResults(List<UUID> resultsUuids) {
@@ -268,11 +233,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        try {
-            restTemplate.put(securityAnalysisServerBaseUri + path, httpEntity);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_SECURITY_ANALYSIS_PARAMETERS_FAILED);
-        }
+        restTemplate.put(securityAnalysisServerBaseUri + path, httpEntity);
     }
 
     public UUID duplicateSecurityAnalysisParameters(UUID sourceParametersUuid) {
@@ -286,29 +247,16 @@ public class SecurityAnalysisService extends AbstractComputationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
-        try {
-            return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_SECURITY_ANALYSIS_PARAMETERS_FAILED);
-        }
+        return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public String getSecurityAnalysisParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
-        String parameters;
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid).toUriString();
 
-        try {
-            parameters = restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND);
-            }
-            throw handleHttpError(e, GET_SECURITY_ANALYSIS_PARAMETERS_FAILED);
-        }
-        return parameters;
+        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
     }
 
     public UUID getSecurityAnalysisParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
@@ -335,13 +283,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 .buildAndExpand()
                 .toUriString();
 
-        UUID parametersUuid;
-        try {
-            parametersUuid = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_SECURITY_ANALYSIS_PARAMETERS_FAILED);
-        }
-        return parametersUuid;
+        return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 
     public UUID createSecurityAnalysisParameters(String parameters) {
@@ -354,13 +296,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        UUID parametersUuid;
-        try {
-            parametersUuid = restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_SECURITY_ANALYSIS_PARAMETERS_FAILED);
-        }
-        return parametersUuid;
+        return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public void updateSecurityAnalysisProvider(UUID parameterUuid, String provider) {
@@ -374,11 +310,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         HttpHeaders headers = new HttpHeaders();
         HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
 
-        try {
-            restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_SECURITY_ANALYSIS_PROVIDER_FAILED);
-        }
+        restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
     public String getSecurityAnalysisDefaultProvider() {
@@ -387,15 +319,11 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 .buildAndExpand()
                 .toUriString();
 
-        try {
-            return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, GET_SECURITY_ANALYSIS_DEFAULT_PROVIDER_FAILED);
-        }
+        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
     }
 
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuid) {
-        return getEnumValues(enumName, resultUuid, SECURITY_ANALYSIS_API_VERSION, securityAnalysisServerBaseUri, SECURITY_ANALYSIS_NOT_FOUND, restTemplate);
+        return getEnumValues(enumName, resultUuid, SECURITY_ANALYSIS_API_VERSION, securityAnalysisServerBaseUri, restTemplate);
     }
 }

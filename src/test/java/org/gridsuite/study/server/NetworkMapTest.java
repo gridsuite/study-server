@@ -772,7 +772,7 @@ class NetworkMapTest {
             .andExpect(status().isInternalServerError())
             .andReturn();
         var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
-        assertEquals("Internal Server Error", problemDetail.getDetail());
+        assertEquals("Internal Server Error", problemDetail.getTitle());
         wireMockUtils.verifyNetworkElementInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, elementId);
     }
 
@@ -810,7 +810,7 @@ class NetworkMapTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/countries",
                         studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid))
-                .andExpect(status().is5xxServerError())
+                .andExpect(status().isNotFound())
                 .andReturn();
 
         wireMockUtils.verifyCountriesGet(stubUuid, NETWORK_UUID_STRING);
@@ -868,7 +868,7 @@ class NetworkMapTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/nominal-voltages",
                         studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid))
-                .andExpect(status().is5xxServerError())
+                .andExpect(status().isNotFound())
                 .andReturn();
 
         wireMockUtils.verifyNominalVoltagesGet(stubUuid, NETWORK_UUID_STRING);

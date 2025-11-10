@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
@@ -25,7 +24,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -36,9 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -92,11 +88,7 @@ public class NetworkModificationService {
             .buildAndExpand(groupUUid)
             .toUriString();
 
-        try {
-            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, GET_MODIFICATIONS_FAILED);
-        }
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
     }
 
     public Integer getModificationsCount(UUID groupUUid, boolean stashedModifications) {
@@ -106,11 +98,7 @@ public class NetworkModificationService {
             .buildAndExpand(groupUUid)
             .toUriString();
 
-        try {
-            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, Integer.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, GET_MODIFICATIONS_COUNT_FAILED);
-        }
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, Integer.class).getBody();
     }
 
     public void deleteModifications(UUID groupUUid) {
@@ -120,11 +108,7 @@ public class NetworkModificationService {
             .buildAndExpand(groupUUid)
             .toUriString();
 
-        try {
-            restTemplate.delete(getNetworkModificationServerURI(false) + path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_NETWORK_MODIFICATION_FAILED);
-        }
+        restTemplate.delete(getNetworkModificationServerURI(false) + path);
     }
 
     public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
@@ -135,16 +119,11 @@ public class NetworkModificationService {
                 .queryParam(GROUP_UUID, groupUuid)
                 .buildAndExpand()
                 .toUriString();
-        try {
-            restTemplate.delete(path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_NETWORK_MODIFICATION_FAILED);
-        }
+        restTemplate.delete(path);
     }
 
     public NetworkModificationsResult createModification(UUID groupUuid,
-                                                                        Pair<String, List<ModificationApplicationContext>> modificationContextInfos) {
-        NetworkModificationsResult result;
+                                                         Pair<String, List<ModificationApplicationContext>> modificationContextInfos) {
         Objects.requireNonNull(modificationContextInfos);
 
         var uriComponentsBuilder = UriComponentsBuilder
@@ -158,17 +137,8 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        try {
-            HttpEntity<String> httpEntity = new HttpEntity<>(getModificationContextJsonString(objectMapper, modificationContextInfos), headers);
-            result = restTemplate.exchange(path, HttpMethod.POST, httpEntity,
-                NetworkModificationsResult.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_NETWORK_MODIFICATION_FAILED);
-        } catch (Exception e) {
-            throw new StudyException(CREATE_NETWORK_MODIFICATION_FAILED, e.getMessage());
-        }
-
-        return result;
+        HttpEntity<String> httpEntity = new HttpEntity<>(getModificationContextJsonString(objectMapper, modificationContextInfos), headers);
+        return restTemplate.exchange(path, HttpMethod.POST, httpEntity, NetworkModificationsResult.class).getBody();
     }
 
     public void updateModification(String createEquipmentAttributes, UUID modificationUuid) {
@@ -184,12 +154,7 @@ public class NetworkModificationService {
 
         HttpEntity<String> httpEntity = new HttpEntity<>(createEquipmentAttributes, headers);
 
-        try {
-            restTemplate.exchange(path, HttpMethod.PUT, httpEntity,
-                    Void.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
-        }
+        restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
     public void stashModifications(UUID groupUUid, List<UUID> modificationsUuids) {
@@ -207,11 +172,7 @@ public class NetworkModificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
-        try {
-            restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
-        }
+        restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
     public void updateModificationsActivation(UUID groupUUid, List<UUID> modificationsUuids, boolean activated) {
@@ -229,11 +190,7 @@ public class NetworkModificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
-        try {
-            restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
-        }
+        restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
     public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids) {
@@ -252,11 +209,7 @@ public class NetworkModificationService {
 
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
 
-        try {
-            restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_NETWORK_MODIFICATION_FAILED);
-        }
+        restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
     public void buildNode(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos, AbstractWorkflowInfos workflowInfos) {
@@ -351,11 +304,12 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        try {
-            return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, new HttpEntity<>(headers), new ParameterizedTypeReference<Map<UUID, UUID>>() { }).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, STUDY_CREATION_FAILED);
-        }
+        return restTemplate.exchange(
+            getNetworkModificationServerURI(false) + path,
+            HttpMethod.POST,
+            new HttpEntity<>(headers),
+            new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+        ).getBody();
     }
 
     public NetworkModificationsResult duplicateModificationsFromGroup(UUID groupUuid, UUID originGroupUuid, Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
@@ -384,11 +338,7 @@ public class NetworkModificationService {
                 .buildAndExpand(groupUUid)
                 .toUriString();
 
-        try {
-            restTemplate.delete(getNetworkModificationServerURI(false) + path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_NETWORK_MODIFICATION_FAILED);
-        }
+        restTemplate.delete(getNetworkModificationServerURI(false) + path);
     }
 
     public void verifyModifications(UUID groupUuid, Set<UUID> modificationUuids) {
