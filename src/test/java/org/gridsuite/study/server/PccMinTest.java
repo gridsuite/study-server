@@ -143,9 +143,9 @@ class PccMinTest {
         UUID nodeId;
     }
 
-    private StudyNodeIds createStudyAndNode(String variantId, String nodeName) throws Exception {
+    private StudyNodeIds createStudyAndNode(String variantId, String nodeName, UUID pccMinParametersUuid) throws Exception {
         StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.fromString(NETWORK_UUID_STRING),
-            "netId", CASE_LOADFLOW_UUID, "", "", null, null, null, null, null, null, PCCMIN_PARAMETERS_UUID);
+            "netId", CASE_LOADFLOW_UUID, "", "", null, null, null, null, null, null, pccMinParametersUuid);
         studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
 
@@ -244,7 +244,7 @@ class PccMinTest {
 
     @Test
     void testRunAndCheckStatus() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1");
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", PCCMIN_PARAMETERS_UUID);
 
         // Run Pcc min
         UUID stubRun = wireMockUtils.stubPccMinRun(NETWORK_UUID_STRING, VARIANT_ID, PCC_MIN_RESULT_UUID);
@@ -266,7 +266,7 @@ class PccMinTest {
 
     @Test
     void testStop() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 2");
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 2", PCCMIN_PARAMETERS_UUID);
         runPccMin(ids);
 
         UUID stubId = wireMockServer.stubFor(
@@ -290,7 +290,7 @@ class PccMinTest {
 
     @Test
     void testFailure() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2");
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2", PCCMIN_PARAMETERS_UUID);
         UUID stubFail = wireMockUtils.stubPccMinFailed(NETWORK_UUID_STRING, VARIANT_ID_2, PCC_MIN_ERROR_RESULT_UUID);
 
         mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
@@ -313,7 +313,7 @@ class PccMinTest {
 
     @Test
     void testResultsDeletion() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", PCCMIN_PARAMETERS_UUID);
         runPccMin(ids);
 
         assertEquals(1, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
@@ -345,7 +345,7 @@ class PccMinTest {
     @Test
     void testGetPccMinResults() throws Exception {
         // --- create study and node ---
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", PCCMIN_PARAMETERS_UUID);
         runPccMin(ids);
 
         //get pages, sorted and filtered results
@@ -435,6 +435,18 @@ class PccMinTest {
             .andExpect(content().string(parametersToCreate));
 
         wireMockUtils.verifyPccMinParametersGet(stubId, String.valueOf(PCCMIN_PARAMETERS_UUID));
+
+       // Not found case
+        UUID wrongParamUuid = UUID.randomUUID();
+
+        wireMockServer.stubFor(WireMock.get("v1/parameters/" + wrongParamUuid)
+            .willReturn(WireMock.notFound()));
+
+        StudyException exception = assertThrows(StudyException.class, () -> {
+            pccMinService.getPccMinParameters(wrongParamUuid);
+        });
+
+        assertEquals(StudyException.Type.PCC_MIN_PARAMETERS_NOT_FOUND, exception.getType());
     }
 
     @Test
