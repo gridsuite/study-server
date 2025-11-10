@@ -74,6 +74,7 @@ public class ConsumerService {
     private final VoltageInitService voltageInitService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
+    private final PccMinService pccMinService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -88,7 +89,7 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService) {
+                           StateEstimationService stateEstimationService, PccMinService pccMinService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -103,6 +104,7 @@ public class ConsumerService {
         this.voltageInitService = voltageInitService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
+        this.pccMinService = pccMinService;
     }
 
     @Bean
@@ -291,13 +293,14 @@ public class ConsumerService {
         UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
+        UUID pccMinParametersUuid = createDefaultPccMinParameters();
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
         UUID diagramGridLayoutUuid = studyService.createGridLayoutFromNadDiagram(userId, userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
             importParameters, importReportUuid);
     }
 
@@ -446,6 +449,15 @@ public class ConsumerService {
             return stateEstimationService.createDefaultStateEstimationParameters();
         } catch (final Exception e) {
             LOGGER.error("Error while creating state estimation default parameters", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultPccMinParameters() {
+        try {
+            return pccMinService.createDefaultPccMinParameters();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating pcc min default parameters", e);
             return null;
         }
     }
