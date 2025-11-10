@@ -459,6 +459,15 @@ class PccMinTest {
 
         createOrUpdateParametersAndDoChecks(studyUuid, parameterToUpdate, HttpStatus.OK);
         wireMockServer.verify(putRequestedFor(urlPathEqualTo("/v1/parameters/" + PCCMIN_PARAMETERS_UUID)));
+
+        // Fail case
+        UUID wrongParamUuid = UUID.randomUUID();
+        wireMockServer.stubFor(WireMock.put("v1/parameters/" + wrongParamUuid)
+            .willReturn(WireMock.notFound()));
+        StudyException exception = assertThrows(StudyException.class, () -> {
+            pccMinService.updatePccMinParameters(wrongParamUuid, "parameterToUpdate");
+        });
+        assertEquals(StudyException.Type.UPDATE_PCC_MIN_PARAMETERS_FAILED, exception.getType());
     }
 
     @Test
@@ -484,5 +493,13 @@ class PccMinTest {
         assertNotNull(studyUuid);
         assertEquals(PCCMIN_PARAMETERS_UUID,
             studyRepository.findById(studyUuid).orElseThrow().getPccMinParametersUuid());
+
+        // Fail case
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters/default"))
+            .willReturn(WireMock.notFound()));
+        StudyException exception = assertThrows(StudyException.class, () -> {
+            pccMinService.createDefaultPccMinParameters();
+        });
+        assertEquals(StudyException.Type.CREATE_PCC_MIN_PARAMETERS_FAILED, exception.getType());
     }
 }
