@@ -37,7 +37,6 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.PCC_MIN_NOT_FOUND;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.PCC_MIN_RUNNING;
 
 /**
@@ -120,17 +119,10 @@ public class PccMinService extends AbstractComputationService {
         if (resultUuid == null) {
             return null;
         }
-        try {
-            String path = UriComponentsBuilder
-                .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/{resultUuid}/status")
-                .buildAndExpand(resultUuid).toUriString();
-            return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(PCC_MIN_NOT_FOUND);
-            }
-            throw e;
-        }
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/{resultUuid}/status")
+            .buildAndExpand(resultUuid).toUriString();
+        return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
     }
 
     public void deletePccMinResults(List<UUID> resultsUuids) {
@@ -197,15 +189,6 @@ public class PccMinService extends AbstractComputationService {
     }
 
     public String getPccMinResource(URI resourcePath) {
-        String result;
-        try {
-            result = restTemplate.getForObject(resourcePath, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(PCC_MIN_NOT_FOUND);
-            }
-            throw e;
-        }
-        return result;
+        return restTemplate.getForObject(resourcePath, String.class);
     }
 }
