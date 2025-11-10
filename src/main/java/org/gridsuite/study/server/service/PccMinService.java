@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.StudyUtils;
@@ -22,6 +23,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -37,8 +39,9 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_RUNNING;
+import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.StudyException.Type.CREATE_PCC_MIN_PARAMETERS_FAILED;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
@@ -48,6 +51,7 @@ public class PccMinService extends AbstractComputationService {
     static final String RESULT_UUID = "resultUuid";
     static final String FILTER_UUID = "filterUuid";
     static final String BUS_ID = "busId";
+    private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
 
     private final RestTemplate restTemplate;
 
@@ -207,5 +211,115 @@ public class PccMinService extends AbstractComputationService {
             throw e;
         }
         return result;
+    }
+
+    public UUID createPccMinParameters(String parameters) {
+        var path = UriComponentsBuilder
+            .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/parameters")
+            .buildAndExpand()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+
+        UUID parametersUuid;
+        try {
+            parametersUuid = restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_PCC_MIN_PARAMETERS_FAILED);
+        }
+        return parametersUuid;
+    }
+
+    public void updatePccMinParameters(UUID parametersUuid, @Nullable String parameters) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/parameters/{uuid}");
+        String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+
+        try {
+            restTemplate.put(pccMinServerBaseUri + path, httpEntity);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, UPDATE_PCC_MIN_PARAMETERS_FAILED);
+        }
+    }
+
+    public UUID getPccMinParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
+        if (studyEntity.getPccMinParametersUuid() == null) {
+            studyEntity.setPccMinParametersUuid(createDefaultPccMinParameters());
+        }
+        return studyEntity.getPccMinParametersUuid();
+    }
+
+    public UUID createDefaultPccMinParameters() {
+        var path = UriComponentsBuilder
+            .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/parameters/default")
+            .buildAndExpand()
+            .toUriString();
+
+        UUID parametersUuid;
+        try {
+            parametersUuid = restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_PCC_MIN_PARAMETERS_FAILED);
+        }
+        return parametersUuid;
+    }
+
+    public String getPccMinParameters(UUID parametersUuid) {
+        Objects.requireNonNull(parametersUuid);
+        String parameters;
+
+        String path = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + PARAMETERS_URI)
+            .buildAndExpand(parametersUuid).toUriString();
+
+        try {
+            parameters = restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(PCC_MIN_PARAMETERS_NOT_FOUND);
+            }
+
+            throw handleHttpError(e, GET_PCC_MIN_PARAMETERS_FAILED);
+        }
+        return parameters;
+    }
+
+    public void deletePccMinParameters(UUID uuid) {
+        Objects.requireNonNull(uuid);
+
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + PCC_MIN_API_VERSION + PARAMETERS_URI)
+            .buildAndExpand(uuid)
+            .toUriString();
+
+        try {
+            restTemplate.delete(pccMinServerBaseUri + path);
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, DELETE_PCC_MIN_PARAMETERS_FAILED);
+        }
+    }
+
+    public UUID duplicatePccMinParameters(UUID sourceParametersUuid) {
+        Objects.requireNonNull(sourceParametersUuid);
+
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + PCC_MIN_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
+            .queryParam("duplicateFrom", sourceParametersUuid)
+            .buildAndExpand()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
+
+        try {
+            return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            throw handleHttpError(e, CREATE_PCC_MIN_PARAMETERS_FAILED);
+        }
     }
 }
