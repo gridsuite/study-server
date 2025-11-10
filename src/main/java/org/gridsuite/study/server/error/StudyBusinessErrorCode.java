@@ -38,7 +38,6 @@ public enum StudyBusinessErrorCode implements BusinessErrorCode {
     NO_VOLTAGE_INIT_RESULTS_FOR_NODE("study.noVoltageInitResultsForNode"),
     STATE_ESTIMATION_RUNNING("study.stateEstimationRunning"),
     PCC_MIN_RUNNING("study.pccMinRunning"),
-    PCC_MIN_NOT_FOUND("study.pccMinNotFound"),
     MAX_NODE_BUILDS_EXCEEDED("study.maxNodeBuildsExceeded"),
     ROOT_NETWORK_NOT_FOUND("study.rootNetworkNotFound"),
     ROOT_NETWORK_DELETE_FORBIDDEN("study.rootNetworkDeleteForbidden"),
