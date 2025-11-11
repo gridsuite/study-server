@@ -89,7 +89,11 @@ class PccMinTest {
     private ObjectMapper objectMapper;
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
+<<<<<<< Updated upstream
     @MockitoSpyBean
+=======
+    @Autowired
+>>>>>>> Stashed changes
     private PccMinService pccMinService;
     @Autowired
     private StudyRepository studyRepository;
