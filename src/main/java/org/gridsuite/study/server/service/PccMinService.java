@@ -49,7 +49,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 @Service
 public class PccMinService extends AbstractComputationService {
     static final String RESULT_UUID = "resultUuid";
-    static final String FILTER_UUID = "filterUuid";
     static final String BUS_ID = "busId";
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
 
@@ -76,10 +75,10 @@ public class PccMinService extends AbstractComputationService {
             .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.PCC_MIN.reportKey);
 
         if (parametersInfos.getShortCircuitParametersUuid() != null) {
-            uriComponentsBuilder.queryParam("shortCircuitParametersUuid", parametersInfos.getShortCircuitParametersUuid());
+            uriComponentsBuilder.queryParam(QUERY_PARAM_SHORT_CIRCUIT_UUID, parametersInfos.getShortCircuitParametersUuid());
         }
-        if (parametersInfos.getFilterUuid() != null) {
-            uriComponentsBuilder.queryParam(FILTER_UUID, parametersInfos.getFilterUuid());
+        if (parametersInfos.getPccMinParametersUuid() != null) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_PCC_MIN_UUID, parametersInfos.getPccMinParametersUuid());
         }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);

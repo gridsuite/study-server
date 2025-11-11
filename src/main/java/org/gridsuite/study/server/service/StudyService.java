@@ -3330,8 +3330,7 @@ public class StudyService {
         if (prevResultUuid != null) {
             pccMinService.deletePccMinResults(List.of(prevResultUuid));
         }
-     //   UUID filterUuid = studyEntity.getPccMinParametersUuid() ? getPccMinParameters(studyEntity.getId()).getPccMinParametersUuid()
-        var runPccMinParametersInfos = new RunPccMinParametersInfos(studyEntity.getShortCircuitParametersUuid(), null, null);
+        var runPccMinParametersInfos = new RunPccMinParametersInfos(studyEntity.getShortCircuitParametersUuid(), studyEntity.getPccMinParametersUuid(), null);
 
         UUID result = pccMinService.runPccMin(networkUuid, variantId, runPccMinParametersInfos, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, PCC_MIN);
