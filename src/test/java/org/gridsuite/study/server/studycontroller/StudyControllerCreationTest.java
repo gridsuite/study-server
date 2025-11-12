@@ -4,10 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import com.powsybl.commons.report.ReportNode;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
+import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
@@ -23,6 +25,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,7 +49,9 @@ import static org.gridsuite.study.server.notification.NotificationService.HEADER
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.FIRST_VARIANT_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -68,6 +73,8 @@ class StudyControllerCreationTest {
 
     @MockitoSpyBean
     private StudyService studyService;
+    @MockitoBean
+    private ReportService reportService;
 
     // All these computation services need to be mocked because apps try to create default parameters for each computation app on study creation
     @MockitoBean
@@ -181,6 +188,7 @@ class StudyControllerCreationTest {
         // run consume case import succeeded
         consumerService.consumeCaseImportSucceeded().accept(MessageBuilder.createMessage("", messageHeaders));
         wireMockStubs.caseApi.verifyDisableCaseExpiration(disableCaseExpirationStub, caseUuid.toString());
+        verifyMockCallsAfterStudyCreation();
 
         // check import parameters are saved
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
@@ -192,6 +200,18 @@ class StudyControllerCreationTest {
 
         assertStudyUpdateMessageReceived(studyUuid, userId);
         assertTrue(studyRepository.findById(studyUuid).isPresent());
+    }
+
+    private void verifyMockCallsAfterStudyCreation() {
+        verify(reportService, Mockito.times(1)).sendReport(any(UUID.class), any(ReportNode.class));
+        verify(loadFlowService, Mockito.times(1)).createDefaultLoadFlowParameters();
+        verify(shortCircuitService, Mockito.times(1)).createParameters(null);
+        verify(securityAnalysisService, Mockito.times(1)).createDefaultSecurityAnalysisParameters();
+        verify(sensitivityAnalysisService, Mockito.times(1)).createDefaultSensitivityAnalysisParameters();
+        verify(voltageInitService, Mockito.times(1)).createVoltageInitParameters(null);
+        verify(dynamicSecurityAnalysisService, Mockito.times(1)).createDefaultParameters();
+        verify(stateEstimationService, Mockito.times(1)).createDefaultStateEstimationParameters();
+        verify(studyConfigService, Mockito.times(1)).createDefaultSpreadsheetConfigCollection();
     }
 
     private void sendStudyCreationRequest(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, boolean duplicateCase) throws Exception {
