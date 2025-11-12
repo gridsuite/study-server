@@ -153,7 +153,7 @@ class StudyControllerCreationTest {
         String importParametersAsJson = mapper.writeValueAsString(importParameters);
         UUID importCaseStub = wireMockStubs.networkConversionApi.stubImportNetwork(caseUuid.toString(), importParametersAsJson, FIRST_VARIANT_ID, caseFormat);
 
-        sendStudyCreationRequest( userId, caseUuid, caseFormat, importParameters, false);
+        sendStudyCreationRequest(userId, caseUuid, caseFormat, importParameters, false);
 
         // assert that all http requests have been sent to remote services
         wireMockStubs.caseApi.verifyCaseExists(caseExistsStub, caseUuid.toString());

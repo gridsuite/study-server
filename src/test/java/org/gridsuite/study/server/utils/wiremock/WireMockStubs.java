@@ -7,13 +7,10 @@
 package org.gridsuite.study.server.utils.wiremock;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.admin.model.ServeEventQuery;
 import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
-import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import com.powsybl.iidm.network.TwoSides;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.springframework.http.HttpHeaders;
@@ -23,12 +20,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>

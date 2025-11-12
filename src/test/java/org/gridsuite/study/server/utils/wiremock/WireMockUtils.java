@@ -13,7 +13,11 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class WireMockUtils {
+public final class WireMockUtils {
+    private WireMockUtils() {
+        throw new IllegalStateException("Utility class");
+    }
+
     public static void verifyPostRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams, int nbRequests) {
         verifyPostRequest(wireMockServer, stubId, urlPath, false, queryParams, null, nbRequests);
     }

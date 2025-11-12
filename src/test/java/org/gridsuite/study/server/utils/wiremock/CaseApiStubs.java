@@ -15,7 +15,7 @@ import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.*;
 
 public class CaseApiStubs {
     private final WireMockServer wireMock;
-    private final String CASE_URI = "/v1/cases";
+    private static final String CASE_URI = "/v1/cases";
 
     public CaseApiStubs(WireMockServer wireMock) {
         this.wireMock = wireMock;
@@ -29,7 +29,7 @@ public class CaseApiStubs {
     }
 
     public void verifyCaseExists(UUID stubUuid, String caseUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo(CASE_URI  + "/" + caseUuid + "/exists"));
+        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo(CASE_URI + "/" + caseUuid + "/exists"));
         wireMock.verify(1, requestBuilder);
         removeRequestForStub(wireMock, stubUuid, 1);
     }
