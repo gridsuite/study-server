@@ -16,7 +16,6 @@ import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.DiagramParameters;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
 import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
-import org.gridsuite.study.server.dto.CurrentLimitViolationInfos;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -74,7 +73,7 @@ public class SingleLineDiagramService {
             }).getBody();
     }
 
-    public byte[] generateVoltageLevelSvg(UUID networkUuid, String variantId, String voltageLevelId, DiagramParameters diagramParameters, List<CurrentLimitViolationInfos> limitViolations) {
+    public byte[] generateVoltageLevelSvg(UUID networkUuid, String variantId, String voltageLevelId, DiagramParameters diagramParameters, Map<String, Object> sldRequestInfos) {
         var uriComponentsBuilder = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/svg/{networkUuid}/{voltageLevelId}")
             .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
@@ -91,7 +90,7 @@ public class SingleLineDiagramService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<List<CurrentLimitViolationInfos>> httpEntity = new HttpEntity<>(limitViolations, headers);
+        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(sldRequestInfos, headers);
 
         byte[] result;
         try {
@@ -106,7 +105,7 @@ public class SingleLineDiagramService {
         return result;
     }
 
-    public String generateVoltageLevelSvgAndMetadata(UUID networkUuid, String variantId, String voltageLevelId, DiagramParameters diagramParameters, List<CurrentLimitViolationInfos> limitViolations) {
+    public String generateVoltageLevelSvgAndMetadata(UUID networkUuid, String variantId, String voltageLevelId, DiagramParameters diagramParameters, Map<String, Object> sldRequestInfos) {
         var uriComponentsBuilder = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION
                 + "/svg-and-metadata/{networkUuid}/{voltageLevelId}")
@@ -121,7 +120,7 @@ public class SingleLineDiagramService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<List<CurrentLimitViolationInfos>> httpEntity = new HttpEntity<>(limitViolations, headers);
+        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(sldRequestInfos, headers);
         String result;
         try {
             var path = uriComponentsBuilder.buildAndExpand(networkUuid, voltageLevelId).toUriString();
@@ -136,7 +135,7 @@ public class SingleLineDiagramService {
         return result;
     }
 
-    public byte[] generateSubstationSvg(UUID networkUuid, String variantId, String substationId, DiagramParameters diagramParameters, String substationLayout, List<CurrentLimitViolationInfos> limitViolations) {
+    public byte[] generateSubstationSvg(UUID networkUuid, String variantId, String substationId, DiagramParameters diagramParameters, String substationLayout, Map<String, Object> sldRequestInfos) {
         var uriComponentsBuilder = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg/{networkUuid}/{substationId}")
             .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
@@ -151,7 +150,7 @@ public class SingleLineDiagramService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<List<CurrentLimitViolationInfos>> httpEntity = new HttpEntity<>(limitViolations, headers);
+        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(sldRequestInfos, headers);
         try {
             result = restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, byte[].class);
         } catch (HttpStatusCodeException e) {
@@ -164,7 +163,7 @@ public class SingleLineDiagramService {
         return result;
     }
 
-    public String generateSubstationSvgAndMetadata(UUID networkUuid, String variantId, String substationId, DiagramParameters diagramParameters, String substationLayout, List<CurrentLimitViolationInfos> limitViolations) {
+    public String generateSubstationSvgAndMetadata(UUID networkUuid, String variantId, String substationId, DiagramParameters diagramParameters, String substationLayout, Map<String, Object> sldRequestInfos) {
         var uriComponentsBuilder = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/substation-svg-and-metadata/{networkUuid}/{substationId}")
             .queryParam(QUERY_PARAM_USE_NAME, diagramParameters.isUseName())
@@ -179,7 +178,7 @@ public class SingleLineDiagramService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<List<CurrentLimitViolationInfos>> httpEntity = new HttpEntity<>(limitViolations, headers);
+        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(sldRequestInfos, headers);
         try {
             result = restTemplate.postForEntity(singleLineDiagramServerBaseUri + uriComponentsBuilder.build().toUriString(), httpEntity, String.class, networkUuid, substationId).getBody();
         } catch (HttpStatusCodeException e) {
