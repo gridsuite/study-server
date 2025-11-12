@@ -3,9 +3,9 @@ package org.gridsuite.study.server.studycontroller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -19,9 +19,12 @@ import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,7 +36,6 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.*;
 
@@ -44,6 +46,7 @@ import static org.gridsuite.study.server.notification.NotificationService.HEADER
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.FIRST_VARIANT_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -53,11 +56,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
 class StudyControllerCreationTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyControllerCreationTest.class);
     private static final long TIMEOUT = 1000;
 
     @Autowired
     private StudyRepository studyRepository;
-    @Autowired
+    @MockitoSpyBean
     private CaseService caseService;
     @Autowired
     private NetworkConversionService networkConversionService;
@@ -103,6 +107,8 @@ class StudyControllerCreationTest {
     private StudyCreationRequestRepository studyCreationRequestRepository;
     @Autowired
     private RootNetworkService rootNetworkService;
+    @Autowired
+    private NetworkModificationTreeService networkModificationTreeService;
 
     @BeforeEach
     void setUp() {
@@ -115,27 +121,66 @@ class StudyControllerCreationTest {
     }
 
     @Test
-    void testCreateStudyWithImportParameters() throws Exception {
+    void testSendStudyCreationRequestWithCaseDuplication() throws Exception {
         UUID caseUuid = UUID.randomUUID();
-        Map<String, Object> importParameters = prepareImportparameters();
-        sendStudyCreationRequestWithParameters( "userId", caseUuid, "UCTE", importParameters);
+        UUID duplicateCaseUuid = UUID.randomUUID();
+        String caseFormat = "UCTE";
+        String userId = "userId";
+
+        doReturn(duplicateCaseUuid).when(caseService).duplicateCase(caseUuid, true);
+        UUID caseExistsStub = wireMockStubs.caseApi.stubCaseExists(caseUuid.toString(), true);
+        UUID importCaseStub = wireMockStubs.networkConversionApi.stubImportNetwork(duplicateCaseUuid.toString(), null, FIRST_VARIANT_ID, caseFormat);
+
+        sendStudyCreationRequest(userId, caseUuid, caseFormat, null, true);
+
+        // assert that all http requests have been sent to remote services
+        wireMockStubs.caseApi.verifyCaseExists(caseExistsStub, caseUuid.toString());
+        wireMockStubs.networkConversionApi.verifyImportNetwork(importCaseStub, duplicateCaseUuid.toString(), FIRST_VARIANT_ID);
+
+        UUID newStudyCreationRequestId = studyCreationRequestRepository.findAll().getFirst().getId();
+        assertStudyUpdateMessageReceived(newStudyCreationRequestId, userId);
+    }
+
+    @Test
+    void testSendStudyCreationRequestWithImportParameters() throws Exception {
+        UUID caseUuid = UUID.randomUUID();
+        Map<String, Object> importParameters = prepareImportParameters();
+        String caseFormat = "UCTE";
+        String userId = "userId";
+
+        UUID caseExistsStub = wireMockStubs.caseApi.stubCaseExists(caseUuid.toString(), true);
+
+        String importParametersAsJson = mapper.writeValueAsString(importParameters);
+        UUID importCaseStub = wireMockStubs.networkConversionApi.stubImportNetwork(caseUuid.toString(), importParametersAsJson, FIRST_VARIANT_ID, caseFormat);
+
+        sendStudyCreationRequest( userId, caseUuid, caseFormat, importParameters, false);
+
+        // assert that all http requests have been sent to remote services
+        wireMockStubs.caseApi.verifyCaseExists(caseExistsStub, caseUuid.toString());
+        wireMockStubs.networkConversionApi.verifyImportNetwork(importCaseStub, caseUuid.toString(), FIRST_VARIANT_ID, importParametersAsJson);
+
+        UUID newStudyCreationRequestId = studyCreationRequestRepository.findAll().getFirst().getId();
+        assertStudyUpdateMessageReceived(newStudyCreationRequestId, userId);
     }
 
     @Test
     void testConsumeCaseImportSucceededWithParameters() throws JsonProcessingException {
         UUID studyUuid = UUID.randomUUID();
+        UUID caseUuid = UUID.randomUUID();
         String userId = "userId";
 
         // Import parameters to pass and check
-        Map<String, Object> importParameters = prepareImportparameters();
+        Map<String, Object> importParameters = prepareImportParameters();
 
-        MessageHeaders messageHeaders = prepareMessageHeaders(studyUuid, userId, importParameters);
+        MessageHeaders messageHeaders = prepareMessageHeaders(studyUuid, userId, caseUuid, importParameters);
 
         // Need to insert studyCreationRequestEntity, otherwise study is deleted after being inserted
         studyCreationRequestRepository.save(new StudyCreationRequestEntity(studyUuid, "firstRootNetworkName"));
 
+        UUID disableCaseExpirationStub = wireMockStubs.caseApi.stubDisableCaseExpiration(caseUuid.toString());
         // run consume case import succeeded
         consumerService.consumeCaseImportSucceeded().accept(MessageBuilder.createMessage("", messageHeaders));
+        wireMockStubs.caseApi.verifyDisableCaseExpiration(disableCaseExpirationStub, caseUuid.toString());
 
         // check import parameters are saved
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
@@ -145,33 +190,21 @@ class StudyControllerCreationTest {
         importParameters.forEach((key, value) -> expectedImportParameters.put(key, value.toString()));
         assertThat(rootNetworkService.getImportParameters(rootNetworkUUID)).usingRecursiveComparison().isEqualTo(expectedImportParameters);
 
-        assertStudyCreation(studyUuid, userId);
+        assertStudyUpdateMessageReceived(studyUuid, userId);
+        assertTrue(studyRepository.findById(studyUuid).isPresent());
     }
 
-    private UUID sendStudyCreationRequestWithParameters(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters) throws Exception {
-        UUID caseExistsStub = wireMockStubs.caseApi.stubCaseExists(caseUuid.toString(), true);
-
-        String importParametersAsJson = mapper.writeValueAsString(importParameters);
-        UUID importCaseStub = wireMockStubs.networkConversionApi.stubImportNetwork(caseUuid.toString(), importParametersAsJson, FIRST_VARIANT_ID, caseFormat);
-
-        MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
+    private void sendStudyCreationRequest(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, boolean duplicateCase) throws Exception {
+        mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
                 .header(HEADER_USER_ID, userId).contentType(MediaType.APPLICATION_JSON)
                 .param(CASE_FORMAT, caseFormat)
+                .param("duplicateCase", String.valueOf(duplicateCase))
                 .content(mapper.writeValueAsString(importParameters)))
-            .andExpect(status().isOk())
-            .andReturn();
-        String resultAsString = result.getResponse().getContentAsString();
-        BasicStudyInfos infos = mapper.readValue(resultAsString, BasicStudyInfos.class);
-        UUID studyUuid = infos.getId();
-
-        // assert that all http requests have been sent to remote services
-        wireMockStubs.caseApi.verifyCaseExists(caseExistsStub, caseUuid.toString());
-        wireMockStubs.networkConversionApi.verifyImportNetwork(importCaseStub, caseUuid.toString(), FIRST_VARIANT_ID, importParametersAsJson);
-        return studyUuid;
+            .andExpect(status().isOk());
     }
 
-    private MessageHeaders prepareMessageHeaders(UUID studyUuid, String userId, Map<String, Object> importParameters) throws JsonProcessingException {
-        CaseImportReceiver receiver = new CaseImportReceiver(studyUuid, null, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), userId, System.nanoTime(), CaseImportAction.STUDY_CREATION);
+    private MessageHeaders prepareMessageHeaders(UUID studyUuid, String userId, UUID caseUuid, Map<String, Object> importParameters) throws JsonProcessingException {
+        CaseImportReceiver receiver = new CaseImportReceiver(studyUuid, null, caseUuid, UUID.randomUUID(), UUID.randomUUID(), userId, System.nanoTime(), CaseImportAction.STUDY_CREATION);
 
         return new MessageHeaders(Map.of(
             HEADER_USER_ID, userId,
@@ -183,7 +216,7 @@ class StudyControllerCreationTest {
             HEADER_RECEIVER, mapper.writeValueAsString(receiver)));
     }
 
-    private Map<String, Object> prepareImportparameters() {
+    private Map<String, Object> prepareImportParameters() {
         Map<String, Object> importParameters = new HashMap<>();
         ArrayList<String> randomListParam = new ArrayList<>();
         randomListParam.add("paramValue1");
@@ -193,16 +226,29 @@ class StudyControllerCreationTest {
         return importParameters;
     }
 
-    private void assertStudyCreation(UUID studyUuid, String userId) {
-        assertTrue(studyRepository.findById(studyUuid).isPresent());
-
+    private void assertStudyUpdateMessageReceived(UUID studyUuid, String userId) {
         // assert that the broker message has been sent a study creation request message
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
-
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+    }
+
+    @AfterEach
+    void tearDown() {
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        studyRepository.deleteAll();
+        studyCreationRequestRepository.deleteAll();
+
+        List<String> destinations = List.of(studyUpdateDestination);
+        TestUtils.assertQueuesEmptyThenClear(destinations, output);
+
+        try {
+            TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
+        } catch (UncheckedInterruptedException e) {
+            LOGGER.error("Error while attempting to get the request done : ", e);
+        }
     }
 }

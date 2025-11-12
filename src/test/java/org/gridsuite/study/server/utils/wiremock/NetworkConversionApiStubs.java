@@ -74,13 +74,16 @@ public class NetworkConversionApiStubs {
     }
 
     public UUID stubImportNetwork(String caseUuid, String importParametersAsJson, String variantId, String caseFormat) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK))
+        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK))
             .withQueryParam(CASE_UUID, WireMock.matching(caseUuid))
             .withQueryParam(QUERY_PARAM_VARIANT_ID, WireMock.matching(variantId))
-            .withQueryParam(CASE_FORMAT, WireMock.matching(caseFormat))
-            .withQueryParam(QUERY_PARAM_RECEIVER, WireMock.matching(".*"))
-            .withRequestBody(equalTo(importParametersAsJson))
-            .willReturn(WireMock.ok())
-        ).getId();
+            .withQueryParam(CASE_FORMAT, WireMock.matching(caseFormat));
+
+        if (importParametersAsJson != null) {
+            mappingBuilder = mappingBuilder.withRequestBody(equalTo(importParametersAsJson))
+                .willReturn(WireMock.ok());
+        }
+
+        return wireMock.stubFor(mappingBuilder).getId();
     }
 }
