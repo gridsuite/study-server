@@ -15,7 +15,6 @@ import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
 import com.powsybl.commons.datasource.ResourceSet;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
-import com.powsybl.iidm.network.Line;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
@@ -36,7 +35,6 @@ import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
 import org.gridsuite.study.server.dto.modification.ModificationInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
@@ -372,17 +370,6 @@ class StudyTest {
 
     @MockitoSpyBean
     ConsumerService consumeService;
-
-    private static EquipmentInfos toEquipmentInfos(Line line) {
-        return EquipmentInfos.builder()
-            .networkUuid(NETWORK_UUID)
-            .id(line.getId())
-            .name(line.getNameOrId())
-            .type("LINE")
-            .variantId("InitialState")
-            .voltageLevels(Set.of(VoltageLevelInfos.builder().id(line.getTerminal1().getVoltageLevel().getId()).name(line.getTerminal1().getVoltageLevel().getNameOrId()).build()))
-            .build();
-    }
 
     private void initMockBeans(Network network) {
         when(equipmentInfosService.getEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("32"));

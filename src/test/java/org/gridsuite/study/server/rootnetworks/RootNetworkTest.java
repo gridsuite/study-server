@@ -33,7 +33,6 @@ import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurit
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -117,8 +116,6 @@ class RootNetworkTest {
 
     private WireMockServer wireMockServer;
 
-    private WireMockStubs wireMockStubs;
-
     @Autowired
     private NetworkConversionService networkConversionService;
 
@@ -182,7 +179,6 @@ class RootNetworkTest {
         wireMockServer.start();
         String baseUrlWireMock = wireMockServer.baseUrl();
         networkConversionService.setNetworkConversionServerBaseUri(baseUrlWireMock);
-        wireMockStubs = new WireMockStubs(wireMockServer);
     }
 
     @Test

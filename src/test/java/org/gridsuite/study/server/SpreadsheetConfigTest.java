@@ -11,7 +11,6 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyConfigService;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -65,7 +64,6 @@ class SpreadsheetConfigTest {
     private StudyConfigService studyConfigService;
 
     private WireMockServer wireMockServer;
-    private WireMockStubs wireMockStubs;
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
     private static final UUID NETWORK_UUID = UUID.fromString("052f64fd-775f-4eb8-89ae-de76b713e349");
@@ -79,7 +77,6 @@ class SpreadsheetConfigTest {
         wireMockServer.start();
         String baseUrlWireMock = wireMockServer.baseUrl();
         studyConfigService.setStudyConfigServerBaseUri(baseUrlWireMock);
-        wireMockStubs = new WireMockStubs(wireMockServer);
     }
 
     @Test
