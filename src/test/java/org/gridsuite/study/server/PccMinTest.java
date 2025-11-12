@@ -471,6 +471,29 @@ class PccMinTest {
     }
 
     @Test
+    void testCreatePccMinParameters() throws Exception {
+        String parameterToCreate = "\"fakeParamsToCreate\"";
+
+        UUID expectedUuid = UUID.randomUUID();
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters"))
+            .willReturn(okJson("\"" + expectedUuid + "\"")));
+
+        UUID paramUuid = pccMinService.createPccMinParameters(parameterToCreate);
+
+        assertEquals(expectedUuid, paramUuid);
+        wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters"))
+            .withRequestBody(equalToJson(parameterToCreate)));
+
+        //failure
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters"))
+            .willReturn(notFound()));
+        StudyException exception = assertThrows(StudyException.class, () -> {
+            pccMinService.createPccMinParameters(parameterToCreate);
+        });
+        assertEquals(StudyException.Type.CREATE_PCC_MIN_PARAMETERS_FAILED, exception.getType());
+    }
+
+    @Test
     void testDefaultParameters() throws Exception {
         String params = buildFilter();
         wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters/default"))
