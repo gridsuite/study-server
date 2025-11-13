@@ -747,12 +747,17 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public UUID getReportUuid(UUID nodeUuid, UUID rootNetworkUuid) {
+    public Optional<UUID> getReportUuid(UUID nodeUuid, UUID rootNetworkUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         if (nodeEntity.getType().equals(NodeType.ROOT)) {
-            return rootNetworkService.getRootReportUuid(rootNetworkUuid);
+            return Optional.ofNullable(rootNetworkService.getRootReportUuid(rootNetworkUuid));
         } else {
-            return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND)).getModificationReports().get(nodeUuid);
+            return Optional.ofNullable(
+                    rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid)
+                            .orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND))
+                            .getModificationReports()
+                            .get(nodeUuid)
+            );
         }
     }
 
@@ -846,10 +851,94 @@ public class NetworkModificationTreeService {
         return nodesRepository.findAllByStudyId(studyUuid);
     }
 
+    /**
+     * Gets or generates a modification report UUID for a node.
+     * <p>
+     * Search priority:
+     * 1. Check if the node being built already has a report for this node
+     * 2. Search across ALL nodes in the root network for existing reports
+     * 3. Generate a new UUID if not found anywhere
+     * <p>
+     * This implements intelligent report reuse to avoid duplicate reports when
+     * multiple nodes are built in different orders.
+     *
+     * @param nodeUuid the node that needs a report
+     * @param rootNetworkUuid the root network context
+     * @param nodeToBuildUuid the node currently being built
+     * @return the report UUID to use (existing or new)
+     */
     private UUID getModificationReportUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID nodeToBuildUuid) {
-        return self.getModificationReports(nodeToBuildUuid, rootNetworkUuid).getOrDefault(nodeUuid, UUID.randomUUID());
+        Map<UUID, UUID> targetNodeReports = self.getModificationReports(nodeToBuildUuid, rootNetworkUuid);
+        if (targetNodeReports.containsKey(nodeUuid)) {
+            return targetNodeReports.get(nodeUuid);
+        }
+
+        Optional<UUID> crossNodeReportUuid = rootNetworkNodeInfoService
+                .findExistingReportUuidForNode(nodeUuid, rootNetworkUuid);
+
+        return crossNodeReportUuid.orElseGet(UUID::randomUUID);
     }
 
+    /**
+     * Inherits modification reports from the nearest built ancestor node.
+     * <p>
+     * When building a node, we inherit all report references from its nearest built parent.
+     * This ensures that if an intermediate node is later deleted, reports referenced by
+     * descendant nodes won't be accidentally deleted.
+     * <p>
+     * Example node tree:
+     * <pre>
+     * ROOT (built)
+     *   └─ N1 (not built, report: r1)
+     *      └─ N2 (built, reports: {N1→r1, N2→r2})
+     *         └─ N3 (not built, report: r3)
+     *            └─ N4 (building, report: r4)
+     *
+     * When N4 builds:
+     * 1. Finds N2 as nearest built parent
+     * 2. Inherits {N1→r1, N2→r2} from N2
+     * 3. Adds its own {N3→r3, N4→r4}
+     * 4. Final reports: {N1→r1, N2→r2, N3→r3, N4→r4}
+     *
+     * If N2 is later deleted, reports r1 and r2 won't be deleted
+     * because N4 still references them.
+     * </pre>
+     *
+     * @param builtParentNodeUuid UUID of the built parent node
+     * @param rootNetworkUuid Root network context
+     * @param buildInfos Build information to populate with inherited reports
+     */
+    private void inheritModificationReportsFromBuiltParent(UUID builtParentNodeUuid, UUID rootNetworkUuid, BuildInfos buildInfos) {
+        Map<UUID, UUID> parentReports = self.getModificationReports(
+                builtParentNodeUuid,
+                rootNetworkUuid
+        );
+
+        if (parentReports == null || parentReports.isEmpty()) {
+            return;
+        }
+
+        Set<UUID> alreadyCollectedNodes = buildInfos.getReportsInfos().stream()
+                .map(ReportInfos::nodeUuid)
+                .collect(Collectors.toSet());
+
+        parentReports.entrySet().stream()
+                .filter(entry -> !alreadyCollectedNodes.contains(entry.getKey()))
+                .forEach(entry -> buildInfos.addInheritedReport(
+                        entry.getKey(),
+                        entry.getValue()
+                ));
+    }
+
+    /**
+     * Recursively collects build information by traversing up the node tree.
+     * Stops at the first built parent and inherits its reports.
+     *
+     * @param nodeEntity Current node being processed
+     * @param rootNetworkUuid Root network context
+     * @param buildInfos Accumulator for build information
+     * @param nodeToBuildUuid The target node being built
+     */
     private void getBuildInfos(NodeEntity nodeEntity, UUID rootNetworkUuid, BuildInfos buildInfos, UUID nodeToBuildUuid) {
         AbstractNode node = getSimpleNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
@@ -857,10 +946,12 @@ public class NetworkModificationTreeService {
             RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeEntity.getIdNode(), rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
             if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
                 UUID reportUuid = getModificationReportUuid(nodeEntity.getIdNode(), rootNetworkUuid, nodeToBuildUuid);
-                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), rootNetworkNodeInfoEntity.getModificationsUuidsToExclude(), new ReportInfos(reportUuid, modificationNode.getId()));
+                ReportInfos reportInfos = new ReportInfos(reportUuid, modificationNode.getId(), ReportMode.REPLACE);
+                buildInfos.insertModificationInfos(modificationNode.getModificationGroupUuid(), rootNetworkNodeInfoEntity.getModificationsUuidsToExclude(), reportInfos);
                 getBuildInfos(nodeEntity.getParentNode(), rootNetworkUuid, buildInfos, nodeToBuildUuid);
             } else {
                 buildInfos.setOriginVariantId(self.getVariantId(nodeEntity.getIdNode(), rootNetworkUuid));
+                inheritModificationReportsFromBuiltParent(nodeEntity.getIdNode(), rootNetworkUuid, buildInfos);
             }
         }
     }
