@@ -51,7 +51,6 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class PccMinService extends AbstractComputationService {
     static final String RESULT_UUID = "resultUuid";
     static final String BUS_ID = "busId";
-    // private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
     private static final String PCC_MIN_URI = DELIMITER + PCC_MIN_API_VERSION;
     private static final String PARAMETERS_URI = PCC_MIN_URI + DELIMITER + PATH_PARAM_PARAMETERS;
     private final RestTemplate restTemplate;
