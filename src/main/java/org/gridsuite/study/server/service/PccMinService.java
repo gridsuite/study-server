@@ -36,6 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+
 import org.springframework.data.domain.Pageable;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -50,8 +51,9 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class PccMinService extends AbstractComputationService {
     static final String RESULT_UUID = "resultUuid";
     static final String BUS_ID = "busId";
-    private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
-
+    // private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
+    private static final String PCC_MIN_URI = DELIMITER + PCC_MIN_API_VERSION;
+    private static final String PARAMETERS_URI = PCC_MIN_URI + DELIMITER + PATH_PARAM_PARAMETERS;
     private final RestTemplate restTemplate;
 
     private final ObjectMapper objectMapper;
@@ -214,7 +216,7 @@ public class PccMinService extends AbstractComputationService {
 
     public UUID createPccMinParameters(String parameters) {
         var path = UriComponentsBuilder
-            .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/parameters")
+            .fromPath(PARAMETERS_URI)
             .buildAndExpand()
             .toUriString();
 
@@ -222,17 +224,15 @@ public class PccMinService extends AbstractComputationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        UUID parametersUuid;
         try {
-            parametersUuid = restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+            return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, CREATE_PCC_MIN_PARAMETERS_FAILED);
         }
-        return parametersUuid;
     }
 
     public void updatePccMinParameters(UUID parametersUuid, @Nullable String parameters) {
-        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/parameters/{uuid}");
+        var uriBuilder = UriComponentsBuilder.fromPath(PARAMETERS_URI + DELIMITER + "{uuid}");
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
@@ -255,24 +255,22 @@ public class PccMinService extends AbstractComputationService {
 
     public UUID createDefaultPccMinParameters() {
         var path = UriComponentsBuilder
-            .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/parameters/default")
+            .fromPath(PARAMETERS_URI + DELIMITER + "default")
             .buildAndExpand()
             .toUriString();
 
-        UUID parametersUuid;
         try {
-            parametersUuid = restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+            return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, CREATE_PCC_MIN_PARAMETERS_FAILED);
         }
-        return parametersUuid;
     }
 
     public String getPccMinParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
         String parameters;
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + PARAMETERS_URI)
+        String path = UriComponentsBuilder.fromPath(PARAMETERS_URI + DELIMITER + "{parametersUuid}")
             .buildAndExpand(parametersUuid).toUriString();
 
         try {
@@ -291,7 +289,7 @@ public class PccMinService extends AbstractComputationService {
         Objects.requireNonNull(uuid);
 
         String path = UriComponentsBuilder
-            .fromPath(DELIMITER + PCC_MIN_API_VERSION + PARAMETERS_URI)
+            .fromPath(PARAMETERS_URI + DELIMITER + "{parametersUuid}")
             .buildAndExpand(uuid)
             .toUriString();
 
@@ -306,7 +304,7 @@ public class PccMinService extends AbstractComputationService {
         Objects.requireNonNull(sourceParametersUuid);
 
         String path = UriComponentsBuilder
-            .fromPath(DELIMITER + PCC_MIN_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
+            .fromPath(PARAMETERS_URI)
             .queryParam("duplicateFrom", sourceParametersUuid)
             .buildAndExpand()
             .toUriString();

@@ -436,7 +436,7 @@ class PccMinTest {
 
         wireMockUtils.verifyPccMinParametersGet(stubId, String.valueOf(PCCMIN_PARAMETERS_UUID));
 
-       // Not found case
+        // Not found case
         UUID wrongParamUuid = UUID.randomUUID();
 
         wireMockServer.stubFor(WireMock.get("v1/parameters/" + wrongParamUuid)
@@ -471,7 +471,7 @@ class PccMinTest {
     }
 
     @Test
-    void testCreatePccMinParameters() throws Exception {
+    void testCreatePccMinParameters() {
         String parameterToCreate = "\"fakeParamsToCreate\"";
 
         UUID expectedUuid = UUID.randomUUID();
