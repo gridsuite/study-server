@@ -185,7 +185,7 @@ class NetworkMapTest {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SWITCHES_INFOS_JSON);
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/bus-bar-sections?variantId=first_variant_id":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), BUSBAR_SECTIONS_INFO_JSON);
-                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/feeder-bays-and-bus-bar-sections?variantId=first_variant_id":
+                    case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/feeder-bays?variantId=first_variant_id":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), FEEDER_BAYS_BUSBAR_SECTIONS_INFO_JSON);
                     case "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/substation-id?variantId=first_variant_id":
                         return new MockResponse.Builder().code(200).body(SUBSTATION_ID_1).build();
@@ -605,7 +605,7 @@ class NetworkMapTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
         AbstractNode node = getRootNode(studyEntity.getId()).getChildren().stream().findFirst().orElseThrow();
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/feeder-bays-and-bus-bar-sections",
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/feeder-bays",
                         studyEntity.getId(), firstRootNetworkUuid, node.getId(), VOLTAGE_LEVEL_ID))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -614,7 +614,7 @@ class NetworkMapTest {
 
         var requests = TestUtils.getRequestsDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches(
-                "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/feeder-bays-and-bus-bar-sections\\?variantId=first_variant_id")));
+                "/v1/networks/" + NETWORK_UUID_STRING + "/voltage-levels/" + VOLTAGE_LEVEL_ID + "/feeder-bays\\?variantId=first_variant_id")));
 
     }
 
