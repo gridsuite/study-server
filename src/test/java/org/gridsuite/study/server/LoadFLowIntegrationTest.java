@@ -29,7 +29,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.WireMockUtils;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -131,7 +131,7 @@ class LoadFLowIntegrationTest {
     LoadFlowService loadFlowService;
 
     private WireMockServer wireMockServer;
-    private WireMockUtils wireMockUtils;
+    private WireMockStubs wireMockStubs;
 
     @BeforeEach
     void setup() {
@@ -139,7 +139,7 @@ class LoadFLowIntegrationTest {
         wireMockServer.start();
         String baseUrlWireMock = wireMockServer.baseUrl();
         loadFlowService.setLoadFlowServerBaseUri(baseUrlWireMock);
-        wireMockUtils = new WireMockUtils(wireMockServer);
+        wireMockStubs = new WireMockStubs(wireMockServer);
 
         rootNodeInfoRepository.deleteAll();
         networkModificationNodeInfoRepository.deleteAll();
@@ -190,14 +190,14 @@ class LoadFLowIntegrationTest {
 
     @Test
     void testDynaFlowNotAllowed() throws Exception {
-        UUID loadFlowProviderStubUuid = wireMockUtils.stubLoadFlowProvider(parametersUuid, DYNA_FLOW_PROVIDER);
+        UUID loadFlowProviderStubUuid = wireMockStubs.stubLoadFlowProvider(parametersUuid, DYNA_FLOW_PROVIDER);
         doNothing().when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
 
         // Construction node : forbidden
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, constructionNodeUuid, userId)
                         .header("userId", userId))
                 .andExpect(status().isForbidden());
-        wireMockUtils.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
+        wireMockStubs.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
 
         // Security node : ok
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, securityNodeUuid, userId)
@@ -207,18 +207,18 @@ class LoadFLowIntegrationTest {
 
     private void runLoadFlow(boolean withRatioTapChangers, boolean isSecurityNode) throws Exception {
         UUID nodeUuid = isSecurityNode ? securityNodeUuid : constructionNodeUuid;
-        UUID runLoadflowStubUuid = wireMockUtils.stubRunLoadFlow(networkUuid, withRatioTapChangers, null, objectMapper.writeValueAsString(loadflowResultUuid));
-        UUID loadFlowProviderStubUuid = wireMockUtils.stubLoadFlowProvider(parametersUuid, testProvider);
+        UUID runLoadflowStubUuid = wireMockStubs.stubRunLoadFlow(networkUuid, withRatioTapChangers, null, objectMapper.writeValueAsString(loadflowResultUuid));
+        UUID loadFlowProviderStubUuid = wireMockStubs.stubLoadFlowProvider(parametersUuid, testProvider);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, nodeUuid, userId)
                 .param(QUERY_WITH_TAP_CHANGER, withRatioTapChangers ? "true" : "false")
                 .header("userId", userId))
             .andExpect(status().isOk());
-        wireMockUtils.verifyRunLoadflow(runLoadflowStubUuid, networkUuid, withRatioTapChangers, null);
+        wireMockStubs.verifyRunLoadflow(runLoadflowStubUuid, networkUuid, withRatioTapChangers, null);
         if (isSecurityNode) {
             verify(networkModificationTreeService, times(1)).invalidateNodeTree(eq(nodeUuid), eq(rootNetworkUuid), any(InvalidateNodeTreeParameters.class));
         } else {
-            wireMockUtils.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
+            wireMockStubs.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
         }
         verify(networkModificationService, times(isSecurityNode ? 1 : 0)).deleteIndexedModifications(any(), any(UUID.class));
 
@@ -240,10 +240,10 @@ class LoadFLowIntegrationTest {
         reset(networkModificationTreeService);
         UUID nodeUuid = isSecurityNode ? securityNodeUuid : constructionNodeUuid;
         UUID newLoadflowResultUuid = UUID.randomUUID();
-        UUID stubDeleteLoadflowResultUuid = wireMockUtils.stubDeleteLoadFlowResults(List.of(loadflowResultUuid));
-        UUID stubCreateRunningLoadflowStatusUuid = wireMockUtils.stubCreateRunningLoadflowStatus(objectMapper.writeValueAsString(newLoadflowResultUuid));
-        UUID loadFlowProviderStubUuid = wireMockUtils.stubLoadFlowProvider(parametersUuid, testProvider);
-        UUID runLoadflowStubUuid = wireMockUtils.stubRunLoadFlow(networkUuid, withRatioTapChangers, null, objectMapper.writeValueAsString(loadflowResultUuid));
+        UUID stubDeleteLoadflowResultUuid = wireMockStubs.stubDeleteLoadFlowResults(List.of(loadflowResultUuid));
+        UUID stubCreateRunningLoadflowStatusUuid = wireMockStubs.stubCreateRunningLoadflowStatus(objectMapper.writeValueAsString(newLoadflowResultUuid));
+        UUID loadFlowProviderStubUuid = wireMockStubs.stubLoadFlowProvider(parametersUuid, testProvider);
+        UUID runLoadflowStubUuid = wireMockStubs.stubRunLoadFlow(networkUuid, withRatioTapChangers, null, objectMapper.writeValueAsString(loadflowResultUuid));
 
         doReturn(parametersUuid).when(loadFlowService).createDefaultLoadFlowParameters();
 
@@ -254,8 +254,8 @@ class LoadFLowIntegrationTest {
                 .header("userId", userId))
             .andExpect(status().isOk());
 
-        wireMockUtils.verifyDeleteLoadFlowResults(stubDeleteLoadflowResultUuid, List.of(loadflowResultUuid));
-        wireMockUtils.verifyCreateRunningLoadflowStatus(stubCreateRunningLoadflowStatusUuid);
+        wireMockStubs.verifyDeleteLoadFlowResults(stubDeleteLoadflowResultUuid, List.of(loadflowResultUuid));
+        wireMockStubs.verifyCreateRunningLoadflowStatus(stubCreateRunningLoadflowStatusUuid);
 
         if (isSecurityNode) {
             verify(networkModificationTreeService, times(1)).invalidateNodeTree(eq(nodeUuid), eq(rootNetworkUuid), any(InvalidateNodeTreeParameters.class));
@@ -263,8 +263,8 @@ class LoadFLowIntegrationTest {
             verify(networkModificationService, times(1)).buildNode(eq(nodeUuid), eq(rootNetworkUuid), any(BuildInfos.class), rerunLoadFlowWorkflowInfosArgumentCaptor.capture());
             assertEquals(withRatioTapChangers, rerunLoadFlowWorkflowInfosArgumentCaptor.getValue().isWithRatioTapChangers());
         } else {
-            wireMockUtils.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
-            wireMockUtils.verifyRunLoadflow(runLoadflowStubUuid, networkUuid, withRatioTapChangers, null);
+            wireMockStubs.verifyLoadFlowProviderGet(loadFlowProviderStubUuid, parametersUuid);
+            wireMockStubs.verifyRunLoadflow(runLoadflowStubUuid, networkUuid, withRatioTapChangers, null);
         }
 
         // verify that the node is blocked

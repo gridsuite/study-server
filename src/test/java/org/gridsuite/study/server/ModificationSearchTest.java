@@ -18,7 +18,7 @@ import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.WireMockUtils;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -84,12 +84,12 @@ class ModificationSearchTest {
     StudyEntity studyEntity;
     RootNetworkEntity rootNetworkEntity;
     NetworkModificationNode node1;
-    private WireMockUtils wireMockUtils;
+    private WireMockStubs wireMockStubs;
 
     @BeforeEach
     void setup() {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
-        wireMockUtils = new WireMockUtils(wireMockServer);
+        wireMockStubs = new WireMockStubs(wireMockServer);
 
         // start server
         wireMockServer.start();
@@ -129,7 +129,7 @@ class ModificationSearchTest {
 
         String jsonBody = mapper.writeValueAsString(modificationsSearchResultByGroup);
 
-        UUID stubUuid = wireMockUtils.stubSearchModifications(rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B", jsonBody);
+        UUID stubUuid = wireMockStubs.stubSearchModifications(rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B", jsonBody);
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/modifications/indexation-infos?userInput=B",
                         studyEntity.getId(), rootNetworkUuid))
                 .andExpect(status().isOk())
@@ -138,6 +138,6 @@ class ModificationSearchTest {
         String responseContent = mvcResult.getResponse().getContentAsString();
         assertTrue(responseContent.contains(node1.getId().toString()));
 
-        wireMockUtils.verifySearchModifications(stubUuid, rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B");
+        wireMockStubs.verifySearchModifications(stubUuid, rootNetworkService.getNetworkUuid(rootNetworkUuid).toString(), "B");
     }
 }
