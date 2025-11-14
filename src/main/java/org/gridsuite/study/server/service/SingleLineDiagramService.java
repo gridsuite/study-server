@@ -221,7 +221,7 @@ public class SingleLineDiagramService {
         }
     }
 
-    public void createMultipleDiagramConfigs(List<NadConfigInfos> nadConfigs) {
+    public void createDiagramConfigs(List<NadConfigInfos> nadConfigs) {
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
             .buildAndExpand()
@@ -235,7 +235,7 @@ public class SingleLineDiagramService {
         restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
     }
 
-    public void deleteMultipleDiagramConfigs(List<UUID> configUuids) {
+    public void deleteDiagramConfigs(List<UUID> configUuids) {
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
             .buildAndExpand()
@@ -280,6 +280,23 @@ public class SingleLineDiagramService {
         } catch (HttpStatusCodeException e) {
             throw handleHttpError(e, DUPLICATE_DIAGRAM_GRID_LAYOUT_FAILED);
         }
+    }
+
+    public void updateNadConfig(NadConfigInfos nadConfigInfos) {
+        Objects.requireNonNull(nadConfigInfos);
+        Objects.requireNonNull(nadConfigInfos.getId());
+
+        var path = UriComponentsBuilder
+            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/config/{configUuid}")
+            .buildAndExpand(nadConfigInfos.getId())
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<NadConfigInfos> httpEntity = new HttpEntity<>(nadConfigInfos, headers);
+
+        restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
     public void createNadPositionsConfigFromCsv(MultipartFile file) {

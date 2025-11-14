@@ -22,6 +22,7 @@ import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsI
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
+import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -129,6 +130,7 @@ public class StudyService {
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
     private final DiagramGridLayoutService diagramGridLayoutService;
+    private final NadConfigService nadConfigService;
     private final FilterService filterService;
     private final ActionsService actionsService;
     private final CaseService caseService;
@@ -193,6 +195,7 @@ public class StudyService {
         DynamicSimulationEventService dynamicSimulationEventService,
         StudyConfigService studyConfigService,
         DiagramGridLayoutService diagramGridLayoutService,
+        NadConfigService nadConfigService,
         FilterService filterService,
         StateEstimationService stateEstimationService,
         PccMinService pccMinService,
@@ -229,6 +232,7 @@ public class StudyService {
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
         this.diagramGridLayoutService = diagramGridLayoutService;
+        this.nadConfigService = nadConfigService;
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
@@ -544,6 +548,7 @@ public class StudyService {
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
                 removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
+                removeNadConfigs(s.getNadConfigsUuids());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -1460,6 +1465,44 @@ public class StudyService {
             return singleLineDiagramService.generateNetworkAreaDiagram(networkUuid, variantId, nadRequestInfos);
         } else {
             return null;
+        }
+    }
+
+    @Transactional
+    public UUID saveNadConfig(UUID studyUuid, NadConfigInfos nadConfig) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+
+        UUID resultUuid = nadConfigService.saveNadConfig(nadConfig);
+
+        List<UUID> nadConfigs = studyEntity.getNadConfigsUuids();
+
+        if (!nadConfigs.contains(resultUuid)) {
+            nadConfigs.add(resultUuid);
+            studyRepository.save(studyEntity);
+        }
+
+        return resultUuid;
+    }
+
+    @Transactional
+    public void deleteNadConfig(UUID studyUuid, UUID nadConfigUuid) {
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+
+        nadConfigService.deleteNadConfig(nadConfigUuid);
+        
+        List<UUID> nadConfigs = studyEntity.getNadConfigsUuids();
+        if (nadConfigs.remove(nadConfigUuid)) {
+            studyRepository.save(studyEntity);
+        }
+    }
+
+    private void removeNadConfigs(List<UUID> nadConfigUuids) {
+        if (nadConfigUuids != null && !nadConfigUuids.isEmpty()) {
+            try {
+                nadConfigService.deleteNadConfigs(nadConfigUuids);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove NAD configs with uuids:" + nadConfigUuids, e);
+            }
         }
     }
 
