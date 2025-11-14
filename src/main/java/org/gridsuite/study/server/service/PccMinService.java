@@ -51,8 +51,10 @@ import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 public class PccMinService extends AbstractComputationService {
     static final String RESULT_UUID = "resultUuid";
     static final String BUS_ID = "busId";
+    private static final String PARAMETER_UUID= "{parametersUuid}";
     private static final String PCC_MIN_URI = DELIMITER + PCC_MIN_API_VERSION;
     private static final String PARAMETERS_URI = PCC_MIN_URI + DELIMITER + PATH_PARAM_PARAMETERS;
+    private static final String PARAMETER_URI = PARAMETERS_URI + DELIMITER + PARAMETER_UUID;
     private final RestTemplate restTemplate;
 
     private final ObjectMapper objectMapper;
@@ -229,7 +231,7 @@ public class PccMinService extends AbstractComputationService {
     }
 
     public void updatePccMinParameters(UUID parametersUuid, @Nullable String parameters) {
-        var uriBuilder = UriComponentsBuilder.fromPath(PARAMETERS_URI + DELIMITER + "{parametersUuid}");
+        var uriBuilder = UriComponentsBuilder.fromPath(PARAMETER_URI);
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
@@ -266,7 +268,7 @@ public class PccMinService extends AbstractComputationService {
     public String getPccMinParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
 
-        String path = UriComponentsBuilder.fromPath(PARAMETERS_URI + DELIMITER + "{parametersUuid}")
+        String path = UriComponentsBuilder.fromPath(PARAMETER_URI)
             .buildAndExpand(parametersUuid).toUriString();
 
         try {
@@ -284,7 +286,7 @@ public class PccMinService extends AbstractComputationService {
         Objects.requireNonNull(uuid);
 
         String path = UriComponentsBuilder
-            .fromPath(PARAMETERS_URI + DELIMITER + "{parametersUuid}")
+            .fromPath(PARAMETER_URI)
             .buildAndExpand(uuid)
             .toUriString();
 
