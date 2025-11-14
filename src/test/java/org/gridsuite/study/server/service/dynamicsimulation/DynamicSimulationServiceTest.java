@@ -37,10 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.LongStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -142,7 +139,7 @@ class DynamicSimulationServiceTest {
     void testRunDynamicSimulation() {
         given(rootNetworkService.getNetworkUuid(ROOTNETWORK_UUID)).willReturn(NETWORK_UUID);
         given(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).willReturn(VARIANT_1_ID);
-        given(networkModificationTreeService.getReportUuid(NODE_UUID, ROOTNETWORK_UUID)).willReturn(REPORT_UUID);
+        given(networkModificationTreeService.getReportUuid(NODE_UUID, ROOTNETWORK_UUID)).willReturn(Optional.of(REPORT_UUID));
 
         // setup DynamicSimulationClient mock
         given(dynamicSimulationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, NODE_UUID)), any(), any(), eq(false))).willReturn(RESULT_UUID);
