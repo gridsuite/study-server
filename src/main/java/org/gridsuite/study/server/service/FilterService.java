@@ -13,7 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -33,8 +33,8 @@ import static org.gridsuite.study.server.StudyConstants.IDS;
 import static org.gridsuite.study.server.StudyConstants.NETWORK_UUID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_EQUIPMENT_TYPES;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_VARIANT_ID;
-import static org.gridsuite.study.server.StudyException.Type.EVALUATE_FILTER_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EVALUATE_FILTER_FAILED;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NETWORK_NOT_FOUND;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**

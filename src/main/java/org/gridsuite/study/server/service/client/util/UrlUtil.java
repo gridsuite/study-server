@@ -8,12 +8,12 @@
 package org.gridsuite.study.server.service.client.util;
 
 import org.apache.logging.log4j.util.Strings;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import static org.gridsuite.study.server.StudyException.Type.URI_SYNTAX;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.URI_SYNTAX;
 import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
 
 /**

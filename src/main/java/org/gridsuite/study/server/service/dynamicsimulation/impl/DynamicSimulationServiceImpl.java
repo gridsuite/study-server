@@ -13,7 +13,7 @@ import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import org.apache.commons.collections4.CollectionUtils;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -39,8 +39,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_RUNNING;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
@@ -120,7 +119,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
                 // get first element to check type
                 if (!CollectionUtils.isEmpty(timeSeries) &&
                     !(timeSeries.get(0) instanceof DoubleTimeSeries)) {
-                    throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time series can not be a type: "
+                    throw new StudyException(TIME_SERIES_BAD_TYPE, "Time series can not be a type: "
                        + timeSeries.get(0).getClass().getSimpleName()
                        + ", expected type: " + DoubleTimeSeries.class.getSimpleName());
                 }
@@ -141,7 +140,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
                 // get first element to check type
                 if (!CollectionUtils.isEmpty(timelines) &&
                     !(timelines.get(0) instanceof StringTimeSeries)) {
-                    throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Timelines can not be a type: "
+                    throw new StudyException(TIME_SERIES_BAD_TYPE, "Timelines can not be a type: "
                                                                                        + timelines.get(0).getClass().getSimpleName()
                                                                                        + ", expected type: " + StringTimeSeries.class.getSimpleName());
                 }
@@ -154,7 +153,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
                             try {
                                 return objectMapper.readValue(eventJson, TimelineEventInfos.class);
                             } catch (JsonProcessingException e) {
-                                throw new StudyException(StudyException.Type.TIMELINE_BAD_TYPE, "Error while deserializing timeline event: " + eventJson);
+                                throw new StudyException(TIMELINE_BAD_TYPE, "Error while deserializing timeline event: " + eventJson);
                             }
                         }).toList();
             }

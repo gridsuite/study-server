@@ -17,7 +17,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.Optional;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.GET_USER_PROFILE_FAILED;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.GET_USER_PROFILE_FAILED;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**

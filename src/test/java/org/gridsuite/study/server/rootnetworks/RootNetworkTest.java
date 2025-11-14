@@ -12,8 +12,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
@@ -55,8 +56,10 @@ import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.ROOT_NETWORK_NOT_FOUND;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -297,9 +300,8 @@ class RootNetworkTest {
                         .header("content-type", "application/json"))
                 .andExpect(status().isForbidden())
                 .andReturn();
-
-        assertTrue(result.getResponse().getContentAsString().equalsIgnoreCase(MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED.name()
-        ));
+        var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertEquals(MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED.value(), problemDetail.getBusinessErrorCode());
 
         assertEquals(1, rootNetworkRequestRepository.countAllByStudyUuid(studyEntity.getId()));
         assertEquals(3, rootNetworkRepository.countAllByStudyId(studyEntity.getId()));
@@ -393,10 +395,10 @@ class RootNetworkTest {
         messageConsumer.accept(new GenericMessage<>("", headers));
 
         // get study from database and check new root network has been created with correct values
-        StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
+        StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         assertEquals(2, updatedStudyEntity.getRootNetworks().size());
 
-        RootNetworkEntity rootNetworkEntity = updatedStudyEntity.getRootNetworks().stream().filter(rne -> rne.getId().equals(newRootNetworkUuid)).findFirst().orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkEntity rootNetworkEntity = updatedStudyEntity.getRootNetworks().stream().filter(rne -> rne.getId().equals(newRootNetworkUuid)).findFirst().orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
         assertEquals(newRootNetworkUuid, rootNetworkEntity.getId());
         assertEquals(NETWORK_UUID2, rootNetworkEntity.getNetworkUuid());
         assertEquals(NETWORK_ID2, rootNetworkEntity.getNetworkId());
@@ -467,7 +469,7 @@ class RootNetworkTest {
         createAndConsumeMessageCaseImport(studyEntity.getId(), rootNetworkInfos, CaseImportAction.ROOT_NETWORK_CREATION);
 
         // get study from database and check new root network has been created with correct values
-        StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
+        StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
         assertEquals(1, updatedStudyEntity.getRootNetworks().size());
 
         // corresponding rootNetworkRequestRepository should be emptied when root network creation is done
@@ -756,8 +758,7 @@ class RootNetworkTest {
         UUID newCaseUuid = UUID.randomUUID();
         String newCaseFormat = "newCaseFormat";
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
-
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/?caseUuid={caseUuid}&caseFormat={newCaseFormat}", studyEntity.getId(), UUID.randomUUID(), newCaseUuid, newCaseFormat)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network?caseFormat={newCaseFormat}", studyEntity.getId(), UUID.randomUUID(), newCaseUuid, newCaseFormat)
                 .header("userId", "userId"))
             .andExpect(status().isNotFound());
 

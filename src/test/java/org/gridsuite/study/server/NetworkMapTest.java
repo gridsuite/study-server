@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.iidm.network.TwoSides;
 import com.powsybl.loadflow.LoadFlowParameters;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import lombok.SneakyThrows;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
@@ -763,12 +764,15 @@ class NetworkMapTest {
 
     private void getNetworkElementInfosWithError(UUID studyUuid, UUID rootNetworkUuid, UUID rootNodeUuid, String elementType, String infoType, String elementId) throws Exception {
         UUID stubUuid = wireMockUtils.stubNetworkElementInfosGetWithError(NETWORK_UUID_STRING, elementType, infoType, elementId);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNetworkUuid, rootNodeUuid, elementId)
+        var result = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNetworkUuid, rootNodeUuid, elementId)
                         .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
                         .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
                         .queryParam(String.format(QUERY_FORMAT_OPTIONAL_PARAMS, QUERY_PARAM_DC_POWERFACTOR), Double.toString(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR))
                 )
-                .andExpectAll(status().isInternalServerError(), content().string("Internal Server Error"));
+            .andExpect(status().isInternalServerError())
+            .andReturn();
+        var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertEquals("Internal Server Error", problemDetail.getDetail());
         wireMockUtils.verifyNetworkElementInfosGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, elementId);
     }
 
