@@ -20,7 +20,7 @@ public class RunPccMinParametersInfos {
 
     private UUID shortCircuitParametersUuid;
 
-    private UUID filterUuid;
+    private UUID pccMinParametersUuid;
 
     private String busId;
 }

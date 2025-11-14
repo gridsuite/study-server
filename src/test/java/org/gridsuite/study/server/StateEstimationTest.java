@@ -245,7 +245,7 @@ class StateEstimationTest {
     private StudyNodeIds createStudyAndNode(String variantId, String nodeName, UUID stateEstimationParametersUuid) throws Exception {
         // create a study
         StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.fromString(NETWORK_UUID_STRING), "netId", CASE_LOADFLOW_UUID, "", "", null,
-                LOADFLOW_PARAMETERS_UUID, null, null, null, stateEstimationParametersUuid);
+                LOADFLOW_PARAMETERS_UUID, null, null, null, stateEstimationParametersUuid, null);
         studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         // with a node
