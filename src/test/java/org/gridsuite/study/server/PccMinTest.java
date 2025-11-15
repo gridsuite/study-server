@@ -33,6 +33,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
@@ -423,13 +424,13 @@ class PccMinTest {
             .withRequestBody(WireMock.equalToJson(content))
             .willReturn(WireMock.notFound())
         );
-        mockMvc.perform(post(PCC_MIN_URL_BASE + "result/csv", ids.studyId, ids.rootNetworkUuid, notFoundUuid)
-                .param("sort", "id,DESC")
-                .param("filters", "fakeFilters")
-                .param("globalFilters", "fakeGlobalFilters")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(content)
-                .header("userId", "userId"))
-            .andExpect(status().isNotFound());
+
+        StudyException exception1 = assertThrows(StudyException.class, () ->
+            pccMinService.exportPccMinResultsAsCsv(notFoundUuid, "", null, null, Sort.unsorted(), null, null));
+        assertEquals(StudyException.Type.PCC_MIN_NOT_FOUND, exception1.getType());
+
+        StudyException exception2 = assertThrows(StudyException.class, () ->
+            pccMinService.exportPccMinResultsAsCsv(null, "", null, null, Sort.unsorted(), null, null));
+        assertEquals(StudyException.Type.PCC_MIN_NOT_FOUND, exception2.getType());
     }
 }
