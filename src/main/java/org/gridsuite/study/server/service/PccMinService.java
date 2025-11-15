@@ -17,6 +17,7 @@ import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -37,8 +38,8 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_NOT_FOUND;
-import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_RUNNING;
+import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
@@ -47,6 +48,7 @@ import static org.gridsuite.study.server.StudyException.Type.PCC_MIN_RUNNING;
 public class PccMinService extends AbstractComputationService {
     static final String RESULT_UUID = "resultUuid";
     static final String FILTER_UUID = "filterUuid";
+    static final String RESULTS = "results";
     static final String BUS_ID = "busId";
 
     private final RestTemplate restTemplate;
@@ -207,5 +209,41 @@ public class PccMinService extends AbstractComputationService {
             throw e;
         }
         return result;
+    }
+
+    public byte[] exportPccMinResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
+        if (resultUuid == null) {
+            throw new StudyException(PCC_MIN_NOT_FOUND);
+        }
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(pccMinServerBaseUri)
+            .pathSegment(PCC_MIN_API_VERSION, RESULTS, resultUuid.toString(), "csv");
+
+        if (StringUtils.isNotBlank(filters)) {
+            uriBuilder.queryParam(QUERY_PARAM_FILTERS, URLEncoder.encode(filters, StandardCharsets.UTF_8));
+        }
+        if (!StringUtils.isEmpty(globalFilters)) {
+            uriBuilder.queryParam(QUERY_PARAM_GLOBAL_FILTERS, URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
+            uriBuilder.queryParam(QUERY_PARAM_NETWORK_UUID, networkUuid);
+            if (!StringUtils.isBlank(variantId)) {
+                uriBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+        }
+        for (Sort.Order order : sort) {
+            uriBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection());
+        }
+        URI uri = uriBuilder.build().encode().toUri();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(csvHeaders, headers);
+        try {
+            return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
+        } catch (HttpStatusCodeException e) {
+            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
+                throw new StudyException(PCC_MIN_NOT_FOUND);
+            } else {
+                throw handleHttpError(e, PCC_MIN_ERROR);
+            }
+        }
     }
 }

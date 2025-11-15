@@ -705,4 +705,17 @@ public class WireMockUtils {
                 "globalFilters", WireMock.equalTo("fakeGlobalFilters")
             ));
     }
+
+    public void verifyExportPccMinResult(UUID stubId, UUID resultUuid) {
+        verifyPostRequest(
+            stubId,
+            "/v1/results/" + resultUuid + "/csv",
+            Map.of(
+                "sort", WireMock.equalTo("id,DESC"),
+                "filters", WireMock.equalTo("fakeFilters"),
+                "globalFilters", WireMock.equalTo("fakeGlobalFilters")
+            ),
+            1
+        );
+    }
 }

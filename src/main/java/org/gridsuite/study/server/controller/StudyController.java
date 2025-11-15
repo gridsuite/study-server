@@ -891,6 +891,29 @@ public class StudyController {
         return ResponseEntity.ok().body(rootNetworkNodeInfoService.getShortCircuitAnalysisCsvResult(nodeUuid, rootNetworkUuid, type, headersCsv));
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get a pcc min result as csv")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of sensitivity analysis results"),
+        @ApiResponse(responseCode = "204", description = "No pcc min has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The pcc min has not been found")})
+    public ResponseEntity<byte[]> exportPccMinResultsAsCsv(
+        @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+        @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
+        Sort sort, @RequestBody String csvHeaders) {
+        byte[] result = rootNetworkNodeInfoService.exportPccMinResultsAsCsv(nodeUuid, rootNetworkUuid, csvHeaders, sort, filters, globalFilters);
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        responseHeaders.setContentDispositionFormData("attachment", "pcc_min_results.csv");
+
+        return ResponseEntity
+            .ok()
+            .headers(responseHeaders)
+            .body(result);
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run")
     @Operation(summary = "run voltage init on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has started"),
