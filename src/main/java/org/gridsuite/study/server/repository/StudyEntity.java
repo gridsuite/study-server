@@ -120,6 +120,14 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
         ))
     private List<NodeAliasEmbeddable> nodeAliases;
 
+    @ElementCollection
+    @CollectionTable(name = "StudyNadConfigs", foreignKey = @ForeignKey(
+            name = "study_nad_configs_fk"
+        ))
+    @Column(name = "nad_config_uuid")
+    @Builder.Default
+    private List<UUID> nadConfigsUuids = new ArrayList<>();
+
     @Column(name = "mono_root", columnDefinition = "boolean default true")
     private boolean monoRoot;
 
