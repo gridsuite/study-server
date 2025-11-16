@@ -1835,12 +1835,12 @@ public class StudyService {
         return networkMapService.getVoltageLevelBusesOrBusbarSections(networkUuid, variantId, voltageLevelId, busPath);
     }
 
-    public String getVoltageLevelInformation(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId,
-                                             String path) {
+    public String getVoltageLevelTopologyInfos(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId,
+                                               String path) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
 
-        return networkMapService.getVoltageLevelInformation(networkUuid, variantId, voltageLevelId, path);
+        return networkMapService.getVoltageLevelTopologyInfos(networkUuid, variantId, voltageLevelId, path);
     }
 
     public String getVoltageLevelSubstationId(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode) {
@@ -1853,9 +1853,9 @@ public class StudyService {
         return getVoltageLevelBusesOrBusbarSections(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, "buses-or-busbar-sections");
     }
 
-    public String getVoltageLevelInformation(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode, String path) {
+    public String getVoltageLevelTopologyInfos(UUID nodeUuid, UUID rootNetworkUuid, String voltageLevelId, boolean inUpstreamBuiltParentNode, String path) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
-        return getVoltageLevelInformation(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, path);
+        return getVoltageLevelTopologyInfos(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, path);
     }
 
     @Transactional
