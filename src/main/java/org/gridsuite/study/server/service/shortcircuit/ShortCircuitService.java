@@ -22,6 +22,7 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
@@ -35,6 +36,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -355,5 +357,14 @@ public class ShortCircuitService extends AbstractComputationService {
             .toUriString();
 
         restTemplate.delete(shortCircuitServerBaseUri + path);
+    }
+
+    public Map<String, Double> getVoltageLevelIccValues(UUID resultUuid, String voltageLevelId) {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/fault_results/icc")
+            .queryParam("voltageLevelId", voltageLevelId)
+            .buildAndExpand(resultUuid)
+            .toUriString();
+        return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<Map<String, Double>>() { }).getBody();
     }
 }
