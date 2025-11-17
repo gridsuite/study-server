@@ -978,7 +978,7 @@ class StudyTest {
                         studyUuid, firstRootNetworkUuid, rootNodeUuid, "ERROR")
                         .param("fileName", "myFileName")
                         .header(HEADER_USER_ID, "userId"))
-                .andExpect(status().isIAmATeapot());
+                .andExpect(status().is5xxServerError());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.contains("/v1/networks/" + NETWORK_UUID_STRING + "/export/ERROR")
                 && request.contains("fileName=myFileName")));
