@@ -87,7 +87,7 @@
             <dependency>
                 <groupId>com.powsybl</groupId>
                 <artifactId>powsybl-ws-commons</artifactId>
-                <version>1.33.0-SNAPSHOT</version>
+                <version>${powsybl-ws-commons.version}</version>
             </dependency>
 
             <dependency><!-- To remove when integrate in next release of gridsuite-dependencies or powsybl-ws-dependencies -->
