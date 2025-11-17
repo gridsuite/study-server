@@ -105,7 +105,6 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
@@ -918,7 +917,7 @@ class StudyTest {
                 content().contentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE))
             .andReturn();
         problemDetail = mapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
-        assertEquals(NOT_FOUND.name(), problemDetail.getDetail());
+        assertEquals("Study not found", problemDetail.getDetail());
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
