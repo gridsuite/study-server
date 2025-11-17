@@ -11,14 +11,12 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import com.powsybl.iidm.network.util.SV;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.DiagramParameters;
 import org.gridsuite.study.server.dto.SvgGenerationMetadata;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
 import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
-import org.gridsuite.study.server.dto.CurrentLimitViolationInfos;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
