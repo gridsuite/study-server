@@ -22,7 +22,7 @@ public class RestResponseEntityExceptionHandler extends AbstractBaseRestExceptio
 
     @Override
     protected @NonNull StudyBusinessErrorCode getBusinessCode(StudyException e) {
-        return (StudyBusinessErrorCode) e.getBusinessErrorCode();
+        return e.getBusinessErrorCode();
     }
 
     @Override

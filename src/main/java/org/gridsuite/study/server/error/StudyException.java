@@ -30,7 +30,7 @@ public class StudyException extends AbstractBusinessException {
     }
 
     @Override
-    public @NonNull BusinessErrorCode getBusinessErrorCode() {
+    public @NonNull StudyBusinessErrorCode getBusinessErrorCode() {
         return errorCode;
     }
 }
