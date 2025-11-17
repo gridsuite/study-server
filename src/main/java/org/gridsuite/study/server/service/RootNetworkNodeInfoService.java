@@ -631,7 +631,7 @@ public class RootNetworkNodeInfoService {
     @Transactional(readOnly = true)
     public String getPccMinResult(UUID nodeUuid, UUID rootNetworkUuid, String filters, String globalFilters, Pageable pageable) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(()
-            -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+            -> new StudyException(NOT_FOUND, "Root network not found"));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
         UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
