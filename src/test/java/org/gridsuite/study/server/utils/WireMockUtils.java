@@ -723,4 +723,15 @@ public class WireMockUtils {
             ),
             body);
     }
+
+    public UUID stubGetVoltageLevelIccValues(UUID resultUuid, String voltageLevelId, String expectedBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/fault_results/icc"))
+            .withQueryParam("voltageLevelId", WireMock.equalTo(voltageLevelId))
+            .willReturn(WireMock.okJson(expectedBody))
+        ).getId();
+    }
+
+    public void verifyGetVoltageLevelIccValues(UUID stubUuid, UUID resultUuid, String voltageLevelId) {
+        verifyGetRequest(stubUuid, "/v1/results/" + resultUuid + "/fault_results/icc", Map.of("voltageLevelId", WireMock.equalTo(voltageLevelId)));
+    }
 }

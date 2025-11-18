@@ -43,6 +43,8 @@ class SingleLineDiagramWiremockTest {
     private MockMvc mockMvc;
     @Autowired
     private SingleLineDiagramService singleLineDiagramService;
+    @Autowired
+    private ShortCircuitService shortCircuitService;
 
     @Autowired
     public ObjectMapper mapper;
@@ -51,8 +53,6 @@ class SingleLineDiagramWiremockTest {
     private NetworkService networkService;
     @MockitoBean
     private LoadFlowService loadFlowService;
-    @MockitoBean
-    private ShortCircuitService shortCircuitService;
     @MockitoBean
     private RootNetworkService rootNetworkService;
     @MockitoBean
@@ -72,6 +72,7 @@ class SingleLineDiagramWiremockTest {
         wireMockServer.start();
 
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(wireMockServer.baseUrl());
+        shortCircuitService.setShortCircuitServerBaseUri(wireMockServer.baseUrl());
     }
 
     @Test
@@ -102,11 +103,14 @@ class SingleLineDiagramWiremockTest {
         String voltageLevelId = "voltageLevelId";
 
         SvgGenerationMetadata svgGenerationMetadata = new SvgGenerationMetadata(violations, busIdToIcc);
-        mockServicesAroundSvgGeneration(nodeUuid, rootNetworkUuid, networkUuid, loadflowResultUuid, shortcircuitResultUuid, voltageLevelId, variantId, svgGenerationMetadata);
+        mockServicesAroundSvgGeneration(nodeUuid, rootNetworkUuid, networkUuid, loadflowResultUuid, shortcircuitResultUuid, variantId, svgGenerationMetadata);
 
         String svgGenerationMetadataJson = mapper.writeValueAsString(svgGenerationMetadata);
-        UUID stubUuid = wireMockUtils.stubGenerateSvg(networkUuid, variantId, voltageLevelId, svgGenerationMetadataJson);
-
+        UUID generateSvgStubUuid = wireMockUtils.stubGenerateSvg(networkUuid, variantId, voltageLevelId, svgGenerationMetadataJson);
+        UUID getIccValuesStubUuid = null;
+        if (shortcircuitResultUuid != null) {
+            getIccValuesStubUuid = wireMockUtils.stubGetVoltageLevelIccValues(shortcircuitResultUuid, voltageLevelId, mapper.writeValueAsString(busIdToIcc));
+        }
         //get the voltage level diagram svg
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false&language=en",
             UUID.randomUUID(), rootNetworkUuid, nodeUuid, voltageLevelId)).andExpectAll(
@@ -114,10 +118,13 @@ class SingleLineDiagramWiremockTest {
             content().contentType(MediaType.APPLICATION_XML),
             content().string("generatedSvg"));
 
-        wireMockUtils.verifyGenerateSvg(stubUuid, networkUuid, variantId, voltageLevelId, svgGenerationMetadataJson);
+        wireMockUtils.verifyGenerateSvg(generateSvgStubUuid, networkUuid, variantId, voltageLevelId, svgGenerationMetadataJson);
+        if (shortcircuitResultUuid != null) {
+            wireMockUtils.verifyGetVoltageLevelIccValues(getIccValuesStubUuid, shortcircuitResultUuid, voltageLevelId);
+        }
     }
 
-    private void mockServicesAroundSvgGeneration(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, UUID loadflowResultUuid, UUID shortcircuitResultUuid, String voltageLevelId, String variantId, SvgGenerationMetadata svgGenerationMetadata) {
+    private void mockServicesAroundSvgGeneration(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, UUID loadflowResultUuid, UUID shortcircuitResultUuid, String variantId, SvgGenerationMetadata svgGenerationMetadata) {
         doReturn(networkUuid).when(rootNetworkService).getNetworkUuid(rootNetworkUuid);
         doReturn(variantId).when(networkModificationTreeService).getVariantId(nodeUuid, rootNetworkUuid);
         doReturn(true).when(networkService).existVariant(networkUuid, variantId);
@@ -125,7 +132,5 @@ class SingleLineDiagramWiremockTest {
         doReturn(shortcircuitResultUuid).when(rootNetworkNodeInfoService).getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SHORT_CIRCUIT);
         List<LimitViolationInfos> violations = svgGenerationMetadata.getCurrentLimitViolationInfos().stream().map(clv -> LimitViolationInfos.builder().subjectId(clv.equipmentId()).build()).toList();
         doReturn(violations).when(loadFlowService).getCurrentLimitViolations(loadflowResultUuid);
-        Map<String, Double> busIdToICCValues = svgGenerationMetadata.getBusIdToIccValues();
-        doReturn(busIdToICCValues).when(shortCircuitService).getVoltageLevelIccValues(shortcircuitResultUuid, voltageLevelId);
     }
 }
