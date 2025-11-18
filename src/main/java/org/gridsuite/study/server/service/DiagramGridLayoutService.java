@@ -135,7 +135,7 @@ public class DiagramGridLayoutService {
     private void cleanupOldNadConfigs(List<UUID> oldNadConfigUuidsToDelete) {
         if (!oldNadConfigUuidsToDelete.isEmpty()) {
             try {
-                singleLineDiagramService.deleteMultipleDiagramConfigs(oldNadConfigUuidsToDelete);
+                singleLineDiagramService.deleteDiagramConfigs(oldNadConfigUuidsToDelete);
             } catch (Exception e) {
                 LOGGER.error("Could not clean up old NAD configs: " + oldNadConfigUuidsToDelete, e);
             }
@@ -213,7 +213,7 @@ public class DiagramGridLayoutService {
 
         // Batch create all NAD configs if any exist
         if (!nadConfigsToCreate.isEmpty()) {
-            singleLineDiagramService.createMultipleDiagramConfigs(nadConfigsToCreate);
+            singleLineDiagramService.createDiagramConfigs(nadConfigsToCreate);
         }
 
         return DiagramGridLayout.builder()
