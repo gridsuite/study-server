@@ -105,7 +105,7 @@ public class NetworkService {
         return networkStoreService.getVariantsInfos(networkUuid).stream().sorted(Comparator.comparing(VariantInfos::getNum)).collect(Collectors.toList());
     }
 
-    boolean existVariant(UUID networkUuid, String variantId) {
+    public boolean existVariant(UUID networkUuid, String variantId) {
         return StringUtils.isEmpty(variantId) ||
             variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ||
             networkStoreService.getVariantsInfos(networkUuid).stream().anyMatch(info -> info.getId().equals(variantId));

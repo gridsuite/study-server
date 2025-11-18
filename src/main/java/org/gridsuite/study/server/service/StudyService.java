@@ -804,7 +804,7 @@ public class StudyService {
         List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
         UUID shortCircuitResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT);
         Map<String, Double> busIdToIccValues = shortCircuitResultUuid != null ?
-            shortCircuitService.getVoltageLevelIccValues(shortCircuitResultUuid, voltageLevelId) : null;
+            shortCircuitService.getVoltageLevelIccValues(shortCircuitResultUuid, voltageLevelId) : Map.of();
 
         return new SvgGenerationMetadata(violations, busIdToIccValues);
     }

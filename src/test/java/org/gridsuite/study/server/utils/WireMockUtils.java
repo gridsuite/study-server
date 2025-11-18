@@ -16,6 +16,7 @@ import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import com.powsybl.iidm.network.TwoSides;
 import org.gridsuite.filter.utils.EquipmentType;
+import org.gridsuite.study.server.dto.SvgGenerationMetadata;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
@@ -704,5 +705,23 @@ public class WireMockUtils {
                 "filters", WireMock.equalTo("fakeFilters"),
                 "globalFilters", WireMock.equalTo("fakeGlobalFilters")
             ));
+    }
+
+    public UUID stubGenerateSvg(UUID networkUuid, String variantId, String voltageLevelId, String body) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/svg/" + networkUuid + "/" + voltageLevelId))
+            .withQueryParam(QUERY_PARAM_VARIANT_ID, WireMock.equalTo(variantId))
+            .withRequestBody(WireMock.equalTo(body))
+            .willReturn(WireMock.ok("generatedSvg")))
+            .getId();
+    }
+
+    public void verifyGenerateSvg(UUID stubId, UUID networkUuid, String variantId, String voltageLevelId, String body) {
+        verifyPostRequest(stubId,
+            "/v1/svg/" + networkUuid + "/" + voltageLevelId,
+            false,
+            Map.of(
+                QUERY_PARAM_VARIANT_ID, WireMock.equalTo(variantId)
+            ),
+            body);
     }
 }
