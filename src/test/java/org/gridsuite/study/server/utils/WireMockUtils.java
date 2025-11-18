@@ -16,7 +16,6 @@ import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import com.powsybl.iidm.network.TwoSides;
 import org.gridsuite.filter.utils.EquipmentType;
-import org.gridsuite.study.server.dto.SvgGenerationMetadata;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
