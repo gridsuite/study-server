@@ -123,7 +123,7 @@ class SingleLineDiagramWiremockTest {
         doReturn(true).when(networkService).existVariant(networkUuid, variantId);
         doReturn(loadflowResultUuid).when(rootNetworkNodeInfoService).getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.LOAD_FLOW);
         doReturn(shortcircuitResultUuid).when(rootNetworkNodeInfoService).getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SHORT_CIRCUIT);
-        List<LimitViolationInfos> violations = svgGenerationMetadata.getCurrentLimitViolationInfos().stream().map(clv -> LimitViolationInfos.builder().subjectId(clv.equipmentId()).build()).toList();//svgGenerationMetadata.getCurrentLimitViolationInfos();
+        List<LimitViolationInfos> violations = svgGenerationMetadata.getCurrentLimitViolationInfos().stream().map(clv -> LimitViolationInfos.builder().subjectId(clv.equipmentId()).build()).toList();
         doReturn(violations).when(loadFlowService).getCurrentLimitViolations(loadflowResultUuid);
         Map<String, Double> busIdToICCValues = svgGenerationMetadata.getBusIdToIccValues();
         doReturn(busIdToICCValues).when(shortCircuitService).getVoltageLevelIccValues(shortcircuitResultUuid, voltageLevelId);
