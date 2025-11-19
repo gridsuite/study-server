@@ -589,7 +589,7 @@ class SecurityAnalysisTest {
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID securityAnalysisParametersUuid) {
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null,
-                UUID.randomUUID(), null, securityAnalysisParametersUuid, null, null);
+                UUID.randomUUID(), null, securityAnalysisParametersUuid, null, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;

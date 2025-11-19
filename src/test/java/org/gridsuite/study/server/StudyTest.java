@@ -1038,7 +1038,7 @@ class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(10, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(11, server);
         assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
@@ -1047,6 +1047,7 @@ class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSecurityAnalysisParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSensitivityAnalysisParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getStateEstimationParametersUuid())));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getPccMinParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-visualizations-params/" + studyEntity.getNetworkVisualizationParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/spreadsheet-config-collections/" + studyEntity.getSpreadsheetConfigCollectionUuid())));
     }
@@ -1061,6 +1062,7 @@ class StudyTest {
         studyEntity.setVoltageInitParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
         studyEntity.setStateEstimationParametersUuid(null);
+        studyEntity.setPccMinParametersUuid(null);
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
 
@@ -1102,7 +1104,7 @@ class StudyTest {
 
         wireMockUtils.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(8, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(9, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + nonExistingCaseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/.*"))); // x 4
@@ -1341,7 +1343,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        int nbRequest = 13;
+        int nbRequest = 14;
         if (parameterDuplicatedUuid != null && !parameterDuplicationSuccess) {
             nbRequest += 7;
         }
@@ -1381,7 +1383,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(13, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(14, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/%s/exists".formatted(caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/%s/disableExpiration".formatted(caseUuid))));
@@ -1411,7 +1413,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(14, server);
+        var requests = TestUtils.getRequestsDone(15, server);
         assertTrue(requests.contains("/v1/cases/%s/exists".formatted(caseUuid)));
         assertTrue(requests.contains("/v1/cases?duplicateFrom=%s&withExpiration=%s".formatted(caseUuid, true)));
         // note : it's a new case UUID
@@ -1631,7 +1633,7 @@ class StudyTest {
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(13, server);
+        var requests = TestUtils.getRequestsDone(14, server);
         assertTrue(requests.contains("/v1/cases/%s/exists".formatted(NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains("/v1/cases/%s/disableExpiration".formatted(NEW_STUDY_CASE_UUID)));
@@ -1835,6 +1837,7 @@ class StudyTest {
                 .voltageInitResultUuid(UUID.randomUUID())
                 .stateEstimationResultUuid(UUID.randomUUID())
                 .pccMinResultUuid(UUID.randomUUID())
+                .pccMinResultUuid(UUID.randomUUID())
                 .build()
         );
 
@@ -1886,6 +1889,7 @@ class StudyTest {
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
         studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
         studyEntity.setStateEstimationParametersUuid(UUID.randomUUID());
+        studyEntity.setPccMinParametersUuid(UUID.randomUUID());
         studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
@@ -1902,6 +1906,7 @@ class StudyTest {
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
         studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
         studyEntity.setStateEstimationParametersUuid(UUID.randomUUID());
+        studyEntity.setPccMinParametersUuid(UUID.randomUUID());
         studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
@@ -1918,6 +1923,7 @@ class StudyTest {
         studyEntity.setVoltageInitParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
         studyEntity.setStateEstimationParametersUuid(null);
+        studyEntity.setPccMinParametersUuid(null);
         studyEntity.setNetworkVisualizationParametersUuid(null);
         studyEntity.setSpreadsheetConfigCollectionUuid(null);
         studyRepository.save(studyEntity);
@@ -1966,6 +1972,9 @@ class StudyTest {
             numberOfRequests++;
         }
         if (studyEntity.getStateEstimationParametersUuid() != null) {
+            numberOfRequests++;
+        }
+        if (studyEntity.getPccMinParametersUuid() != null) {
             numberOfRequests++;
         }
         if (studyEntity.getSpreadsheetConfigCollectionUuid() != null) {
@@ -2065,6 +2074,12 @@ class StudyTest {
             assertNotNull(duplicatedStudy.getStateEstimationParametersUuid());
             numberOfRequests++;
         }
+        if (sourceStudy.getPccMinParametersUuid() == null) {
+            assertNull(duplicatedStudy.getPccMinParametersUuid());
+        } else {
+            assertNotNull(duplicatedStudy.getPccMinParametersUuid());
+            numberOfRequests++;
+        }
         if (sourceStudy.getSpreadsheetConfigCollectionUuid() == null) {
             assertNull(duplicatedStudy.getSpreadsheetConfigCollectionUuid());
         } else {
@@ -2100,6 +2115,9 @@ class StudyTest {
         }
         if (sourceStudy.getStateEstimationParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getStateEstimationParametersUuid())).count());
+        }
+        if (sourceStudy.getPccMinParametersUuid() != null) {
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getPccMinParametersUuid())).count());
         }
         if (sourceStudy.getSpreadsheetConfigCollectionUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + sourceStudy.getSpreadsheetConfigCollectionUuid())).count());
