@@ -60,24 +60,24 @@ public class WireMockUtils {
 
     public UUID stubNetworkElementInfosGet(String networkUuid, String elementType, String infoType, String elementId, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements" + DELIMITER + elementId))
-                .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
-                .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
+            .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
+            .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
             .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
     public UUID stubNetworkElementInfosGetNotFound(String networkUuid, String elementType, String infoType, String elementId) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements" + DELIMITER + elementId))
-                .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
-                .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
+            .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
+            .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
             .willReturn(WireMock.notFound())
         ).getId();
     }
 
     public UUID stubNetworkElementInfosGetWithError(String networkUuid, String elementType, String infoType, String elementId) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements" + DELIMITER + elementId))
-                .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
-                .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
+            .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
+            .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
             .willReturn(WireMock.serverError().withBody("Internal Server Error"))
         ).getId();
     }
@@ -85,13 +85,13 @@ public class WireMockUtils {
     public void verifyNetworkElementInfosGet(UUID stubUuid, String networkUuid, String elementType, String infoType, String elementId) {
         verifyGetRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements" + DELIMITER + elementId,
             Map.of(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType),
-                   QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType)));
+                QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType)));
     }
 
     public UUID stubNetworkElementsInfosPost(String networkUuid, String infoType, String elementType, List<Double> nominalVoltages, String responseBody) {
         MappingBuilder requestPatternBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements"))
-                .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
-                .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType));
+            .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
+            .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType));
         if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
             for (Double voltage : nominalVoltages) {
                 requestPatternBuilder.withQueryParam("nominalVoltages", WireMock.equalTo(voltage.toString()));
@@ -99,35 +99,35 @@ public class WireMockUtils {
         }
 
         return wireMock.stubFor(requestPatternBuilder
-                .willReturn(WireMock.ok().withBody(responseBody))
+            .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
     public void verifyNetworkElementsInfosPost(UUID stubUuid, String networkUuid, String infoType, String elementType, String requestBody) {
         verifyPostRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements", false,
-                Map.of(
-                        QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType),
-                        QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType)
-                ),
-                requestBody
+            Map.of(
+                QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType),
+                QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType)
+            ),
+            requestBody
         );
     }
 
     public UUID stubNetworkElementsIdsPost(String networkUuid, String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements-ids"))
-                .willReturn(WireMock.ok().withBody(responseBody))
+            .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
     public void verifyNetworkElementsIdsPost(UUID stubUuid, String networkUuid, String requestBody) {
         verifyPostRequest(stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements-ids", false,
-                Map.of(),
-                requestBody);
+            Map.of(),
+            requestBody);
     }
 
     public UUID stubNetworkEquipmentsInfosGet(String networkUuid, String equipmentPath, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + equipmentPath))
-                .willReturn(WireMock.ok().withBody(responseBody))
+            .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
@@ -137,7 +137,7 @@ public class WireMockUtils {
 
     public UUID stubNetworkEquipmentInfosGet(String networkUuid, String infoTypePath, String equipmentId, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + infoTypePath + DELIMITER + equipmentId))
-                .willReturn(WireMock.ok().withBody(responseBody))
+            .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
@@ -349,7 +349,7 @@ public class WireMockUtils {
 
     public UUID stubCaseExists(String caseUuid, boolean returnedValue) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/exists"))
-                .willReturn(WireMock.ok().withBody(returnedValue ? "true" : "false")
+            .willReturn(WireMock.ok().withBody(returnedValue ? "true" : "false")
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         ).getId();
     }
@@ -374,7 +374,7 @@ public class WireMockUtils {
 
     public UUID stubLoadFlowProvider(UUID parametersUuid, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid + "/provider"))
-                .willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(responseBody))
+            .willReturn(WireMock.ok().withHeader("Content-Type", "application/json").withBody(responseBody))
         ).getId();
     }
 
@@ -396,7 +396,7 @@ public class WireMockUtils {
 
     public UUID stubDeleteLoadFlowResults(List<UUID> loadFlowResultUuids) {
         return wireMock.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/results"))
-                .withQueryParam(QUERY_PARAM_RESULTS_UUIDS, WireMock.equalTo(String.join(",", loadFlowResultUuids.stream().map(UUID::toString).toList())))
+            .withQueryParam(QUERY_PARAM_RESULTS_UUIDS, WireMock.equalTo(String.join(",", loadFlowResultUuids.stream().map(UUID::toString).toList())))
             .willReturn(WireMock.ok())
         ).getId();
     }
@@ -426,20 +426,20 @@ public class WireMockUtils {
             mappingBuilder = mappingBuilder.withQueryParam("variantId", WireMock.equalTo(variantId));
         }
         mappingBuilder = mappingBuilder.withPostServeAction(POST_ACTION_SEND_INPUT,
-            Parameters.from(
-                Map.of(
-                    "payload", "",
-                    "destination", "case.import.succeeded",
-                    "networkUuid", networkUuid,
-                    "networkId", networkId,
-                    "caseFormat", caseFormat,
-                    "caseName", caseName,
-                    "importParameters", importParameters,
-                    "latch", countDownLatch
+                Parameters.from(
+                    Map.of(
+                        "payload", "",
+                        "destination", "case.import.succeeded",
+                        "networkUuid", networkUuid,
+                        "networkId", networkId,
+                        "caseFormat", caseFormat,
+                        "caseName", caseName,
+                        "importParameters", importParameters,
+                        "latch", countDownLatch
+                    )
                 )
             )
-        )
-        .willReturn(WireMock.ok());
+            .willReturn(WireMock.ok());
 
         return wireMock.stubFor(mappingBuilder).getId();
     }
@@ -458,7 +458,7 @@ public class WireMockUtils {
 
     public UUID stubDisableCaseExpiration(String caseUuid) {
         return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/disableExpiration"))
-                .willReturn(WireMock.ok())).getId();
+            .willReturn(WireMock.ok())).getId();
     }
 
     public void verifyDisableCaseExpiration(UUID stubUuid, String caseUuid) {
@@ -467,19 +467,19 @@ public class WireMockUtils {
 
     public UUID stubCountriesGet(String networkUuid, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/countries"))
-                .willReturn(WireMock.ok().withBody(responseBody))
+            .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
     public UUID stubCountriesGetNotFoundError(String networkUuid) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/countries"))
-                .willReturn(WireMock.notFound().withBody("Network not found"))
+            .willReturn(WireMock.notFound().withBody("Network not found"))
         ).getId();
     }
 
     public UUID stubCountriesGetError(String networkUuid) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/countries"))
-                .willReturn(WireMock.serverError().withBody("Internal Server Error"))
+            .willReturn(WireMock.serverError().withBody("Internal Server Error"))
         ).getId();
     }
 
@@ -498,19 +498,19 @@ public class WireMockUtils {
 
     public UUID stubNominalVoltagesGet(String networkUuid, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/nominal-voltages"))
-                .willReturn(WireMock.ok().withBody(responseBody))
+            .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
     public UUID stubNominalVoltagesGetNotFoundError(String networkUuid) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/nominal-voltages"))
-                .willReturn(WireMock.notFound().withBody("Network not found"))
+            .willReturn(WireMock.notFound().withBody("Network not found"))
         ).getId();
     }
 
     public UUID stubNominalVoltagesGetError(String networkUuid) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/nominal-voltages"))
-                .willReturn(WireMock.serverError().withBody("Internal Server Error"))
+            .willReturn(WireMock.serverError().withBody("Internal Server Error"))
         ).getId();
     }
 
@@ -520,8 +520,8 @@ public class WireMockUtils {
 
     public UUID stubFilterEvaluate(String networkUuid, String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
-                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
-                .willReturn(WireMock.ok().withBody(responseBody))
+            .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+            .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
@@ -536,21 +536,21 @@ public class WireMockUtils {
 
     public UUID stubFilterEvaluateNotFoundError(String networkUuid) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
-                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
-                .willReturn(WireMock.notFound().withBody("Network not found"))
+            .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+            .willReturn(WireMock.notFound().withBody("Network not found"))
         ).getId();
     }
 
     public UUID stubFilterEvaluateError(String networkUuid) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate"))
-                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
-                .willReturn(WireMock.serverError().withBody("Internal Server Error"))
+            .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+            .willReturn(WireMock.serverError().withBody("Internal Server Error"))
         ).getId();
     }
 
     public void verifyFilterEvaluate(UUID stubUuid, String networkUuid) {
         verifyPostRequest(stubUuid, "/v1/filters/evaluate",
-                Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid)));
+            Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid)));
     }
 
     public void verifyGlobalFilterEvaluate(UUID stubUuid, String networkUuid, List<EquipmentType> equipmentTypes) {
@@ -562,15 +562,15 @@ public class WireMockUtils {
 
     public UUID stubFilterExport(String networkUuid, String filterUuid, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/filters/" + filterUuid + "/export"))
-                .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
-                .willReturn(WireMock.ok().withBody(responseBody))
+            .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
+            .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
 
     public UUID stubFiltersEvaluate(String networkUuid, String filtersBody, String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/filters/evaluate/identifiables"))
             .withQueryParam(NETWORK_UUID, WireMock.equalTo(networkUuid))
-                .withRequestBody(WireMock.equalToJson(filtersBody))
+            .withRequestBody(WireMock.equalToJson(filtersBody))
             .willReturn(WireMock.ok().withBody(responseBody))
         ).getId();
     }
@@ -586,7 +586,7 @@ public class WireMockUtils {
 
     public void verifyFilterExport(UUID stubUuid, String filterUuid, String networkUuid) {
         verifyGetRequest(stubUuid, "/v1/filters/" + filterUuid + "/export",
-                Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid)));
+            Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid)));
     }
 
     public void verifyFiltersExport(UUID stubUuid, List<String> filtersUuid, String networkUuid) {
@@ -606,31 +606,31 @@ public class WireMockUtils {
 
     public UUID stubSearchModifications(String networkUuid, String userInput, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/network-modifications/indexation-infos"))
-                        .withQueryParam("networkUuid", WireMock.equalTo(networkUuid))
-                        .withQueryParam("userInput", WireMock.equalTo(userInput))
-                        .willReturn(WireMock.ok()
-                                .withHeader("Content-Type", "application/json")
-                                .withBody(responseBody)))
-                .getId();
+                .withQueryParam("networkUuid", WireMock.equalTo(networkUuid))
+                .withQueryParam("userInput", WireMock.equalTo(userInput))
+                .willReturn(WireMock.ok()
+                    .withHeader("Content-Type", "application/json")
+                    .withBody(responseBody)))
+            .getId();
     }
 
     public void verifySearchModifications(UUID stubUuid, String networkUuid, String userInput) {
         verifyGetRequest(stubUuid, "/v1/network-modifications/indexation-infos",
-                Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid),
-                        "userInput", WireMock.equalTo(userInput)));
+            Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid),
+                "userInput", WireMock.equalTo(userInput)));
     }
 
     public UUID stubCreatePositionsFromCsv() {
         MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_AREA_DIAGRAM))
-                .withHeader("Content-Type", WireMock.containing("multipart/form-data"))
-                .withMultipartRequestBody(WireMock.aMultipart()
-                        .withName("file")
-                        .withHeader("Content-Disposition", WireMock.containing("filename=\"positions.csv\""))
-                )
-                .withMultipartRequestBody(WireMock.aMultipart()
-                        .withName("file_name")
-                        .withBody(WireMock.equalTo("positions.csv"))
-                );
+            .withHeader("Content-Type", WireMock.containing("multipart/form-data"))
+            .withMultipartRequestBody(WireMock.aMultipart()
+                .withName("file")
+                .withHeader("Content-Disposition", WireMock.containing("filename=\"positions.csv\""))
+            )
+            .withMultipartRequestBody(WireMock.aMultipart()
+                .withName("file_name")
+                .withBody(WireMock.equalTo("positions.csv"))
+            );
         return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withHeader("Content-Type", "application/json"))).getId();
     }
 
@@ -717,5 +717,15 @@ public class WireMockUtils {
             ),
             1
         );
+    }
+
+    public UUID stubPccMinParametersGet(String paramUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid))
+            .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
+    public void verifyPccMinParametersGet(UUID stubUuid, String paramUuid) {
+        verifyGetRequest(stubUuid, "/v1/parameters/" + paramUuid, Map.of());
     }
 }
