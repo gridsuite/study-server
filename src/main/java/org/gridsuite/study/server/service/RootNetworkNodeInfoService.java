@@ -255,7 +255,7 @@ public class RootNetworkNodeInfoService {
         InvalidateNodeInfos invalidateNodeInfos = getInvalidationComputationInfos(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
 
         if (notOnlyChildrenBuildStatus) {
-            rootNetworkNodeInfoEntity.getModificationReports().forEach((key, value) -> invalidateNodeInfos.addReportUuid(value));
+            collectDeletableReports(rootNetworkNodeInfoEntity, invalidateNodeInfos);
             invalidateNodeInfos.addVariantId(rootNetworkNodeInfoEntity.getVariantId());
             invalidateBuildStatus(rootNetworkNodeInfoEntity, invalidateNodeInfos);
         }
@@ -265,10 +265,84 @@ public class RootNetworkNodeInfoService {
         return invalidateNodeInfos;
     }
 
+    /**
+     * Finds an existing report UUID for a node by searching across all nodes
+     * in the same root network.
+     *
+     * @param targetNodeUuid the node to find a report for
+     * @param rootNetworkUuid the root network context
+     * @return Optional containing the report UUID if found anywhere, empty otherwise
+     */
+    @Transactional(readOnly = true)
+    public Optional<UUID> findExistingReportUuidForNode(UUID targetNodeUuid, UUID rootNetworkUuid) {
+        Set<UUID> reportUuids = rootNetworkNodeInfoRepository.findReportUuidsForNodeInRootNetwork(targetNodeUuid, rootNetworkUuid);
+        if (reportUuids.isEmpty()) {
+            return Optional.empty();
+        }
+        // We assume that there is only one report UUID for a given node across all nodes in the same root network,
+        // so we return the first one found
+        return Optional.of(reportUuids.iterator().next());
+    }
+
+    /**
+     * Identifies and collects report UUIDs that can be safely deleted.
+     * <p>
+     * Only reports that are exclusively owned by the specified entity
+     * will be marked for deletion. Reports shared with other nodes are preserved.
+     *
+     * @param rootNetworkNodeInfo The entity being invalidated
+     * @param invalidateNodeInfos Accumulator for deletion candidates
+     */
+    private void collectDeletableReports(
+            RootNetworkNodeInfoEntity rootNetworkNodeInfo,
+            InvalidateNodeInfos invalidateNodeInfos) {
+
+        Map<UUID, UUID> nodeReports = rootNetworkNodeInfo.getModificationReports();
+
+        if (nodeReports == null || nodeReports.isEmpty()) {
+            return;
+        }
+
+        Set<UUID> candidateReportUuids = new HashSet<>(nodeReports.values());
+
+        Set<UUID> safeToDelete = filterForExclusivelyOwnedReports(
+                candidateReportUuids,
+                rootNetworkNodeInfo.getId()
+        );
+
+        safeToDelete.forEach(invalidateNodeInfos::addReportUuid);
+    }
+
+    /**
+     * Filters report UUIDs to only include those not referenced by other nodes.
+     * <p>
+     * This safety mechanism prevents cascade deletion of shared reports.
+     * Uses a database query to check all report references in a single round trip.
+     *
+     * @param candidateReportUuids Report UUIDs being considered for deletion
+     * @param ownerEntityId ID of the entity being processed
+     * @return Set of reports that can be safely deleted (not referenced elsewhere)
+     */
+    private Set<UUID> filterForExclusivelyOwnedReports(
+            Set<UUID> candidateReportUuids,
+            UUID ownerEntityId) {
+
+        if (candidateReportUuids.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        Set<UUID> sharedReports = rootNetworkNodeInfoRepository
+                .findReferencedReportUuidsExcludingEntity(candidateReportUuids, ownerEntityId);
+
+        return candidateReportUuids.stream()
+                .filter(reportUuid -> !sharedReports.contains(reportUuid))
+                .collect(Collectors.toSet());
+    }
+
     private static void invalidateBuildStatus(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos) {
         rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
         rootNetworkNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
-        rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>(Map.of(rootNetworkNodeInfoEntity.getNodeInfo().getId(), UUID.randomUUID())));
+        rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>());
 
         invalidateNodeInfos.addNodeUuid(rootNetworkNodeInfoEntity.getNodeInfo().getIdNode());
     }

@@ -16,8 +16,11 @@ import java.util.UUID;
 @Schema(description = "Report infos")
 public record ReportInfos(
     UUID reportUuid,
-    UUID nodeUuid
+    UUID nodeUuid,
+    ReportMode reportMode
 ) {
-
+    public ReportInfos(UUID reportUuid, UUID nodeUuid) {
+        this(reportUuid, nodeUuid, ReportMode.APPEND);
+    }
 }
 
