@@ -3352,13 +3352,13 @@ public class StudyService {
 
     @Transactional
     public String getPccMinParameters(UUID studyUuid) {
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        StudyEntity studyEntity = getStudy(studyUuid);
         return pccMinService.getPccMinParameters(pccMinService.getPccMinParametersUuidOrElseCreateDefaults(studyEntity));
     }
 
     @Transactional
     public void setPccMinParameters(UUID studyUuid, String parameters, String userId) {
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        StudyEntity studyEntity = getStudy(studyUuid);
         createOrUpdatePccMinParameters(studyEntity, parameters);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
