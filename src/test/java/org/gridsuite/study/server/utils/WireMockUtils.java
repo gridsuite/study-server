@@ -734,4 +734,14 @@ public class WireMockUtils {
     public void verifyGetVoltageLevelIccValues(UUID stubUuid, UUID resultUuid, String voltageLevelId) {
         verifyGetRequest(stubUuid, "/v1/results/" + resultUuid + "/fault_results/icc", Map.of("voltageLevelId", WireMock.equalTo(voltageLevelId)));
     }
+
+    public UUID stubPccMinParametersGet(String paramUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid))
+            .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
+    public void verifyPccMinParametersGet(UUID stubUuid, String paramUuid) {
+        verifyGetRequest(stubUuid, "/v1/parameters/" + paramUuid, Map.of());
+    }
 }

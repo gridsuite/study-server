@@ -2522,4 +2522,24 @@ public class StudyController {
                                                             @RequestBody final SpreadsheetParameters spreadsheetParameters) {
         return (this.studyService.updateSpreadsheetParameters(studyUuid, spreadsheetParameters) ? ResponseEntity.noContent() : ResponseEntity.notFound()).build();
     }
+
+    @GetMapping(value = "/studies/{studyUuid}/pcc-min/parameters")
+    @Operation(summary = "Get pcc min parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters")})
+    public ResponseEntity<String> getPccMinParameters(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getPccMinParameters(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/pcc-min/parameters")
+    @Operation(summary = "set pcc min parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters are set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> setPccMinParameters(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody(required = false) String pccMinParametersInfos,
+        @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId);
+        return ResponseEntity.ok().build();
+    }
 }
