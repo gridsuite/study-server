@@ -385,7 +385,7 @@ public class StudyController {
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
             @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
             @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
-            @RequestBody(required = false) Map<String, Object> sldRequestInfos) {
+            @RequestBody Map<String, Object> sldRequestInfos) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
                 .labelCentered(centerLabel)
@@ -400,7 +400,7 @@ public class StudyController {
                 diagramParameters,
                 nodeUuid,
                 rootNetworkUuid,
-                Objects.requireNonNullElse(sldRequestInfos, new HashMap<>()));
+                sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -421,7 +421,7 @@ public class StudyController {
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
             @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
             @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
-            @RequestBody(required = false) Map<String, Object> sldRequestInfos) {
+            @RequestBody Map<String, Object> sldRequestInfos) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
                 .labelCentered(centerLabel)
@@ -436,7 +436,7 @@ public class StudyController {
                 diagramParameters,
                 nodeUuid,
                 rootNetworkUuid,
-                Objects.requireNonNullElse(sldRequestInfos, new HashMap<>()));
+                sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1210,7 +1210,7 @@ public class StudyController {
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
             @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
-            @RequestBody(required = false) Map<String, Object> sldRequestInfos) {
+            @RequestBody Map<String, Object> sldRequestInfos) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
                 .labelCentered(centerLabel)
@@ -1220,7 +1220,7 @@ public class StudyController {
                 .language(language)
                 .build();
         byte[] result = studyService.generateSubstationSvg(substationId,
-                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid, Objects.requireNonNullElse(sldRequestInfos, new HashMap<>()));
+                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid, sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -1241,7 +1241,7 @@ public class StudyController {
             @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
             @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
             @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
-            @RequestBody(required = false) Map<String, Object> sldRequestInfos) {
+            @RequestBody Map<String, Object> sldRequestInfos) {
         DiagramParameters diagramParameters = DiagramParameters.builder()
                 .useName(useName)
                 .labelCentered(centerLabel)
@@ -1256,7 +1256,7 @@ public class StudyController {
                 substationLayout,
                 nodeUuid,
                 rootNetworkUuid,
-                Objects.requireNonNullElse(sldRequestInfos, new HashMap<>()));
+                sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
