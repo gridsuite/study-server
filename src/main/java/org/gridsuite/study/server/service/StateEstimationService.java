@@ -21,11 +21,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -37,14 +35,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.CREATE_STATE_ESTIMATION_PARAMETERS_FAILED;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.DELETE_STATE_ESTIMATION_PARAMETERS_FAILED;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.GET_STATE_ESTIMATION_PARAMETERS_FAILED;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STATE_ESTIMATION_NOT_FOUND;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STATE_ESTIMATION_PARAMETERS_NOT_FOUND;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STATE_ESTIMATION_RUNNING;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.UPDATE_STATE_ESTIMATION_PARAMETERS_FAILED;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -72,7 +63,6 @@ public class StateEstimationService extends AbstractComputationService {
     }
 
     public String getStateEstimationResult(UUID resultUuid) {
-        String result;
 
         if (resultUuid == null) {
             return null;
@@ -81,17 +71,7 @@ public class StateEstimationService extends AbstractComputationService {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}");
         String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
-        try {
-            result = restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(STATE_ESTIMATION_NOT_FOUND);
-            } else {
-                throw e;
-            }
-        }
-
-        return result;
+        return restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
     }
 
     public UUID runStateEstimation(UUID networkUuid, String variantId, UUID parametersUuid, ReportInfos reportInfos, String receiver, String userId) {
@@ -143,19 +123,10 @@ public class StateEstimationService extends AbstractComputationService {
         if (resultUuid == null) {
             return null;
         }
-        String status;
-        try {
-            String path = UriComponentsBuilder
-                    .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}/status")
-                    .buildAndExpand(resultUuid).toUriString();
-            status = restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(STATE_ESTIMATION_NOT_FOUND);
-            }
-            throw e;
-        }
-        return status;
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}/status")
+            .buildAndExpand(resultUuid).toUriString();
+        return restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
     }
 
     public void deleteStateEstimationResults(List<UUID> resultsUuids) {
@@ -192,13 +163,7 @@ public class StateEstimationService extends AbstractComputationService {
             .buildAndExpand()
             .toUriString();
 
-        UUID parametersUuid;
-        try {
-            parametersUuid = restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_STATE_ESTIMATION_PARAMETERS_FAILED);
-        }
-        return parametersUuid;
+        return restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 
     public UUID createStateEstimationParameters(String parameters) {
@@ -211,13 +176,7 @@ public class StateEstimationService extends AbstractComputationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        UUID parametersUuid;
-        try {
-            parametersUuid = restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_STATE_ESTIMATION_PARAMETERS_FAILED);
-        }
-        return parametersUuid;
+        return restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public void updateStateEstimationParameters(UUID parametersUuid, @Nullable String parameters) {
@@ -228,30 +187,16 @@ public class StateEstimationService extends AbstractComputationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        try {
-            restTemplate.put(stateEstimationServerServerBaseUri + path, httpEntity);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, UPDATE_STATE_ESTIMATION_PARAMETERS_FAILED);
-        }
+        restTemplate.put(stateEstimationServerServerBaseUri + path, httpEntity);
     }
 
     public String getStateEstimationParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
-        String parameters;
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid).toUriString();
 
-        try {
-            parameters = restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(STATE_ESTIMATION_PARAMETERS_NOT_FOUND);
-            }
-
-            throw handleHttpError(e, GET_STATE_ESTIMATION_PARAMETERS_FAILED);
-        }
-        return parameters;
+        return restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
     }
 
     public UUID duplicateStateEstimationParameters(UUID sourceParametersUuid) {
@@ -267,11 +212,7 @@ public class StateEstimationService extends AbstractComputationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
-        try {
-            return restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_STATE_ESTIMATION_PARAMETERS_FAILED);
-        }
+        return restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public void deleteStateEstimationParameters(UUID uuid) {
@@ -282,12 +223,7 @@ public class StateEstimationService extends AbstractComputationService {
             .buildAndExpand(uuid)
             .toUriString();
 
-        try {
-            restTemplate.delete(stateEstimationServerServerBaseUri + path);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_STATE_ESTIMATION_PARAMETERS_FAILED);
-        }
-
+        restTemplate.delete(stateEstimationServerServerBaseUri + path);
     }
 
     public void invalidateStateEstimationStatus(List<UUID> uuids) {

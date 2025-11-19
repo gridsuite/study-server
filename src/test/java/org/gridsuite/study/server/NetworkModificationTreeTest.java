@@ -20,7 +20,6 @@ import com.jayway.jsonpath.spi.mapper.MappingProvider;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
-import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import lombok.SneakyThrows;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
@@ -1532,12 +1531,8 @@ class NetworkModificationTreeTest {
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
-        var result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId()))
-            .andExpect(status().isInternalServerError())
-            .andReturn();
-        var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
-        assertEquals(GET_MODIFICATIONS_FAILED.value(), problemDetail.getBusinessErrorCode());
-        assertEquals(HttpStatus.NOT_FOUND.toString(), problemDetail.getDetail());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId()))
+            .andExpect(status().isNotFound());
 
         // No network modification for a root node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId()))
@@ -1562,15 +1557,7 @@ class NetworkModificationTreeTest {
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
-        var result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), true))
-            .andExpect(status().isInternalServerError())
-            .andReturn();
-        var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
-        assertEquals(GET_MODIFICATIONS_FAILED.value(), problemDetail.getBusinessErrorCode());
-        assertEquals(HttpStatus.NOT_FOUND.toString(), problemDetail.getDetail());
-
-        // No network modification for a root node
-        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId(), true))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), true))
             .andExpect(status().isNotFound());
 
         node = NetworkModificationTreeTest.buildNetworkModificationConstructionNode("modification node 3", "", UUID.fromString(MODIFICATION_GROUP_UUID_STRING), VARIANT_ID,
@@ -1607,12 +1594,8 @@ class NetworkModificationTreeTest {
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
-        var result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), false))
-                .andExpect(status().isInternalServerError())
-                .andReturn();
-        var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
-        assertEquals(GET_MODIFICATIONS_FAILED.value(), problemDetail.getBusinessErrorCode());
-        assertEquals(HttpStatus.NOT_FOUND.toString(), problemDetail.getDetail());
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), false))
+                .andExpect(status().isNotFound());
 
         // No network modification for a root node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId(), false))

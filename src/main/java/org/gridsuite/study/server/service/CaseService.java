@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -66,11 +65,7 @@ public class CaseService {
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        try {
-            restTemplate.exchange(caseServerBaseUri + path, HttpMethod.DELETE, null, Void.class, caseUuid);
-        } catch (RestClientException e) {
-            LOGGER.error(String.format("Error while deleting case '%s' : %s", caseUuid, e.getMessage()), e);
-        }
+        restTemplate.exchange(caseServerBaseUri + path, HttpMethod.DELETE, null, Void.class, caseUuid);
     }
 
     public UUID duplicateCase(UUID caseUuid, Boolean withExpiration) {
