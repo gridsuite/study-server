@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
@@ -36,7 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 

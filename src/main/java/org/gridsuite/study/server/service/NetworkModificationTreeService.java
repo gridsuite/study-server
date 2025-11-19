@@ -10,7 +10,7 @@ import com.powsybl.commons.report.ReportNode;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
@@ -32,7 +32,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
 /**
  * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com

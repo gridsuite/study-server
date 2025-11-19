@@ -20,6 +20,7 @@ import com.jayway.jsonpath.spi.mapper.MappingProvider;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import lombok.SneakyThrows;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
@@ -30,6 +31,7 @@ import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -77,6 +79,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.ROOT_NODE_NAME;
 import static org.junit.jupiter.api.Assertions.*;
@@ -588,14 +591,14 @@ class NetworkModificationTreeTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectWriter.writeValueAsString(securityNode))
                         .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().is5xxServerError()); // Argument type mismatch is handled as a server error by spring
 
         /* RULE: Security node CANNOT be inserted after a construction node */
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}?mode={insertMode}", root.getStudyId(), newConstructionNode, InsertMode.AFTER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectWriter.writeValueAsString(securityNode))
                         .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().is5xxServerError()); // Argument type mismatch is handled as a server error by spring
     }
 
     private static final String ROOT_NETWORK_UUID = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -774,14 +777,14 @@ class NetworkModificationTreeTest {
         RootNode root = getRootNode(rootStudyId, firstRootNetworkUuid);
         UUID rootId = root.getId();
 
-        RootNodeInfoEntity rootInfos = rootNodeInfoRepository.findById(rootId).orElseThrow(() -> new StudyException(StudyException.Type.NODE_NOT_FOUND));
+        RootNodeInfoEntity rootInfos = rootNodeInfoRepository.findById(rootId).orElseThrow(() -> new StudyException(NODE_NOT_FOUND));
         assertEquals(rootId, rootInfos.getId());
 
         List<AbstractNode> children = root.getChildren();
         assertEquals(2, children.size());
         NetworkModificationNode n1 = (NetworkModificationNode) (children.stream().filter(c -> c.getName().equals("n1")).findFirst().orElseThrow());
         NetworkModificationNodeInfoEntity n1Infos = networkModificationTreeService.getNetworkModificationNodeInfoEntity(n1.getId());
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(n1.getId(), firstRootNetworkUuid).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(n1.getId(), firstRootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
 
         assertEquals("n1", n1.getName());
         assertEquals("zzz", n1.getDescription());
@@ -1501,7 +1504,7 @@ class NetworkModificationTreeTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectWriter.writeValueAsString(newNode))
                         .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isInternalServerError());
     }
 
     private void createNodeForbidden(UUID studyUuid, AbstractNode parentNode, AbstractNode newNode) throws Exception {
@@ -1529,11 +1532,12 @@ class NetworkModificationTreeTest {
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
-        String bodyError = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId()))
+        var result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId()))
             .andExpect(status().isInternalServerError())
-            .andReturn().getResponse().getContentAsString();
-
-        assertEquals(new StudyException(StudyException.Type.GET_MODIFICATIONS_FAILED, HttpStatus.NOT_FOUND.toString()).getMessage(), bodyError);
+            .andReturn();
+        var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertEquals(GET_MODIFICATIONS_FAILED.value(), problemDetail.getBusinessErrorCode());
+        assertEquals(HttpStatus.NOT_FOUND.toString(), problemDetail.getDetail());
 
         // No network modification for a root node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId()))
@@ -1558,11 +1562,12 @@ class NetworkModificationTreeTest {
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
-        String bodyError = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), true))
+        var result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), true))
             .andExpect(status().isInternalServerError())
-            .andReturn().getResponse().getContentAsString();
-
-        assertEquals(new StudyException(StudyException.Type.GET_MODIFICATIONS_FAILED, HttpStatus.NOT_FOUND.toString()).getMessage(), bodyError);
+            .andReturn();
+        var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertEquals(GET_MODIFICATIONS_FAILED.value(), problemDetail.getBusinessErrorCode());
+        assertEquals(HttpStatus.NOT_FOUND.toString(), problemDetail.getDetail());
 
         // No network modification for a root node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId(), true))
@@ -1602,11 +1607,12 @@ class NetworkModificationTreeTest {
                 UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), BuildStatus.BUILT);
         createNode(root.getStudyId(), root, node, userId);
 
-        String bodyError = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), false))
+        var result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), node.getId(), false))
                 .andExpect(status().isInternalServerError())
-                .andReturn().getResponse().getContentAsString();
-
-        assertEquals(new StudyException(StudyException.Type.GET_MODIFICATIONS_FAILED, HttpStatus.NOT_FOUND.toString()).getMessage(), bodyError);
+                .andReturn();
+        var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertEquals(GET_MODIFICATIONS_FAILED.value(), problemDetail.getBusinessErrorCode());
+        assertEquals(HttpStatus.NOT_FOUND.toString(), problemDetail.getDetail());
 
         // No network modification for a root node
         mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", root.getStudyId(), root.getId(), false))
