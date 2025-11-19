@@ -706,6 +706,19 @@ public class WireMockUtils {
             ));
     }
 
+    public void verifyExportPccMinResult(UUID stubId, UUID resultUuid) {
+        verifyPostRequest(
+            stubId,
+            "/v1/results/" + resultUuid + "/csv",
+            Map.of(
+                "sort", WireMock.equalTo("id,DESC"),
+                "filters", WireMock.equalTo("fakeFilters"),
+                "globalFilters", WireMock.equalTo("fakeGlobalFilters")
+            ),
+            1
+        );
+    }
+
     public UUID stubPccMinParametersGet(String paramUuid, String responseBody) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid))
             .willReturn(WireMock.ok().withBody(responseBody))
