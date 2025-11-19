@@ -12,7 +12,7 @@ package org.gridsuite.study.server.service;
  */
 
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.DiagramParameters;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
 import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
@@ -34,7 +34,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service

@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.service.client.util;
 
-import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.StudyException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;

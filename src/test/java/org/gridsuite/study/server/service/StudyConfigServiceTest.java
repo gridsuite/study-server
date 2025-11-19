@@ -1,7 +1,7 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
 import org.junit.jupiter.api.Test;

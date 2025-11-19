@@ -8,7 +8,7 @@ package org.gridsuite.study.server.service;
 
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.DiagramPosition;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
@@ -28,7 +28,7 @@ import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.STUDY_CONFIG_API_VERSION;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**

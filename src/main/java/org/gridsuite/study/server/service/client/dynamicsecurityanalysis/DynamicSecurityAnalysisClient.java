@@ -10,7 +10,7 @@ package org.gridsuite.study.server.service.client.dynamicsecurityanalysis;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.service.StudyService;
@@ -28,7 +28,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;

@@ -15,7 +15,7 @@ import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.model.VariantInfos;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.NetworkVariantsListener;
-import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.HttpStatus;
@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NETWORK_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com

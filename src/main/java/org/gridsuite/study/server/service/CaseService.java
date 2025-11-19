@@ -11,7 +11,7 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,7 +25,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.CASE_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
 
 @Service
 public class CaseService {

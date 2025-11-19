@@ -13,7 +13,6 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.sensitivity.SensitivityFunctionType;
-import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import lombok.SneakyThrows;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
@@ -26,7 +25,6 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
@@ -65,8 +63,6 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.ROOT_NETWORK_NOT_FOUND;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
@@ -95,7 +91,7 @@ class SensitivityAnalysisTest {
     private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
-    private static final String NOT_FOUND_NODE_UUID = "a3a80c9b-9594-4e55-8ec7-07ea965d24eb";
+    private static final String NOT_FOUND_SENSITIVITY_ANALYSIS_UUID = "a3a80c9b-9594-4e55-8ec7-07ea965d24eb";
 
     private static final String FAKE_RESULT_JSON = "fake result json";
     private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
@@ -320,13 +316,7 @@ class SensitivityAnalysisTest {
 
     private void testSensitivityAnalysisWithRootNetworkUuidAndNodeUuid(final MockWebServer server, UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, UUID resultUuid) throws Exception {
         // sensitivity analysis not found
-        mockMvc.perform(
-            get(
-                "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector=subjectId",
-                studyUuid,
-                rootNetworkUuid,
-                NOT_FOUND_NODE_UUID))
-            .andExpect(status().isNotFound());
+        mockMvc.perform(get("/v1/sensitivity-analysis/results/{resultUuid}", NOT_FOUND_SENSITIVITY_ANALYSIS_UUID)).andExpect(status().isNotFound());
 
         // run sensitivity analysis
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyUuid, rootNetworkUuid, nodeUuid)
@@ -372,14 +362,11 @@ class SensitivityAnalysisTest {
                 .build());
 
         // error case
-        var result = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv?selector=fakeJsonSelector", studyUuid, rootNetworkUuid, UUID.randomUUID())
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv?selector=fakeJsonSelector", studyUuid, rootNetworkUuid, UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("userId", "userId")
                         .content(content))
-            .andExpect(status().isNotFound())
-            .andReturn();
-        var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
-        assertEquals(ROOT_NETWORK_NOT_FOUND.value(), problemDetail.getBusinessErrorCode());
+                .andExpectAll(status().isNotFound(), content().string("\"ROOT_NETWORK_NOT_FOUND\""));
 
         // csv export with no filter
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv?selector=fakeJsonSelector", studyUuid, rootNetworkUuid, nodeUuid)
@@ -717,7 +704,7 @@ class SensitivityAnalysisTest {
         wireMock.verify(WireMock.putRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID)));
 
         // Get sensitivity analysis (not existing, so it will create default)
-        StudyEntity studyEntityToUpdate = studyRepository.findById(studyNameUserIdUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        StudyEntity studyEntityToUpdate = studyRepository.findById(studyNameUserIdUuid).orElseThrow(() -> new StudyException(StudyException.Type.STUDY_NOT_FOUND));
         studyEntityToUpdate.setSensitivityAnalysisParametersUuid(null);
         studyRepository.save(studyEntityToUpdate);
 

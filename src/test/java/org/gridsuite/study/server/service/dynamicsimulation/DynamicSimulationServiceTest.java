@@ -12,7 +12,7 @@ import com.powsybl.commons.PowsyblException;
 import com.powsybl.timeseries.*;
 
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;

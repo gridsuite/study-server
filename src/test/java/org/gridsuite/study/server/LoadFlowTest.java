@@ -23,7 +23,6 @@ import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -69,7 +68,7 @@ import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.LOADFLOW_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_FOUND;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;

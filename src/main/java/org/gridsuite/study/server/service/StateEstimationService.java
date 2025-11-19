@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.StateEstimationStatus;
@@ -37,13 +37,13 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.CREATE_STATE_ESTIMATION_PARAMETERS_FAILED;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.DELETE_STATE_ESTIMATION_PARAMETERS_FAILED;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.GET_STATE_ESTIMATION_PARAMETERS_FAILED;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STATE_ESTIMATION_NOT_FOUND;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STATE_ESTIMATION_PARAMETERS_NOT_FOUND;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STATE_ESTIMATION_RUNNING;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.UPDATE_STATE_ESTIMATION_PARAMETERS_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.CREATE_STATE_ESTIMATION_PARAMETERS_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.DELETE_STATE_ESTIMATION_PARAMETERS_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.GET_STATE_ESTIMATION_PARAMETERS_FAILED;
+import static org.gridsuite.study.server.StudyException.Type.STATE_ESTIMATION_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.STATE_ESTIMATION_PARAMETERS_NOT_FOUND;
+import static org.gridsuite.study.server.StudyException.Type.STATE_ESTIMATION_RUNNING;
+import static org.gridsuite.study.server.StudyException.Type.UPDATE_STATE_ESTIMATION_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**

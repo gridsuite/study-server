@@ -9,7 +9,7 @@ package org.gridsuite.study.server.service.client.dynamicmapping;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfos;
