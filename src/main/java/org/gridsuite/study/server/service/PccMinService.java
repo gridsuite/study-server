@@ -41,7 +41,6 @@ import org.springframework.data.domain.Pageable;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.CREATE_PCC_MIN_PARAMETERS_FAILED;
 import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
