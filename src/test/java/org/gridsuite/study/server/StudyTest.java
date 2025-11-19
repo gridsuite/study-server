@@ -105,7 +105,6 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
@@ -884,7 +883,7 @@ class StudyTest {
         //insert a study with a non-existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
                 NOT_EXISTING_CASE_UUID, "false").header(USER_ID_HEADER, "userId").param(CASE_FORMAT, "XIIDM"))
-                     .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE)).andReturn();
+                     .andExpectAll(status().isNotFound(), content().contentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE)).andReturn();
         var problemDetail = mapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
         assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", problemDetail.getDetail());
 
@@ -918,7 +917,7 @@ class StudyTest {
                 content().contentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE))
             .andReturn();
         problemDetail = mapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
-        assertEquals(STUDY_NOT_FOUND.name(), problemDetail.getDetail());
+        assertEquals("Study not found", problemDetail.getDetail());
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 

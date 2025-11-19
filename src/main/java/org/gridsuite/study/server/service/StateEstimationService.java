@@ -35,7 +35,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STATE_ESTIMATION_RUNNING;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 
 /**
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
@@ -146,7 +146,7 @@ public class StateEstimationService extends AbstractComputationService {
     public void assertStateEstimationNotRunning(UUID resultUuid) {
         String status = getStateEstimationStatus(resultUuid);
         if (StateEstimationStatus.RUNNING.name().equals(status)) {
-            throw new StudyException(STATE_ESTIMATION_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

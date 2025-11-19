@@ -130,7 +130,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
 
     public byte[] exportSensitivityResultsAsCsv(UUID resultUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos, UUID networkUuid, String variantId, String selector, String filters, String globalFilters) {
         if (resultUuid == null) {
-            throw new StudyException(SENSITIVITY_ANALYSIS_NOT_FOUND);
+            throw new StudyException(NOT_FOUND, "Result of sensitivity analysis was not found");
         }
 
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
@@ -232,7 +232,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
     public void assertSensitivityAnalysisNotRunning(UUID resultUuid) {
         String sas = getSensitivityAnalysisStatus(resultUuid);
         if (SensitivityAnalysisStatus.RUNNING.name().equals(sas)) {
-            throw new StudyException(SENSITIVITY_ANALYSIS_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

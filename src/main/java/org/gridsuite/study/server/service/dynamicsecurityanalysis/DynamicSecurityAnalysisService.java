@@ -24,7 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.DYNAMIC_SECURITY_ANALYSIS_RUNNING;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -107,7 +107,7 @@ public class DynamicSecurityAnalysisService {
     public void assertDynamicSecurityAnalysisNotRunning(UUID resultUuid) {
         DynamicSecurityAnalysisStatus status = getStatus(resultUuid);
         if (DynamicSecurityAnalysisStatus.RUNNING == status) {
-            throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

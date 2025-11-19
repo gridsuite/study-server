@@ -191,7 +191,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     public void assertDynamicSimulationNotRunning(UUID resultUuid) {
         DynamicSimulationStatus status = getStatus(resultUuid);
         if (DynamicSimulationStatus.RUNNING == status) {
-            throw new StudyException(DYNAMIC_SIMULATION_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

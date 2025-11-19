@@ -65,8 +65,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.ROOT_NETWORK_NOT_FOUND;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.STUDY_NOT_FOUND;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
@@ -379,7 +378,7 @@ class SensitivityAnalysisTest {
             .andExpect(status().isNotFound())
             .andReturn();
         var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
-        assertEquals(ROOT_NETWORK_NOT_FOUND.value(), problemDetail.getBusinessErrorCode());
+        assertEquals(NOT_FOUND.value(), problemDetail.getBusinessErrorCode());
 
         // csv export with no filter
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv?selector=fakeJsonSelector", studyUuid, rootNetworkUuid, nodeUuid)
@@ -717,7 +716,7 @@ class SensitivityAnalysisTest {
         wireMock.verify(WireMock.putRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID)));
 
         // Get sensitivity analysis (not existing, so it will create default)
-        StudyEntity studyEntityToUpdate = studyRepository.findById(studyNameUserIdUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        StudyEntity studyEntityToUpdate = studyRepository.findById(studyNameUserIdUuid).orElseThrow(() -> new StudyException(NOT_FOUND));
         studyEntityToUpdate.setSensitivityAnalysisParametersUuid(null);
         studyRepository.save(studyEntityToUpdate);
 
