@@ -11,7 +11,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyBusinessErrorCode;
+import org.gridsuite.study.server.error.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
@@ -31,7 +32,7 @@ public final class StudyUtils {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
-    public static StudyException handleHttpError(HttpStatusCodeException httpException, StudyException.Type type) {
+    public static StudyException handleHttpError(HttpStatusCodeException httpException, StudyBusinessErrorCode type) {
         String responseBody = httpException.getResponseBodyAsString();
 
         String errorMessage = responseBody.isEmpty() ? httpException.getStatusCode().toString() : parseHttpError(responseBody);

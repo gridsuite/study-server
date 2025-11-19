@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.voltageinit.parameters.FilterEquipments;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
@@ -51,6 +52,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.junit.jupiter.api.Assertions.*;
@@ -446,7 +448,7 @@ class PccMinTest {
             pccMinService.getPccMinParameters(wrongParamUuid);
         });
 
-        assertEquals(StudyException.Type.PCC_MIN_PARAMETERS_NOT_FOUND, exception.getType());
+        assertEquals(PCC_MIN_PARAMETERS_NOT_FOUND, exception.getBusinessErrorCode());
     }
 
     @Test
@@ -467,7 +469,7 @@ class PccMinTest {
         StudyException exception = assertThrows(StudyException.class, () -> {
             pccMinService.updatePccMinParameters(wrongParamUuid, "parameterToUpdate");
         });
-        assertEquals(StudyException.Type.UPDATE_PCC_MIN_PARAMETERS_FAILED, exception.getType());
+        assertEquals(UPDATE_PCC_MIN_PARAMETERS_FAILED, exception.getBusinessErrorCode());
     }
 
     @Test
@@ -490,7 +492,7 @@ class PccMinTest {
         StudyException exception = assertThrows(StudyException.class, () -> {
             pccMinService.createPccMinParameters(parameterToCreate);
         });
-        assertEquals(StudyException.Type.CREATE_PCC_MIN_PARAMETERS_FAILED, exception.getType());
+        assertEquals(CREATE_PCC_MIN_PARAMETERS_FAILED, exception.getBusinessErrorCode());
     }
 
     @Test
@@ -523,6 +525,6 @@ class PccMinTest {
         StudyException exception = assertThrows(StudyException.class, () -> {
             pccMinService.createDefaultPccMinParameters();
         });
-        assertEquals(StudyException.Type.CREATE_PCC_MIN_PARAMETERS_FAILED, exception.getType());
+        assertEquals(CREATE_PCC_MIN_PARAMETERS_FAILED, exception.getBusinessErrorCode());
     }
 }

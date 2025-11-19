@@ -20,8 +20,7 @@ import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
 import org.gridsuite.study.server.StudyConstants.SldDisplayMode;
-import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.StudyException.Type;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
@@ -65,6 +64,8 @@ import jakarta.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
 import java.util.*;
 
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.UNKNOWN_ACTION_TYPE;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 
@@ -683,12 +684,12 @@ public class StudyController {
             case MOVE:
                 // we don't cut - paste modifications from different studies
                 if (!studyUuid.equals(originStudyUuid)) {
-                    throw new StudyException(Type.MOVE_NETWORK_MODIFICATION_FORBIDDEN);
+                    throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
                 }
                 handleMoveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
             default:
-                throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
+                throw new StudyException(UNKNOWN_ACTION_TYPE);
         }
         return ResponseEntity.ok().build();
     }
