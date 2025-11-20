@@ -529,6 +529,7 @@ class PccMinTest {
             () -> pccMinService.createDefaultPccMinParameters()
         );
     }
+
     @Test
     void testExportPccMinResults() throws Exception {
         // --- create study and node ---
