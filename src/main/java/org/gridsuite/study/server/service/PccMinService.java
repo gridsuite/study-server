@@ -18,16 +18,15 @@ import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -38,6 +37,7 @@ import org.springframework.data.domain.Pageable;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
@@ -45,6 +45,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATIO
 @Service
 public class PccMinService extends AbstractComputationService {
     static final String RESULT_UUID = "resultUuid";
+    static final String RESULTS = "results";
     static final String BUS_ID = "busId";
     private static final String PARAMETER_UUID = "{parametersUuid}";
     private static final String PCC_MIN_URI = DELIMITER + PCC_MIN_API_VERSION;
@@ -264,5 +265,34 @@ public class PccMinService extends AbstractComputationService {
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
         return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+    }
+
+    public byte[] exportPccMinResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
+        if (resultUuid == null) {
+            throw new StudyException(NOT_FOUND, "Result of pcc min was not found");
+        }
+
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(pccMinServerBaseUri)
+            .pathSegment(PCC_MIN_API_VERSION, RESULTS, resultUuid.toString(), "csv");
+
+        if (StringUtils.isNotBlank(filters)) {
+            uriBuilder.queryParam(QUERY_PARAM_FILTERS, URLEncoder.encode(filters, StandardCharsets.UTF_8));
+        }
+        if (!StringUtils.isEmpty(globalFilters)) {
+            uriBuilder.queryParam(QUERY_PARAM_GLOBAL_FILTERS, URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
+            uriBuilder.queryParam(QUERY_PARAM_NETWORK_UUID, networkUuid);
+            if (!StringUtils.isBlank(variantId)) {
+                uriBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+        }
+        for (Sort.Order order : sort) {
+            uriBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection());
+        }
+        URI uri = uriBuilder.build().encode().toUri();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(csvHeaders, headers);
+        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
     }
 }
