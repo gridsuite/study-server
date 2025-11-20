@@ -560,4 +560,14 @@ public class WireMockStubs {
                 "globalFilters", WireMock.equalTo("fakeGlobalFilters")
             ));
     }
+
+    public UUID stubPccMinParametersGet(String paramUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid))
+            .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
+    public void verifyPccMinParametersGet(UUID stubUuid, String paramUuid) {
+        verifyGetRequest(wireMock, stubUuid, "/v1/parameters/" + paramUuid, Map.of());
+    }
 }

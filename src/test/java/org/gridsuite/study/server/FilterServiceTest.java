@@ -111,7 +111,7 @@ class FilterServiceTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid) {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, null, null, null, null, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, null, null, null, null, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;
@@ -248,7 +248,7 @@ class FilterServiceTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/evaluate",
                         studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
                         .content(sendBody).contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is5xxServerError())
+                .andExpect(status().is4xxClientError())
                 .andReturn();
 
         wireMockStubs.verifyFilterEvaluate(stubUuid, NETWORK_UUID_STRING);

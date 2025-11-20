@@ -8,7 +8,6 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.report.ReportNode;
 import lombok.NonNull;
 import org.apache.poi.util.StringUtil;
@@ -197,10 +196,12 @@ public class ReportService {
             .toUriString();
         var headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        String serializedNode;
         try {
-            restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.PUT, new HttpEntity<>(objectMapper.writeValueAsString(reportNode), headers), ReportNode.class);
+            serializedNode = objectMapper.writeValueAsString(reportNode);
         } catch (JsonProcessingException error) {
-            throw new PowsyblException("error creating report", error);
+            throw new IllegalStateException("Impossible to serialize report node", error);
         }
+        restTemplate.exchange(this.getReportsServerURI() + path, HttpMethod.PUT, new HttpEntity<>(serializedNode, headers), ReportNode.class);
     }
 }

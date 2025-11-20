@@ -63,13 +63,14 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.StudyException.Type.LOADFLOW_NOT_FOUND;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
 import static org.junit.jupiter.api.Assertions.*;
@@ -903,7 +904,7 @@ class LoadFlowTest {
     @Test
     void testGetStatusNotFound(final MockWebServer server) {
         UUID notExistingNetworkUuid = UUID.fromString(LOADFLOW_ERROR_RESULT_UUID);
-        assertThrows(StudyException.class, () -> loadFlowService.getLoadFlowStatus(notExistingNetworkUuid), LOADFLOW_NOT_FOUND.name());
+        assertThrows(HttpClientErrorException.NotFound.class, () -> loadFlowService.getLoadFlowStatus(notExistingNetworkUuid), NOT_FOUND.name());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_ERROR_RESULT_UUID + "/status")));
     }
 
@@ -1011,7 +1012,7 @@ class LoadFlowTest {
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID loadFlowParametersUuid) {
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null,
-                loadFlowParametersUuid, null, null, null, null);
+                loadFlowParametersUuid, null, null, null, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;

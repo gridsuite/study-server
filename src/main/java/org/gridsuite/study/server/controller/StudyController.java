@@ -20,8 +20,7 @@ import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
 import org.gridsuite.study.server.StudyConstants.SldDisplayMode;
-import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.StudyException.Type;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
@@ -65,6 +64,7 @@ import jakarta.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
 import java.util.*;
 
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 
@@ -457,31 +457,31 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelInformation(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "switches"));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelTopologyInfos(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "switches"));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/bus-bar-sections")
     @Operation(summary = "get bus bar sections information for a given network and voltage level")
     @ApiResponse(responseCode = "200", description = "Bus bar sections information of the given voltage level retrieved")
-    public ResponseEntity<String> getBusBarSectionsInfo(
+    public ResponseEntity<String> getVoltageLevelBusBarSections(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelInformation(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "bus-bar-sections"));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelTopologyInfos(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "bus-bar-sections"));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/feeder-bays-and-bus-bar-sections")
-    @Operation(summary = "get feeder bays and bus bar sections information for a given network and voltage level")
-    @ApiResponse(responseCode = "200", description = "Feeder bays and bus bar sections information of the given voltage level retrieved")
-    public ResponseEntity<String> getFeederBaysBusBarSectionsInfo(
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/feeder-bays")
+    @Operation(summary = "get feeder bays informations for a given network and voltage level")
+    @ApiResponse(responseCode = "200", description = "Feeder bays informations of the given voltage level retrieved")
+    public ResponseEntity<String> getVoltageLevelFeederBays(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelInformation(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "feeder-bays-and-bus-bar-sections"));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelTopologyInfos(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "feeder-bays"));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/substation-id")
@@ -683,12 +683,10 @@ public class StudyController {
             case MOVE:
                 // we don't cut - paste modifications from different studies
                 if (!studyUuid.equals(originStudyUuid)) {
-                    throw new StudyException(Type.MOVE_NETWORK_MODIFICATION_FORBIDDEN);
+                    throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
                 }
                 handleMoveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
-            default:
-                throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
         }
         return ResponseEntity.ok().build();
     }
@@ -1749,11 +1747,9 @@ public class StudyController {
     @Operation(summary = "Create study related notification")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The notification has been sent"),
-        @ApiResponse(responseCode = "400", description = "The notification type is unknown")
     })
-    public ResponseEntity<Void> notify(@PathVariable("studyUuid") UUID studyUuid,
-                                             @RequestParam("type") String notificationType) {
-        studyService.notify(notificationType, studyUuid);
+    public ResponseEntity<Void> notify(@PathVariable("studyUuid") UUID studyUuid) {
+        studyService.notify(studyUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -2521,5 +2517,25 @@ public class StudyController {
     public ResponseEntity<Void> updateSpreadsheetParameters(@PathVariable("studyUuid") final UUID studyUuid,
                                                             @RequestBody final SpreadsheetParameters spreadsheetParameters) {
         return (this.studyService.updateSpreadsheetParameters(studyUuid, spreadsheetParameters) ? ResponseEntity.noContent() : ResponseEntity.notFound()).build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/pcc-min/parameters")
+    @Operation(summary = "Get pcc min parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters")})
+    public ResponseEntity<String> getPccMinParameters(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getPccMinParameters(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/pcc-min/parameters")
+    @Operation(summary = "set pcc min parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters are set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> setPccMinParameters(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody(required = false) String pccMinParametersInfos,
+        @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId);
+        return ResponseEntity.ok().build();
     }
 }

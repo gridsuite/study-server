@@ -15,7 +15,8 @@ import mockwebserver3.RecordedRequest;
 import okio.Buffer;
 import org.assertj.core.api.ThrowableAssert;
 import org.assertj.core.api.ThrowableAssertAlternative;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyBusinessErrorCode;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -162,13 +163,15 @@ public final class TestUtils {
                                                UUID shortCircuitParametersUuid,
                                                UUID securityAnalysisParametersUuid,
                                                UUID sensitivityParametersUuid,
-                                               UUID stateEstimationParametersUuid) {
+                                               UUID stateEstimationParametersUuid,
+                                               UUID pccMinParametersUuid) {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
                 .loadFlowParametersUuid(loadFlowParametersUuid)
                 .shortCircuitParametersUuid(shortCircuitParametersUuid)
                 .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
                 .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
                 .stateEstimationParametersUuid(stateEstimationParametersUuid)
+                .pccMinParametersUuid(pccMinParametersUuid)
                 .build();
         RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").tag("dum").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(reportUuid).build();
         studyEntity.addRootNetwork(rootNetworkEntity);
@@ -234,10 +237,10 @@ public final class TestUtils {
         reports.forEach(r -> assertThat(r, new MatcherReport(expectedReports.get(reports.indexOf(r)))));
     }
 
-    public static void assertStudyException(ThrowableAssert.ThrowingCallable throwingCallable, StudyException.Type type, String message) {
+    public static void assertStudyException(ThrowableAssert.ThrowingCallable throwingCallable, StudyBusinessErrorCode type, String message) {
         ThrowableAssertAlternative<StudyException> throwableAssert = Assertions.assertThatExceptionOfType(StudyException.class)
                 .isThrownBy(throwingCallable);
-        throwableAssert.extracting("type").isEqualTo(type);
+        throwableAssert.extracting("errorCode").isEqualTo(type);
         Optional.ofNullable(message).ifPresent(throwableAssert::withMessage);
     }
 

@@ -14,13 +14,11 @@ package org.gridsuite.study.server.service;
 import com.powsybl.iidm.network.ThreeSides;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.InfoTypeParameters;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -29,8 +27,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 @Service
 public class NetworkMapService {
@@ -87,17 +83,7 @@ public class NetworkMapService {
             .optionalParameters(optionalParameters)
             .build(), builder);
 
-        try {
-            return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid, elementId);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(EQUIPMENT_NOT_FOUND);
-            }
-            if (HttpStatus.NOT_IMPLEMENTED.equals(e.getStatusCode())) {
-                throw new StudyException(StudyException.Type.NOT_IMPLEMENTED, e.getMessage());
-            }
-            throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
-        }
+        return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid, elementId);
     }
 
     public String getAllElementsInfos(UUID networkUuid,
@@ -130,15 +116,7 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
 
-        try {
-            return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(NETWORK_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, GET_NETWORK_COUNTRY_FAILED);
-            }
-        }
+        return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid);
     }
 
     public String getNominalVoltages(UUID networkUuid, String variantId) {
@@ -148,15 +126,7 @@ public class NetworkMapService {
             uriBuilder = uriBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
 
-        try {
-            return restTemplate.getForObject(networkMapServerBaseUri + uriBuilder.build().toUriString(), String.class, networkUuid);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(NETWORK_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, GET_NETWORK_NOMINAL_VOLTAGES_FAILED);
-            }
-        }
+        return restTemplate.getForObject(networkMapServerBaseUri + uriBuilder.build().toUriString(), String.class, networkUuid);
     }
 
     public String getElementsIds(UUID networkUuid, String variantId, List<String> substationsIds, String elementType, List<Double> nominalVoltages) {
@@ -200,13 +170,7 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         String path = builder.buildAndExpand(networkUuid, equipmentId).toUriString();
-        String equipmentMapData;
-        try {
-            equipmentMapData = restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
-        }
-        return equipmentMapData;
+        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
     }
 
     public String getHvdcLineShuntCompensators(UUID networkUuid, String variantId, String hvdcId) {
@@ -216,13 +180,7 @@ public class NetworkMapService {
             builder = builder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
         String path = builder.buildAndExpand(networkUuid, hvdcId).toUriString();
-        String equipmentMapData;
-        try {
-            equipmentMapData = restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, GET_NETWORK_ELEMENT_FAILED);
-        }
-        return equipmentMapData;
+        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
     }
 
     public String getVoltageLevelSubstationId(UUID networkUuid, String variantId,
@@ -251,9 +209,9 @@ public class NetworkMapService {
                 }, networkUuid, voltageLevelId).getBody();
     }
 
-    public String getVoltageLevelInformation(UUID networkUuid, String variantId,
-                                             String voltageLevelId,
-                                             String path) {
+    public String getVoltageLevelTopologyInfos(UUID networkUuid, String variantId,
+                                               String voltageLevelId,
+                                               String path) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION
                 + "/networks/{networkUuid}/voltage-levels/{voltageLevelId}/" + path);
         if (!StringUtils.isBlank(variantId)) {

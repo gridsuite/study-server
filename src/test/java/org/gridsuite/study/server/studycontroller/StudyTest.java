@@ -22,6 +22,7 @@ import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import com.powsybl.network.store.model.VariantInfos;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import lombok.SneakyThrows;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
@@ -103,7 +104,6 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-import static org.gridsuite.study.server.StudyException.Type.STUDY_NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatcherStudyBasicInfos;
@@ -786,8 +786,9 @@ class StudyTest {
         //insert a study with a non-existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
                 NOT_EXISTING_CASE_UUID, "false").header(USER_ID_HEADER, "userId").param(CASE_FORMAT, "XIIDM"))
-                     .andExpectAll(status().isFailedDependency(), content().contentType(MediaType.valueOf("text/plain;charset=UTF-8"))).andReturn();
-        assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", result.getResponse().getContentAsString());
+                     .andExpectAll(status().isNotFound(), content().contentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE)).andReturn();
+        var problemDetail = mapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertEquals("The case '" + NOT_EXISTING_CASE_UUID + "' does not exist", problemDetail.getDetail());
 
         assertTrue(TestUtils.getRequestsDone(1, server)
                        .contains("/v1/cases/%s/exists".formatted(NOT_EXISTING_CASE_UUID)));
@@ -814,10 +815,12 @@ class StudyTest {
 
         UUID randomUuid = UUID.randomUUID();
         //get a non-existing study -> 404 not found
-        mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header(USER_ID_HEADER, "userId"))
+        result = mockMvc.perform(get("/v1/studies/{studyUuid}", randomUuid).header(USER_ID_HEADER, "userId"))
             .andExpectAll(status().isNotFound(),
-                content().contentType(MediaType.APPLICATION_JSON),
-                jsonPath("$").value(STUDY_NOT_FOUND.name()));
+                content().contentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+            .andReturn();
+        problemDetail = mapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertEquals("Study not found", problemDetail.getDetail());
 
         UUID studyNameUserIdUuid = studyRepository.findAll().get(0).getId();
 
@@ -877,7 +880,7 @@ class StudyTest {
                         studyUuid, firstRootNetworkUuid, rootNodeUuid, "ERROR")
                         .param("fileName", "myFileName")
                         .header(HEADER_USER_ID, "userId"))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().is5xxServerError());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.contains("/v1/networks/" + NETWORK_UUID_STRING + "/export/ERROR")
                 && request.contains("fileName=myFileName")));
@@ -924,7 +927,7 @@ class StudyTest {
 
         wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(10, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(11, server);
         assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
@@ -933,6 +936,7 @@ class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSecurityAnalysisParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getSensitivityAnalysisParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getStateEstimationParametersUuid())));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getPccMinParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-visualizations-params/" + studyEntity.getNetworkVisualizationParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/spreadsheet-config-collections/" + studyEntity.getSpreadsheetConfigCollectionUuid())));
     }
@@ -947,6 +951,7 @@ class StudyTest {
         studyEntity.setVoltageInitParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
         studyEntity.setStateEstimationParametersUuid(null);
+        studyEntity.setPccMinParametersUuid(null);
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
 
@@ -988,7 +993,7 @@ class StudyTest {
 
         wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(8, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(9, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + nonExistingCaseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/.*"))); // x 4
@@ -1023,14 +1028,10 @@ class StudyTest {
     @Test
     void testNotifyStudyMetadataUpdated() throws Exception {
         UUID studyUuid = UUID.randomUUID();
-        mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=metadata_updated", studyUuid)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/notification", studyUuid)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkStudyMetadataUpdatedMessagesReceived();
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/notification?type=NOT_EXISTING_TYPE", UUID.randomUUID())
-                .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -1227,7 +1228,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        int nbRequest = 13;
+        int nbRequest = 14;
         if (parameterDuplicatedUuid != null && !parameterDuplicationSuccess) {
             nbRequest += 7;
         }
@@ -1267,7 +1268,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(13, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(14, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/%s/exists".formatted(caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/%s/disableExpiration".formatted(caseUuid))));
@@ -1297,7 +1298,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(14, server);
+        var requests = TestUtils.getRequestsDone(15, server);
         assertTrue(requests.contains("/v1/cases/%s/exists".formatted(caseUuid)));
         assertTrue(requests.contains("/v1/cases?duplicateFrom=%s&withExpiration=%s".formatted(caseUuid, true)));
         // note : it's a new case UUID
@@ -1345,7 +1346,7 @@ class StudyTest {
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR)
                         .header("userId", userId)
                         .param(CASE_FORMAT, "UCTE"))
-            .andExpect(status().is5xxServerError());
+            .andExpect(status().isIAmATeapot());
 
        // assert that the broker message has been sent a study creation request message
         Message<byte[]> message = output.receive(TIMEOUT, "study.update");
@@ -1517,7 +1518,7 @@ class StudyTest {
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(13, server);
+        var requests = TestUtils.getRequestsDone(14, server);
         assertTrue(requests.contains("/v1/cases/%s/exists".formatted(NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains("/v1/cases/%s/disableExpiration".formatted(NEW_STUDY_CASE_UUID)));
@@ -1721,6 +1722,7 @@ class StudyTest {
                 .voltageInitResultUuid(UUID.randomUUID())
                 .stateEstimationResultUuid(UUID.randomUUID())
                 .pccMinResultUuid(UUID.randomUUID())
+                .pccMinResultUuid(UUID.randomUUID())
                 .build()
         );
 
@@ -1772,6 +1774,7 @@ class StudyTest {
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
         studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
         studyEntity.setStateEstimationParametersUuid(UUID.randomUUID());
+        studyEntity.setPccMinParametersUuid(UUID.randomUUID());
         studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
@@ -1788,6 +1791,7 @@ class StudyTest {
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
         studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
         studyEntity.setStateEstimationParametersUuid(UUID.randomUUID());
+        studyEntity.setPccMinParametersUuid(UUID.randomUUID());
         studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
@@ -1804,6 +1808,7 @@ class StudyTest {
         studyEntity.setVoltageInitParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
         studyEntity.setStateEstimationParametersUuid(null);
+        studyEntity.setPccMinParametersUuid(null);
         studyEntity.setNetworkVisualizationParametersUuid(null);
         studyEntity.setSpreadsheetConfigCollectionUuid(null);
         studyRepository.save(studyEntity);
@@ -1852,6 +1857,9 @@ class StudyTest {
             numberOfRequests++;
         }
         if (studyEntity.getStateEstimationParametersUuid() != null) {
+            numberOfRequests++;
+        }
+        if (studyEntity.getPccMinParametersUuid() != null) {
             numberOfRequests++;
         }
         if (studyEntity.getSpreadsheetConfigCollectionUuid() != null) {
@@ -1951,6 +1959,12 @@ class StudyTest {
             assertNotNull(duplicatedStudy.getStateEstimationParametersUuid());
             numberOfRequests++;
         }
+        if (sourceStudy.getPccMinParametersUuid() == null) {
+            assertNull(duplicatedStudy.getPccMinParametersUuid());
+        } else {
+            assertNotNull(duplicatedStudy.getPccMinParametersUuid());
+            numberOfRequests++;
+        }
         if (sourceStudy.getSpreadsheetConfigCollectionUuid() == null) {
             assertNull(duplicatedStudy.getSpreadsheetConfigCollectionUuid());
         } else {
@@ -1986,6 +2000,9 @@ class StudyTest {
         }
         if (sourceStudy.getStateEstimationParametersUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getStateEstimationParametersUuid())).count());
+        }
+        if (sourceStudy.getPccMinParametersUuid() != null) {
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/parameters\\?duplicateFrom=" + sourceStudy.getPccMinParametersUuid())).count());
         }
         if (sourceStudy.getSpreadsheetConfigCollectionUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + sourceStudy.getSpreadsheetConfigCollectionUuid())).count());
@@ -2849,7 +2866,7 @@ class StudyTest {
         UUID notExistingNetworkRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(notExistingNetworkStudyUuid);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", notExistingNetworkStudyUuid, notExistingNetworkRootNetworkUuid))
-            .andExpect(status().isInternalServerError());
+            .andExpect(status().isNotFound());
         Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
         Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
 
@@ -2857,7 +2874,7 @@ class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().contains("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/reindex-all")));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", notExistingNetworkStudyUuid, notExistingNetworkRootNetworkUuid))
-            .andExpectAll(status().isInternalServerError());
+            .andExpectAll(status().isNotFound());
 
         requests = TestUtils.getRequestsWithBodyDone(1, server);
         assertEquals(1, requests.stream().filter(r -> r.getPath().contains("/v1/networks/" + NOT_EXISTING_NETWORK_UUID + "/indexed-equipments")).count());

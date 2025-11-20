@@ -21,6 +21,7 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import lombok.SneakyThrows;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
@@ -34,6 +35,7 @@ import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAna
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.modification.*;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
@@ -79,6 +81,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR_MESSAGE;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
@@ -480,7 +483,9 @@ class NetworkModificationTest {
                         .contentType(APPLICATION_JSON)
                 ).andExpect(status().isForbidden())
                 .andReturn();
-        assertTrue(result.getResponse().getContentAsString().equalsIgnoreCase("MAX_NODE_BUILDS_EXCEEDED max allowed built nodes : 1"));
+        var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertEquals(MAX_NODE_BUILDS_EXCEEDED.value(), problemDetail.getBusinessErrorCode());
+        assertEquals("max allowed built nodes : 1", problemDetail.getDetail());
         WireMockUtils.verifyGetRequest(wireMockServer, userProfileQuotaExceededStubId, "/v1/users/" + userId + "/profile/max-builds", Map.of());
     }
 
@@ -497,21 +502,6 @@ class NetworkModificationTest {
 
         // build modificationNode1: ok
         testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode1.getId(), rootNetworkUuid, userId, userProfileNoQuotaStubId);
-    }
-
-    @Test
-    void testBuildNoProfile() throws Exception {
-        String userId = USER_ID_NO_PROFILE;
-        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
-        UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
-        UUID studyNameUserIdUuid = studyEntity.getId();
-        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
-        UUID modificationGroupUuid1 = UUID.randomUUID();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
-                modificationGroupUuid1, "variant_1", "node 1", userId);
-
-        // build modificationNode1: ok
-        testBuildWithNodeUuid(studyNameUserIdUuid, modificationNode1.getId(), rootNetworkUuid, userId, userNoProfileStubId);
     }
 
     @Test
@@ -557,7 +547,7 @@ class NetworkModificationTest {
         assertEquals(List.of(modificationGroupUuid1, modificationGroupUuid2, modificationGroupUuid3, modificationGroupUuid4, modificationGroupUuid5), buildInfos.getModificationGroupUuids());
 
         // Mark the node 3 status as built
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo3Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode3.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo3Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode3.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo3Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo3Entity);
 
@@ -568,17 +558,17 @@ class NetworkModificationTest {
         assertEquals(List.of(modificationGroupUuid4), buildInfos.getModificationGroupUuids());
 
         // Mark the node 2 status as not built
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode2.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode2.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo2Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo2Entity);
 
         // Mark the node 4 status as not built
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo4Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode4.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo4Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode4.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo4Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo4Entity);
 
         // Mark the node 5 status as built
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo5Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode5.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo5Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode5.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo5Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo5Entity);
 
@@ -590,7 +580,7 @@ class NetworkModificationTest {
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode5.getId(), rootNetworkUuid).getGlobalBuildStatus());
 
         // Mark the node 3 status as built
-        rootNetworkNodeInfo3Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode3.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        rootNetworkNodeInfo3Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode3.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo3Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo3Entity);
 
@@ -618,7 +608,7 @@ class NetworkModificationTest {
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
 
         // Mark the node status as built
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
 
@@ -742,10 +732,10 @@ class NetworkModificationTest {
         wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
         // test build status on switch modification
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode2.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode2.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo2Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo2Entity);
 
@@ -1068,7 +1058,7 @@ class NetworkModificationTest {
                 + "\"voltageLevelId1\":\"idVL1\"," + "\"busOrBusbarSectionId1\":\"idBus1\","
                 + "\"voltageLevelId2\":\"idVL2\"," + "\"busOrBusbarSectionId2\":\"idBus2\"}";
         // Mark the node 1 status as building
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
         // create line on building node
@@ -1140,7 +1130,7 @@ class NetworkModificationTest {
 
         String createTwoWindingsTransformerAttributes2 = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId3\",\"equipmentName\":\"2wtName3\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         // Mark the node 1 status as building
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
         // create Two Windings Transformer on building node
@@ -1190,7 +1180,7 @@ class NetworkModificationTest {
         mockMvc.perform(delete("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", studyUuid, modificationNode.getId())
                 .queryParam("uuids", modificationUuid.toString())
                 .header(USER_ID_HEADER, "userId"))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isInternalServerError());
         WireMockUtils.verifyDeleteRequest(wireMockServer, stubId, "/v1/network-modifications", false, Map.of("uuids", WireMock.equalTo(modificationUuid.toString())));
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkEquipmentDeletingFinishedMessagesReceived(studyUuid, modificationNode.getId());
@@ -1242,7 +1232,7 @@ class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreate2).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isInternalServerError());
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1271,7 +1261,7 @@ class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreate4).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isInternalServerError());
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1300,7 +1290,7 @@ class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreate6).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isInternalServerError());
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1329,7 +1319,7 @@ class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreate8).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isInternalServerError());
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
@@ -1415,7 +1405,7 @@ class NetworkModificationTest {
 
         String createLoadAttributes2 = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId3\",\"loadName\":\"loadName3\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
         // Mark the node 3 status as built
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo3Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode3Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo3Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode3Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo3Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo3Entity);
 
@@ -1607,7 +1597,7 @@ class NetworkModificationTest {
 
         String createSubstationAttributes2 = "{\"type\":\"" + ModificationType.SUBSTATION_CREATION + "\",\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"AD\"}";
         // Mark the node 1 status as built
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
         // create substation on building node
@@ -1681,7 +1671,7 @@ class NetworkModificationTest {
         String createVoltageLevelAttributes2 = "{\"type\":\"" + ModificationType.VOLTAGE_LEVEL_CREATION + "\",\"voltageLevelId\":\"voltageLevelId3\",\"voltageLevelName\":\"voltageLevelName3\""
                 + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s2\"}";
         // Mark the node 1 status as building
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
         // create voltage level on building node
@@ -1744,18 +1734,14 @@ class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                         .content(badBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpectAll(
-                        status().isBadRequest(),
-                        content().string("400 BAD_REQUEST"));
+            .andExpect(status().isBadRequest());
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         mockMvc.perform(put(URI_NETWORK_MODIF_WITH_ID, studyNameUserIdUuid, modificationNodeUuid, MODIFICATION_UUID)
                         .content(badBody).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
-                .andExpectAll(
-                        status().isBadRequest(),
-                        content().string("400 BAD_REQUEST"));
+            .andExpect(status().isBadRequest());
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         wireMockStubs.verifyNetworkModificationPost(stubPostId, modificationBodyJson);
@@ -2144,7 +2130,7 @@ class NetworkModificationTest {
         verify(rootNetworkNodeInfoService, times(1)).copyModificationsToExclude(any(), any(), any());
 
         // now we do the same but on a built node
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid1, studyTestUtils.getOneRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid1, studyTestUtils.getOneRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
 
@@ -2437,7 +2423,7 @@ class NetworkModificationTest {
         NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid, modificationNode2Uuid, UUID.randomUUID(), VARIANT_ID_3, "node 3", NetworkModificationNodeType.SECURITY, BuildStatus.BUILT, userId);
         UUID modificationNode3Uuid = modificationNode3.getId();
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(UUID.fromString(SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
@@ -2481,10 +2467,10 @@ class NetworkModificationTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + STATE_ESTIMATION_RESULT_UUID)));
 
         // Mark nodes 2 and 3 status as built
-        rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode2Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode2Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
-        rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode3Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode3Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
 
@@ -2521,7 +2507,7 @@ class NetworkModificationTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1", NetworkModificationNodeType.SECURITY, BuildStatus.BUILT, userId);
         UUID modificationNode1Uuid = modificationNode1.getId();
         // In this node, let's say we have all computations results
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity.setLoadFlowResultUuid(LOADFLOW_RESULT_UUID);
         rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(DYNAMIC_SIMULATION_RESULT_UUID);
@@ -2618,7 +2604,7 @@ class NetworkModificationTest {
         wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
         // Mark the node status as built
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(StudyException.Type.ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
 
@@ -2929,7 +2915,7 @@ class NetworkModificationTest {
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, String caseFormat) {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, caseFormat, "", null, UUID.randomUUID(), null, null, null, null);
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, caseFormat, "", null, UUID.randomUUID(), null, null, null, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;
@@ -3022,7 +3008,8 @@ class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                 .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
                 .header(USER_ID_HEADER, userId))
-            .andExpectAll(status().isBadRequest(), content().string(contentErrorMessage));
+            .andExpect(status().isInternalServerError())
+            .andReturn();
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -3033,7 +3020,7 @@ class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                 .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
                 .header(USER_ID_HEADER, userId))
-            .andExpectAll(status().isBadRequest(), content().string(contentErrorMessage));
+            .andExpect(status().isInternalServerError());
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -3045,7 +3032,7 @@ class NetworkModificationTest {
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNodeUuid)
                 .content(jsonCreateLoadInfos).contentType(MediaType.APPLICATION_JSON)
                 .header(USER_ID_HEADER, userId))
-            .andExpectAll(status().isBadRequest(), content().string(contentErrorMessage));
+            .andExpect(status().isInternalServerError());
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentCreatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);

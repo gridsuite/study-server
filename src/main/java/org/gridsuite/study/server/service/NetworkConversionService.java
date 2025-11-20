@@ -14,16 +14,15 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -35,8 +34,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.*;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
 @Service
 public class NetworkConversionService {
@@ -126,8 +124,6 @@ public class NetworkConversionService {
                     requestEntity,
                     UUID.class
             ).getBody();
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, NETWORK_EXPORT_FAILED);
         } catch (Exception e) {
             throw new StudyException(NETWORK_EXPORT_FAILED, e.getMessage());
         }
@@ -141,15 +137,7 @@ public class NetworkConversionService {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/reindex-all")
             .buildAndExpand(networkUuid)
             .toUriString();
-        try {
-            restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null, Void.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(NETWORK_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, STUDY_INDEXATION_FAILED);
-            }
-        }
+        restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null, Void.class);
     }
 
     public boolean checkStudyIndexationStatus(UUID networkUuid) {
@@ -159,14 +147,6 @@ public class NetworkConversionService {
 
         ParameterizedTypeReference<String> typeRef = new ParameterizedTypeReference<>() {
         };
-        try {
-            return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(NETWORK_NOT_FOUND);
-            } else {
-                throw handleHttpError(e, STUDY_CHECK_INDEXATION_FAILED);
-            }
-        }
+        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
     }
 }

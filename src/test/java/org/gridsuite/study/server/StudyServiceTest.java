@@ -213,7 +213,7 @@ class StudyServiceTest {
         UUID caseExistsStubId = wireMockStubs.caseApi.stubCaseExists(CASE_UUID.toString(), false);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
                 .header(USER_ID_HEADER, userId))
-            .andExpect(status().isFailedDependency());
+            .andExpect(status().isNotFound());
         wireMockStubs.caseApi.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
     }
 
@@ -270,7 +270,7 @@ class StudyServiceTest {
                 .param(HEADER_IMPORT_PARAMETERS, objectWriter.writeValueAsString(newImportParameters))
                 .param("caseUuid", CASE_UUID_STRING)
                 .header(USER_ID_HEADER, userId))
-            .andExpectAll(status().isFailedDependency());
+            .andExpectAll(status().isNotFound());
 
         wireMockStubs.caseApi.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
     }

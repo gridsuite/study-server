@@ -840,7 +840,7 @@ class ShortCircuitTest implements WithAssertions {
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID shortCircuitParametersUuid) {
         StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null,
-                UUID.randomUUID(), shortCircuitParametersUuid, null, null, null);
+                UUID.randomUUID(), shortCircuitParametersUuid, null, null, null, null);
         var study = studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
         return study;

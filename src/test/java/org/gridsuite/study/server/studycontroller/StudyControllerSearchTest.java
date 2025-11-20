@@ -11,6 +11,7 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
@@ -40,6 +41,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
@@ -136,11 +139,13 @@ class StudyControllerSearchTest {
         equipmentInfos = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertThat(equipmentInfos, new MatcherJson<>(mapper, linesInfos));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus",
+        var result = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=bogus",
                 studyUuid, firstRootNetworkUuid, rootNodeId, "B").header(USER_ID_HEADER, "userId"))
-            .andExpectAll(status().isBadRequest(),
-                content().string("Enum unknown entry 'bogus' should be among NAME, ID"))
+            .andExpect(status().isInternalServerError())
             .andReturn();
+        var problemDetail = mapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
+        assertNotNull(problemDetail.getDetail());
+        assertTrue(problemDetail.getDetail().contains("Enum unknown entry 'bogus' should be among NAME, ID"));
     }
 
     private UUID getRootNodeUuid(UUID studyUuid) {
