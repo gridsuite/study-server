@@ -181,10 +181,10 @@ class StudyServiceTest {
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
-        UUID caseExistsStubId = wireMockStubs.caseApi.stubCaseExists(CASE_UUID.toString(), true);
+        UUID caseExistsStubId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockStubs.networkConversionApi.stubImportNetworkWithPostAction(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
-        UUID disableCaseExpirationStubId = wireMockStubs.caseApi.stubDisableCaseExpiration(CASE_UUID.toString());
+        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
+        UUID disableCaseExpirationStubId = wireMockStubs.caseServer.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
                 .header(USER_ID_HEADER, userId))
@@ -199,9 +199,9 @@ class StudyServiceTest {
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
 
-        wireMockStubs.caseApi.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
-        wireMockStubs.networkConversionApi.verifyImportNetwork(postNetworkStubId, CASE_UUID.toString(), null);
-        wireMockStubs.caseApi.verifyDisableCaseExpiration(disableCaseExpirationStubId, CASE_UUID.toString());
+        wireMockStubs.caseServer.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
+        wireMockStubs.networkConversionServer.verifyImportNetwork(postNetworkStubId, CASE_UUID.toString(), null);
+        wireMockStubs.caseServer.verifyDisableCaseExpiration(disableCaseExpirationStubId, CASE_UUID.toString());
     }
 
     @Test
@@ -210,11 +210,11 @@ class StudyServiceTest {
         String userId = "userId";
         UUID studyUuid = createStudy(userId, CASE_UUID, importParameters);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
-        UUID caseExistsStubId = wireMockStubs.caseApi.stubCaseExists(CASE_UUID.toString(), false);
+        UUID caseExistsStubId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID.toString(), false);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isNotFound());
-        wireMockStubs.caseApi.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
+        wireMockStubs.caseServer.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
     }
 
     @Test
@@ -228,10 +228,10 @@ class StudyServiceTest {
         importParameters.put("param1", "changedValue1, changedValue2");
         importParameters.put("param2", "changedValue");
 
-        UUID caseExistsStubId = wireMockStubs.caseApi.stubCaseExists(CASE_UUID.toString(), true);
+        UUID caseExistsStubId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockStubs.networkConversionApi.stubImportNetworkWithPostAction(CASE_UUID_STRING, newImportParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
-        UUID disableCaseExpirationStubId = wireMockStubs.caseApi.stubDisableCaseExpiration(CASE_UUID.toString());
+        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(CASE_UUID_STRING, newImportParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
+        UUID disableCaseExpirationStubId = wireMockStubs.caseServer.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
                 .param(HEADER_IMPORT_PARAMETERS, objectWriter.writeValueAsString(newImportParameters))
@@ -248,9 +248,9 @@ class StudyServiceTest {
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
 
-        wireMockStubs.caseApi.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
-        wireMockStubs.networkConversionApi.verifyImportNetwork(postNetworkStubId, CASE_UUID_STRING, null);
-        wireMockStubs.caseApi.verifyDisableCaseExpiration(disableCaseExpirationStubId, CASE_UUID.toString());
+        wireMockStubs.caseServer.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
+        wireMockStubs.networkConversionServer.verifyImportNetwork(postNetworkStubId, CASE_UUID_STRING, null);
+        wireMockStubs.caseServer.verifyDisableCaseExpiration(disableCaseExpirationStubId, CASE_UUID.toString());
     }
 
     @Test
@@ -264,7 +264,7 @@ class StudyServiceTest {
         importParameters.put("param1", "changedValue1, changedValue2");
         importParameters.put("param2", "changedValue");
 
-        UUID caseExistsStubId = wireMockStubs.caseApi.stubCaseExists(CASE_UUID.toString(), false);
+        UUID caseExistsStubId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID.toString(), false);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
                 .param(HEADER_IMPORT_PARAMETERS, objectWriter.writeValueAsString(newImportParameters))
@@ -272,7 +272,7 @@ class StudyServiceTest {
                 .header(USER_ID_HEADER, userId))
             .andExpectAll(status().isNotFound());
 
-        wireMockStubs.caseApi.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
+        wireMockStubs.caseServer.verifyCaseExists(caseExistsStubId, CASE_UUID.toString());
     }
 
     @Test
@@ -296,10 +296,10 @@ class StudyServiceTest {
 
     private UUID createStudy(String userId, UUID caseUuid, Map<String, Object> importParameters) throws Exception {
         // mock API calls
-        UUID caseExistsStubId = wireMockStubs.caseApi.stubCaseExists(caseUuid.toString(), true);
+        UUID caseExistsStubId = wireMockStubs.caseServer.stubCaseExists(caseUuid.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockStubs.networkConversionApi.stubImportNetworkWithPostAction(caseUuid.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", WireMockStubs.FIRST_VARIANT_ID, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
-        UUID disableCaseExpirationStubId = wireMockStubs.caseApi.stubDisableCaseExpiration(caseUuid.toString());
+        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(caseUuid.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", WireMockStubs.FIRST_VARIANT_ID, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
+        UUID disableCaseExpirationStubId = wireMockStubs.caseServer.stubDisableCaseExpiration(caseUuid.toString());
         UUID sendReportStubId = wireMockStubs.stubSendReport();
         when(loadFlowService.createDefaultLoadFlowParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
@@ -319,9 +319,9 @@ class StudyServiceTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert API calls have been made
-        wireMockStubs.caseApi.verifyCaseExists(caseExistsStubId, caseUuid.toString());
-        wireMockStubs.networkConversionApi.verifyImportNetwork(postNetworkStubId, caseUuid.toString(), WireMockStubs.FIRST_VARIANT_ID);
-        wireMockStubs.caseApi.verifyDisableCaseExpiration(disableCaseExpirationStubId, caseUuid.toString());
+        wireMockStubs.caseServer.verifyCaseExists(caseExistsStubId, caseUuid.toString());
+        wireMockStubs.networkConversionServer.verifyImportNetwork(postNetworkStubId, caseUuid.toString(), WireMockStubs.FIRST_VARIANT_ID);
+        wireMockStubs.caseServer.verifyDisableCaseExpiration(disableCaseExpirationStubId, caseUuid.toString());
         wireMockStubs.verifySendReport(sendReportStubId);
 
         return studyUuid;

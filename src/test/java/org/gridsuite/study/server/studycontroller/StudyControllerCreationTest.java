@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2025, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.study.server.studycontroller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -54,6 +60,9 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
+ */
 @ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
@@ -134,14 +143,14 @@ class StudyControllerCreationTest {
         String userId = "userId";
 
         doReturn(duplicateCaseUuid).when(caseService).duplicateCase(caseUuid, true);
-        UUID caseExistsStub = wireMockStubs.caseApi.stubCaseExists(caseUuid.toString(), true);
-        UUID importCaseStub = wireMockStubs.networkConversionApi.stubImportNetwork(duplicateCaseUuid.toString(), null, FIRST_VARIANT_ID, caseFormat);
+        UUID caseExistsStub = wireMockStubs.caseServer.stubCaseExists(caseUuid.toString(), true);
+        UUID importCaseStub = wireMockStubs.networkConversionServer.stubImportNetwork(duplicateCaseUuid.toString(), null, FIRST_VARIANT_ID, caseFormat);
 
         sendStudyCreationRequest(userId, caseUuid, caseFormat, null, true);
 
         // assert that all http requests have been sent to remote services
-        wireMockStubs.caseApi.verifyCaseExists(caseExistsStub, caseUuid.toString());
-        wireMockStubs.networkConversionApi.verifyImportNetwork(importCaseStub, duplicateCaseUuid.toString(), FIRST_VARIANT_ID);
+        wireMockStubs.caseServer.verifyCaseExists(caseExistsStub, caseUuid.toString());
+        wireMockStubs.networkConversionServer.verifyImportNetwork(importCaseStub, duplicateCaseUuid.toString(), FIRST_VARIANT_ID);
 
         UUID newStudyCreationRequestId = studyCreationRequestRepository.findAll().getFirst().getId();
         assertStudyUpdateMessageReceived(newStudyCreationRequestId, userId);
@@ -154,16 +163,16 @@ class StudyControllerCreationTest {
         String caseFormat = "UCTE";
         String userId = "userId";
 
-        UUID caseExistsStub = wireMockStubs.caseApi.stubCaseExists(caseUuid.toString(), true);
+        UUID caseExistsStub = wireMockStubs.caseServer.stubCaseExists(caseUuid.toString(), true);
 
         String importParametersAsJson = mapper.writeValueAsString(importParameters);
-        UUID importCaseStub = wireMockStubs.networkConversionApi.stubImportNetwork(caseUuid.toString(), importParametersAsJson, FIRST_VARIANT_ID, caseFormat);
+        UUID importCaseStub = wireMockStubs.networkConversionServer.stubImportNetwork(caseUuid.toString(), importParametersAsJson, FIRST_VARIANT_ID, caseFormat);
 
         sendStudyCreationRequest(userId, caseUuid, caseFormat, importParameters, false);
 
         // assert that all http requests have been sent to remote services
-        wireMockStubs.caseApi.verifyCaseExists(caseExistsStub, caseUuid.toString());
-        wireMockStubs.networkConversionApi.verifyImportNetwork(importCaseStub, caseUuid.toString(), FIRST_VARIANT_ID, importParametersAsJson);
+        wireMockStubs.caseServer.verifyCaseExists(caseExistsStub, caseUuid.toString());
+        wireMockStubs.networkConversionServer.verifyImportNetwork(importCaseStub, caseUuid.toString(), FIRST_VARIANT_ID, importParametersAsJson);
 
         UUID newStudyCreationRequestId = studyCreationRequestRepository.findAll().getFirst().getId();
         assertStudyUpdateMessageReceived(newStudyCreationRequestId, userId);
@@ -183,10 +192,10 @@ class StudyControllerCreationTest {
         // Need to insert studyCreationRequestEntity, otherwise study is deleted after being inserted
         studyCreationRequestRepository.save(new StudyCreationRequestEntity(studyUuid, "firstRootNetworkName"));
 
-        UUID disableCaseExpirationStub = wireMockStubs.caseApi.stubDisableCaseExpiration(caseUuid.toString());
+        UUID disableCaseExpirationStub = wireMockStubs.caseServer.stubDisableCaseExpiration(caseUuid.toString());
         // run consume case import succeeded
         consumerService.consumeCaseImportSucceeded().accept(MessageBuilder.createMessage("", messageHeaders));
-        wireMockStubs.caseApi.verifyDisableCaseExpiration(disableCaseExpirationStub, caseUuid.toString());
+        wireMockStubs.caseServer.verifyDisableCaseExpiration(disableCaseExpirationStub, caseUuid.toString());
         verifyMockCallsAfterStudyCreation();
 
         // check import parameters are saved

@@ -40,13 +40,13 @@ public class WireMockStubs {
     public static final String FIRST_VARIANT_ID = "first_variant_id";
 
     private final WireMockServer wireMock;
-    public final CaseApiStubs caseApi;
-    public final NetworkConversionApiStubs networkConversionApi;
+    public final CaseServerStubs caseServer;
+    public final NetworkConversionServerStubs networkConversionServer;
 
     public WireMockStubs(WireMockServer wireMock) {
         this.wireMock = wireMock;
-        this.caseApi = new CaseApiStubs(wireMock);
-        this.networkConversionApi = new NetworkConversionApiStubs(wireMock);
+        this.caseServer = new CaseServerStubs(wireMock);
+        this.networkConversionServer = new NetworkConversionServerStubs(wireMock);
     }
 
     public UUID stubNetworkElementInfosGet(String networkUuid, String elementType, String infoType, String elementId, String responseBody) {
