@@ -178,9 +178,11 @@ public class StudyController {
     @Operation(summary = "get a study")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The study information"),
+        @ApiResponse(responseCode = "403", description = "The user has no write permission"),
         @ApiResponse(responseCode = "404", description = "The study doesn't exist")})
-    public ResponseEntity<CreatedStudyBasicInfos> getStudy(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyInfos(studyUuid));
+    public ResponseEntity<CreatedStudyBasicInfos> getStudy(@PathVariable("studyUuid") UUID studyUuid,
+                                                           @RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudyInfos(studyUuid, userId));
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}")

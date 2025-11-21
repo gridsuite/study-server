@@ -9,13 +9,20 @@ package org.gridsuite.study.server.service;
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.DIRECTORY_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -38,5 +45,17 @@ public class DirectoryService {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements/{elementUuid}/name");
         String path = pathBuilder.buildAndExpand(elementUuid).toUriString();
         return restTemplate.getForObject(directoryServerServerBaseUri + path, String.class);
+    }
+
+    public void checkWritePermission(UUID elementUuid, String userId) {
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements");
+        pathBuilder.queryParam("accessType", "WRITE");
+        pathBuilder.queryParam("ids", List.of(elementUuid));
+        String path = pathBuilder.buildAndExpand(elementUuid).toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        restTemplate.exchange(directoryServerServerBaseUri + path, HttpMethod.HEAD, new HttpEntity<>(headers), Void.class);
     }
 }

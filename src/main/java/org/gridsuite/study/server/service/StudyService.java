@@ -488,8 +488,8 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public CreatedStudyBasicInfos getStudyInfos(UUID studyUuid) {
-        Objects.requireNonNull(studyUuid);
+    public CreatedStudyBasicInfos getStudyInfos(@NonNull UUID studyUuid, @NonNull String userId) {
+        directoryService.checkWritePermission(studyUuid, userId);
         StudyEntity studyEntity = getStudy(studyUuid);
         return toStudyInfos(studyEntity.getId());
     }
