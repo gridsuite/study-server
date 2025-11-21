@@ -264,6 +264,8 @@ class StudyTest {
     private static final String DEFAULT_PROVIDER = "defaultProvider";
     private static final UUID EXPORT_UUID = UUID.randomUUID();
 
+    private static final String UNAUTHORIZED_USER = "unAuthorizedUserId";
+
     @Autowired
     private OutputDestination output;
 
@@ -458,7 +460,7 @@ class StudyTest {
                 Buffer body = request.getBody();
 
                 if (path.matches("/v1/elements\\?accessType=WRITE&ids=.*")) {
-                    return new MockResponse(200);
+                    return new MockResponse(UNAUTHORIZED_USER.equalsIgnoreCase(request.getHeaders().get("userId")) ? 403 : 200);
                 } else if (path.matches("/v1/groups/" + EMPTY_MODIFICATION_GROUP_UUID + "/.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), new JSONArray(List.of()).toString());
                 } else if (path.matches("/v1/groups/.*") ||
@@ -870,6 +872,15 @@ class StudyTest {
             .andExpect(status().isAccepted());
 
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID + "&fileName=myFileName")));
+    }
+
+    @Test
+    void testGetStudyWithoutWritePermission(final MockWebServer server) throws Exception {
+        UUID studyUuid = createStudy(server, "userId", CASE_UUID);
+        // 403 on study access with user UNAUTHORIZED_USER
+        mockMvc.perform(get("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, UNAUTHORIZED_USER))
+                .andExpect(status().isForbidden());
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/elements?accessType=WRITE&ids=%s".formatted(studyUuid)));
     }
 
     @Test
