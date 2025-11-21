@@ -10,7 +10,6 @@ package org.gridsuite.study.server.service.client.dynamicsecurityanalysis;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.service.StudyService;
@@ -19,7 +18,6 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -28,10 +26,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -66,15 +62,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
                 .fromHttpUrl(rootBaseUrl + "/default-provider")
                 .toUriString();
 
-        // call dynamic-security-analysis REST API
-        try {
-            return getRestTemplate().getForObject(url, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PROVIDER_NOT_FOUND);
-            }
-            throw handleHttpError(e, GET_DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PROVIDER_FAILED);
-        }
+        return getRestTemplate().getForObject(url, String.class);
     }
 
     public String getProvider(@NonNull UUID parametersUuid) {
@@ -86,15 +74,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
-        // call dynamic-security-analysis REST API
-        try {
-            return getRestTemplate().getForObject(url, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_PROVIDER_NOT_FOUND);
-            }
-            throw handleHttpError(e, GET_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED);
-        }
+        return getRestTemplate().getForObject(url, String.class);
     }
 
     public void updateProvider(@NonNull UUID parametersUuid, @NonNull String provider) {
@@ -114,14 +94,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
 
         // call dynamic-security-analysis REST API
-        try {
-            getRestTemplate().put(url, httpEntity);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND);
-            }
-            throw handleHttpError(e, UPDATE_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED);
-        }
+        getRestTemplate().put(url, httpEntity);
     }
 
     public String getParameters(@NonNull UUID parametersUuid) {
@@ -129,15 +102,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
         String url = getParametersWithUuidUrl(parametersUuid);
 
-        // call dynamic-security-analysis REST API
-        try {
-            return getRestTemplate().getForObject(url, String.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND);
-            }
-            throw handleHttpError(e, GET_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED);
-        }
+        return getRestTemplate().getForObject(url, String.class);
     }
 
     public UUID createParameters(@NonNull String parametersInfos) {
@@ -155,12 +120,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parametersInfos, headers);
 
-        // call dynamic-security-analysis REST API
-        try {
-            return getRestTemplate().postForObject(url, httpEntity, UUID.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED);
-        }
+        return getRestTemplate().postForObject(url, httpEntity, UUID.class);
     }
 
     public void updateParameters(@NonNull UUID parametersUuid, @NonNull String parametersInfos) {
@@ -174,15 +134,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parametersInfos, headers);
 
-        // call dynamic-security-analysis REST API
-        try {
-            getRestTemplate().put(url, httpEntity);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND);
-            }
-            throw handleHttpError(e, UPDATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED);
-        }
+        getRestTemplate().put(url, httpEntity);
     }
 
     public UUID duplicateParameters(@NonNull UUID sourceParametersUuid) {
@@ -196,15 +148,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
                 .buildAndExpand()
                 .toUriString();
 
-        // call dynamic-security-analysis REST API
-        try {
-            return getRestTemplate().postForObject(url, null, UUID.class);
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND);
-            }
-            throw handleHttpError(e, DUPLICATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED);
-        }
+        return getRestTemplate().postForObject(url, null, UUID.class);
     }
 
     public void deleteParameters(@NonNull UUID parametersUuid) {
@@ -224,12 +168,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
                 .buildAndExpand()
                 .toUriString();
 
-        // call dynamic-security-analysis REST API
-        try {
-            return getRestTemplate().postForObject(url, null, UUID.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, CREATE_DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PARAMETERS_FAILED);
-        }
+        return getRestTemplate().postForObject(url, null, UUID.class);
     }
 
     // --- Related run computation methods --- //
@@ -273,11 +212,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         // call dynamic-security-analysis REST API
         HttpEntity<?> httpEntity = new HttpEntity<>(null, headers);
 
-        try {
-            return getRestTemplate().postForObject(url, httpEntity, UUID.class);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, RUN_DYNAMIC_SECURITY_ANALYSIS_FAILED);
-        }
+        return getRestTemplate().postForObject(url, httpEntity, UUID.class);
     }
 
     // --- Related result methods --- //
@@ -309,15 +244,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
                 .build()
                 .toUriString();
 
-        // call dynamic-security-analysis REST API
-        try {
-            getRestTemplate().exchange(url, HttpMethod.PUT, null, new ParameterizedTypeReference<List<UUID>>() { });
-        } catch (HttpStatusCodeException e) {
-            if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
-                throw new StudyException(DYNAMIC_SECURITY_ANALYSIS_NOT_FOUND);
-            }
-            throw handleHttpError(e, INVALIDATE_DYNAMIC_SECURITY_ANALYSIS_FAILED);
-        }
+        getRestTemplate().exchange(url, HttpMethod.PUT, null, new ParameterizedTypeReference<List<UUID>>() { });
     }
 
     public void deleteResults(List<UUID> resultUuids) {

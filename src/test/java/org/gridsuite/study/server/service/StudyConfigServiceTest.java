@@ -1,7 +1,6 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
 import org.junit.jupiter.api.Test;
@@ -69,6 +68,6 @@ class StudyConfigServiceTest {
                 eq(HttpMethod.POST), any(HttpEntity.class), eq(UUID.class)))
             .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
 
-        assertThrows(StudyException.class, () -> service.createGridLayoutFromNadDiagram(src, clone, "N"));
+        assertThrows(HttpServerErrorException.class, () -> service.createGridLayoutFromNadDiagram(src, clone, "N"));
     }
 }

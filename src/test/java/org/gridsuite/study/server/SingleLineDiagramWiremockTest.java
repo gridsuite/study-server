@@ -11,8 +11,8 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.gridsuite.study.server.utils.WireMockUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,12 +61,12 @@ class SingleLineDiagramWiremockTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     private WireMockServer wireMockServer;
-    private WireMockUtils wireMockUtils;
+    private WireMockStubs wireMockStubs;
 
     @BeforeEach
     void setup() {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
-        wireMockUtils = new WireMockUtils(wireMockServer);
+        wireMockStubs = new WireMockStubs(wireMockServer);
 
         // Start the server.
         wireMockServer.start();
@@ -106,10 +106,10 @@ class SingleLineDiagramWiremockTest {
         mockServicesAroundSvgGeneration(nodeUuid, rootNetworkUuid, networkUuid, loadflowResultUuid, shortcircuitResultUuid, variantId, svgGenerationMetadata);
 
         String svgGenerationMetadataJson = mapper.writeValueAsString(svgGenerationMetadata);
-        UUID generateSvgStubUuid = wireMockUtils.stubGenerateSvg(networkUuid, variantId, voltageLevelId, svgGenerationMetadataJson);
+        UUID generateSvgStubUuid = wireMockStubs.stubGenerateSvg(networkUuid, variantId, voltageLevelId, svgGenerationMetadataJson);
         UUID getIccValuesStubUuid = null;
         if (shortcircuitResultUuid != null) {
-            getIccValuesStubUuid = wireMockUtils.stubGetVoltageLevelIccValues(shortcircuitResultUuid, voltageLevelId, mapper.writeValueAsString(busIdToIcc));
+            getIccValuesStubUuid = wireMockStubs.stubGetVoltageLevelIccValues(shortcircuitResultUuid, voltageLevelId, mapper.writeValueAsString(busIdToIcc));
         }
         //get the voltage level diagram svg
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false&language=en",
@@ -118,9 +118,9 @@ class SingleLineDiagramWiremockTest {
             content().contentType(MediaType.APPLICATION_XML),
             content().string("generatedSvg"));
 
-        wireMockUtils.verifyGenerateSvg(generateSvgStubUuid, networkUuid, variantId, voltageLevelId, svgGenerationMetadataJson);
+        wireMockStubs.verifyGenerateSvg(generateSvgStubUuid, networkUuid, variantId, voltageLevelId, svgGenerationMetadataJson);
         if (shortcircuitResultUuid != null) {
-            wireMockUtils.verifyGetVoltageLevelIccValues(getIccValuesStubUuid, shortcircuitResultUuid, voltageLevelId);
+            wireMockStubs.verifyGetVoltageLevelIccValues(getIccValuesStubUuid, shortcircuitResultUuid, voltageLevelId);
         }
     }
 

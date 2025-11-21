@@ -11,13 +11,12 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -25,7 +24,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyException.Type.CASE_NOT_FOUND;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 @Service
 public class CaseService {
@@ -66,11 +65,7 @@ public class CaseService {
                 .buildAndExpand(caseUuid)
                 .toUriString();
 
-        try {
-            restTemplate.exchange(caseServerBaseUri + path, HttpMethod.DELETE, null, Void.class, caseUuid);
-        } catch (RestClientException e) {
-            LOGGER.error(String.format("Error while deleting case '%s' : %s", caseUuid, e.getMessage()), e);
-        }
+        restTemplate.exchange(caseServerBaseUri + path, HttpMethod.DELETE, null, Void.class, caseUuid);
     }
 
     public UUID duplicateCase(UUID caseUuid, Boolean withExpiration) {
@@ -85,7 +80,7 @@ public class CaseService {
 
     public void assertCaseExists(UUID caseUuid) {
         if (caseUuid != null && Boolean.FALSE.equals(caseExists(caseUuid))) {
-            throw new StudyException(CASE_NOT_FOUND, "The case '" + caseUuid + "' does not exist");
+            throw new StudyException(NOT_FOUND, "The case '" + caseUuid + "' does not exist");
         }
     }
 

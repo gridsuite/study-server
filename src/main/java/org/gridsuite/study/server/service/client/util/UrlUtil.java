@@ -8,12 +8,10 @@
 package org.gridsuite.study.server.service.client.util;
 
 import org.apache.logging.log4j.util.Strings;
-import org.gridsuite.study.server.StudyException;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import static org.gridsuite.study.server.StudyException.Type.URI_SYNTAX;
 import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
 
 /**
@@ -45,7 +43,7 @@ public final class UrlUtil {
             // normalize before return
             return new URI(url).normalize().toString();
         } catch (URISyntaxException e) {
-            throw new StudyException(URI_SYNTAX, e.getMessage());
+            throw new IllegalStateException("impossible to build url", e);
         }
     }
 }
