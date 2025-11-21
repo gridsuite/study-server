@@ -457,7 +457,9 @@ class StudyTest {
                 String path = Objects.requireNonNull(request.getPath());
                 Buffer body = request.getBody();
 
-                if (path.matches("/v1/groups/" + EMPTY_MODIFICATION_GROUP_UUID + "/.*")) {
+                if (path.matches("/v1/elements\\?accessType=WRITE&ids=.*")) {
+                    return new MockResponse(200);
+                } else if (path.matches("/v1/groups/" + EMPTY_MODIFICATION_GROUP_UUID + "/.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), new JSONArray(List.of()).toString());
                 } else if (path.matches("/v1/groups/.*") ||
                     path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/switches/switchId\\?group=.*&open=true") ||
@@ -782,6 +784,7 @@ class StudyTest {
         StudyInfos infos = mapper.readValue(resultAsString, StudyInfos.class);
 
         assertThat(infos, createMatcherStudyInfos(studyUuid));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/elements?accessType=WRITE&ids=%s".formatted(studyUuid)));
 
         //insert a study with a non-existing case and except exception
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
