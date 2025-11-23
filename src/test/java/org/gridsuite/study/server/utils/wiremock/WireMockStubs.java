@@ -563,7 +563,7 @@ public class WireMockStubs {
 
     public void verifyExportPccMinResult(UUID stubId, UUID resultUuid) {
         verifyPostRequest(
-            stubId,
+            wireMock, stubId,
             "/v1/results/" + resultUuid + "/csv",
             Map.of(
                 "sort", WireMock.equalTo("id,DESC"),

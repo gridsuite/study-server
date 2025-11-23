@@ -564,7 +564,7 @@ class PccMinTest {
             .andExpect(content().bytes(PCC_MIN_RESULTS_AS_ZIPPED_CSV));
 
         // Verification of the POST to the PCC MIN server
-        wireMockUtils.verifyExportPccMinResult(stubId, UUID.fromString(PCC_MIN_RESULT_UUID));
+        wireMockStubs.verifyExportPccMinResult(stubId, UUID.fromString(PCC_MIN_RESULT_UUID));
 
         // --- NOT FOUND CASE ---
         UUID notFoundUuid = UUID.randomUUID();

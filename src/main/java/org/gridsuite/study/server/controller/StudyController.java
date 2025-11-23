@@ -891,7 +891,7 @@ public class StudyController {
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get a pcc min result as csv")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of sensitivity analysis results"),
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of pcc min results"),
         @ApiResponse(responseCode = "204", description = "No pcc min has been done yet"),
         @ApiResponse(responseCode = "404", description = "The pcc min has not been found")})
     public ResponseEntity<byte[]> exportPccMinResultsAsCsv(
