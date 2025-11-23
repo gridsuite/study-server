@@ -15,7 +15,8 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.SingleLineDiagramService;
-import org.gridsuite.study.server.utils.WireMockUtils;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
+import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,7 +50,7 @@ class NetworkAreaDiagramTest {
 
     private WireMockServer wireMockServer;
 
-    protected WireMockUtils wireMockUtils;
+    protected WireMockStubs wireMockStubs;
 
     @Autowired
     private ObjectMapper mapper;
@@ -86,7 +87,7 @@ class NetworkAreaDiagramTest {
     @BeforeEach
     void setUp() {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
-        wireMockUtils = new WireMockUtils(wireMockServer);
+        wireMockStubs = new WireMockStubs(wireMockServer);
         wireMockServer.start();
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(wireMockServer.baseUrl());
 
@@ -112,7 +113,8 @@ class NetworkAreaDiagramTest {
                         .header("userId", USER1))
                 .andExpectAll(status().isOk(), content().string("nad-svg-from-config"))
                 .andReturn();
-        wireMockUtils.verifyPostRequest(
+        WireMockUtils.verifyPostRequest(
+                wireMockServer,
                 stubId,
                 SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID,
                 Map.of("variantId", WireMock.equalTo(VariantManagerConstants.INITIAL_VARIANT_ID)));
@@ -149,7 +151,7 @@ class NetworkAreaDiagramTest {
                         .header("userId", USER1))
                 .andExpectAll(status().isNotFound());
 
-        wireMockUtils.verifyPostRequest(stubId, SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID, Map.of(
+        WireMockUtils.verifyPostRequest(wireMockServer, stubId, SINGLE_LINE_DIAGRAM_SERVER_BASE_URL + NETWORK_UUID, Map.of(
                  "variantId", WireMock.equalTo(VariantManagerConstants.INITIAL_VARIANT_ID)));
     }
 }
