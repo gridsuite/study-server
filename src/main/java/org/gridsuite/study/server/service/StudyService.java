@@ -1477,7 +1477,7 @@ public class StudyService {
 
     @Transactional
     public UUID saveNadConfig(UUID studyUuid, NadConfigInfos nadConfig) {
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        StudyEntity studyEntity = getStudy(studyUuid);
 
         UUID nadConfigUuid = nadConfigService.saveNadConfig(nadConfig);
 
@@ -1488,7 +1488,7 @@ public class StudyService {
 
     @Transactional
     public void deleteNadConfig(UUID studyUuid, UUID nadConfigUuid) {
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
+        StudyEntity studyEntity = getStudy(studyUuid);
 
         nadConfigService.deleteNadConfigs(List.of(nadConfigUuid));
         

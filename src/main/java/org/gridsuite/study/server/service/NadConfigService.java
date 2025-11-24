@@ -8,7 +8,6 @@ package org.gridsuite.study.server.service;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,9 +15,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
-
-import static org.gridsuite.study.server.StudyException.Type.DELETE_NAD_CONFIG_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.SAVE_NAD_CONFIG_FAILED;
 
 /**
  * @author Ayoub Labidi <ayoub.labidi at rte-france.com>
@@ -36,17 +32,9 @@ public class NadConfigService {
 
         if (configUuid == null) {
             nadConfigInfos.setId(UUID.randomUUID());
-            try {
-                singleLineDiagramService.createDiagramConfigs(List.of(nadConfigInfos));
-            } catch (Exception e) {
-                throw new StudyException(SAVE_NAD_CONFIG_FAILED, "Could not create NAD config: " + nadConfigInfos.getId());
-            }
+            singleLineDiagramService.createDiagramConfigs(List.of(nadConfigInfos));
         } else {
-            try {
-                singleLineDiagramService.updateNadConfig(nadConfigInfos);
-            } catch (Exception e) {
-                throw new StudyException(SAVE_NAD_CONFIG_FAILED, "Could not update NAD config: " + configUuid);
-            }
+            singleLineDiagramService.updateNadConfig(nadConfigInfos);
         }
 
         return nadConfigInfos.getId();
@@ -57,10 +45,6 @@ public class NadConfigService {
             return;
         }
 
-        try {
-            singleLineDiagramService.deleteDiagramConfigs(nadConfigUuids);
-        } catch (Exception e) {
-            LOGGER.error("Could not delete NAD configs: {}", nadConfigUuids, e);
-        }
+        singleLineDiagramService.deleteDiagramConfigs(nadConfigUuids);
     }
 }

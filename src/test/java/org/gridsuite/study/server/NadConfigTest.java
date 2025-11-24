@@ -12,6 +12,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.springframework.web.client.HttpServerErrorException;
 import org.gridsuite.study.server.service.NadConfigService;
 import org.gridsuite.study.server.service.SingleLineDiagramService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -70,7 +71,6 @@ class NadConfigTest {
     @AfterEach
     void tearDown() {
         wireMockServer.stop();
-        studyRepository.deleteAll();
     }
 
     @Test
@@ -91,7 +91,7 @@ class NadConfigTest {
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             ));
 
-        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/network-area-diagrams/configs", studyUuid)
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nad-configs", studyUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
             .andExpect(status().isOk())
@@ -127,7 +127,7 @@ class NadConfigTest {
         wireMockServer.stubFor(WireMock.put(DELIMITER + "v1/network-area-diagram/config/" + existingNadConfigUuid)
             .willReturn(WireMock.ok()));
 
-        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/network-area-diagrams/configs", studyUuid)
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nad-configs", studyUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
             .andExpect(status().isOk())
@@ -158,7 +158,7 @@ class NadConfigTest {
         wireMockServer.stubFor(WireMock.delete(DELIMITER + "v1/network-area-diagram/configs")
             .willReturn(WireMock.ok()));
 
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/network-area-diagrams/configs/{nadConfigUuid}", studyUuid, nadConfigUuid))
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/nad-configs/{nadConfigUuid}", studyUuid, nadConfigUuid))
             .andExpect(status().isNoContent());
 
         wireMockServer.verify(1, WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(DELIMITER + "v1/network-area-diagram/configs")));
@@ -170,7 +170,7 @@ class NadConfigTest {
 
     @Test
     void testNadConfigServiceDeleteConfigWithNull() {
-        nadConfigService.deleteNadConfig(null);
+        nadConfigService.deleteNadConfigs(null);
 
         // Verify no external calls were made
         wireMockServer.verify(0, WireMock.deleteRequestedFor(WireMock.urlMatching(".*")));
@@ -186,14 +186,6 @@ class NadConfigTest {
         nadConfigService.deleteNadConfigs(nadConfigUuids);
 
         wireMockServer.verify(1, WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(DELIMITER + "v1/network-area-diagram/configs")));
-    }
-
-    @Test
-    void testNadConfigServiceDeleteMultipleConfigsWithNull() {
-        nadConfigService.deleteNadConfigs(null);
-
-        // Verify no external calls were made
-        wireMockServer.verify(0, WireMock.deleteRequestedFor(WireMock.urlMatching(".*")));
     }
 
     @Test
@@ -213,11 +205,9 @@ class NadConfigTest {
         wireMockServer.stubFor(WireMock.post(DELIMITER + "v1/network-area-diagram/configs")
             .willReturn(WireMock.serverError()));
 
-        StudyException exception = assertThrows(StudyException.class, () -> {
+        assertThrows(HttpServerErrorException.class, () -> {
             nadConfigService.saveNadConfig(nadConfigInfos);
         });
-
-        assertEquals(StudyException.Type.SAVE_NAD_CONFIG_FAILED, exception.getType());
     }
 
     @Test
@@ -230,11 +220,9 @@ class NadConfigTest {
         wireMockServer.stubFor(WireMock.put(DELIMITER + "v1/network-area-diagram/config/" + existingUuid)
             .willReturn(WireMock.serverError()));
 
-        StudyException exception = assertThrows(StudyException.class, () -> {
+        assertThrows(HttpServerErrorException.class, () -> {
             nadConfigService.saveNadConfig(nadConfigInfos);
         });
-
-        assertEquals(StudyException.Type.SAVE_NAD_CONFIG_FAILED, exception.getType());
     }
 
     @Test
@@ -244,10 +232,6 @@ class NadConfigTest {
         wireMockServer.stubFor(WireMock.delete(DELIMITER + "v1/network-area-diagram/configs")
             .willReturn(WireMock.serverError()));
 
-        StudyException exception = assertThrows(StudyException.class, () -> {
-            nadConfigService.deleteNadConfig(nadConfigUuid);
-        });
-
-        assertEquals(StudyException.Type.DELETE_NAD_CONFIG_FAILED, exception.getType());
+        assertThrows(HttpServerErrorException.class, () -> nadConfigService.deleteNadConfigs(List.of(nadConfigUuid)));
     }
 }
