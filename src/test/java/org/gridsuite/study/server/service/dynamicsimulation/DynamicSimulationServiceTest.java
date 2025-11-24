@@ -12,7 +12,7 @@ import com.powsybl.commons.PowsyblException;
 import com.powsybl.timeseries.*;
 
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -292,7 +292,7 @@ class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroup(TIMELINE_UUID, null)).willReturn(timelines);
 
         // call method to be tested
-        assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
+        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() ->
             dynamicSimulationService.getTimelineResult(RESULT_UUID)
         ).withMessage("Error while deserializing timeline event: %s", objectMapper.writeValueAsString(timelineEventInfosList.get(0)));
     }

@@ -23,6 +23,7 @@ import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.dto.VoltageLevelInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
+import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -37,6 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -277,5 +279,26 @@ class SupervisionControllerTest {
         verify(studyService).getExistingBasicRootNetworkInfos(studyToReindexUuid);
         verify(studyService).reindexRootNetwork(studyToReindexUuid, network1.rootNetworkUuid());
         verify(studyService).reindexRootNetwork(studyToReindexUuid, network2.rootNetworkUuid());
+    }
+
+    @Test
+    void testSupervisionStudiesBasicData() throws Exception {
+        // test empty return
+        mockMvc.perform(get("/v1/supervision/studies")).andExpectAll(status().isOk(),
+            content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
+
+        //insert a study
+        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, "caseName", "caseFormat", UUID.randomUUID());
+        studyEntity = studyRepository.save(studyEntity);
+
+        MvcResult mvcResult = mockMvc.perform(get("/v1/supervision/studies", studyEntity.getId()))
+            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+        List<SupervisionStudyInfos> infos = mapper.readValue(resultAsString, new TypeReference<>() { });
+
+        assertEquals(1, infos.size());
+        // checks that the supervision extra data are here
+        assertEquals(1, infos.get(0).getCaseUuids().size());
+        assertEquals(1, infos.get(0).getRootNetworkInfos().size());
     }
 }
