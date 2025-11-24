@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
@@ -30,41 +31,25 @@ public class NadConfigService {
 
     private final SingleLineDiagramService singleLineDiagramService;
 
-    public UUID saveNadConfig(NadConfigInfos nadConfigInfos) {
-
+    public UUID saveNadConfig(@NonNull NadConfigInfos nadConfigInfos) {
         UUID configUuid = nadConfigInfos.getId();
 
         if (configUuid == null) {
-            // Create new config
-            UUID newUuid = UUID.randomUUID();
-            nadConfigInfos.setId(newUuid);
+            nadConfigInfos.setId(UUID.randomUUID());
             try {
                 singleLineDiagramService.createDiagramConfigs(List.of(nadConfigInfos));
             } catch (Exception e) {
-                throw new StudyException(SAVE_NAD_CONFIG_FAILED, "Could not create NAD config: " + newUuid);
+                throw new StudyException(SAVE_NAD_CONFIG_FAILED, "Could not create NAD config: " + nadConfigInfos.getId());
             }
-            return newUuid;
         } else {
-            // Update existing config
             try {
                 singleLineDiagramService.updateNadConfig(nadConfigInfos);
             } catch (Exception e) {
                 throw new StudyException(SAVE_NAD_CONFIG_FAILED, "Could not update NAD config: " + configUuid);
             }
-            return configUuid;
-        }
-    }
-
-    public void deleteNadConfig(UUID configUuid) {
-        if (configUuid == null) {
-            return;
         }
 
-        try {
-            singleLineDiagramService.deleteDiagramConfigs(List.of(configUuid));
-        } catch (Exception e) {
-            throw new StudyException(DELETE_NAD_CONFIG_FAILED, "Could not delete NAD config: " + configUuid);
-        }
+        return nadConfigInfos.getId();
     }
 
     public void deleteNadConfigs(List<UUID> nadConfigUuids) {

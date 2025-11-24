@@ -548,7 +548,7 @@ public class StudyService {
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
                 removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
-                removeNadConfigs(s.getNadConfigsUuids());
+                removeNadConfigs(s.getNadConfigsUuids().stream().toList());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -1472,28 +1472,20 @@ public class StudyService {
     public UUID saveNadConfig(UUID studyUuid, NadConfigInfos nadConfig) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
-        UUID resultUuid = nadConfigService.saveNadConfig(nadConfig);
+        UUID nadConfigUuid = nadConfigService.saveNadConfig(nadConfig);
 
-        List<UUID> nadConfigs = studyEntity.getNadConfigsUuids();
+        studyEntity.getNadConfigsUuids().add(nadConfigUuid);
 
-        if (!nadConfigs.contains(resultUuid)) {
-            nadConfigs.add(resultUuid);
-            studyRepository.save(studyEntity);
-        }
-
-        return resultUuid;
+        return nadConfigUuid;
     }
 
     @Transactional
     public void deleteNadConfig(UUID studyUuid, UUID nadConfigUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(STUDY_NOT_FOUND));
 
-        nadConfigService.deleteNadConfig(nadConfigUuid);
+        nadConfigService.deleteNadConfigs(List.of(nadConfigUuid));
         
-        List<UUID> nadConfigs = studyEntity.getNadConfigsUuids();
-        if (nadConfigs.remove(nadConfigUuid)) {
-            studyRepository.save(studyEntity);
-        }
+        studyEntity.getNadConfigsUuids().remove(nadConfigUuid);
     }
 
     private void removeNadConfigs(List<UUID> nadConfigUuids) {

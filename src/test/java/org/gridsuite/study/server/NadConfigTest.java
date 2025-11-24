@@ -27,10 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
@@ -81,7 +78,7 @@ class NadConfigTest {
     void testSaveNewNadConfig() throws Exception {
         UUID studyUuid = UUID.randomUUID();
 
-        studyRepository.save(StudyEntity.builder().id(studyUuid).nadConfigsUuids(new ArrayList<>()).build());
+        studyRepository.save(StudyEntity.builder().id(studyUuid).nadConfigsUuids(new HashSet<>()).build());
 
         NadConfigInfos nadConfigInfos = NadConfigInfos.builder()
             .id(null) // New config
@@ -117,7 +114,7 @@ class NadConfigTest {
         UUID studyUuid = UUID.randomUUID();
         UUID existingNadConfigUuid = UUID.randomUUID();
 
-        List<UUID> nadConfigsList = new ArrayList<>();
+        Set<UUID> nadConfigsList = new HashSet<>();
         nadConfigsList.add(existingNadConfigUuid);
         studyRepository.save(StudyEntity.builder().id(studyUuid).nadConfigsUuids(nadConfigsList).build());
 
@@ -154,7 +151,7 @@ class NadConfigTest {
         UUID studyUuid = UUID.randomUUID();
         UUID nadConfigUuid = UUID.randomUUID();
 
-        List<UUID> nadConfigsList = new ArrayList<>();
+        Set<UUID> nadConfigsList = new HashSet<>();
         nadConfigsList.add(nadConfigUuid);
         studyRepository.save(StudyEntity.builder().id(studyUuid).nadConfigsUuids(nadConfigsList).build());
 

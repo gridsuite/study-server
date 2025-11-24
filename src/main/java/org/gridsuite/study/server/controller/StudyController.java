@@ -2524,7 +2524,7 @@ public class StudyController {
         return (this.studyService.updateSpreadsheetParameters(studyUuid, spreadsheetParameters) ? ResponseEntity.noContent() : ResponseEntity.notFound()).build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/network-area-diagrams/configs", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/studies/{studyUuid}/nad-configs", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Save NAD config")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "NAD config is saved"),
@@ -2538,7 +2538,7 @@ public class StudyController {
         return ResponseEntity.ok().body(savedUuid);
     }
 
-    @DeleteMapping(value = "/studies/{studyUuid}/network-area-diagrams/configs/{nadConfigUuid}")
+    @DeleteMapping(value = "/studies/{studyUuid}/nad-configs/{nadConfigUuid}")
     @Operation(summary = "Delete NAD config")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "204", description = "NAD config is deleted"),
