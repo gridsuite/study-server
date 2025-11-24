@@ -21,6 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -29,13 +31,12 @@ import java.util.UUID;
 import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
 import static org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient.*;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
-import static org.gridsuite.study.server.utils.TestUtils.assertStudyException;
 import static org.gridsuite.study.server.utils.assertions.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -92,16 +93,20 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.notFound()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.getDefaultProvider(),
-                DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PROVIDER_NOT_FOUND, null);
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisClient.getDefaultProvider()
+        );
 
         // --- Error --- //
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
                 .willReturn(WireMock.serverError()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.getDefaultProvider(),
-                GET_DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PROVIDER_FAILED, null);
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisClient.getDefaultProvider()
+        );
     }
 
     @Test
@@ -129,16 +134,20 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.notFound()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID),
-                DYNAMIC_SECURITY_ANALYSIS_PROVIDER_NOT_FOUND, null);
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID)
+        );
 
         // --- Error --- //
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
                 .willReturn(WireMock.serverError()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID),
-                GET_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED, null);
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID)
+        );
     }
 
     @Test
@@ -164,16 +173,20 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.notFound()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.updateProvider(PARAMETERS_UUID, newProvider),
-                DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND, null);
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisClient.updateProvider(PARAMETERS_UUID, newProvider)
+        );
 
         // --- Error --- //
         wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
                 .willReturn(WireMock.serverError()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.updateProvider(PARAMETERS_UUID, newProvider),
-                UPDATE_DYNAMIC_SECURITY_ANALYSIS_PROVIDER_FAILED, null);
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisClient.updateProvider(PARAMETERS_UUID, newProvider)
+        );
     }
 
     @Test
@@ -206,16 +219,20 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.notFound()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.getParameters(PARAMETERS_UUID),
-                DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND, null);
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisClient.getParameters(PARAMETERS_UUID)
+        );
 
         // --- Error --- //
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
                 .willReturn(WireMock.serverError()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.getParameters(PARAMETERS_UUID),
-                GET_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED, null);
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisClient.getParameters(PARAMETERS_UUID)
+        );
     }
 
     @Test
@@ -247,8 +264,10 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.serverError()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.createParameters(parameterJson),
-                CREATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED, null);
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisClient.createParameters(parameterJson)
+        );
     }
 
     @Test
@@ -277,8 +296,10 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.notFound()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.updateParameters(PARAMETERS_UUID, parameterJson),
-                DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND, null);
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisClient.updateParameters(PARAMETERS_UUID, parameterJson)
+        );
 
         // --- Error --- //
         wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
@@ -286,8 +307,10 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.serverError()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.updateParameters(PARAMETERS_UUID, parameterJson),
-                UPDATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED, null);
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisClient.updateParameters(PARAMETERS_UUID, parameterJson)
+        );
     }
 
     @Test
@@ -315,8 +338,10 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.notFound()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.duplicateParameters(PARAMETERS_UUID),
-                DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_NOT_FOUND, null);
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisClient.duplicateParameters(PARAMETERS_UUID)
+        );
 
         // --- Error --- //
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL))
@@ -324,8 +349,10 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.serverError()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.duplicateParameters(PARAMETERS_UUID),
-                DUPLICATE_DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_FAILED, null);
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisClient.duplicateParameters(PARAMETERS_UUID)
+        );
     }
 
     @Test
@@ -360,8 +387,10 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.serverError()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.createDefaultParameters(),
-                CREATE_DYNAMIC_SECURITY_ANALYSIS_DEFAULT_PARAMETERS_FAILED, null);
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisClient.createDefaultParameters()
+        );
     }
 
     @Test
@@ -405,9 +434,12 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.serverError()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.run(null, "receiver", NETWORK_UUID,
-                null, new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId", true),
-                RUN_DYNAMIC_SECURITY_ANALYSIS_FAILED, null);
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisClient.run(null, "receiver", NETWORK_UUID, null,
+                new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID,
+                "userId", true)
+        );
     }
 
     @Test
@@ -445,8 +477,10 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.notFound()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.invalidateStatus(List.of(RESULT_UUID)),
-                DYNAMIC_SECURITY_ANALYSIS_NOT_FOUND, null);
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSecurityAnalysisClient.invalidateStatus(List.of(RESULT_UUID))
+        );
 
         // --- Error --- //
         wireMockServer.stubFor(WireMock.put(WireMock.urlPathTemplate(url))
@@ -454,8 +488,10 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.serverError()));
 
         // check result
-        assertStudyException(() -> dynamicSecurityAnalysisClient.invalidateStatus(List.of(RESULT_UUID)),
-                INVALIDATE_DYNAMIC_SECURITY_ANALYSIS_FAILED, null);
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSecurityAnalysisClient.invalidateStatus(List.of(RESULT_UUID))
+        );
     }
 
     @Test

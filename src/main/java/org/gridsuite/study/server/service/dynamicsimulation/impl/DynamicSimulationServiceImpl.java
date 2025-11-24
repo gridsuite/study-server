@@ -13,7 +13,7 @@ import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import org.apache.commons.collections4.CollectionUtils;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -28,7 +28,6 @@ import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimula
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -39,9 +38,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyException.Type.DELETE_COMPUTATION_RESULTS_FAILED;
-import static org.gridsuite.study.server.StudyException.Type.DYNAMIC_SIMULATION_RUNNING;
-import static org.gridsuite.study.server.utils.StudyUtils.handleHttpError;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -120,7 +117,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
                 // get first element to check type
                 if (!CollectionUtils.isEmpty(timeSeries) &&
                     !(timeSeries.get(0) instanceof DoubleTimeSeries)) {
-                    throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Time series can not be a type: "
+                    throw new StudyException(TIME_SERIES_BAD_TYPE, "Time series can not be a type: "
                        + timeSeries.get(0).getClass().getSimpleName()
                        + ", expected type: " + DoubleTimeSeries.class.getSimpleName());
                 }
@@ -141,7 +138,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
                 // get first element to check type
                 if (!CollectionUtils.isEmpty(timelines) &&
                     !(timelines.get(0) instanceof StringTimeSeries)) {
-                    throw new StudyException(StudyException.Type.TIME_SERIES_BAD_TYPE, "Timelines can not be a type: "
+                    throw new StudyException(TIME_SERIES_BAD_TYPE, "Timelines can not be a type: "
                                                                                        + timelines.get(0).getClass().getSimpleName()
                                                                                        + ", expected type: " + StringTimeSeries.class.getSimpleName());
                 }
@@ -154,7 +151,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
                             try {
                                 return objectMapper.readValue(eventJson, TimelineEventInfos.class);
                             } catch (JsonProcessingException e) {
-                                throw new StudyException(StudyException.Type.TIMELINE_BAD_TYPE, "Error while deserializing timeline event: " + eventJson);
+                                throw new IllegalStateException("Error while deserializing timeline event: " + eventJson, e);
                             }
                         }).toList();
             }
@@ -177,11 +174,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public void deleteResults(List<UUID> resultUuids) {
-        try {
-            dynamicSimulationClient.deleteResults(resultUuids);
-        } catch (HttpStatusCodeException e) {
-            throw handleHttpError(e, DELETE_COMPUTATION_RESULTS_FAILED);
-        }
+        dynamicSimulationClient.deleteResults(resultUuids);
     }
 
     @Override
@@ -198,7 +191,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     public void assertDynamicSimulationNotRunning(UUID resultUuid) {
         DynamicSimulationStatus status = getStatus(resultUuid);
         if (DynamicSimulationStatus.RUNNING == status) {
-            throw new StudyException(DYNAMIC_SIMULATION_RUNNING);
+            throw new StudyException(COMPUTATION_RUNNING);
         }
     }
 

@@ -20,8 +20,7 @@ import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
 import org.gridsuite.study.server.StudyConstants.SldDisplayMode;
-import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.StudyException.Type;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
@@ -66,6 +65,7 @@ import jakarta.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
 import java.util.*;
 
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 
@@ -684,12 +684,10 @@ public class StudyController {
             case MOVE:
                 // we don't cut - paste modifications from different studies
                 if (!studyUuid.equals(originStudyUuid)) {
-                    throw new StudyException(Type.MOVE_NETWORK_MODIFICATION_FORBIDDEN);
+                    throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
                 }
                 handleMoveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
-            default:
-                throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
         }
         return ResponseEntity.ok().build();
     }
@@ -890,6 +888,29 @@ public class StudyController {
             @Parameter(description = "type") @RequestParam(value = "type") ShortcircuitAnalysisType type,
             @Parameter(description = "headersCsv") @RequestBody String headersCsv) {
         return ResponseEntity.ok().body(rootNetworkNodeInfoService.getShortCircuitAnalysisCsvResult(nodeUuid, rootNetworkUuid, type, headersCsv));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get a pcc min result as csv")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of pcc min results"),
+        @ApiResponse(responseCode = "204", description = "No pcc min has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The pcc min has not been found")})
+    public ResponseEntity<byte[]> exportPccMinResultsAsCsv(
+        @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+        @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
+        Sort sort, @RequestBody String csvHeaders) {
+        byte[] result = rootNetworkNodeInfoService.exportPccMinResultsAsCsv(nodeUuid, rootNetworkUuid, csvHeaders, sort, filters, globalFilters);
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        responseHeaders.setContentDispositionFormData("attachment", "pcc_min_results.csv");
+
+        return ResponseEntity
+            .ok()
+            .headers(responseHeaders)
+            .body(result);
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run")
@@ -1750,11 +1771,9 @@ public class StudyController {
     @Operation(summary = "Create study related notification")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The notification has been sent"),
-        @ApiResponse(responseCode = "400", description = "The notification type is unknown")
     })
-    public ResponseEntity<Void> notify(@PathVariable("studyUuid") UUID studyUuid,
-                                             @RequestParam("type") String notificationType) {
-        studyService.notify(notificationType, studyUuid);
+    public ResponseEntity<Void> notify(@PathVariable("studyUuid") UUID studyUuid) {
+        studyService.notify(studyUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -2522,6 +2541,26 @@ public class StudyController {
     public ResponseEntity<Void> updateSpreadsheetParameters(@PathVariable("studyUuid") final UUID studyUuid,
                                                             @RequestBody final SpreadsheetParameters spreadsheetParameters) {
         return (this.studyService.updateSpreadsheetParameters(studyUuid, spreadsheetParameters) ? ResponseEntity.noContent() : ResponseEntity.notFound()).build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/pcc-min/parameters")
+    @Operation(summary = "Get pcc min parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters")})
+    public ResponseEntity<String> getPccMinParameters(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getPccMinParameters(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/pcc-min/parameters")
+    @Operation(summary = "set pcc min parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters are set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> setPccMinParameters(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody(required = false) String pccMinParametersInfos,
+        @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/studies/{studyUuid}/nad-configs", consumes = MediaType.APPLICATION_JSON_VALUE)

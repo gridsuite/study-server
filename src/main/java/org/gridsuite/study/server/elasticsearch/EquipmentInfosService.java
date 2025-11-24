@@ -374,7 +374,7 @@ public class EquipmentInfosService {
         BoolQuery query = buildSearchEquipmentsQuery(userInput, fieldSelector, networkUuid,
                 variantId, equipmentType);
         List<EquipmentInfos> equipmentInfos = searchEquipments(query);
-        return variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanModifiedAndRemovedEquipments(networkUuid, effectiveVariantId, equipmentInfos);
+        return effectiveVariantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanModifiedAndRemovedEquipments(networkUuid, effectiveVariantId, equipmentInfos);
     }
 
     public List<EquipmentInfos> searchEquipments(@NonNull final BoolQuery query) {

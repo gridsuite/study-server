@@ -9,7 +9,7 @@ package org.gridsuite.study.server.service;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.StudyException;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -45,7 +45,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.StudyException.Type.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 
@@ -141,14 +141,14 @@ public class RootNetworkNodeInfoService {
 
     @Transactional
     public void updateLoadflowResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, Boolean withRatioTapChangers) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity.setLoadFlowResultUuid(loadflowResultUuid);
         rootNetworkNodeInfoEntity.setLoadFlowWithRatioTapChangers(withRatioTapChangers);
     }
 
     @Transactional
     public void updateComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID computationResultUuid, ComputationType computationType) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         switch (computationType) {
             case LOAD_FLOW -> rootNetworkNodeInfoEntity.setLoadFlowResultUuid(computationResultUuid);
             case SECURITY_ANALYSIS -> rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(computationResultUuid);
@@ -235,7 +235,7 @@ public class RootNetworkNodeInfoService {
     }
 
     public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         return invalidateRootNetworkNode(rootNetworkNodeInfoEntity, invalidateTreeParameters);
     }
 
@@ -393,7 +393,7 @@ public class RootNetworkNodeInfoService {
     }
 
     public void assertNetworkNodeIsNotBuilding(UUID rootNetworkUuid, UUID nodeUuid) {
-        NodeBuildStatusEmbeddable buildStatusEmbeddable = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        NodeBuildStatusEmbeddable buildStatusEmbeddable = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         if (buildStatusEmbeddable.getGlobalBuildStatus().isBuilding() || buildStatusEmbeddable.getLocalBuildStatus().isBuilding()) {
             throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
         }
@@ -422,7 +422,7 @@ public class RootNetworkNodeInfoService {
     public void updateModificationsToExclude(UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationUuids, boolean activated) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository
             .findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
-            .orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+            .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         if (activated) {
             rootNetworkNodeInfoEntity.removeModificationsFromExclude(modificationUuids);
         } else {
@@ -449,7 +449,7 @@ public class RootNetworkNodeInfoService {
 
     @Transactional
     public void updateRootNetworkNode(UUID nodeUuid, UUID rootNetworkUuid, RootNetworkNodeInfo rootNetworkNodeInfo) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         if (rootNetworkNodeInfo.getVariantId() != null) {
             rootNetworkNodeInfoEntity.setVariantId(rootNetworkNodeInfo.getVariantId());
         }
@@ -510,7 +510,7 @@ public class RootNetworkNodeInfoService {
 
     @Transactional
     public ModificationApplicationContext getNetworkModificationApplicationContext(UUID rootNetworkUuid, UUID nodeUuid, UUID networkUuid) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
         UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
         return new ModificationApplicationContext(networkUuid, variantId, reportUuid, nodeUuid, rootNetworkNodeInfoEntity.getModificationsUuidsToExclude());
@@ -548,7 +548,7 @@ public class RootNetworkNodeInfoService {
     @Transactional(readOnly = true)
     public String getSecurityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String filters, String globalFilters, Pageable pageable) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(()
-                -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+                -> new StudyException(NOT_FOUND, "Root network not found"));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
         UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
@@ -581,7 +581,7 @@ public class RootNetworkNodeInfoService {
 
     @Transactional(readOnly = true)
     public String getSensitivityAnalysisResult(UUID nodeUuid, UUID rootNetworkUuid, String selector, String filters, String globalFilters) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
         UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
@@ -590,11 +590,20 @@ public class RootNetworkNodeInfoService {
 
     @Transactional(readOnly = true)
     public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, UUID rootNetworkUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos, String selector, String filters, String globalFilters) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
         UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         return sensitivityAnalysisService.exportSensitivityResultsAsCsv(resultUuid, sensitivityAnalysisCsvFileInfos, networkUuid, variantId, selector, filters, globalFilters);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportPccMinResultsAsCsv(UUID nodeUuid, UUID rootNetworkUuid, String csvHeaders, Sort sort, String filters, String globalFilters) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        String variantId = rootNetworkNodeInfoEntity.getVariantId();
+        UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
+        return pccMinService.exportPccMinResultsAsCsv(resultUuid, csvHeaders, networkUuid, variantId, sort, filters, globalFilters);
     }
 
     @Transactional(readOnly = true)
@@ -631,7 +640,7 @@ public class RootNetworkNodeInfoService {
     @Transactional(readOnly = true)
     public String getPccMinResult(UUID nodeUuid, UUID rootNetworkUuid, String filters, String globalFilters, Pageable pageable) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(()
-            -> new StudyException(ROOT_NETWORK_NOT_FOUND));
+            -> new StudyException(NOT_FOUND, "Root network not found"));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
         UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
@@ -665,7 +674,10 @@ public class RootNetworkNodeInfoService {
     }
 
     public LoadFlowComputationInfos getLoadFlowComputationInfos(UUID nodeUuid, UUID rootNetworkUuid) {
-        Boolean isWithRatioTapChangers = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).map(RootNetworkNodeInfoEntity::getLoadFlowWithRatioTapChangers).orElseThrow(() -> new StudyException(LOADFLOW_NOT_FOUND));
+        Boolean isWithRatioTapChangers = rootNetworkNodeInfoRepository
+            .findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
+            .map(RootNetworkNodeInfoEntity::getLoadFlowWithRatioTapChangers)
+            .orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found"));
         if (isWithRatioTapChangers == null) {
             throw new StudyException(LOADFLOW_ERROR);
         }
@@ -676,7 +688,7 @@ public class RootNetworkNodeInfoService {
     public String getLoadFlowModifications(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         if (resultUuid == null) {
-            throw new StudyException(LOADFLOW_NOT_FOUND);
+            throw new StudyException(NOT_FOUND, "Result of loadflow was not found");
         }
         return loadFlowService.getLoadFlowModifications(resultUuid);
     }

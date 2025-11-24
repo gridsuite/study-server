@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service.client.dynamicsimulation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
@@ -22,21 +21,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.UUID;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.StudyException.Type.RUN_DYNAMIC_SIMULATION_FAILED;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
 import static org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient.*;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
-import static org.gridsuite.study.server.utils.TestUtils.assertStudyException;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -110,8 +107,8 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
 
         // --- Error --- //
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
-                .withQueryParam(QUERY_PARAM_VARIANT_ID, absent())
-                .withQueryParam("provider", absent())
+                .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo("variantIdFailed"))
+                .withQueryParam("provider", equalTo("Dynawo"))
                 .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
@@ -121,9 +118,11 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
                 .willReturn(WireMock.serverError()));
 
         // check result
-        assertStudyException(() -> dynamicSimulationClient.run(null, "receiver", NETWORK_UUID, null,
-                new ReportInfos(REPORT_UUID, NODE_UUID), parameters, "userId", true), RUN_DYNAMIC_SIMULATION_FAILED, null);
-
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSimulationClient.run("Dynawo", "receiver", NETWORK_UUID, "variantIdFailed",
+                new ReportInfos(REPORT_UUID, NODE_UUID), parameters, "userId", true)
+        );
     }
 
     @Test
@@ -148,7 +147,10 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_NOT_FOUND_UUID + DELIMITER + "timeseries"))
                 .willReturn(WireMock.notFound()
                 ));
-        assertThrows(StudyException.class, () -> dynamicSimulationClient.getTimeSeriesResult(RESULT_NOT_FOUND_UUID));
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSimulationClient.getTimeSeriesResult(RESULT_NOT_FOUND_UUID)
+        );
     }
 
     @Test
@@ -170,7 +172,10 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_NOT_FOUND_UUID + DELIMITER + "timeline"))
                 .willReturn(WireMock.notFound()
                 ));
-        assertThrows(StudyException.class, () -> dynamicSimulationClient.getTimelineResult(RESULT_NOT_FOUND_UUID));
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSimulationClient.getTimelineResult(RESULT_NOT_FOUND_UUID)
+        );
     }
 
     @Test
@@ -193,7 +198,10 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_NOT_FOUND_UUID + DELIMITER + "status"))
                 .willReturn(WireMock.notFound()
                 ));
-        assertThrows(StudyException.class, () -> dynamicSimulationClient.getStatus(RESULT_NOT_FOUND_UUID));
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSimulationClient.getStatus(RESULT_NOT_FOUND_UUID)
+        );
     }
 
     @Test
@@ -217,7 +225,10 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
                 .withQueryParam("resultUuid", equalTo(RESULT_NOT_FOUND_UUID.toString()))
                 .willReturn(WireMock.notFound()
                 ));
-        assertThrows(StudyException.class, () -> dynamicSimulationClient.invalidateStatus(List.of(RESULT_NOT_FOUND_UUID)));
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSimulationClient.invalidateStatus(List.of(RESULT_NOT_FOUND_UUID))
+        );
     }
 
     @Test
