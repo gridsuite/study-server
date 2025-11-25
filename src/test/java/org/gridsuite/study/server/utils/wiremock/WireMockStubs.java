@@ -561,6 +561,35 @@ public class WireMockStubs {
             ));
     }
 
+    public UUID stubGenerateSvg(UUID networkUuid, String variantId, String voltageLevelId, String body) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/svg/" + networkUuid + "/" + voltageLevelId))
+            .withQueryParam(QUERY_PARAM_VARIANT_ID, WireMock.equalTo(variantId))
+            .withRequestBody(WireMock.equalTo(body))
+            .willReturn(WireMock.ok("generatedSvg")))
+            .getId();
+    }
+
+    public void verifyGenerateSvg(UUID stubId, UUID networkUuid, String variantId, String voltageLevelId, String body) {
+        verifyPostRequest(wireMock, stubId,
+            "/v1/svg/" + networkUuid + "/" + voltageLevelId,
+            false,
+            Map.of(
+                QUERY_PARAM_VARIANT_ID, WireMock.equalTo(variantId)
+            ),
+            body);
+    }
+
+    public UUID stubGetVoltageLevelIccValues(UUID resultUuid, String voltageLevelId, String expectedBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/fault_results/icc"))
+            .withQueryParam("voltageLevelId", WireMock.equalTo(voltageLevelId))
+            .willReturn(WireMock.okJson(expectedBody))
+        ).getId();
+    }
+
+    public void verifyGetVoltageLevelIccValues(UUID stubUuid, UUID resultUuid, String voltageLevelId) {
+        verifyGetRequest(wireMock, stubUuid, "/v1/results/" + resultUuid + "/fault_results/icc", Map.of("voltageLevelId", WireMock.equalTo(voltageLevelId)));
+    }
+
     public void verifyExportPccMinResult(UUID stubId, UUID resultUuid) {
         verifyPostRequest(
             wireMock, stubId,
