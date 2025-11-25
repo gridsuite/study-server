@@ -232,6 +232,7 @@ class NadConfigTest {
         wireMockServer.stubFor(WireMock.delete(DELIMITER + "v1/network-area-diagram/configs")
             .willReturn(WireMock.serverError()));
 
-        assertThrows(HttpServerErrorException.class, () -> nadConfigService.deleteNadConfigs(List.of(nadConfigUuid)));
+        List<UUID> nadConfigUuids = List.of(nadConfigUuid);
+        assertThrows(HttpServerErrorException.class, () -> nadConfigService.deleteNadConfigs(nadConfigUuids));
     }
 }
