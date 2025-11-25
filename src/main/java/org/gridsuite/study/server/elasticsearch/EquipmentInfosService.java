@@ -6,10 +6,11 @@
  */
 package org.gridsuite.study.server.elasticsearch;
 
-import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.*;
 import co.elastic.clients.elasticsearch._types.aggregations.*;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import co.elastic.clients.json.JsonData;
 import lombok.Getter;
 
 import com.powsybl.iidm.network.VariantManagerConstants;
@@ -283,7 +284,7 @@ public class EquipmentInfosService {
                 .filter(builder ->
                         builder.match(
                                 matchBuilder -> matchBuilder
-                                        .field(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID)
+                                        .field(getSelectedEquipmentField(fieldSelector))
                                         .query(FieldValue.of(escapeLucene(userInput))))
                 )
                 .weight((double) EQUIPMENT_TYPE_SCORES.size())
@@ -308,7 +309,7 @@ public class EquipmentInfosService {
     private BoolQuery buildSearchEquipmentsQuery(String userInput, EquipmentInfosService.FieldSelector fieldSelector, UUID networkUuid, String variantId, String equipmentType) {
         // If search requires boolean logic or advanced text analysis, then use queryStringQuery.
         // Otherwise, use wildcardQuery for simple text search.
-        WildcardQuery equipmentSearchQuery = Queries.wildcardQuery(fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID, "*" + escapeLucene(userInput) + "*");
+        WildcardQuery equipmentSearchQuery = Queries.wildcardQuery(getSelectedEquipmentField(fieldSelector), "*" + escapeLucene(userInput) + "*");
         TermQuery networkUuidSearchQuery = Queries.termQuery(NETWORK_UUID, networkUuid.toString());
         TermsQuery variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
                 new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(VariantManagerConstants.INITIAL_VARIANT_ID))).build()).build() :
@@ -329,6 +330,42 @@ public class EquipmentInfosService {
             boolQueryBuilder.must(functionScoreQuery._toQuery());
         }
         return boolQueryBuilder.build();
+    }
+
+    private List<SortOptions> buildSearchEquipmentsSortOptions(String userInput, EquipmentInfosService.FieldSelector fieldSelector) {
+        // Sort by score -> defined by equipmentType
+        SortOptions scoreSort = SortOptions.of(s -> s
+            .score(sc -> sc
+                .order(SortOrder.Desc)
+            )
+        );
+
+        // Then sort by elements starting by userInput
+        SortOptions prefixSort = SortOptions.of(s -> s
+            .script(sc -> sc
+                .type(ScriptSortType.Number)
+                .order(SortOrder.Asc)
+                .script(Script.of(scr -> scr
+                    .source("""
+                        String value = doc[params.field].value;
+                        return value.startsWith(params.prefix) ? 0 : 1;
+                    """)
+                    .params("field", JsonData.of(getSelectedEquipmentField(fieldSelector)))
+                    .params("prefix", JsonData.of(userInput))
+                ))
+            )
+        );
+
+        // Then sort alphabetically
+        SortOptions alphabeticalOrder = SortOptions.of(s -> s
+            .field(sc -> sc
+                .field(EQUIPMENT_ID)
+                .order(SortOrder.Asc)
+            )
+        );
+
+        // Sort order is important
+        return List.of(scoreSort, prefixSort, alphabeticalOrder);
     }
 
     private void cleanModifiedEquipments(List<EquipmentInfos> equipmentInfos) {
@@ -373,19 +410,27 @@ public class EquipmentInfosService {
 
         BoolQuery query = buildSearchEquipmentsQuery(userInput, fieldSelector, networkUuid,
                 variantId, equipmentType);
-        List<EquipmentInfos> equipmentInfos = searchEquipments(query);
+        List<SortOptions> sortOptions = buildSearchEquipmentsSortOptions(userInput, fieldSelector);
+        List<EquipmentInfos> equipmentInfos = searchEquipments(query, sortOptions);
         return effectiveVariantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ? equipmentInfos : cleanModifiedAndRemovedEquipments(networkUuid, effectiveVariantId, equipmentInfos);
     }
 
-    public List<EquipmentInfos> searchEquipments(@NonNull final BoolQuery query) {
-        NativeQuery nativeQuery = new NativeQueryBuilder()
+    public List<EquipmentInfos> searchEquipments(@NonNull final BoolQuery query, @NonNull List<SortOptions> sortOptions) {
+        NativeQueryBuilder nativeQueryBuilder = new NativeQueryBuilder()
                 .withQuery(query._toQuery())
-                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
-                .build();
+                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE));
+
+        sortOptions.forEach(nativeQueryBuilder::withSort);
+
+        NativeQuery nativeQuery = nativeQueryBuilder.build();
 
         return elasticsearchOperations.search(nativeQuery, EquipmentInfos.class)
                 .stream()
                 .map(SearchHit::getContent)
                 .collect(Collectors.toList()); //.collect(Collectors.toList()) instead of .toList() to update list before returning
+    }
+
+    private String getSelectedEquipmentField(EquipmentInfosService.FieldSelector fieldSelector) {
+        return fieldSelector == EquipmentInfosService.FieldSelector.NAME ? EQUIPMENT_NAME : EQUIPMENT_ID;
     }
 }
