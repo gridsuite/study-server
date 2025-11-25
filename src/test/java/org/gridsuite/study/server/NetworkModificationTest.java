@@ -485,7 +485,8 @@ class NetworkModificationTest {
                 .andReturn();
         var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
         assertEquals(MAX_NODE_BUILDS_EXCEEDED.value(), problemDetail.getBusinessErrorCode());
-        assertEquals("max allowed built nodes : 1", problemDetail.getDetail());
+        assertEquals(1, problemDetail.getBusinessErrorValues().get("limit"));
+        assertEquals("max allowed built nodes reached", problemDetail.getDetail());
         WireMockUtils.verifyGetRequest(wireMockServer, userProfileQuotaExceededStubId, "/v1/users/" + userId + "/profile/max-builds", Map.of());
     }
 
