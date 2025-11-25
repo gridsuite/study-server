@@ -166,7 +166,7 @@ public class SingleLineDiagramService {
         return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, request, String.class);
     }
 
-    public void createMultipleDiagramConfigs(List<NadConfigInfos> nadConfigs) {
+    public void createDiagramConfigs(List<NadConfigInfos> nadConfigs) {
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
             .buildAndExpand()
@@ -180,7 +180,7 @@ public class SingleLineDiagramService {
         restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
     }
 
-    public void deleteMultipleDiagramConfigs(List<UUID> configUuids) {
+    public void deleteDiagramConfigs(List<UUID> configUuids) {
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
             .buildAndExpand()
@@ -221,6 +221,23 @@ public class SingleLineDiagramService {
         HttpEntity<NetworkAreaDiagramLayoutDetails> httpEntity = new HttpEntity<>(headers);
 
         return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, UUID.class);
+    }
+
+    public void updateNadConfig(NadConfigInfos nadConfigInfos) {
+        Objects.requireNonNull(nadConfigInfos);
+        Objects.requireNonNull(nadConfigInfos.getId());
+
+        var path = UriComponentsBuilder
+            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/config/{configUuid}")
+            .buildAndExpand(nadConfigInfos.getId())
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<NadConfigInfos> httpEntity = new HttpEntity<>(nadConfigInfos, headers);
+
+        restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
     public void createNadPositionsConfigFromCsv(MultipartFile file) {
