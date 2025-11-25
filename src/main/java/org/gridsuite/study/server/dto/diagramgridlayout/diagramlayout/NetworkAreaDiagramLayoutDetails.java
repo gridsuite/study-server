@@ -23,7 +23,8 @@ import java.util.UUID;
 @Getter
 public class NetworkAreaDiagramLayoutDetails extends AbstractDiagramLayout {
     UUID originalNadConfigUuid;
-    UUID filterUuid;
+    UUID originalFilterUuid;
+    UUID currentFilterUuid;
     String name;
     Set<String> voltageLevelIds;
     List<NadVoltageLevelPositionInfos> positions;

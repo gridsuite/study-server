@@ -206,7 +206,8 @@ public class DiagramGridLayoutService {
                     .diagramPositions(nadDetails.getDiagramPositions())
                     .currentNadConfigUuid(preGeneratedUuid)
                     .originalNadConfigUuid(nadDetails.getOriginalNadConfigUuid())
-                    .filterUuid(nadDetails.getFilterUuid())
+                    .currentFilterUuid(nadDetails.getCurrentFilterUuid())
+                    .originalFilterUuid(nadDetails.getOriginalFilterUuid())
                     .name(nadDetails.getName())
                     .build());
             } else {

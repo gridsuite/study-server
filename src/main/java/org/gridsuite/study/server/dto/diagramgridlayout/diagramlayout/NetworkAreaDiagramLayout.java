@@ -22,6 +22,7 @@ import java.util.UUID;
 public class NetworkAreaDiagramLayout extends AbstractDiagramLayout {
     UUID originalNadConfigUuid;
     UUID currentNadConfigUuid;
-    UUID filterUuid;
+    UUID originalFilterUuid;
+    UUID currentFilterUuid;
     String name;
 }
