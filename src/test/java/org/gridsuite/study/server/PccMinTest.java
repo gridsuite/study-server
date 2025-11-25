@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.voltageinit.parameters.FilterEquipments;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
@@ -35,6 +36,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -82,6 +85,7 @@ class PccMinTest {
     private static final String PCC_MIN_RESULT_JSON_DESTINATION = "pccmin.result";
     private static final String PCC_MIN_STOPPED_DESTINATION = "pccmin.stopped";
     private static final String PCC_MIN_FAILED_DESTINATION = "pccmin.run.dlx";
+    private static final byte[] PCC_MIN_RESULTS_AS_ZIPPED_CSV = {0x00, 0x01};
 
     @Autowired
     private MockMvc mockMvc;
@@ -526,5 +530,53 @@ class PccMinTest {
             HttpClientErrorException.NotFound.class,
             () -> pccMinService.createDefaultPccMinParameters()
         );
+    }
+
+    @Test
+    void testExportPccMinResults() throws Exception {
+        // --- create study and node ---
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", PCCMIN_PARAMETERS_UUID);
+        runPccMin(ids);
+
+        // Prepare body: JSON array of csv headers
+        List<String> csvHeaders = List.of("busId", "Pcc min", "Icc min");
+        String content = objectMapper.writeValueAsString(csvHeaders);
+
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/results/" + PCC_MIN_RESULT_UUID + "/csv"))
+            .withQueryParam("sort", WireMock.equalTo("id,DESC"))
+            .withQueryParam("filters", WireMock.equalTo("fakeFilters"))
+            .withQueryParam("globalFilters", WireMock.equalTo("fakeGlobalFilters"))
+            .withRequestBody(WireMock.equalToJson(content))
+            .willReturn(WireMock.ok()
+                .withBody(PCC_MIN_RESULTS_AS_ZIPPED_CSV)
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+            )
+        ).getId();
+
+        mockMvc.perform(post(PCC_MIN_URL_BASE + "result/csv", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                .param("sort", "id,DESC")
+                .param("filters", "fakeFilters")
+                .param("globalFilters", "fakeGlobalFilters")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(content)
+                .header("userId", "userId"))
+            .andExpect(status().isOk())
+            .andExpect(content().bytes(PCC_MIN_RESULTS_AS_ZIPPED_CSV));
+
+        // Verification of the POST to the PCC MIN server
+        wireMockStubs.verifyExportPccMinResult(stubId, UUID.fromString(PCC_MIN_RESULT_UUID));
+
+        // --- NOT FOUND CASE ---
+        UUID notFoundUuid = UUID.randomUUID();
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/results/" + notFoundUuid + "/csv"))
+            .withRequestBody(WireMock.equalToJson(content))
+            .willReturn(WireMock.notFound())
+        );
+
+        // test csv failure
+        assertThrows(HttpClientErrorException.NotFound.class, () ->
+            pccMinService.exportPccMinResultsAsCsv(notFoundUuid, "", null, null, Sort.unsorted(), null, null));
+        assertThrows(StudyException.class, () ->
+            pccMinService.exportPccMinResultsAsCsv(null, "", null, null, Sort.unsorted(), null, null));
     }
 }
