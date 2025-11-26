@@ -18,6 +18,9 @@ import java.util.concurrent.ExecutorService;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * @author Mohamed Benrejeb <mohamed.ben-rejeb at rte-france.com>
+ */
 class StudyServerExecutionServiceTest {
 
     private static final String THREAD_LOCAL_KEY = "study-server-thread-local";
