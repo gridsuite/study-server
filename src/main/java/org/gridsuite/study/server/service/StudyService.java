@@ -22,6 +22,7 @@ import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsI
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
+import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -127,6 +128,7 @@ public class StudyService {
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
     private final DiagramGridLayoutService diagramGridLayoutService;
+    private final NadConfigService nadConfigService;
     private final FilterService filterService;
     private final ActionsService actionsService;
     private final CaseService caseService;
@@ -191,6 +193,7 @@ public class StudyService {
         DynamicSimulationEventService dynamicSimulationEventService,
         StudyConfigService studyConfigService,
         DiagramGridLayoutService diagramGridLayoutService,
+        NadConfigService nadConfigService,
         FilterService filterService,
         StateEstimationService stateEstimationService,
         PccMinService pccMinService,
@@ -227,6 +230,7 @@ public class StudyService {
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
         this.diagramGridLayoutService = diagramGridLayoutService;
+        this.nadConfigService = nadConfigService;
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
@@ -543,6 +547,7 @@ public class StudyService {
                 removePccMinParameters(s.getPccMinParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
                 removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
+                removeNadConfigs(s.getNadConfigsUuids().stream().toList());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
@@ -795,8 +800,7 @@ public class StudyService {
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
-            return singleLineDiagramService.generateVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters, violations);
+            return singleLineDiagramService.generateVoltageLevelSvg(networkUuid, variantId, voltageLevelId, diagramParameters, buildSvgGenerationMetadata(voltageLevelId, nodeUuid, rootNetworkUuid));
         } else {
             return null;
         }
@@ -810,11 +814,19 @@ public class StudyService {
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
-            return singleLineDiagramService.generateVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters, violations);
+            return singleLineDiagramService.generateVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, diagramParameters, buildSvgGenerationMetadata(voltageLevelId, nodeUuid, rootNetworkUuid));
         } else {
             return null;
         }
+    }
+
+    private SvgGenerationMetadata buildSvgGenerationMetadata(String voltageLevelId, UUID nodeUuid, UUID rootNetworkUuid) {
+        List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
+        UUID shortCircuitResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT);
+        Map<String, Double> busIdToIccValues = shortCircuitResultUuid != null ?
+            shortCircuitService.getVoltageLevelIccValues(shortCircuitResultUuid, voltageLevelId) : Map.of();
+
+        return new SvgGenerationMetadata(violations, busIdToIccValues);
     }
 
     private void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, String userId, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
@@ -1434,7 +1446,7 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
             List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
-            return singleLineDiagramService.generateSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout, violations);
+            return singleLineDiagramService.generateSubstationSvg(networkUuid, variantId, substationId, diagramParameters, substationLayout, new SvgGenerationMetadata(violations));
         } else {
             return null;
         }
@@ -1449,7 +1461,7 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
             List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
-            return singleLineDiagramService.generateSubstationSvgAndMetadata(networkUuid, variantId, substationId, diagramParameters, substationLayout, violations);
+            return singleLineDiagramService.generateSubstationSvgAndMetadata(networkUuid, variantId, substationId, diagramParameters, substationLayout, new SvgGenerationMetadata(violations));
         } else {
             return null;
         }
@@ -1467,6 +1479,36 @@ public class StudyService {
             return singleLineDiagramService.generateNetworkAreaDiagram(networkUuid, variantId, nadRequestInfos);
         } else {
             return null;
+        }
+    }
+
+    @Transactional
+    public UUID saveNadConfig(UUID studyUuid, NadConfigInfos nadConfig) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+
+        UUID nadConfigUuid = nadConfigService.saveNadConfig(nadConfig);
+
+        studyEntity.getNadConfigsUuids().add(nadConfigUuid);
+
+        return nadConfigUuid;
+    }
+
+    @Transactional
+    public void deleteNadConfig(UUID studyUuid, UUID nadConfigUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+
+        nadConfigService.deleteNadConfigs(List.of(nadConfigUuid));
+        
+        studyEntity.getNadConfigsUuids().remove(nadConfigUuid);
+    }
+
+    private void removeNadConfigs(List<UUID> nadConfigUuids) {
+        if (nadConfigUuids != null && !nadConfigUuids.isEmpty()) {
+            try {
+                nadConfigService.deleteNadConfigs(nadConfigUuids);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove NAD configs with uuids:" + nadConfigUuids, e);
+            }
         }
     }
 
