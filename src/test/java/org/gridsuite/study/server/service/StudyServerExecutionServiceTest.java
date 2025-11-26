@@ -48,7 +48,7 @@ class StudyServerExecutionServiceTest {
             }
 
             @Override
-            public void reset() {
+            public void setValue() {
                 threadLocal.remove();
             }
         });
