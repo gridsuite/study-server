@@ -19,7 +19,6 @@ import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
-import org.gridsuite.study.server.StudyConstants.SldDisplayMode;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
@@ -378,26 +377,9 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
-            @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
-            @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
-            @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
-            @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
-            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
-            @RequestBody Map<String, Object> sldRequestInfos) {
-        DiagramParameters diagramParameters = DiagramParameters.builder()
-                .useName(useName)
-                .labelCentered(centerLabel)
-                .diagonalLabel(diagonalLabel)
-                .topologicalColoring(topologicalColoring)
-                .componentLibrary(componentLibrary)
-                .sldDisplayMode(sldDisplayMode)
-                .language(language)
-                .build();
+            @RequestBody SldRequestInfos sldRequestInfos) {
         byte[] result = studyService.generateVoltageLevelSvg(
                 voltageLevelId,
-                diagramParameters,
                 nodeUuid,
                 rootNetworkUuid,
                 sldRequestInfos);
@@ -414,26 +396,9 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
-            @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
-            @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
-            @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
-            @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
-            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
-            @RequestBody Map<String, Object> sldRequestInfos) {
-        DiagramParameters diagramParameters = DiagramParameters.builder()
-                .useName(useName)
-                .labelCentered(centerLabel)
-                .diagonalLabel(diagonalLabel)
-                .topologicalColoring(topologicalColoring)
-                .componentLibrary(componentLibrary)
-                .sldDisplayMode(sldDisplayMode)
-                .language(language)
-                .build();
+            @RequestBody SldRequestInfos sldRequestInfos) {
         String result = studyService.generateVoltageLevelSvgAndMetadata(
                 voltageLevelId,
-                diagramParameters,
                 nodeUuid,
                 rootNetworkUuid,
                 sldRequestInfos);
@@ -1203,24 +1168,8 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("substationId") String substationId,
-            @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
-            @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
-            @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
-            @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
-            @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
-            @RequestBody Map<String, Object> sldRequestInfos) {
-        DiagramParameters diagramParameters = DiagramParameters.builder()
-                .useName(useName)
-                .labelCentered(centerLabel)
-                .diagonalLabel(diagonalLabel)
-                .topologicalColoring(topologicalColoring)
-                .componentLibrary(componentLibrary)
-                .language(language)
-                .build();
-        byte[] result = studyService.generateSubstationSvg(substationId,
-                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid, sldRequestInfos);
+            @RequestBody SldRequestInfos sldRequestInfos) {
+        byte[] result = studyService.generateSubstationSvg(substationId, nodeUuid, rootNetworkUuid, sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
     }
@@ -1234,29 +1183,8 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("substationId") String substationId,
-            @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
-            @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
-            @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
-            @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
-            @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language,
-            @RequestBody Map<String, Object> sldRequestInfos) {
-        DiagramParameters diagramParameters = DiagramParameters.builder()
-                .useName(useName)
-                .labelCentered(centerLabel)
-                .diagonalLabel(diagonalLabel)
-                .topologicalColoring(topologicalColoring)
-                .componentLibrary(componentLibrary)
-                .language(language)
-                .build();
-        String result = studyService.generateSubstationSvgAndMetadata(
-                substationId,
-                diagramParameters,
-                substationLayout,
-                nodeUuid,
-                rootNetworkUuid,
-                sldRequestInfos);
+            @RequestBody SldRequestInfos sldRequestInfos) {
+        String result = studyService.generateSubstationSvgAndMetadata(substationId, nodeUuid, rootNetworkUuid, sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1268,7 +1196,7 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestBody Map<String, Object> nadRequestInfos) {
+            @RequestBody NadRequestInfos nadRequestInfos) {
         String result = studyService.generateNetworkAreaDiagram(nodeUuid, rootNetworkUuid, nadRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
