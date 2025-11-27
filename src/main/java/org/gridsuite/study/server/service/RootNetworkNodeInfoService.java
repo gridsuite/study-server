@@ -273,7 +273,6 @@ public class RootNetworkNodeInfoService {
      * @param rootNetworkUuid the root network context
      * @return Optional containing the report UUID if found anywhere, empty otherwise
      */
-    @Transactional(readOnly = true)
     public Optional<UUID> findExistingReportUuidForNode(UUID targetNodeUuid, UUID rootNetworkUuid) {
         Set<UUID> reportUuids = rootNetworkNodeInfoRepository.findReportUuidsForNodeInRootNetwork(targetNodeUuid, rootNetworkUuid);
         if (reportUuids.isEmpty()) {

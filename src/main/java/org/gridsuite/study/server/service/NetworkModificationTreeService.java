@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
 import java.time.Instant;
 import java.util.*;
@@ -914,7 +915,7 @@ public class NetworkModificationTreeService {
                 rootNetworkUuid
         );
 
-        if (parentReports == null || parentReports.isEmpty()) {
+        if (CollectionUtils.isEmpty(parentReports)) {
             return;
         }
 
