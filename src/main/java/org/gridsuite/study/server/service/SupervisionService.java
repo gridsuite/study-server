@@ -344,7 +344,7 @@ public class SupervisionService {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         //TODO: to parallelize ?
         studyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(rootNetwork ->
-            studyService.invalidateNodeTree(studyUuid, rootNodeUuid, rootNetwork.rootNetworkUuid())
+            studyService.invalidateNodeTree(studyUuid, rootNodeUuid, rootNetwork.rootNetworkUuid(), InvalidateNodeTreeParameters.ALL, true)
         );
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
