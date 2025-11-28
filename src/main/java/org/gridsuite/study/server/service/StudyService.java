@@ -1498,7 +1498,7 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
 
         nadConfigService.deleteNadConfigs(List.of(nadConfigUuid));
-        
+
         studyEntity.getNadConfigsUuids().remove(nadConfigUuid);
     }
 
@@ -2096,13 +2096,20 @@ public class StudyService {
     }
 
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters, false);
+    }
+
+    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters, boolean blocking) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
 
         InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.invalidateNodeTree(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
         invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
 
-        deleteInvalidationInfos(invalidateNodeInfos);
+        CompletableFuture<Void> cf = deleteInvalidationInfos(invalidateNodeInfos);
+        if (blocking) {
+            cf.join();
+        }
 
         emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
 
@@ -2250,8 +2257,8 @@ public class StudyService {
     }
 
     // /!\ Do not wait completion and do not throw exception
-    private void deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {
-        CompletableFuture.allOf(
+    private CompletableFuture<Void> deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {
+        return CompletableFuture.allOf(
             studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())),
             studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())),
             studyServerExecutionService.runAsync(() -> reportService.deleteReports(invalidateNodeInfos.getReportUuids())),
