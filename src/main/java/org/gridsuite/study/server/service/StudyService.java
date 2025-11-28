@@ -1873,8 +1873,9 @@ public class StudyService {
     private void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId, AbstractWorkflowInfos workflowInfos) {
         assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
-        Map<UUID, UUID> nodeUuidToReportUuid = buildInfos.getReportsInfos().stream().collect(Collectors.toMap(ReportInfos::nodeUuid, ReportInfos::reportUuid));
-        networkModificationTreeService.setModificationReports(nodeUuid, rootNetworkUuid, nodeUuidToReportUuid);
+
+        // Store all reports (inherited + new) for this node
+        networkModificationTreeService.setModificationReports(nodeUuid, rootNetworkUuid, buildInfos.getAllReportsAsMap());
         networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         try {
             networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, workflowInfos);
@@ -2476,9 +2477,10 @@ public class StudyService {
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         List<UUID> reportUuids = nodeIds.stream()
-            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId,
-                        networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
-            .filter(Objects::nonNull)
+            .map(nodeId -> Optional.ofNullable(modificationReportsMap.get(nodeId))
+                    .or(() -> networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
             .toList();
         return reportService.getPagedMultipleReportLogs(reportUuids, messageFilter, severityLevels, paged, pageable);
     }
@@ -2496,9 +2498,10 @@ public class StudyService {
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         List<UUID> reportUuids = nodeIds.stream()
-            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId,
-                        networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
-            .filter(Objects::nonNull)
+            .map(nodeId -> Optional.ofNullable(modificationReportsMap.get(nodeId))
+                    .or(() -> networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
             .toList();
         return reportService.getSearchTermMatchesInMultipleFilteredLogs(reportUuids, severityLevels, messageFilter, searchTerm, pageSize);
     }
@@ -2517,8 +2520,12 @@ public class StudyService {
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         for (UUID nodeId : nodeIds) {
-            UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
-            severities.addAll(reportService.getReportAggregatedSeverities(reportId));
+            Optional<UUID> reportId = Optional.ofNullable(modificationReportsMap.get(nodeId))
+                    .or(() -> networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
+
+            reportId.ifPresent(uuid ->
+                    severities.addAll(reportService.getReportAggregatedSeverities(uuid))
+            );
         }
         return severities;
     }
@@ -2554,8 +2561,9 @@ public class StudyService {
     }
 
     private List<Report> getNodeOnlyReport(UUID nodeUuid, UUID rootNetworkUuid, Set<String> severityLevels) {
-        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid, rootNetworkUuid);
-        return List.of(reportService.getReport(reportUuid, nodeUuid.toString(), severityLevels));
+        return networkModificationTreeService.getReportUuid(nodeUuid, rootNetworkUuid)
+                .map(uuid -> List.of(reportService.getReport(uuid, nodeUuid.toString(), severityLevels)))
+                .orElse(Collections.emptyList());
     }
 
     private List<Report> getAllModificationReports(UUID nodeUuid, UUID rootNetworkUuid, Set<String> severityLevels) {
@@ -2564,8 +2572,12 @@ public class StudyService {
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         for (UUID nodeId : nodeIds) {
-            UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
-            modificationReports.add(reportService.getReport(reportId, nodeId.toString(), severityLevels));
+            Optional<UUID> reportId = Optional.ofNullable(modificationReportsMap.get(nodeId))
+                    .or(() -> networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
+
+            reportId.ifPresent(uuid ->
+                    modificationReports.add(reportService.getReport(uuid, nodeId.toString(), severityLevels))
+            );
         }
 
         return modificationReports;
