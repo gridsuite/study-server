@@ -1499,7 +1499,7 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
 
         nadConfigService.deleteNadConfigs(List.of(nadConfigUuid));
-        
+
         studyEntity.getNadConfigsUuids().remove(nadConfigUuid);
     }
 
@@ -1874,8 +1874,9 @@ public class StudyService {
     private void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId, AbstractWorkflowInfos workflowInfos) {
         assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
-        Map<UUID, UUID> nodeUuidToReportUuid = buildInfos.getReportsInfos().stream().collect(Collectors.toMap(ReportInfos::nodeUuid, ReportInfos::reportUuid));
-        networkModificationTreeService.setModificationReports(nodeUuid, rootNetworkUuid, nodeUuidToReportUuid);
+
+        // Store all reports (inherited + new) for this node
+        networkModificationTreeService.setModificationReports(nodeUuid, rootNetworkUuid, buildInfos.getAllReportsAsMap());
         networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         try {
             networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, workflowInfos);
@@ -2096,13 +2097,20 @@ public class StudyService {
     }
 
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters, false);
+    }
+
+    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters, boolean blocking) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
 
         InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.invalidateNodeTree(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
         invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
 
-        deleteInvalidationInfos(invalidateNodeInfos);
+        CompletableFuture<Void> cf = deleteInvalidationInfos(invalidateNodeInfos);
+        if (blocking) {
+            cf.join();
+        }
 
         emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
 
@@ -2250,8 +2258,8 @@ public class StudyService {
     }
 
     // /!\ Do not wait completion and do not throw exception
-    private void deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {
-        CompletableFuture.allOf(
+    private CompletableFuture<Void> deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {
+        return CompletableFuture.allOf(
             studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())),
             studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())),
             studyServerExecutionService.runAsync(() -> reportService.deleteReports(invalidateNodeInfos.getReportUuids())),
@@ -2470,9 +2478,10 @@ public class StudyService {
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         List<UUID> reportUuids = nodeIds.stream()
-            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId,
-                        networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
-            .filter(Objects::nonNull)
+            .map(nodeId -> Optional.ofNullable(modificationReportsMap.get(nodeId))
+                    .or(() -> networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
             .toList();
         return reportService.getPagedMultipleReportLogs(reportUuids, messageFilter, severityLevels, paged, pageable);
     }
@@ -2490,9 +2499,10 @@ public class StudyService {
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         List<UUID> reportUuids = nodeIds.stream()
-            .map(nodeId -> modificationReportsMap.getOrDefault(nodeId,
-                        networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
-            .filter(Objects::nonNull)
+            .map(nodeId -> Optional.ofNullable(modificationReportsMap.get(nodeId))
+                    .or(() -> networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid)))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
             .toList();
         return reportService.getSearchTermMatchesInMultipleFilteredLogs(reportUuids, severityLevels, messageFilter, searchTerm, pageSize);
     }
@@ -2511,8 +2521,12 @@ public class StudyService {
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         for (UUID nodeId : nodeIds) {
-            UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
-            severities.addAll(reportService.getReportAggregatedSeverities(reportId));
+            Optional<UUID> reportId = Optional.ofNullable(modificationReportsMap.get(nodeId))
+                    .or(() -> networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
+
+            reportId.ifPresent(uuid ->
+                    severities.addAll(reportService.getReportAggregatedSeverities(uuid))
+            );
         }
         return severities;
     }
@@ -2548,8 +2562,9 @@ public class StudyService {
     }
 
     private List<Report> getNodeOnlyReport(UUID nodeUuid, UUID rootNetworkUuid, Set<String> severityLevels) {
-        UUID reportUuid = networkModificationTreeService.getReportUuid(nodeUuid, rootNetworkUuid);
-        return List.of(reportService.getReport(reportUuid, nodeUuid.toString(), severityLevels));
+        return networkModificationTreeService.getReportUuid(nodeUuid, rootNetworkUuid)
+                .map(uuid -> List.of(reportService.getReport(uuid, nodeUuid.toString(), severityLevels)))
+                .orElse(Collections.emptyList());
     }
 
     private List<Report> getAllModificationReports(UUID nodeUuid, UUID rootNetworkUuid, Set<String> severityLevels) {
@@ -2558,8 +2573,12 @@ public class StudyService {
         Map<UUID, UUID> modificationReportsMap = networkModificationTreeService.getModificationReports(nodeUuid, rootNetworkUuid);
 
         for (UUID nodeId : nodeIds) {
-            UUID reportId = modificationReportsMap.getOrDefault(nodeId, networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
-            modificationReports.add(reportService.getReport(reportId, nodeId.toString(), severityLevels));
+            Optional<UUID> reportId = Optional.ofNullable(modificationReportsMap.get(nodeId))
+                    .or(() -> networkModificationTreeService.getReportUuid(nodeId, rootNetworkUuid));
+
+            reportId.ifPresent(uuid ->
+                    modificationReports.add(reportService.getReport(uuid, nodeId.toString(), severityLevels))
+            );
         }
 
         return modificationReports;
