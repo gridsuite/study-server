@@ -377,7 +377,7 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
-            @RequestBody SldRequestInfos sldRequestInfos) {
+            @RequestBody Map<String, Object> sldRequestInfos) {
         byte[] result = studyService.generateVoltageLevelSvg(
                 voltageLevelId,
                 nodeUuid,
@@ -396,7 +396,7 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
-            @RequestBody SldRequestInfos sldRequestInfos) {
+            @RequestBody Map<String, Object> sldRequestInfos) {
         String result = studyService.generateVoltageLevelSvgAndMetadata(
                 voltageLevelId,
                 nodeUuid,
@@ -1168,7 +1168,7 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("substationId") String substationId,
-            @RequestBody SldRequestInfos sldRequestInfos) {
+            @RequestBody Map<String, Object> sldRequestInfos) {
         byte[] result = studyService.generateSubstationSvg(substationId, nodeUuid, rootNetworkUuid, sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
@@ -1183,7 +1183,7 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("substationId") String substationId,
-            @RequestBody SldRequestInfos sldRequestInfos) {
+            @RequestBody Map<String, Object> sldRequestInfos) {
         String result = studyService.generateSubstationSvgAndMetadata(substationId, nodeUuid, rootNetworkUuid, sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
@@ -1196,7 +1196,7 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestBody NadRequestInfos nadRequestInfos) {
+            @RequestBody Map<String, Object> nadRequestInfos) {
         String result = studyService.generateNetworkAreaDiagram(nodeUuid, rootNetworkUuid, nadRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
