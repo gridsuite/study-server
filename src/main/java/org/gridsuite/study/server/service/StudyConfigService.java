@@ -392,4 +392,13 @@ public class StudyConfigService {
         HttpEntity<String> httpEntity = new HttpEntity<>(globalFilters, headers);
         restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
     }
+
+    public void updateColumns(UUID configUuid, UUID columnUuid, String columnInfos) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_WITH_ID_URI + "/columns/{colId}");
+        String path = uriBuilder.buildAndExpand(configUuid, columnUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(columnInfos, headers);
+        restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+    }
 }

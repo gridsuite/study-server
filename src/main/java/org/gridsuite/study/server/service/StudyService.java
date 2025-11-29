@@ -3519,6 +3519,10 @@ public class StudyService {
         studyConfigService.setGlobalFiltersForComputationResult(studyUuid, configUuid, globalFilters);
     }
 
+    public void updateColumns(UUID studyUuid, UUID configUuid, UUID columnUuid, String columnInfos) {
+        studyConfigService.updateColumns(configUuid, columnUuid, columnInfos);
+    }
+
     public void renameSpreadsheetConfig(UUID studyUuid, UUID configUuid, String newName) {
         studyConfigService.renameSpreadsheetConfig(configUuid, newName);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);

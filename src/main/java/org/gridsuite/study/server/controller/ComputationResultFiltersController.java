@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.StudyService;
 import org.springframework.http.ResponseEntity;
@@ -49,6 +50,18 @@ public class ComputationResultFiltersController {
             @Parameter(description = "ID of the global filters") @PathVariable UUID id,
             @RequestBody String filters) {
         studyService.setGlobalFiltersForComputationResult(studyUuid, id, filters);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/columns/{columnUuid}")
+    @Operation(summary = "Update a column", description = "Updates an existing column")
+    @ApiResponse(responseCode = "204", description = "Column updated")
+    public ResponseEntity<Void> updateColumns(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "ID of the spreadsheet config") @PathVariable UUID id,
+            @Parameter(description = "ID of the column to update") @PathVariable UUID columnUuid,
+            @Valid @RequestBody String columnInfos) {
+        studyService.updateColumns(studyUuid, id, columnUuid, columnInfos);
         return ResponseEntity.noContent().build();
     }
 }
