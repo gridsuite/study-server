@@ -416,11 +416,13 @@ public class EquipmentInfosService {
     }
 
     public List<EquipmentInfos> searchEquipments(@NonNull final BoolQuery query, @NonNull List<SortOptions> sortOptions) {
-        NativeQuery nativeQuery = new NativeQueryBuilder()
-            .withQuery(query._toQuery())
-            .withSort(sortOptions)
-            .withPageable(PageRequest.of(0, PAGE_MAX_SIZE))
-            .build();
+        NativeQueryBuilder nativeQueryBuilder = new NativeQueryBuilder()
+                .withQuery(query._toQuery())
+                .withPageable(PageRequest.of(0, PAGE_MAX_SIZE));
+
+        sortOptions.forEach(nativeQueryBuilder::withSort);
+
+        NativeQuery nativeQuery = nativeQueryBuilder.build();
 
         return elasticsearchOperations.search(nativeQuery, EquipmentInfos.class)
                 .stream()
