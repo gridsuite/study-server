@@ -2493,8 +2493,7 @@ class NetworkModificationTest {
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(jsonCreateLoadInfos, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNode2Uuid, NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
-        requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
+        TestUtils.assertServerRequestsEmptyThenShutdown(server);
     }
 
     @Test
