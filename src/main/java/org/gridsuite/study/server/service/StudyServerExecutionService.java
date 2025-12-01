@@ -28,8 +28,9 @@ public class StudyServerExecutionService {
 
     @PostConstruct
     private void postConstruct() {
+        ContextSnapshotFactory snapshotFactory = ContextSnapshotFactory.builder().build();
         executorService = ContextExecutorService.wrap(Executors.newCachedThreadPool(),
-                () -> ContextSnapshotFactory.builder().build().captureAll());
+            snapshotFactory::captureAll);
     }
 
     @PreDestroy
