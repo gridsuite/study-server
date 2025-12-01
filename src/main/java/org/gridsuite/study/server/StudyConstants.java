@@ -45,6 +45,8 @@ public final class StudyConstants {
 
     public static final String DELIMITER = "/";
     public static final String QUERY_PARAM_VARIANT_ID = "variantId";
+    public static final String QUERY_PARAM_PCC_MIN_UUID = "pccMinParametersUuid";
+    public static final String QUERY_PARAM_SHORT_CIRCUIT_UUID = "shortCircuitParametersUuid";
     public static final String QUERY_PARAM_NETWORK_UUID = "networkUuid";
     public static final String QUERY_PARAM_EQUIPMENT_TYPE = "equipmentType";
     public static final String QUERY_PARAM_EQUIPMENT_TYPES = "equipmentTypes";
@@ -58,6 +60,8 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_RESULTS_UUIDS = "resultsUuids";
     public static final String QUERY_PARAM_RESULT_UUID = "resultUuid";
     public static final String QUERY_PARAM_PARAMETERS_UUID = "parametersUuid";
+    public static final String QUERY_PARAM_FILTERS = "filters";
+    public static final String QUERY_PARAM_GLOBAL_FILTERS = "globalFilters";
 
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";

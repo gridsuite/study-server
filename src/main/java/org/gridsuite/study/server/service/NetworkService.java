@@ -15,20 +15,15 @@ import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.model.VariantInfos;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.NetworkVariantsListener;
-import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import static org.gridsuite.study.server.StudyException.Type.NETWORK_NOT_FOUND;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -47,15 +42,11 @@ public class NetworkService {
     }
 
     public Network getNetwork(UUID networkUuid, PreloadingStrategy strategy, String variantId) {
-        try {
-            Network network = networkStoreService.getNetwork(networkUuid, strategy);
-            if (variantId != null) {
-                network.getVariantManager().setWorkingVariant(variantId);
-            }
-            return network;
-        } catch (PowsyblException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        Network network = networkStoreService.getNetwork(networkUuid, strategy);
+        if (variantId != null) {
+            network.getVariantManager().setWorkingVariant(variantId);
         }
+        return network;
     }
 
     public boolean doesNetworkExist(UUID networkUuid) {
@@ -68,29 +59,17 @@ public class NetworkService {
 
     }
 
-    void deleteNetwork(UUID networkUuid) {
-        try {
-            networkStoreService.deleteNetwork(networkUuid);
-        } catch (PowsyblException e) {
-            throw new StudyException(NETWORK_NOT_FOUND, networkUuid.toString());
-        }
-    }
-
     public void deleteVariants(UUID networkUuid, List<String> variantsToRemove) {
-        try {
-            Network network = networkStoreService.getNetwork(networkUuid);
-            network.addListener(new NetworkVariantsListener(networkUuid, equipmentInfosService));
-            VariantManager variantManager = network.getVariantManager();
-            Collection<String> allVariants = variantManager.getVariantIds();
-            variantsToRemove.forEach(v -> {
-                if (allVariants.contains(v)) {
-                    variantManager.removeVariant(v);
-                }
-            });
-            networkStoreService.flush(network);
-        } catch (PowsyblException e) {
-            throw new StudyException(NETWORK_NOT_FOUND, networkUuid.toString());
-        }
+        Network network = networkStoreService.getNetwork(networkUuid);
+        network.addListener(new NetworkVariantsListener(networkUuid, equipmentInfosService));
+        VariantManager variantManager = network.getVariantManager();
+        Collection<String> allVariants = variantManager.getVariantIds();
+        variantsToRemove.forEach(v -> {
+            if (allVariants.contains(v)) {
+                variantManager.removeVariant(v);
+            }
+        });
+        networkStoreService.flush(network);
     }
 
     Network cloneNetwork(UUID sourceNetworkId, List<String> targetVariantIds) {
@@ -105,7 +84,7 @@ public class NetworkService {
         return networkStoreService.getVariantsInfos(networkUuid).stream().sorted(Comparator.comparing(VariantInfos::getNum)).collect(Collectors.toList());
     }
 
-    boolean existVariant(UUID networkUuid, String variantId) {
+    public boolean existVariant(UUID networkUuid, String variantId) {
         return StringUtils.isEmpty(variantId) ||
             variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ||
             networkStoreService.getVariantsInfos(networkUuid).stream().anyMatch(info -> info.getId().equals(variantId));

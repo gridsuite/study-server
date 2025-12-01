@@ -14,6 +14,8 @@ import lombok.AllArgsConstructor;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
+import org.gridsuite.study.server.dto.voltageinit.parameters.FilterEquipments;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
@@ -22,15 +24,22 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.WireMockUtils;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.json.JSONObject;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
@@ -41,11 +50,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import org.springframework.web.client.HttpClientErrorException;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -61,8 +73,9 @@ class PccMinTest {
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String PCC_MIN_RESULT_UUID = "cf203721-6150-4203-8960-d61d815a9d16";
     private static final String PCC_MIN_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
-    private static final UUID SHORTCIRCUIT_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f4");
+    private static final UUID PCCMIN_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f2");
     private static final String PCC_MIN_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+    private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
@@ -72,6 +85,7 @@ class PccMinTest {
     private static final String PCC_MIN_RESULT_JSON_DESTINATION = "pccmin.result";
     private static final String PCC_MIN_STOPPED_DESTINATION = "pccmin.stopped";
     private static final String PCC_MIN_FAILED_DESTINATION = "pccmin.run.dlx";
+    private static final byte[] PCC_MIN_RESULTS_AS_ZIPPED_CSV = {0x00, 0x01};
 
     @Autowired
     private MockMvc mockMvc;
@@ -101,13 +115,13 @@ class PccMinTest {
     private ConsumerService consumerService;
 
     private WireMockServer wireMockServer;
-    private WireMockUtils wireMockUtils;
+    private WireMockStubs wireMockStubs;
 
     @BeforeEach
     void setup() {
         wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
         wireMockServer.start();
-        wireMockUtils = new WireMockUtils(wireMockServer);
+        wireMockStubs = new WireMockStubs(wireMockServer);
         configureFor("localhost", wireMockServer.port());
         String baseUrl = wireMockServer.baseUrl();
 
@@ -135,9 +149,9 @@ class PccMinTest {
         UUID nodeId;
     }
 
-    private StudyNodeIds createStudyAndNode(String variantId, String nodeName) throws Exception {
+    private StudyNodeIds createStudyAndNode(String variantId, String nodeName, UUID pccMinParametersUuid) throws Exception {
         StudyEntity studyEntity = TestUtils.createDummyStudy(UUID.fromString(NETWORK_UUID_STRING),
-            "netId", CASE_LOADFLOW_UUID, "", "", null, null, SHORTCIRCUIT_PARAMETERS_UUID, null, null, null);
+            "netId", CASE_LOADFLOW_UUID, "", "", null, null, null, null, null, null, pccMinParametersUuid);
         studyRepository.save(studyEntity);
         networkModificationTreeService.createRoot(studyEntity);
 
@@ -224,7 +238,8 @@ class PccMinTest {
 
         consumePccMinResult(ids, PCC_MIN_RESULT_UUID);
 
-        wireMockUtils.verifyPostRequest(
+        WireMockUtils.verifyPostRequest(
+            wireMockServer,
             stubId,
             "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save",
             true,
@@ -236,29 +251,29 @@ class PccMinTest {
 
     @Test
     void testRunAndCheckStatus() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1");
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", PCCMIN_PARAMETERS_UUID);
 
         // Run Pcc min
-        UUID stubRun = wireMockUtils.stubPccMinRun(NETWORK_UUID_STRING, VARIANT_ID, PCC_MIN_RESULT_UUID);
+        UUID stubRun = wireMockStubs.stubPccMinRun(NETWORK_UUID_STRING, VARIANT_ID, PCC_MIN_RESULT_UUID);
         mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
         consumePccMinResult(ids, PCC_MIN_RESULT_UUID);
-        wireMockUtils.verifyPccMinRun(stubRun, NETWORK_UUID_STRING, VARIANT_ID);
+        wireMockStubs.verifyPccMinRun(stubRun, NETWORK_UUID_STRING, VARIANT_ID);
 
         // verify pcc min status
-        UUID stubStatus = wireMockUtils.stubPccMinStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON);
+        UUID stubStatus = wireMockStubs.stubPccMinStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON);
         mockMvc.perform(get(PCC_MIN_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk())
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(PCC_MIN_STATUS_JSON));
 
-        wireMockUtils.verifyPccMinStatus(stubStatus, PCC_MIN_RESULT_UUID);
+        wireMockStubs.verifyPccMinStatus(stubStatus, PCC_MIN_RESULT_UUID);
     }
 
     @Test
     void testStop() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 2");
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 2", PCCMIN_PARAMETERS_UUID);
         runPccMin(ids);
 
         UUID stubId = wireMockServer.stubFor(
@@ -277,13 +292,13 @@ class PccMinTest {
             .build();
         consumerService.consumePccMinStopped().accept(stoppedMessage);
         checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
-        wireMockUtils.verifyPccMinStop(stubId, PCC_MIN_RESULT_UUID);
+        wireMockStubs.verifyPccMinStop(stubId, PCC_MIN_RESULT_UUID);
     }
 
     @Test
     void testFailure() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2");
-        UUID stubFail = wireMockUtils.stubPccMinFailed(NETWORK_UUID_STRING, VARIANT_ID_2, PCC_MIN_ERROR_RESULT_UUID);
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID_2, "node 2", PCCMIN_PARAMETERS_UUID);
+        UUID stubFail = wireMockStubs.stubPccMinFailed(NETWORK_UUID_STRING, VARIANT_ID_2, PCC_MIN_ERROR_RESULT_UUID);
 
         mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                 .header("userId", "userId"))
@@ -300,12 +315,12 @@ class PccMinTest {
         checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
         checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_FAILED);
 
-        wireMockUtils.verifyPccMinFail(stubFail, NETWORK_UUID_STRING, VARIANT_ID_2);
+        wireMockStubs.verifyPccMinFail(stubFail, NETWORK_UUID_STRING, VARIANT_ID_2);
     }
 
     @Test
     void testResultsDeletion() throws Exception {
-        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1");
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", PCCMIN_PARAMETERS_UUID);
         runPccMin(ids);
 
         assertEquals(1, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
@@ -332,5 +347,236 @@ class PccMinTest {
             .withQueryParam("resultsUuids", matching(".*")));
 
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByPccMinResultUuidNotNull().size());
+    }
+
+    @Test
+    void testGetPccMinResults() throws Exception {
+        // --- create study and node ---
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", PCCMIN_PARAMETERS_UUID);
+        runPccMin(ids);
+
+        //get pages, sorted and filtered results
+        UUID stubId = wireMockStubs.stubPagedPccMinResult(PCC_MIN_RESULT_UUID, TestUtils.resourceToString("/pccmin-result-paged.json"));
+        mockMvc.perform(get(PCC_MIN_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                .param("page", "0")
+                .param("size", "20")
+                .param("sort", "id,DESC")
+                .param("filters", "fakeFilters")
+                .param("globalFilters", "fakeGlobalFilters"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(TestUtils.resourceToString("/pccmin-result-paged.json")));
+
+        wireMockStubs.verifyPccMinPagedGet(stubId, PCC_MIN_RESULT_UUID);
+
+        UUID resultUuid = UUID.randomUUID();
+        ResultParameters params = new ResultParameters(UUID.randomUUID(), UUID.randomUUID(), "variantId", UUID.randomUUID(), resultUuid);
+
+        // results NOT FOUND
+        wireMockServer.stubFor(
+            WireMock.get("/v1/pcc-min/results/" + resultUuid)
+                .willReturn(WireMock.notFound())
+        );
+        PageRequest pageRequest = PageRequest.of(0, 20);
+        assertThrows(HttpClientErrorException.NotFound.class, () ->
+            pccMinService.getPccMinResultsPage(params, null, null, pageRequest)
+        );
+
+        // no content
+        ResultParameters params2 = new ResultParameters(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            "variantId",
+            null,
+            null
+        );
+        String result = pccMinService.getPccMinResultsPage(params2, null, null, PageRequest.of(0, 20));
+        assertNull(result);
+        wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlMatching("/v1/pcc-min/results/.*")));
+    }
+
+    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, HttpStatusCode status) throws Exception {
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/pcc-min/parameters", studyNameUserIdUuid)
+                    .header("userId", "userId")
+                    .contentType(MediaType.ALL)
+                    .content(parameters))
+            .andExpect(status().is(status.value()));
+
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_PCC_MIN_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
+        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+    }
+
+    private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID pccMinParametersUuid) {
+        StudyEntity studyEntity = TestUtils.createDummyStudy(networkUuid, "netId", caseUuid, "", "", null, UUID.randomUUID(), null, null, null, null, pccMinParametersUuid);
+        var study = studyRepository.save(studyEntity);
+        networkModificationTreeService.createRoot(studyEntity);
+        return study;
+    }
+
+    private String buildFilter() throws JsonProcessingException {
+        return objectMapper.writeValueAsString(
+            List.of(new FilterEquipments(UUID.randomUUID(), "updatedFilter"))
+        );
+    }
+
+    @Test
+    void testGetPccMinParameters() throws Exception {
+        String parametersToCreate = buildFilter();
+        UUID stubId = wireMockStubs.stubPccMinParametersGet(
+            String.valueOf(PCCMIN_PARAMETERS_UUID),
+            parametersToCreate
+        );
+
+        UUID studyUuid = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), PCCMIN_PARAMETERS_UUID).getId();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/pcc-min/parameters", studyUuid))
+            .andExpect(status().isOk())
+            .andExpect(content().string(parametersToCreate));
+
+        wireMockStubs.verifyPccMinParametersGet(stubId, String.valueOf(PCCMIN_PARAMETERS_UUID));
+
+        // Not found case
+        UUID wrongParamUuid = UUID.randomUUID();
+
+        wireMockServer.stubFor(WireMock.get("v1/parameters/" + wrongParamUuid)
+            .willReturn(WireMock.notFound()));
+
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> pccMinService.getPccMinParameters(wrongParamUuid)
+        );
+    }
+
+    @Test
+    void testSetPccMinParameters() throws Exception {
+        String parameterToUpdate = buildFilter();
+
+        wireMockServer.stubFor(put(urlPathEqualTo("/v1/parameters/" + PCCMIN_PARAMETERS_UUID))
+            .willReturn(ok()));
+        UUID studyUuid = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), PCCMIN_PARAMETERS_UUID).getId();
+
+        createOrUpdateParametersAndDoChecks(studyUuid, parameterToUpdate, HttpStatus.OK);
+        wireMockServer.verify(putRequestedFor(urlPathEqualTo("/v1/parameters/" + PCCMIN_PARAMETERS_UUID)));
+
+        // Fail case
+        UUID wrongParamUuid = UUID.randomUUID();
+        wireMockServer.stubFor(WireMock.put("v1/parameters/" + wrongParamUuid)
+            .willReturn(WireMock.notFound()));
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> pccMinService.updatePccMinParameters(wrongParamUuid, "parameterToUpdate")
+        );
+    }
+
+    @Test
+    void testCreatePccMinParameters() {
+        String parameterToCreate = "\"fakeParamsToCreate\"";
+
+        UUID expectedUuid = UUID.randomUUID();
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters"))
+            .willReturn(okJson("\"" + expectedUuid + "\"")));
+
+        UUID paramUuid = pccMinService.createPccMinParameters(parameterToCreate);
+
+        assertEquals(expectedUuid, paramUuid);
+        wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters"))
+            .withRequestBody(equalToJson(parameterToCreate)));
+
+        //failure
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters"))
+            .willReturn(notFound()));
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> pccMinService.createPccMinParameters(parameterToCreate)
+        );
+    }
+
+    @Test
+    void testDefaultParameters() throws Exception {
+        String params = buildFilter();
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters/default"))
+            .willReturn(okJson(objectMapper.writeValueAsString(PCCMIN_PARAMETERS_UUID))));
+
+        UUID stubId = wireMockStubs.stubPccMinParametersGet(
+            String.valueOf(PCCMIN_PARAMETERS_UUID),
+            params
+        );
+
+        UUID studyUuid = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), null).getId();
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/pcc-min/parameters", studyUuid))
+            .andExpect(status().isOk())
+            .andExpect(content().string(params));
+
+        wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters/default")));
+        wireMockStubs.verifyPccMinParametersGet(stubId, String.valueOf(PCCMIN_PARAMETERS_UUID));
+
+        assertNotNull(studyUuid);
+        assertEquals(PCCMIN_PARAMETERS_UUID,
+            studyRepository.findById(studyUuid).orElseThrow().getPccMinParametersUuid());
+
+        // Fail case
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters/default"))
+            .willReturn(WireMock.notFound()));
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> pccMinService.createDefaultPccMinParameters()
+        );
+    }
+
+    @Test
+    void testExportPccMinResults() throws Exception {
+        // --- create study and node ---
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node1", PCCMIN_PARAMETERS_UUID);
+        runPccMin(ids);
+
+        // Prepare body: JSON array of csv headers
+        List<String> csvHeaders = List.of("busId", "Pcc min", "Icc min");
+        String content = objectMapper.writeValueAsString(csvHeaders);
+
+        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/results/" + PCC_MIN_RESULT_UUID + "/csv"))
+            .withQueryParam("sort", WireMock.equalTo("id,DESC"))
+            .withQueryParam("filters", WireMock.equalTo("fakeFilters"))
+            .withQueryParam("globalFilters", WireMock.equalTo("fakeGlobalFilters"))
+            .withRequestBody(WireMock.equalToJson(content))
+            .willReturn(WireMock.ok()
+                .withBody(PCC_MIN_RESULTS_AS_ZIPPED_CSV)
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+            )
+        ).getId();
+
+        mockMvc.perform(post(PCC_MIN_URL_BASE + "result/csv", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                .param("sort", "id,DESC")
+                .param("filters", "fakeFilters")
+                .param("globalFilters", "fakeGlobalFilters")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(content)
+                .header("userId", "userId"))
+            .andExpect(status().isOk())
+            .andExpect(content().bytes(PCC_MIN_RESULTS_AS_ZIPPED_CSV));
+
+        // Verification of the POST to the PCC MIN server
+        wireMockStubs.verifyExportPccMinResult(stubId, UUID.fromString(PCC_MIN_RESULT_UUID));
+
+        // --- NOT FOUND CASE ---
+        UUID notFoundUuid = UUID.randomUUID();
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/results/" + notFoundUuid + "/csv"))
+            .withRequestBody(WireMock.equalToJson(content))
+            .willReturn(WireMock.notFound())
+        );
+
+        // test csv failure
+        assertThrows(HttpClientErrorException.NotFound.class, () ->
+            pccMinService.exportPccMinResultsAsCsv(notFoundUuid, "", null, null, Sort.unsorted(), null, null));
+        assertThrows(StudyException.class, () ->
+            pccMinService.exportPccMinResultsAsCsv(null, "", null, null, Sort.unsorted(), null, null));
     }
 }

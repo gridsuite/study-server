@@ -14,18 +14,17 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
 import org.gridsuite.study.server.StudyConstants.SldDisplayMode;
-import org.gridsuite.study.server.StudyException;
-import org.gridsuite.study.server.StudyException.Type;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
+import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -66,6 +65,7 @@ import jakarta.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
 import java.util.*;
 
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 
@@ -458,31 +458,31 @@ public class StudyController {
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelInformation(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "switches"));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelTopologyInfos(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "switches"));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/bus-bar-sections")
     @Operation(summary = "get bus bar sections information for a given network and voltage level")
     @ApiResponse(responseCode = "200", description = "Bus bar sections information of the given voltage level retrieved")
-    public ResponseEntity<String> getBusBarSectionsInfo(
+    public ResponseEntity<String> getVoltageLevelBusBarSections(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelInformation(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "bus-bar-sections"));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelTopologyInfos(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "bus-bar-sections"));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/feeder-bays-and-bus-bar-sections")
-    @Operation(summary = "get feeder bays and bus bar sections information for a given network and voltage level")
-    @ApiResponse(responseCode = "200", description = "Feeder bays and bus bar sections information of the given voltage level retrieved")
-    public ResponseEntity<String> getFeederBaysBusBarSectionsInfo(
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/feeder-bays")
+    @Operation(summary = "get feeder bays informations for a given network and voltage level")
+    @ApiResponse(responseCode = "200", description = "Feeder bays informations of the given voltage level retrieved")
+    public ResponseEntity<String> getVoltageLevelFeederBays(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
             @Parameter(description = "Should get in upstream built node ?") @RequestParam(value = "inUpstreamBuiltParentNode", required = false, defaultValue = "false") boolean inUpstreamBuiltParentNode) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelInformation(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "feeder-bays-and-bus-bar-sections"));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getVoltageLevelTopologyInfos(nodeUuid, rootNetworkUuid, voltageLevelId, inUpstreamBuiltParentNode, "feeder-bays"));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/substation-id")
@@ -684,12 +684,10 @@ public class StudyController {
             case MOVE:
                 // we don't cut - paste modifications from different studies
                 if (!studyUuid.equals(originStudyUuid)) {
-                    throw new StudyException(Type.MOVE_NETWORK_MODIFICATION_FORBIDDEN);
+                    throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
                 }
                 handleMoveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
-            default:
-                throw new StudyException(Type.UNKNOWN_ACTION_TYPE);
         }
         return ResponseEntity.ok().build();
     }
@@ -892,6 +890,29 @@ public class StudyController {
         return ResponseEntity.ok().body(rootNetworkNodeInfoService.getShortCircuitAnalysisCsvResult(nodeUuid, rootNetworkUuid, type, headersCsv));
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get a pcc min result as csv")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of pcc min results"),
+        @ApiResponse(responseCode = "204", description = "No pcc min has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The pcc min has not been found")})
+    public ResponseEntity<byte[]> exportPccMinResultsAsCsv(
+        @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+        @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
+        Sort sort, @RequestBody String csvHeaders) {
+        byte[] result = rootNetworkNodeInfoService.exportPccMinResultsAsCsv(nodeUuid, rootNetworkUuid, csvHeaders, sort, filters, globalFilters);
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        responseHeaders.setContentDispositionFormData("attachment", "pcc_min_results.csv");
+
+        return ResponseEntity
+            .ok()
+            .headers(responseHeaders)
+            .body(result);
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run")
     @Operation(summary = "run voltage init on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has started"),
@@ -975,16 +996,17 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}")
     @Operation(summary = "export the study's network in the given format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network in the given format")})
-    public void exportNetwork(
+    public ResponseEntity<UUID> exportNetwork(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("format") String format,
             @RequestParam(value = "formatParameters", required = false) String parametersJson,
             @RequestParam(value = "fileName") String fileName,
-            HttpServletResponse response) {
+            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
-        studyService.exportNetwork(nodeUuid, rootNetworkUuid, format, parametersJson, fileName, response);
+        UUID exportUuid = studyService.exportNetwork(studyUuid, nodeUuid, rootNetworkUuid, fileName, format, userId, parametersJson);
+        return ResponseEntity.accepted().body(exportUuid);
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run")
@@ -1749,11 +1771,9 @@ public class StudyController {
     @Operation(summary = "Create study related notification")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The notification has been sent"),
-        @ApiResponse(responseCode = "400", description = "The notification type is unknown")
     })
-    public ResponseEntity<Void> notify(@PathVariable("studyUuid") UUID studyUuid,
-                                             @RequestParam("type") String notificationType) {
-        studyService.notify(notificationType, studyUuid);
+    public ResponseEntity<Void> notify(@PathVariable("studyUuid") UUID studyUuid) {
+        studyService.notify(studyUuid);
         return ResponseEntity.ok().build();
     }
 
@@ -2375,6 +2395,22 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result")
+    @Operation(summary = "Get a pcc min result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min result"),
+        @ApiResponse(responseCode = "204", description = "No pcc min  has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The pcc min  has not been found")})
+    public ResponseEntity<String> getPccMinResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                  @Parameter(description = "rootNetwork Uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                  @Parameter(description = "node Uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                  @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                                  @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
+                                                  Pageable pageable) {
+        String result = rootNetworkNodeInfoService.getPccMinResult(nodeUuid, rootNetworkUuid, filters, globalFilters, pageable);
+        return result != null ? ResponseEntity.ok().body(result) :
+            ResponseEntity.noContent().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/result")
     @Operation(summary = "Get a state estimation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
@@ -2505,5 +2541,53 @@ public class StudyController {
     public ResponseEntity<Void> updateSpreadsheetParameters(@PathVariable("studyUuid") final UUID studyUuid,
                                                             @RequestBody final SpreadsheetParameters spreadsheetParameters) {
         return (this.studyService.updateSpreadsheetParameters(studyUuid, spreadsheetParameters) ? ResponseEntity.noContent() : ResponseEntity.notFound()).build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/pcc-min/parameters")
+    @Operation(summary = "Get pcc min parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters")})
+    public ResponseEntity<String> getPccMinParameters(
+        @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getPccMinParameters(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/pcc-min/parameters")
+    @Operation(summary = "set pcc min parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters are set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> setPccMinParameters(
+        @PathVariable("studyUuid") UUID studyUuid,
+        @RequestBody(required = false) String pccMinParametersInfos,
+        @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nad-configs", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Save NAD config")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "NAD config is saved"),
+        @ApiResponse(responseCode = "404", description = "Study does not exist")
+    })
+        public ResponseEntity<UUID> saveNadConfig(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody NadConfigInfos nadConfigData) {
+        studyService.assertIsStudyExist(studyUuid);
+        UUID savedUuid = studyService.saveNadConfig(studyUuid, nadConfigData);
+        return ResponseEntity.ok().body(savedUuid);
+    }
+
+    @DeleteMapping(value = "/studies/{studyUuid}/nad-configs/{nadConfigUuid}")
+    @Operation(summary = "Delete NAD config")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "NAD config is deleted"),
+        @ApiResponse(responseCode = "404", description = "Study does not exist")
+    })
+    public ResponseEntity<Void> deleteNadConfig(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nadConfigUuid") UUID nadConfigUuid) {
+        studyService.assertIsStudyExist(studyUuid);
+        studyService.deleteNadConfig(studyUuid, nadConfigUuid);
+        return ResponseEntity.noContent().build();
     }
 }

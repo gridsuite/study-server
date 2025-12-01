@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.service;
 
-import org.gridsuite.study.server.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
@@ -36,9 +35,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
-
-import static org.gridsuite.study.server.StudyException.Type.ELEMENT_NOT_FOUND;
-import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
@@ -143,7 +139,6 @@ public class SupervisionService {
                 dryRun ? stateEstimationService.getStateEstimationResultsCount() : deleteStateEstimationResults();
             case PCC_MIN ->
                 dryRun ? pccMinService.getPccMinResultsCount() : deletePccMinResults();
-            default -> throw new StudyException(ELEMENT_NOT_FOUND);
         };
     }
 
@@ -349,7 +344,7 @@ public class SupervisionService {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         //TODO: to parallelize ?
         studyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(rootNetwork ->
-            studyService.invalidateNodeTree(studyUuid, rootNodeUuid, rootNetwork.rootNetworkUuid())
+            studyService.invalidateNodeTree(studyUuid, rootNodeUuid, rootNetwork.rootNetworkUuid(), InvalidateNodeTreeParameters.ALL, true)
         );
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
