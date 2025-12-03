@@ -122,7 +122,7 @@ class StudyControllerSearchTest {
         MvcResult mvcResult;
         String resultAsString;
 
-        doReturn(linesInfos).when(equipmentInfosService).searchEquipments(any(BoolQuery.class));
+        doReturn(linesInfos).when(equipmentInfosService).searchEquipments(any(BoolQuery.class), any());
 
         mvcResult = mockMvc
             .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/search?userInput={request}&fieldSelector=NAME",

@@ -7,6 +7,8 @@
 
 package org.gridsuite.study.server.service;
 
+import io.micrometer.context.ContextExecutorService;
+import io.micrometer.context.ContextSnapshotFactory;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -26,7 +28,9 @@ public class StudyServerExecutionService {
 
     @PostConstruct
     private void postConstruct() {
-        executorService = Executors.newCachedThreadPool();
+        ContextSnapshotFactory snapshotFactory = ContextSnapshotFactory.builder().build();
+        executorService = ContextExecutorService.wrap(Executors.newCachedThreadPool(),
+            snapshotFactory::captureAll);
     }
 
     @PreDestroy
