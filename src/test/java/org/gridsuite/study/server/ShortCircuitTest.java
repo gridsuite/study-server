@@ -776,6 +776,9 @@ class ShortCircuitTest implements WithAssertions {
         assertEquals(NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         message = output.receive(TIMEOUT, studyUpdateDestination);
+        assertEquals(NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(NotificationService.UPDATE_TYPE_PCC_MIN_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         message = output.receive(TIMEOUT, studyUpdateDestination);
