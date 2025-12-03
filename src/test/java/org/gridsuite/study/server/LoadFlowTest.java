@@ -531,7 +531,7 @@ class LoadFlowTest {
     }
 
     @Test
-    void testInvalidateStatus(final MockWebServer server) throws Exception {
+    void testUpdateParametersInvalidateStatus(final MockWebServer server) throws Exception {
         //insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -555,13 +555,23 @@ class LoadFlowTest {
         consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1);
 
         // invalidate status
-        mockMvc.perform(put("/v1/studies/{studyUuid}/loadflow/invalidate-status", studyNameUserIdUuid)
-                .header("userId", "userId")).andExpect(status().isOk());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
+                                .header("userId", NO_PROFILE_USER_ID)
+                                .contentType(MediaType.ALL)
+                                .content(""))
+                .andExpect(status().isOk());
 
         // invalidating loadflow (with security node) invalidate node, their children and their computations
         checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        assertRequestsDone(server, List.of("/v1/results/invalidate-status\\?resultUuid=.*"));
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/users/" + NO_PROFILE_USER_ID + "/profile")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.equals("/v1/results/invalidate-status?resultUuid=" + LOADFLOW_RESULT_UUID)));
     }
 
     @Test

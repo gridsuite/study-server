@@ -3256,7 +3256,6 @@ public class StudyService {
     }
 
     public void invalidateShortCircuitStatusOnAllNodes(UUID studyUuid) {
-        // TODO : fix duplicate ressult uuids
         shortCircuitService.invalidateShortCircuitStatus(Stream.concat(
             rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT).stream(),
             rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT_ONE_BUS).stream()
