@@ -2240,27 +2240,6 @@ public class StudyController {
             networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid), factorsIds, isInjectionsSet));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/loadflow/invalidate-status")
-    @Operation(summary = "Invalidate loadflow status on study nodes")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The loadflow status has been invalidated on all study nodes"),
-        @ApiResponse(responseCode = "404", description = "The study is not found")})
-    public ResponseEntity<Void> invalidateLoadFlowStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                         @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertNoBlockedNodeInStudy(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid));
-        studyService.invalidateLoadFlowStatus(studyUuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/short-circuit/invalidate-status")
-    @Operation(summary = "Invalidate short circuit status on study nodes")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit status has been invalidated on all study nodes"),
-                           @ApiResponse(responseCode = "404", description = "The study is not found")})
-    public ResponseEntity<Void> invalidateShortCircuitStatus(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        studyService.invalidateShortCircuitStatus(studyUuid);
-        return ResponseEntity.ok().build();
-    }
-
     @GetMapping(value = "/servers/infos")
     @Operation(summary = "Get the information of all backend servers (if not filter with view parameter)")
     @ApiResponses(value = {
