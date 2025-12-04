@@ -15,7 +15,6 @@ import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.loadflow.LoadFlowParameters;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
-
 import lombok.SneakyThrows;
 import mockwebserver3.Dispatcher;
 import mockwebserver3.MockResponse;
@@ -182,43 +181,43 @@ class SingleLineDiagramTest {
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 switch (path) {
-                    case "/v1/svg/" + NETWORK_UUID_STRING
-                        + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "byte");
-
-                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING
-                            + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=STATE_VARIABLE&language=en":
+                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelId?variantId=" + VARIANT_ID:
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "svgandmetadata");
 
-                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING
-                        + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=STATE_VARIABLE&language=en&variantId=" + VARIANT_ID:
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "svgandmetadata");
+                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelId": {
+                        Map<String, Object> sldRequestInfos = objectMapper.readValue(request.getBody().readUtf8(), new TypeReference<>() { });
+                        switch (sldRequestInfos.get("sldDisplayMode")) {
+                            case SldDisplayMode.STATE_VARIABLE:
+                                return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "svgandmetadata");
+                            case SldDisplayMode.FEEDER_POSITION:
+                                return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "FEEDER_POSITION");
+                            default:
+                                LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
+                                return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
+                        }
+                    }
 
-                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING
-                            + "/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=FEEDER_POSITION&language=en":
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "FEEDER_POSITION");
-
-                    case "/v1/substation-svg/" + NETWORK_UUID_STRING
-                            + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
+                    case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationId":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "substation-byte");
 
-                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING
-                            + "/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
+                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationId":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "substation-svgandmetadata");
 
-                    case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en":
-                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=STATE_VARIABLE&language=en":
-                    case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal":
-                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
+                    case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelNotFoundId":
+                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelNotFoundId":
+                    case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationNotFoundId":
+                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationNotFoundId":
                         return new MockResponse(404);
 
-                    case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en":
-                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en":
-                    case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
-                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en":
+                    case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelErrorId":
+                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelErrorId":
+                    case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationErrorId":
+                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationErrorId":
                         return new MockResponse(500, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"tmp\",\"path\":\"/v1/networks\"}");
                     case "/v1/network-area-diagram/" + NETWORK_UUID_STRING :
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "nad-svg");
+                    case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelId":
+                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "byte");
 
                     case "/v1/svg-component-libraries":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "[\"GridSuiteAndConvergence\",\"Convergence\"]");
@@ -253,87 +252,49 @@ class SingleLineDiagramTest {
         UUID modificationNodeUuid = modificationNode1.getId();
 
         //get the voltage level diagram svg
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false&language=en",
-                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelId")
-                    .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg",
+                        studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelId")
+                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(
                         status().isOk(),
                         content().contentType(MediaType.APPLICATION_XML),
                         content().string("byte"));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en".formatted(
-                NETWORK_UUID_STRING)));
-
-        //get the voltage level diagram svg without language
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false",
-                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelId")
-                    .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_XML),
-                content().string("byte"));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en".formatted(
-                NETWORK_UUID_STRING)));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg/%s/voltageLevelId".formatted(NETWORK_UUID_STRING)));
 
         //get the voltage level diagram svg on a variant node
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false",
-            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "voltageLevelId")
-                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
-            .andExpectAll(
-            status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON),
-            content().string("svgandmetadata"));
-
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-and-metadata/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=STATE_VARIABLE&language=en&variantId=%s".formatted(
-                NETWORK_UUID_STRING, VARIANT_ID)));
-
-        //get the voltage level diagram svg from a study that doesn't exist
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg",
-                randomUuid, randomUuid, rootNodeUuid, "voltageLevelId")
-                    .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
-
-        //get the voltage level diagram svg and metadata sldDisplayMode = STATE_VARIABLE
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false&language=en",
-                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelId")
-                    .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)
-                ).andExpectAll(
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata",
+                        studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "voltageLevelId")
+                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
+                .andExpectAll(
                         status().isOk(),
                         content().contentType(MediaType.APPLICATION_JSON),
                         content().string("svgandmetadata"));
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-and-metadata/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=%s&language=en".formatted(
-                NETWORK_UUID_STRING, StudyConstants.SldDisplayMode.STATE_VARIABLE)));
 
-        //get the voltage level diagram svg and metadata sldDisplayMode = FEEDER_POSITION
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false&sldDisplayMode=" + StudyConstants.SldDisplayMode.FEEDER_POSITION + "&language=en",
-                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelId")
-                    .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON),
-                content().string("FEEDER_POSITION"));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-and-metadata/%s/voltageLevelId?variantId=%s".formatted(NETWORK_UUID_STRING, VARIANT_ID)));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-and-metadata/%s/voltageLevelId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=%s&language=en".formatted(
-                NETWORK_UUID_STRING, StudyConstants.SldDisplayMode.FEEDER_POSITION)));
+        //get the voltage level diagram svg from a study that doesn't exist
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg",
+                        randomUuid, randomUuid, rootNodeUuid, "voltageLevelId")
+                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
 
         // get the voltage level diagram svg and metadata from a study that doesn't
         // exist
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata",
-                randomUuid, randomUuid, rootNodeUuid, "voltageLevelId")
-                    .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
+                        randomUuid, randomUuid, rootNodeUuid, "voltageLevelId")
+                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
 
         // get the substation diagram svg
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false",
-                        studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationId")
-                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(
-                                status().isOk(),
-                                content().contentType(MediaType.APPLICATION_XML),
-                                content().string("substation-byte"));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg",
+                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationId")
+                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(
+                status().isOk(),
+                content().contentType(MediaType.APPLICATION_XML),
+                content().string("substation-byte"));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg/%s/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal".formatted(
-                NETWORK_UUID_STRING)));
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg/%s/substationId".formatted(NETWORK_UUID_STRING)));
 
         // get the substation diagram svg from a study that doesn't exist
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg",
@@ -341,29 +302,28 @@ class SingleLineDiagramTest {
                 .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpect(status().isNotFound());
 
         // get the substation diagram svg and metadata
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false",
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata",
                 studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationId")
                 .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON),
                 content().string("substation-svgandmetadata"));
 
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg-and-metadata/%s/substationId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en".formatted(
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg-and-metadata/%s/substationId".formatted(
                 NETWORK_UUID_STRING)));
 
         // get the substation diagram svg and metadata from a study that doesn't exist
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata",
-                        randomUuid, randomUuid, rootNodeUuid, "substationId")
-                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpect(status().isNotFound());
+                randomUuid, randomUuid, rootNodeUuid, "substationId")
+                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpect(status().isNotFound());
 
         // get the network area diagram
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
                         .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
                 .andExpectAll(
-                content().contentType(MediaType.APPLICATION_JSON),
-                status().isOk(),
-                content().string("nad-svg")
-            );
+                        content().contentType(MediaType.APPLICATION_JSON),
+                        status().isOk(),
+                        content().string("nad-svg"));
 
         assertTrue(TestUtils.getRequestsDone(1, server).contains(String.format("/v1/network-area-diagram/" + NETWORK_UUID_STRING)));
 
@@ -471,42 +431,42 @@ class SingleLineDiagramTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-component-libraries"));
 
         // Test getting non existing voltage level or substation svg
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelNotFoundId")
-            .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg/%s/voltageLevelNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en".formatted(NETWORK_UUID_STRING)));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelNotFoundId")
+                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg/%s/voltageLevelNotFoundId".formatted(NETWORK_UUID_STRING)));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelNotFoundId")
-            .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-and-metadata/%s/voltageLevelNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=%s&language=en".formatted(NETWORK_UUID_STRING, StudyConstants.SldDisplayMode.STATE_VARIABLE)));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelNotFoundId")
+                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-and-metadata/%s/voltageLevelNotFoundId".formatted(NETWORK_UUID_STRING)));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationNotFoundId")
-            .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg/%s/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal".formatted(NETWORK_UUID_STRING)));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationNotFoundId")
+                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg/%s/substationNotFoundId".formatted(NETWORK_UUID_STRING)));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationNotFoundId")
-            .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg-and-metadata/%s/substationNotFoundId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en".formatted(NETWORK_UUID_STRING)));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationNotFoundId")
+                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg-and-metadata/%s/substationNotFoundId".formatted(NETWORK_UUID_STRING)));
 
         // Test other errors when getting voltage level or substation svg
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelErrorId")
-                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
-            .andExpectAll(status().isInternalServerError());
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg/%s/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&language=en".formatted(NETWORK_UUID_STRING)));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelErrorId")
+                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
+                .andExpectAll(status().isInternalServerError());
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg/%s/voltageLevelErrorId".formatted(NETWORK_UUID_STRING)));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelErrorId")
-                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
-            .andExpectAll(status().is4xxClientError());
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-and-metadata/%s/voltageLevelErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&sldDisplayMode=%s&language=en".formatted(NETWORK_UUID_STRING, StudyConstants.SldDisplayMode.STATE_VARIABLE)));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelErrorId")
+                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
+                .andExpectAll(status().isInternalServerError());
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-and-metadata/%s/voltageLevelErrorId".formatted(NETWORK_UUID_STRING)));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationErrorId")
-                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
-            .andExpectAll(status().is4xxClientError());
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg/%s/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal".formatted(NETWORK_UUID_STRING)));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationErrorId")
+                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
+                .andExpectAll(status().isInternalServerError());
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg/%s/substationErrorId".formatted(NETWORK_UUID_STRING)));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationErrorId")
-                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
-            .andExpectAll(status().isInternalServerError());
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg-and-metadata/%s/substationErrorId?useName=false&centerLabel=false&diagonalLabel=false&topologicalColoring=false&substationLayout=horizontal&language=en".formatted(NETWORK_UUID_STRING)));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationErrorId")
+                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
+                .andExpectAll(status().isInternalServerError());
+        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg-and-metadata/%s/substationErrorId".formatted(NETWORK_UUID_STRING)));
     }
 
     @Test
@@ -522,27 +482,27 @@ class SingleLineDiagramTest {
 
         //get the voltage level diagram svg on a non existing variant
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg?useName=false",
-            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "voltageLevelId")
-            .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(
-            status().isNoContent());
+                studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "voltageLevelId")
+                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(
+                status().isNoContent());
 
         //get the voltage level diagram svg and metadata on a non existing variant
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata?useName=false",
-            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "voltageLevelId")
-            .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(
-            status().isNoContent());
+                studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "voltageLevelId")
+                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(
+                status().isNoContent());
 
         //get the substation diagram svg on a non existing variant
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg?useName=false",
-            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "substationId")
-            .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(
-            status().isNoContent());
+                studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "substationId")
+                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(
+                status().isNoContent());
 
         //get the substation diagram svg and metadata on a non existing variant
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata?useName=false",
-            studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "substationId")
-            .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(
-            status().isNoContent());
+                studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, "substationId")
+                .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(
+                status().isNoContent());
 
         //get the network area diagram on a non existing variant
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-area-diagram",
