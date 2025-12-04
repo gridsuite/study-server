@@ -70,6 +70,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -822,11 +823,15 @@ public class StudyService {
 
     private SvgGenerationMetadata buildSvgGenerationMetadata(String voltageLevelId, UUID nodeUuid, UUID rootNetworkUuid) {
         List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
-        UUID shortCircuitResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT);
-        Map<String, Double> busIdToIccValues = shortCircuitResultUuid != null ?
-            shortCircuitService.getVoltageLevelIccValues(shortCircuitResultUuid, voltageLevelId) : Map.of();
+        Map<String, Double> busIdToIccValues = getBusIdToIccValuesMap(voltageLevelId, nodeUuid, rootNetworkUuid);
 
         return new SvgGenerationMetadata(violations, busIdToIccValues);
+    }
+
+    private Map<String, Double> getBusIdToIccValuesMap(String voltageLevelId, UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID shortCircuitResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT);
+        return shortCircuitResultUuid != null ?
+            shortCircuitService.getVoltageLevelIccValues(shortCircuitResultUuid, voltageLevelId) : Map.of();
     }
 
     private void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, String userId, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
@@ -881,8 +886,25 @@ public class StudyService {
             networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
             elementType,
             infoTypeParameters.getInfoType(),
-            getOptionalParameters(elementType, studyEntity, loadFlowParameters),
+            getSingleElementOptionalParameters(elementId, elementType, studyEntity, nodeUuid, rootNetworkUuid, loadFlowParameters),
             elementId);
+    }
+
+    private Map<String, String> getSingleElementOptionalParameters(String elementId, String elementType, StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, LoadFlowParameters loadFlowParameters) {
+        Map<String, String> additionalParameters = getOptionalParameters(elementType, studyEntity, loadFlowParameters);
+
+        if (elementType.toLowerCase().equals("voltage_level")) {
+            try {
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_BUS_ID_TO_ICC_VALUES,
+                    UriUtils.encode(objectMapper.writeValueAsString(getBusIdToIccValuesMap(elementId, nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8)
+                );
+            } catch (JsonProcessingException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        return additionalParameters;
     }
 
     private static Map<String, String> getOptionalParameters(String elementType, StudyEntity studyEntity, LoadFlowParameters loadFlowParameters) {
