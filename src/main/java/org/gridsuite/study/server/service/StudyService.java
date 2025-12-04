@@ -3249,26 +3249,11 @@ public class StudyService {
         }
     }
 
-    @Transactional
-    public void invalidateLoadFlowStatus(UUID studyUuid, String userId) {
-        invalidateAllStudyLoadFlowStatus(studyUuid);
-        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
     public void invalidateShortCircuitStatusOnAllNodes(UUID studyUuid) {
-        // TODO : fix duplicate ressult uuids
         shortCircuitService.invalidateShortCircuitStatus(Stream.concat(
             rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT).stream(),
             rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT_ONE_BUS).stream()
         ).toList());
-    }
-
-    @Transactional
-    public void invalidateShortCircuitStatus(UUID studyUuid) {
-        invalidateShortCircuitStatusOnAllNodes(studyUuid);
-        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
     }
 
     private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode computationsInvalidationMode) {
