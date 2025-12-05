@@ -4,19 +4,23 @@
  */
 package org.gridsuite.study.server.error;
 
-import com.powsybl.ws.commons.error.AbstractBaseRestExceptionHandler;
+import com.powsybl.ws.commons.error.AbstractBusinessExceptionHandler;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import com.powsybl.ws.commons.error.ServerNameProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.NonNull;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 @ControllerAdvice
-public class RestResponseEntityExceptionHandler extends AbstractBaseRestExceptionHandler<StudyException, StudyBusinessErrorCode> {
+public class StudyExceptionHandler extends AbstractBusinessExceptionHandler<StudyException, StudyBusinessErrorCode> {
 
-    protected RestResponseEntityExceptionHandler(ServerNameProvider serverNameProvider) {
+    protected StudyExceptionHandler(ServerNameProvider serverNameProvider) {
         super(serverNameProvider);
     }
 
@@ -47,5 +51,11 @@ public class RestResponseEntityExceptionHandler extends AbstractBaseRestExceptio
             case TIME_SERIES_BAD_TYPE -> HttpStatus.BAD_REQUEST;
             default -> HttpStatus.INTERNAL_SERVER_ERROR;
         };
+    }
+
+    @ExceptionHandler(StudyException.class)
+    protected ResponseEntity<PowsyblWsProblemDetail> handleStudyException(
+        StudyException exception, HttpServletRequest request) {
+        return super.handleDomainException(exception, request);
     }
 }
