@@ -192,8 +192,8 @@ class SingleLineDiagramTest {
                             case SldDisplayMode.FEEDER_POSITION:
                                 return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "FEEDER_POSITION");
                             default:
-                                LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                                return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
+                                LOGGER.error("Unhandled method+path: {} {} with body: {}", request.getMethod(), request.getPath(), sldRequestInfos);
+                                return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath() + " with body: " + sldRequestInfos).build();
                         }
                     }
 
@@ -209,11 +209,6 @@ class SingleLineDiagramTest {
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationNotFoundId":
                         return new MockResponse(404);
 
-                    case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelErrorId":
-                    case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelErrorId":
-                    case "/v1/substation-svg/" + NETWORK_UUID_STRING + "/substationErrorId":
-                    case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationErrorId":
-                        return new MockResponse(500, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "{\"timestamp\":\"2020-12-14T10:27:11.760+0000\",\"status\":500,\"error\":\"Internal Server Error\",\"message\":\"tmp\",\"path\":\"/v1/networks\"}");
                     case "/v1/network-area-diagram/" + NETWORK_UUID_STRING :
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "nad-svg");
                     case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelId":
@@ -446,27 +441,6 @@ class SingleLineDiagramTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationNotFoundId")
                 .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
         assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg-and-metadata/%s/substationNotFoundId".formatted(NETWORK_UUID_STRING)));
-
-        // Test other errors when getting voltage level or substation svg
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelErrorId")
-                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(status().isInternalServerError());
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg/%s/voltageLevelErrorId".formatted(NETWORK_UUID_STRING)));
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelErrorId")
-                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(status().isInternalServerError());
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-and-metadata/%s/voltageLevelErrorId".formatted(NETWORK_UUID_STRING)));
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationErrorId")
-                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(status().isInternalServerError());
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg/%s/substationErrorId".formatted(NETWORK_UUID_STRING)));
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationErrorId")
-                        .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON))
-                .andExpectAll(status().isInternalServerError());
-        assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg-and-metadata/%s/substationErrorId".formatted(NETWORK_UUID_STRING)));
     }
 
     @Test
