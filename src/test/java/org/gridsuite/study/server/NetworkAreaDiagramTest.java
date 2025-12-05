@@ -34,6 +34,7 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.StudyConstants.CURRENT_LIMIT_VIOLATIONS_INFOS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -81,7 +82,7 @@ class NetworkAreaDiagramTest {
     private static final Map<String, Object> BODY_CONTENT = Map.of("key", "bodyContent");
     private static final Map<String, Object> BODY_CONTENT_WITH_VIOLATIONS = new LinkedHashMap<String, Object>() {{
                 put("key", "bodyContent");
-                put("currentLimitViolationsInfos", List.of(new CurrentLimitViolationInfos("eq1", null)));
+                put(CURRENT_LIMIT_VIOLATIONS_INFOS, List.of(new CurrentLimitViolationInfos("eq1", null)));
         }};
 
     @BeforeEach

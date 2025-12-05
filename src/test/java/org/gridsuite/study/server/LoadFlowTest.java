@@ -553,15 +553,6 @@ class LoadFlowTest {
         assertRequestsDone(server, List.of("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
 
         consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1);
-
-        // invalidate status
-        mockMvc.perform(put("/v1/studies/{studyUuid}/loadflow/invalidate-status", studyNameUserIdUuid)
-                .header("userId", "userId")).andExpect(status().isOk());
-
-        // invalidating loadflow (with security node) invalidate node, their children and their computations
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        assertRequestsDone(server, List.of("/v1/results/invalidate-status\\?resultUuid=.*"));
     }
 
     @Test
@@ -943,16 +934,23 @@ class LoadFlowTest {
          *  N3 is security - it will be invalidated
          */
 
-        // run loadflow invalidation on all study
-        studyService.invalidateLoadFlowStatus(studyUuid, "userId");
+        // run loadflow invalidation on all study after parameter change
+        studyService.setLoadFlowParameters(studyUuid, null, NO_PROFILE_USER_ID);
 
         // node2 and node3 will be invalidated with their children, but the order in which way they are invalidated is not deterministic
         // this is why we don't check node uuid here for those two calls
         checkUpdateModelsStatusMessagesReceived(studyUuid);
 
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS);
 
-        var requests = TestUtils.getRequestsDone(3, server);
+        var requests = TestUtils.getRequestsDone(5, server);
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results\\?resultsUuids=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=.*")));
