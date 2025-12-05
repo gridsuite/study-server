@@ -19,7 +19,6 @@ import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
-import org.gridsuite.study.server.StudyConstants.SldDisplayMode;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
@@ -369,7 +368,7 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg")
     @Operation(summary = "get the voltage level diagram for the given network and voltage level")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
         @ApiResponse(responseCode = "404", description = "The voltage level has not been found")})
@@ -378,32 +377,17 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
-            @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
-            @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
-            @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
-            @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
-            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
-        DiagramParameters diagramParameters = DiagramParameters.builder()
-                .useName(useName)
-                .labelCentered(centerLabel)
-                .diagonalLabel(diagonalLabel)
-                .topologicalColoring(topologicalColoring)
-                .componentLibrary(componentLibrary)
-                .sldDisplayMode(sldDisplayMode)
-                .language(language)
-                .build();
+            @RequestBody Map<String, Object> sldRequestInfos) {
         byte[] result = studyService.generateVoltageLevelSvg(
                 voltageLevelId,
-                diagramParameters,
                 nodeUuid,
-                rootNetworkUuid);
+                rootNetworkUuid,
+                sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
             ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata")
     @Operation(summary = "get the voltage level diagram for the given network and voltage level")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg and metadata"),
         @ApiResponse(responseCode = "404", description = "The voltage level has not been found")})
@@ -412,27 +396,12 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("voltageLevelId") String voltageLevelId,
-            @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
-            @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
-            @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
-            @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "Sld display mode") @RequestParam(name = "sldDisplayMode", defaultValue = "STATE_VARIABLE") SldDisplayMode sldDisplayMode,
-            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
-        DiagramParameters diagramParameters = DiagramParameters.builder()
-                .useName(useName)
-                .labelCentered(centerLabel)
-                .diagonalLabel(diagonalLabel)
-                .topologicalColoring(topologicalColoring)
-                .componentLibrary(componentLibrary)
-                .sldDisplayMode(sldDisplayMode)
-                .language(language)
-                .build();
+            @RequestBody Map<String, Object> sldRequestInfos) {
         String result = studyService.generateVoltageLevelSvgAndMetadata(
                 voltageLevelId,
-                diagramParameters,
                 nodeUuid,
-                rootNetworkUuid);
+                rootNetworkUuid,
+                sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
@@ -1190,7 +1159,7 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getShortCircuitParametersInfo(studyUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
         @ApiResponse(responseCode = "404", description = "The substation has not been found")})
@@ -1199,28 +1168,13 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("substationId") String substationId,
-            @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
-            @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
-            @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
-            @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
-            @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
-        DiagramParameters diagramParameters = DiagramParameters.builder()
-                .useName(useName)
-                .labelCentered(centerLabel)
-                .diagonalLabel(diagonalLabel)
-                .topologicalColoring(topologicalColoring)
-                .componentLibrary(componentLibrary)
-                .language(language)
-                .build();
-        byte[] result = studyService.generateSubstationSvg(substationId,
-                diagramParameters, substationLayout, nodeUuid, rootNetworkUuid);
+            @RequestBody Map<String, Object> sldRequestInfos) {
+        byte[] result = studyService.generateSubstationSvg(substationId, nodeUuid, rootNetworkUuid, sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body(result) :
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata")
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg and metadata"),
         @ApiResponse(responseCode = "404", description = "The substation has not been found")})
@@ -1229,27 +1183,8 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("substationId") String substationId,
-            @Parameter(description = "useName") @RequestParam(name = "useName", defaultValue = "false") boolean useName,
-            @Parameter(description = "centerLabel") @RequestParam(name = "centerLabel", defaultValue = "false") boolean centerLabel,
-            @Parameter(description = "diagonalLabel") @RequestParam(name = "diagonalLabel", defaultValue = "false") boolean diagonalLabel,
-            @Parameter(description = "topologicalColoring") @RequestParam(name = "topologicalColoring", defaultValue = "false") boolean topologicalColoring,
-            @Parameter(description = "substationLayout") @RequestParam(name = "substationLayout", defaultValue = "horizontal") String substationLayout,
-            @Parameter(description = "component library name") @RequestParam(name = "componentLibrary", required = false) String componentLibrary,
-            @Parameter(description = "language") @RequestParam(name = "language", defaultValue = "en") String language) {
-        DiagramParameters diagramParameters = DiagramParameters.builder()
-                .useName(useName)
-                .labelCentered(centerLabel)
-                .diagonalLabel(diagonalLabel)
-                .topologicalColoring(topologicalColoring)
-                .componentLibrary(componentLibrary)
-                .language(language)
-                .build();
-        String result = studyService.generateSubstationSvgAndMetadata(
-                substationId,
-                diagramParameters,
-                substationLayout,
-                nodeUuid,
-                rootNetworkUuid);
+            @RequestBody Map<String, Object> sldRequestInfos) {
+        String result = studyService.generateSubstationSvgAndMetadata(substationId, nodeUuid, rootNetworkUuid, sldRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
     }
