@@ -1903,7 +1903,7 @@ public class StudyService {
         userAdminService.getUserMaxAllowedBuilds(userId).ifPresent(maxBuilds -> {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
             if (nbBuiltNodes >= maxBuilds) {
-                throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes : " + maxBuilds);
+                throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes reached", Map.of("limit", maxBuilds));
             }
         });
     }
