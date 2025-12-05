@@ -21,7 +21,7 @@ import java.util.Map;
 public class EmbeddedElasticsearch {
 
     private static final String ES_DOCKER_IMAGE_NAME = "docker.elastic.co/elasticsearch/elasticsearch";
-    private static final String ES_DOCKER_IMAGE_VERSION = "8.15.5";
+    private static final String ES_DOCKER_IMAGE_VERSION = "8.18.8";
 
     private static ElasticsearchContainer elasticsearchContainer;
 
