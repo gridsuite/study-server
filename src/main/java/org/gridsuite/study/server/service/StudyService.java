@@ -2184,6 +2184,23 @@ public class StudyService {
     }
 
     @Transactional
+    public void updateNetworkModificationsDescription(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, String userId, String description) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        try {
+            if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
+                throw new StudyException(NOT_ALLOWED);
+            }
+            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            networkModificationService.updateModificationDescription(groupId, modificationUuid, description);
+            invalidateNodeTree(studyUuid, nodeUuid);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
+        }
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
     public void updateNetworkModificationsActivationInRootNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationsUuids, String userId, boolean activated) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         networkModificationService.verifyModifications(networkModificationTreeService.getModificationGroupUuid(nodeUuid), modificationsUuids);

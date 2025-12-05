@@ -193,6 +193,22 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
+    public void updateModificationDescription(UUID groupUUid, UUID modificationUuid, String description) {
+        Objects.requireNonNull(groupUUid);
+        Objects.requireNonNull(modificationUuid);
+        var path = UriComponentsBuilder
+            .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + modificationUuid)
+            .queryParam(QUERY_PARAM_DESCRIPTION, description)
+            .buildAndExpand()
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
+        restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
+    }
+
     public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
