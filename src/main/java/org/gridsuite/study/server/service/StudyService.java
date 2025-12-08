@@ -893,7 +893,7 @@ public class StudyService {
     private Map<String, String> getSingleElementOptionalParameters(String elementId, String elementType, StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, LoadFlowParameters loadFlowParameters) {
         Map<String, String> additionalParameters = getOptionalParameters(elementType, studyEntity, loadFlowParameters);
 
-        if (elementType.toLowerCase().equals("voltage_level")) {
+        if (elementType.equalsIgnoreCase("voltage_level")) {
             try {
                 additionalParameters.put(
                     InfoTypeParameters.QUERY_PARAM_BUS_ID_TO_ICC_VALUES,
