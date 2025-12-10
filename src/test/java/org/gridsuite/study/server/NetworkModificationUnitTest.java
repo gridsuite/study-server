@@ -290,7 +290,6 @@ class NetworkModificationUnitTest {
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeWithModification);
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
-        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
         Mockito.verify(restTemplate, Mockito.times(1)).exchange(
             matches(".*network-modifications/" + networkModificationUuid.toString() +
                 "\\?description=" + description),
