@@ -22,16 +22,14 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
+import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.LoadFlowService;
-import org.gridsuite.study.server.service.NetworkMapService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.ReportService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -122,6 +120,9 @@ class NetworkMapTest {
     private NetworkMapService networkMapService;
 
     @Autowired
+    private FilterService filterService;
+
+    @Autowired
     private LoadFlowService loadFlowService;
 
     @Autowired
@@ -149,6 +150,7 @@ class NetworkMapTest {
         networkMapService.setNetworkMapServerBaseUri(baseUrl);
         loadFlowService.setLoadFlowServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
+        filterService.setBaseUri(wireMockServer.baseUrl());
 
         String busesDataAsString = mapper.writeValueAsString(List.of(
                 IdentifiableInfos.builder().id("BUS_1").name("BUS_1").build(),
@@ -678,6 +680,69 @@ class NetworkMapTest {
 
         var requests = TestUtils.getRequestsDone(1, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
+    }
+
+    @Test
+    void testGetNetworkElementsInfosByGlobalFilter(final MockWebServer server) throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+
+        // Create study
+        StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+
+        String equipmentType = "GENERATOR";
+        String infoType = "FORM";
+        String globalFilterBody = """
+            {
+                "genericFilter": ["550e8400-e29b-41d4-a716-446655440000"]
+            }
+            """;
+
+        // Response from global filter evaluation
+        String globalFilterEvaluateResponse = "[\"GEN1\",\"GEN2\"]";
+
+        // Response from elements-by-ids endpoint
+        String elementsInfosResponse = mapper.writeValueAsString(List.of(
+                IdentifiableInfos.builder().id("GEN1").name("Generator 1").build(),
+                IdentifiableInfos.builder().id("GEN2").name("Generator 2").build()
+        ));
+
+        UUID globalFilterStubUuid = wireMockStubs.stubGlobalFilterEvaluate(
+                NETWORK_UUID_STRING,
+                List.of(EquipmentType.GENERATOR),
+                globalFilterEvaluateResponse
+        );
+
+        UUID elementsByIdsStubUuid = wireMockStubs.stubNetworkElementsByIdsPost(
+                NETWORK_UUID_STRING,
+                equipmentType,
+                infoType,
+                elementsInfosResponse
+        );
+
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements-by-global-filter",
+                        studyUuid, firstRootNetworkUuid, rootNodeUuid)
+                        .queryParam("equipmentType", equipmentType)
+                        .queryParam("infoType", infoType)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(globalFilterBody))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+
+        String resultAsString = mvcResult.getResponse().getContentAsString();
+
+        List<IdentifiableInfos> resultList = mapper.readValue(resultAsString, new TypeReference<>() {});
+        assertEquals(2, resultList.size());
+        assertTrue(resultList.stream().anyMatch(info -> "GEN1".equals(info.getId())));
+        assertTrue(resultList.stream().anyMatch(info -> "GEN2".equals(info.getId())));
+
+        wireMockStubs.verifyGlobalFilterEvaluate(globalFilterStubUuid, NETWORK_UUID_STRING, List.of(EquipmentType.GENERATOR));
+        wireMockStubs.verifyNetworkElementsByIdsPost(elementsByIdsStubUuid, NETWORK_UUID_STRING, equipmentType, infoType, "[\"GEN1\",\"GEN2\"]");
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
     }
 
     private StudyEntity insertDummyStudy(final MockWebServer server, UUID networkUuid, UUID caseUuid) {
