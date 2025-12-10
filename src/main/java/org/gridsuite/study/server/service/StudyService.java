@@ -2191,9 +2191,7 @@ public class StudyService {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.updateModificationDescription(groupId, modificationUuid, description);
-            invalidateNodeTree(studyUuid, nodeUuid);
+            networkModificationService.updateModificationDescription(modificationUuid, description);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }

@@ -193,8 +193,7 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
-    public void updateModificationDescription(UUID groupUUid, UUID modificationUuid, String description) {
-        Objects.requireNonNull(groupUUid);
+    public void updateModificationDescription(UUID modificationUuid, String description) {
         Objects.requireNonNull(modificationUuid);
         var path = UriComponentsBuilder
             .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + modificationUuid)

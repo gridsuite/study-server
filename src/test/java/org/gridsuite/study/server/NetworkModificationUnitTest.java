@@ -230,7 +230,17 @@ class NetworkModificationUnitTest {
     @Test
     void updateDescription() {
         UUID modificationUuid = UUID.randomUUID();
-        updateNetworkModificationDescription(modificationUuid, node1Uuid, List.of(node2Uuid, node4Uuid, node3Uuid), List.of(node1Uuid, node2Uuid, node4Uuid), "new description");
+        List<UUID> childrenNodes = List.of(node2Uuid, node4Uuid, node3Uuid);
+
+        studyController.updateNetworkModificationDescription(studyUuid, node1Uuid, modificationUuid, "new description", USER_ID_HEADER);
+
+        checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
+
+        Mockito.verify(restTemplate, Mockito.times(1)).exchange(
+                matches(".*network-modifications/" + modificationUuid.toString() +
+                        "\\?description=" + "new description"),
+                eq(HttpMethod.PUT), any(HttpEntity.class), eq(Void.class));
     }
 
     @Test
@@ -280,20 +290,6 @@ class NetworkModificationUnitTest {
             matches(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid.toString() + "&").collect(Collectors.joining()) +
                 "groupUuid=" + node1Infos.getModificationGroupUuid().toString() + "&" +
                 "activated=" + activated), eq(HttpMethod.PUT), any(HttpEntity.class), eq(Void.class));
-    }
-
-    private void updateNetworkModificationDescription(UUID networkModificationUuid, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, String description) {
-        studyController.updateNetworkModificationDescription(studyUuid, node1Uuid, networkModificationUuid, description, USER_ID_HEADER);
-
-        checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
-        checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
-        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeWithModification);
-        checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
-
-        Mockito.verify(restTemplate, Mockito.times(1)).exchange(
-            matches(".*network-modifications/" + networkModificationUuid.toString() +
-                "\\?description=" + description),
-            eq(HttpMethod.PUT), any(HttpEntity.class), eq(Void.class));
     }
 
     private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {
