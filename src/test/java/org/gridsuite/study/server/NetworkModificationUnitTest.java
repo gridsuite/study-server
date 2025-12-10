@@ -93,6 +93,7 @@ class NetworkModificationUnitTest {
     private static final String CASE_LOADFLOW_UUID_STRING = "11a91c11-2c2d-83bb-b45f-20b83e4ef00c";
     private static final UUID CASE_LOADFLOW_UUID = UUID.fromString(CASE_LOADFLOW_UUID_STRING);
     private static final UUID NETWORK_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00d");
+    private static final String USER_ID_HEADER = "userId";
 
     private static final String SHOULD_NOT_RETURN_NULL_MESSAGE = "Should not return null here";
 
@@ -227,6 +228,12 @@ class NetworkModificationUnitTest {
     }
 
     @Test
+    void updateDescription() {
+        UUID modificationUuid = UUID.randomUUID();
+        updateNetworkModificationDescription(modificationUuid, node1Uuid, List.of(node2Uuid, node4Uuid, node3Uuid), List.of(node1Uuid, node2Uuid, node4Uuid), "new description");
+    }
+
+    @Test
     void activateNetworkModificationTest() {
         List<UUID> modificationToDeactivateUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
         updateNetworkModificationActivationStatus(modificationToDeactivateUuids, node1Uuid, List.of(node2Uuid, node4Uuid, node3Uuid), List.of(node1Uuid, node2Uuid, node4Uuid), false);
@@ -245,7 +252,7 @@ class NetworkModificationUnitTest {
         UUID networkUuid = UUID.randomUUID();
         BuildInfos buildInfos = new BuildInfos();
         RerunLoadFlowInfos rerunLoadFlowInfos = RerunLoadFlowInfos.builder()
-            .userId("userId")
+            .userId(USER_ID_HEADER)
             .withRatioTapChangers(true)
             .loadflowResultUuid(UUID.randomUUID())
             .build();
@@ -261,7 +268,7 @@ class NetworkModificationUnitTest {
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
-        studyController.updateNetworkModificationsActivation(studyUuid, node1Uuid, networkModificationUuids, activated, "userId");
+        studyController.updateNetworkModificationsActivation(studyUuid, node1Uuid, networkModificationUuids, activated, USER_ID_HEADER);
 
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
@@ -273,6 +280,21 @@ class NetworkModificationUnitTest {
             matches(".*network-modifications\\?" + networkModificationUuids.stream().map(uuid -> "uuids=" + uuid.toString() + "&").collect(Collectors.joining()) +
                 "groupUuid=" + node1Infos.getModificationGroupUuid().toString() + "&" +
                 "activated=" + activated), eq(HttpMethod.PUT), any(HttpEntity.class), eq(Void.class));
+    }
+
+    private void updateNetworkModificationDescription(UUID networkModificationUuid, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, String description) {
+        studyController.updateNetworkModificationDescription(studyUuid, node1Uuid, networkModificationUuid, description, USER_ID_HEADER);
+
+        checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
+        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeWithModification);
+        checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
+
+        NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
+        Mockito.verify(restTemplate, Mockito.times(1)).exchange(
+            matches(".*network-modifications/" + networkModificationUuid.toString() +
+                "\\?description=" + description),
+            eq(HttpMethod.PUT), any(HttpEntity.class), eq(Void.class));
     }
 
     private void checkModificationUpdatedMessageReceived(UUID studyUuid, UUID nodeUuid, List<UUID> childrenNodeUuids, String notificationType) {
