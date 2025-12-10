@@ -485,7 +485,8 @@ class NetworkModificationTest {
                 .andReturn();
         var problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
         assertEquals(MAX_NODE_BUILDS_EXCEEDED.value(), problemDetail.getBusinessErrorCode());
-        assertEquals("max allowed built nodes : 1", problemDetail.getDetail());
+        assertEquals(1, problemDetail.getBusinessErrorValues().get("limit"));
+        assertEquals("max allowed built nodes reached", problemDetail.getDetail());
         WireMockUtils.verifyGetRequest(wireMockServer, userProfileQuotaExceededStubId, "/v1/users/" + userId + "/profile/max-builds", Map.of());
     }
 
@@ -2493,8 +2494,7 @@ class NetworkModificationTest {
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(jsonCreateLoadInfos, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNode2Uuid, NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
-        requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
+        TestUtils.assertServerRequestsEmptyThenShutdown(server);
     }
 
     @Test

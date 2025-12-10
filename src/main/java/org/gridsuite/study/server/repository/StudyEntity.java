@@ -12,10 +12,7 @@ import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -125,6 +122,14 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
             name = "study_node_aliases_fk"
         ))
     private List<NodeAliasEmbeddable> nodeAliases;
+
+    @ElementCollection
+    @CollectionTable(name = "StudyNadConfigs", foreignKey = @ForeignKey(
+            name = "study_nad_configs_fk"
+        ))
+    @Column(name = "nad_config_uuid")
+    @Builder.Default
+    private Set<UUID> nadConfigsUuids = new HashSet<>();
 
     @Column(name = "mono_root", columnDefinition = "boolean default true")
     private boolean monoRoot;
