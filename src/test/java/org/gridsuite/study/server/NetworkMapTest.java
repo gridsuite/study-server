@@ -734,7 +734,7 @@ class NetworkMapTest {
 
         String resultAsString = mvcResult.getResponse().getContentAsString();
 
-        List<IdentifiableInfos> resultList = mapper.readValue(resultAsString, new TypeReference<>() {});
+        List<IdentifiableInfos> resultList = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertEquals(2, resultList.size());
         assertTrue(resultList.stream().anyMatch(info -> "GEN1".equals(info.getId())));
         assertTrue(resultList.stream().anyMatch(info -> "GEN2".equals(info.getId())));
