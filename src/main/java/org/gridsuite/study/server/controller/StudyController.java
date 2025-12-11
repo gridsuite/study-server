@@ -962,7 +962,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formatsJson);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}")
     @Operation(summary = "export the study's network in the given format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network in the given format")})
     public ResponseEntity<UUID> exportNetwork(
@@ -975,7 +975,7 @@ public class StudyController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
         UUID exportUuid = studyService.exportNetwork(studyUuid, nodeUuid, rootNetworkUuid, fileName, format, userId, parametersJson);
-        return ResponseEntity.accepted().body(exportUuid);
+        return ResponseEntity.ok().body(exportUuid);
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run")
