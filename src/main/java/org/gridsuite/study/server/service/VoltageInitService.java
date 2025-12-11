@@ -11,6 +11,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
@@ -42,7 +43,8 @@ public class VoltageInitService extends AbstractComputationService {
 
     static final String RESULT_UUID = "resultUuid";
     static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
-    static final String THE_NODE = "The node ";
+    static final String QUERY_PARAM_ROOT_NETWORK_NAME = "rootNetworkName";
+    static final String QUERY_PARAM_NODE_NAME = "nodeName";
 
     private String voltageInitServerBaseUri;
 
@@ -58,8 +60,7 @@ public class VoltageInitService extends AbstractComputationService {
         this.objectMapper = objectMapper;
     }
 
-    public UUID runVoltageInit(VariantInfos variantInfos, UUID parametersUuid, ReportInfos reportInfos, UUID rootNetworkUuid, String userId, boolean debug) {
-
+    public UUID runVoltageInit(VariantInfos variantInfos, UUID parametersUuid, ReportInfos reportInfos, UUID rootNetworkUuid, String userId, boolean debug, ContextInfos contextInfos) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(reportInfos.nodeUuid(), rootNetworkUuid)), StandardCharsets.UTF_8);
@@ -85,6 +86,9 @@ public class VoltageInitService extends AbstractComputationService {
         if (debug) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, true);
         }
+
+        uriComponentsBuilder.queryParam(QUERY_PARAM_ROOT_NETWORK_NAME, contextInfos.rootNetworkName());
+        uriComponentsBuilder.queryParam(QUERY_PARAM_NODE_NAME, contextInfos.nodeName());
 
         var path = uriComponentsBuilder.buildAndExpand(variantInfos.getNetworkUuid()).toUriString();
 
