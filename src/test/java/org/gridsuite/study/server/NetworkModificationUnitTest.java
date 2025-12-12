@@ -9,8 +9,7 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.controller.StudyController;
-import org.gridsuite.study.server.dto.BuildInfos;
-import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
@@ -26,10 +25,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
-import org.gridsuite.study.server.service.NetworkModificationService;
-import org.gridsuite.study.server.service.NetworkService;
-import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
-import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -61,7 +57,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_INF
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_TYPE;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
@@ -128,6 +124,9 @@ class NetworkModificationUnitTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockitoSpyBean
+    private NetworkModificationTreeService networkModificationTreeService;
+
     @BeforeEach
     void setup() {
         rootNodeInfoRepository.deleteAll();
@@ -135,39 +134,11 @@ class NetworkModificationUnitTest {
         nodeRepository.deleteAll();
         rootNetworkRepository.deleteAll();
         studyRepository.deleteAll();
-
-        StudyEntity study = insertStudy();
-
-        RootNetworkEntity firstRootNetworkEntity = RootNetworkEntity.builder()
-            .id(UUID.randomUUID())
-            .name("rootNetworkName")
-            .tag("rn1")
-            .networkUuid(NETWORK_UUID)
-            .networkId("netId")
-            .caseUuid(CASE_LOADFLOW_UUID)
-            .caseFormat("caseFormat")
-            .caseName("caseName")
-            .indexationStatus(RootNetworkIndexationStatus.INDEXED)
-            .build();
-
-        study.addRootNetwork(firstRootNetworkEntity);
-        studyRepository.save(study);
-        studyUuid = study.getId();
-        NodeEntity rootNode = insertRootNode(study);
-        NodeEntity node1 = insertNode(study, node1Uuid, NetworkModificationNodeType.SECURITY, VARIANT_1, REPORT_UUID_1, rootNode, firstRootNetworkEntity, BuildStatus.BUILT);
-        NodeEntity node2 = insertNode(study, node2Uuid, NetworkModificationNodeType.SECURITY, VARIANT_2, REPORT_UUID_2, node1, firstRootNetworkEntity, BuildStatus.BUILT);
-        NodeEntity node3 = insertNode(study, node3Uuid, NetworkModificationNodeType.SECURITY, VARIANT_3, REPORT_UUID_3, node1, firstRootNetworkEntity, BuildStatus.NOT_BUILT);
-        NodeEntity node4 = insertNode(study, node4Uuid, NetworkModificationNodeType.SECURITY, VARIANT_4, REPORT_UUID_4, node2, firstRootNetworkEntity, BuildStatus.BUILT);
-        rootNetworkRepository.save(firstRootNetworkEntity);
-
-        node1Uuid = node1.getIdNode();
-        node2Uuid = node2.getIdNode();
-        node3Uuid = node3.getIdNode();
-        node4Uuid = node4.getIdNode();
     }
 
     @Test
     void unbuildNode() {
+        setupWithOneRootNetwork();
         /*       rootNode
          *          |
          *       node1(B)
@@ -228,18 +199,21 @@ class NetworkModificationUnitTest {
 
     @Test
     void activateNetworkModificationTest() {
+        setupWithOneRootNetwork();
         List<UUID> modificationToDeactivateUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
         updateNetworkModificationActivationStatus(modificationToDeactivateUuids, node1Uuid, List.of(node2Uuid, node4Uuid, node3Uuid), List.of(node1Uuid, node2Uuid, node4Uuid), false);
     }
 
     @Test
     void deactivateNetworkModificationTest() {
+        setupWithOneRootNetwork();
         List<UUID> modificationToDeactivateUuids = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
         updateNetworkModificationActivationStatus(modificationToDeactivateUuids, node1Uuid, List.of(node2Uuid, node4Uuid, node3Uuid), List.of(node1Uuid, node2Uuid, node4Uuid), true);
     }
 
     @Test
     void buildNodeWithWorkflowInfos() throws JsonProcessingException {
+        setupWithOneRootNetwork();
         UUID nodeUuid = UUID.randomUUID();
         UUID rootNetworkUuid = UUID.randomUUID();
         UUID networkUuid = UUID.randomUUID();
@@ -258,6 +232,19 @@ class NetworkModificationUnitTest {
 
         assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_TYPE + "=" + rerunLoadFlowInfos.getType().name()));
         assertTrue(urlCaptor.getValue().contains(QUERY_PARAM_WORKFLOW_INFOS + "=" + URLEncoder.encode(objectMapper.writeValueAsString(rerunLoadFlowInfos), StandardCharsets.UTF_8)));
+    }
+
+    @Test
+    void unbuildAllNodes() {
+        setupWithTwoRootNetwork();
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+
+        studyController.unbuildAllNodes(studyUuid);
+
+        verify(networkModificationTreeService, times(2)).invalidateNodeTree(eq(rootNodeUuid), any(), eq(InvalidateNodeTreeParameters.ONLY_CHILDREN_WITH_BLOCKED_NODES));
+        // one for each root network
+        checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));
+        checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
@@ -328,10 +315,12 @@ class NetworkModificationUnitTest {
             .build();
     }
 
-    private NodeEntity insertNode(StudyEntity study, UUID nodeId, NetworkModificationNodeType nodeType, String variantId, UUID reportUuid, NodeEntity parentNode, RootNetworkEntity rootNetworkEntity, BuildStatus buildStatus) {
+    private NodeEntity insertNode(StudyEntity study, UUID nodeId, NetworkModificationNodeType nodeType, String variantId, UUID reportUuid, NodeEntity parentNode, List<RootNetworkEntity> rootNetworkEntities, BuildStatus buildStatus) {
         NodeEntity nodeEntity = nodeRepository.save(new NodeEntity(nodeId, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
         NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).nodeType(nodeType).modificationGroupUuid(UUID.randomUUID()).build());
-        createNodeLinks(rootNetworkEntity, modificationNodeInfoEntity, variantId, reportUuid, buildStatus);
+        rootNetworkEntities.forEach(rn -> {
+            createNodeLinks(rn, modificationNodeInfoEntity, variantId, reportUuid, buildStatus);
+        });
         return nodeEntity;
     }
 
@@ -350,6 +339,86 @@ class NetworkModificationUnitTest {
         rootNodeInfo.setIdNode(node.getIdNode());
         rootNodeInfoRepository.save(rootNodeInfo);
         return node;
+    }
+
+    private void setupWithOneRootNetwork() {
+        StudyEntity study = insertStudy();
+
+        RootNetworkEntity rootNetworkEntity1 = RootNetworkEntity.builder()
+            .id(UUID.randomUUID())
+            .name("rootNetworkName")
+            .tag("rn1")
+            .networkUuid(NETWORK_UUID)
+            .networkId("netId")
+            .caseUuid(CASE_LOADFLOW_UUID)
+            .caseFormat("caseFormat")
+            .caseName("caseName")
+            .indexationStatus(RootNetworkIndexationStatus.INDEXED)
+            .build();
+
+        List<RootNetworkEntity> rootNetworkEntityList = List.of(rootNetworkEntity1);
+
+        study.addRootNetwork(rootNetworkEntity1);
+        studyRepository.save(study);
+        studyUuid = study.getId();
+        NodeEntity rootNode = insertRootNode(study);
+        NodeEntity node1 = insertNode(study, node1Uuid, NetworkModificationNodeType.SECURITY, VARIANT_1, REPORT_UUID_1, rootNode, rootNetworkEntityList, BuildStatus.BUILT);
+        NodeEntity node2 = insertNode(study, node2Uuid, NetworkModificationNodeType.SECURITY, VARIANT_2, REPORT_UUID_2, node1, rootNetworkEntityList, BuildStatus.BUILT);
+        NodeEntity node3 = insertNode(study, node3Uuid, NetworkModificationNodeType.SECURITY, VARIANT_3, REPORT_UUID_3, node1, rootNetworkEntityList, BuildStatus.NOT_BUILT);
+        NodeEntity node4 = insertNode(study, node4Uuid, NetworkModificationNodeType.SECURITY, VARIANT_4, REPORT_UUID_4, node2, rootNetworkEntityList, BuildStatus.BUILT);
+        rootNetworkRepository.save(rootNetworkEntity1);
+
+        node1Uuid = node1.getIdNode();
+        node2Uuid = node2.getIdNode();
+        node3Uuid = node3.getIdNode();
+        node4Uuid = node4.getIdNode();
+    }
+
+    private void setupWithTwoRootNetwork() {
+        StudyEntity study = insertStudy();
+
+        RootNetworkEntity rootNetworkEntity1 = RootNetworkEntity.builder()
+            .id(UUID.randomUUID())
+            .name("rootNetworkName")
+            .tag("rn1")
+            .networkUuid(NETWORK_UUID)
+            .networkId("netId")
+            .caseUuid(CASE_LOADFLOW_UUID)
+            .caseFormat("caseFormat")
+            .caseName("caseName")
+            .indexationStatus(RootNetworkIndexationStatus.INDEXED)
+            .build();
+
+        RootNetworkEntity rootNetworkEntity2 = RootNetworkEntity.builder()
+            .id(UUID.randomUUID())
+            .name("rootNetworkName2")
+            .tag("rn2")
+            .networkUuid(NETWORK_UUID)
+            .networkId("netId")
+            .caseUuid(CASE_LOADFLOW_UUID)
+            .caseFormat("caseFormat")
+            .caseName("caseName")
+            .indexationStatus(RootNetworkIndexationStatus.INDEXED)
+            .build();
+
+        List<RootNetworkEntity> rootNetworkEntityList = List.of(rootNetworkEntity1, rootNetworkEntity2);
+
+        study.addRootNetwork(rootNetworkEntity1);
+        study.addRootNetwork(rootNetworkEntity2);
+        studyRepository.save(study);
+        studyUuid = study.getId();
+        NodeEntity rootNode = insertRootNode(study);
+        NodeEntity node1 = insertNode(study, node1Uuid, NetworkModificationNodeType.SECURITY, VARIANT_1, REPORT_UUID_1, rootNode, rootNetworkEntityList, BuildStatus.BUILT);
+        NodeEntity node2 = insertNode(study, node2Uuid, NetworkModificationNodeType.SECURITY, VARIANT_2, REPORT_UUID_2, node1, rootNetworkEntityList, BuildStatus.BUILT);
+        NodeEntity node3 = insertNode(study, node3Uuid, NetworkModificationNodeType.SECURITY, VARIANT_3, REPORT_UUID_3, node1, rootNetworkEntityList, BuildStatus.NOT_BUILT);
+        NodeEntity node4 = insertNode(study, node4Uuid, NetworkModificationNodeType.SECURITY, VARIANT_4, REPORT_UUID_4, node2, rootNetworkEntityList, BuildStatus.BUILT);
+        rootNetworkRepository.save(rootNetworkEntity1);
+        rootNetworkRepository.save(rootNetworkEntity2);
+
+        node1Uuid = node1.getIdNode();
+        node2Uuid = node2.getIdNode();
+        node3Uuid = node3.getIdNode();
+        node4Uuid = node4.getIdNode();
     }
 
     @AfterEach

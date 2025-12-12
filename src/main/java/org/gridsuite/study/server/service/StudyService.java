@@ -1925,6 +1925,20 @@ public class StudyService {
         }
     }
 
+    @Transactional
+    public void unbuildAllStudyNodes(@NonNull UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+
+        List<CompletableFuture<Void>> futures = studyEntity.getRootNetworks().stream().map(rn ->
+            studyServerExecutionService.runAsync(() -> invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), InvalidateNodeTreeParameters.ONLY_CHILDREN_WITH_BLOCKED_NODES))
+        ).toList();
+
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+
+        self.unblockNodeTree(studyUuid, rootNodeUuid);
+    }
+
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {
         networkModificationService.stopBuild(nodeUuid, rootNetworkUuid);
     }
@@ -2116,7 +2130,9 @@ public class StudyService {
             cf.join();
         }
 
-        emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
+        if (!networkModificationTreeService.isRootNode(nodeUuid)) {
+            emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
+        }
 
         if (startTime.get() != null) {
             LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
