@@ -1,0 +1,17 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="rehiligha (generated)" id="1765554894804-18">
+        <createTable tableName="export_uuids">
+            <column name="root_network_node_info_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="export_uuidsPK"/>
+            </column>
+            <column name="status" type="VARCHAR(255)"/>
+            <column name="export_uuid_key" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="export_uuidsPK"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1765554894804-20">
+        <addForeignKeyConstraint baseColumnNames="root_network_node_info_id" baseTableName="export_uuids" constraintName="rootNetworkNodeInfo_exportUuids_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="root_network_node_info" validate="true"/>
+    </changeSet>
+</databaseChangeLog>

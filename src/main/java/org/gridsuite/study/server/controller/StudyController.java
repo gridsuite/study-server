@@ -14,13 +14,12 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
-import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
@@ -34,6 +33,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
+import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
@@ -41,6 +41,7 @@ import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.service.*;
@@ -62,7 +63,6 @@ import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
 import java.util.*;
 
@@ -983,8 +983,8 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/download-file")
     @Operation(summary = "Download exported network file")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "The file is downloaded"),
-            @ApiResponse(responseCode = "409", description = "Export not ready yet")
+        @ApiResponse(responseCode = "200", description = "The file is downloaded"),
+        @ApiResponse(responseCode = "409", description = "Export not ready yet")
     })
     public ResponseEntity<InputStreamResource> downloadExportedNetworkFile(
             @Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
@@ -998,7 +998,7 @@ public class StudyController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(null);
         }
         InputStreamResource resource = studyService.downloadExportedNetworkFile(exportUuid, userId);
-        return  ResponseEntity.ok()
+        return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION)
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(resource);
