@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
@@ -857,5 +858,19 @@ public class RootNetworkNodeInfoService {
     public void stopPccMin(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
         pccMinService.stopPccMin(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
+    }
+
+    @Transactional
+    public void updateExportNetworkStatus(UUID nodeUuid, UUID rootNetworkUuid, UUID exportUuid, ExportNetworkStatus status) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
+            .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        rootNetworkNodeInfoEntity.getExportNetworkUuids().put(exportUuid, status);
+    }
+
+    @Transactional
+    public ExportNetworkStatus getExportNetworkStatus(UUID nodeUuid, UUID rootNetworkUuid, UUID exportUuid) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        return rootNetworkNodeInfoEntity.getExportNetworkUuids().get(exportUuid);
     }
 }

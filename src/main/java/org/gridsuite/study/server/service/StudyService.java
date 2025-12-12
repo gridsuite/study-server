@@ -16,8 +16,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyConstants;
-import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
@@ -35,13 +33,16 @@ import org.gridsuite.study.server.dto.modification.ModificationApplicationContex
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
+import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
@@ -51,6 +52,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
@@ -64,9 +66,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -84,11 +89,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.StudyConstants.BUS_ID_TO_ICC_VALUES;
 import static org.gridsuite.study.server.StudyConstants.CURRENT_LIMIT_VIOLATIONS_INFOS;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -100,6 +105,7 @@ import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ALL_WI
 public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
+    private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
     NotificationService notificationService;
 
@@ -167,43 +173,43 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
-        StudyRepository studyRepository,
-        StudyCreationRequestRepository studyCreationRequestRepository,
-        NetworkService networkStoreService,
-        NetworkModificationService networkModificationService,
-        ReportService reportService,
-        UserAdminService userAdminService,
-        StudyInfosService studyInfosService,
-        EquipmentInfosService equipmentInfosService,
-        NetworkModificationTreeService networkModificationTreeService,
-        ObjectMapper objectMapper,
-        StudyServerExecutionService studyServerExecutionService,
-        NotificationService notificationService,
-        LoadFlowService loadflowService,
-        ShortCircuitService shortCircuitService,
-        SingleLineDiagramService singleLineDiagramService,
-        NetworkConversionService networkConversionService,
-        GeoDataService geoDataService,
-        NetworkMapService networkMapService,
-        SecurityAnalysisService securityAnalysisService,
-        ActionsService actionsService,
-        CaseService caseService,
-        SensitivityAnalysisService sensitivityAnalysisService,
-        DynamicSimulationService dynamicSimulationService,
-        DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-        VoltageInitService voltageInitService,
-        DynamicSimulationEventService dynamicSimulationEventService,
-        StudyConfigService studyConfigService,
-        DiagramGridLayoutService diagramGridLayoutService,
-        NadConfigService nadConfigService,
-        FilterService filterService,
-        StateEstimationService stateEstimationService,
-        PccMinService pccMinService,
-        @Lazy StudyService studyService,
-        RootNetworkService rootNetworkService,
-        RootNetworkNodeInfoService rootNetworkNodeInfoService,
-        DirectoryService directoryService) {
+            @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
+            StudyRepository studyRepository,
+            StudyCreationRequestRepository studyCreationRequestRepository,
+            NetworkService networkStoreService,
+            NetworkModificationService networkModificationService,
+            ReportService reportService,
+            UserAdminService userAdminService,
+            StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
+            NetworkModificationTreeService networkModificationTreeService,
+            ObjectMapper objectMapper,
+            StudyServerExecutionService studyServerExecutionService,
+            NotificationService notificationService,
+            LoadFlowService loadflowService,
+            ShortCircuitService shortCircuitService,
+            SingleLineDiagramService singleLineDiagramService,
+            NetworkConversionService networkConversionService,
+            GeoDataService geoDataService,
+            NetworkMapService networkMapService,
+            SecurityAnalysisService securityAnalysisService,
+            ActionsService actionsService,
+            CaseService caseService,
+            SensitivityAnalysisService sensitivityAnalysisService,
+            DynamicSimulationService dynamicSimulationService,
+            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+            VoltageInitService voltageInitService,
+            DynamicSimulationEventService dynamicSimulationEventService,
+            StudyConfigService studyConfigService,
+            DiagramGridLayoutService diagramGridLayoutService,
+            NadConfigService nadConfigService,
+            FilterService filterService,
+            StateEstimationService stateEstimationService,
+            PccMinService pccMinService,
+            @Lazy StudyService studyService,
+            RootNetworkService rootNetworkService,
+            RootNetworkNodeInfoService rootNetworkNodeInfoService,
+            DirectoryService directoryService, RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository) {
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
@@ -241,6 +247,7 @@ public class StudyService {
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.directoryService = directoryService;
+        this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -1054,8 +1061,13 @@ public class StudyService {
     public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String fileName, String format, String userId, String parametersJson) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, nodeUuid, rootNetworkUuid, variantId, fileName, format, userId, parametersJson);
+        rootNetworkNodeInfoService.updateExportNetworkStatus(nodeUuid, rootNetworkUuid, exportUuid, ExportNetworkStatus.RUNNING);
+        return exportUuid;
+    }
 
-        return networkConversionService.exportNetwork(networkUuid, studyUuid, variantId, fileName, format, userId, parametersJson);
+    public InputStreamResource downloadExportedNetworkFile(UUID exportUuid, String userId) {
+        return networkConversionService.downloadFile(exportUuid, userId);
     }
 
     @Transactional(readOnly = true)

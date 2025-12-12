@@ -13,12 +13,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
+import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
@@ -101,6 +99,17 @@ public class RootNetworkNodeInfoEntity {
 
     @Column(name = "pccMinResultUuid")
     private UUID pccMinResultUuid;
+
+    @ElementCollection
+    @CollectionTable(
+            name = "exportUuids",
+            joinColumns = @JoinColumn(name = "root_network_node_info_id"),
+            foreignKey = @ForeignKey(name = "rootNetworkNodeInfo_exportUuids_fk")
+    )
+    @MapKeyColumn(name = "export_uuid_key")
+    @Column(name = "status")
+    @Enumerated(EnumType.STRING)
+    private Map<UUID, ExportNetworkStatus> exportNetworkUuids = new HashMap<>();
 
     @Column(name = "blockedNode")
     private Boolean blockedNode;

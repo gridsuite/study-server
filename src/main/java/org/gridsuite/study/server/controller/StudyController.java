@@ -19,6 +19,7 @@ import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
+import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
@@ -47,6 +48,7 @@ import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResul
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.ResultParameters;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
@@ -976,6 +978,30 @@ public class StudyController {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
         UUID exportUuid = studyService.exportNetwork(studyUuid, nodeUuid, rootNetworkUuid, fileName, format, userId, parametersJson);
         return ResponseEntity.ok().body(exportUuid);
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/download-file")
+    @Operation(summary = "Download exported network file")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "The file is downloaded"),
+            @ApiResponse(responseCode = "409", description = "Export not ready yet")
+    })
+    public ResponseEntity<InputStreamResource> downloadExportedNetworkFile(
+            @Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Root Network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "Export UUID") @RequestParam("exportUuid") UUID exportUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
+        ExportNetworkStatus status = rootNetworkNodeInfoService.getExportNetworkStatus(nodeUuid, rootNetworkUuid, exportUuid);
+        if (status == ExportNetworkStatus.RUNNING) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(null);
+        }
+        InputStreamResource resource = studyService.downloadExportedNetworkFile(exportUuid, userId);
+        return  ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run")

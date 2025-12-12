@@ -17,10 +17,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
+import org.gridsuite.study.server.error.StudyException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -34,7 +35,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NETWORK_EXPORT_FAILED;
 
 @Service
 public class NetworkConversionService {
@@ -97,7 +98,7 @@ public class NetworkConversionService {
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public UUID exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, String fileName, String format, String userId, String parametersJson) {
+    public UUID exportNetwork(UUID networkUuid, UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String variantId, String fileName, String format, String userId, String parametersJson) {
 
         try {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
@@ -109,7 +110,7 @@ public class NetworkConversionService {
             if (!StringUtils.isEmpty(fileName)) {
                 uriComponentsBuilder.queryParam("fileName", fileName);
             }
-            String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NetworkExportReceiver(studyUuid, userId)), StandardCharsets.UTF_8);
+            String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NetworkExportReceiver(studyUuid, nodeUuid, rootNetworkUuid, userId)), StandardCharsets.UTF_8);
             uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver);
             String path = uriComponentsBuilder.buildAndExpand(networkUuid, format).toUriString();
 
@@ -127,6 +128,26 @@ public class NetworkConversionService {
         } catch (Exception e) {
             throw new StudyException(NETWORK_EXPORT_FAILED, e.getMessage());
         }
+    }
+
+    public InputStreamResource downloadFile(UUID exportUuid, String userId) {
+        String path = UriComponentsBuilder.fromPath(
+                        DELIMITER + NETWORK_CONVERSION_API_VERSION + "/download-file")
+                .queryParam("exportUuid", exportUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<InputStreamResource> response = restTemplate.exchange(
+                networkConversionServerBaseUri + path,
+                HttpMethod.GET,
+                entity,
+                InputStreamResource.class
+        );
+
+        return response.getBody();
     }
 
     public void setNetworkConversionServerBaseUri(String networkConversionServerBaseUri) {
