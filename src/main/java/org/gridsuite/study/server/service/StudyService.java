@@ -3308,6 +3308,26 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
+    public String getNetworkElementsInfosByGlobalFilter(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, EquipmentType equipmentType, String infoType, GlobalFilter filter) {
+        // Get the list of equipment ids that match the filter
+        List<String> equipmentIds = self.evaluateGlobalFilter(nodeUuid, rootNetworkUuid, List.of(equipmentType), filter);
+
+        // Get the requested info for the filtered equipment ids
+        UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, true);
+        StudyEntity studyEntity = getStudy(studyUuid);
+        LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
+
+        return networkMapService.getElementsInfosByIds(
+            rootNetworkService.getNetworkUuid(rootNetworkUuid),
+            networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
+            String.valueOf(equipmentType),
+            infoType,
+            getOptionalParameters(String.valueOf(equipmentType), studyEntity, loadFlowParameters),
+            equipmentIds
+        );
+    }
+
+    @Transactional(readOnly = true)
     public String exportFilter(UUID rootNetworkUuid, UUID filterUuid) {
         return filterService.exportFilter(rootNetworkService.getNetworkUuid(rootNetworkUuid), filterUuid);
     }
