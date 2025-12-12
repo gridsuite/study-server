@@ -3298,7 +3298,7 @@ public class StudyService {
     @Transactional(readOnly = true)
     public String getNetworkElementsInfosByGlobalFilter(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, EquipmentType equipmentType, String infoType, GlobalFilter filter) {
         // Get the list of equipment ids that match the filter
-        List<String> equipmentIds = evaluateGlobalFilter(nodeUuid, rootNetworkUuid, List.of(equipmentType), filter);
+        List<String> equipmentIds = self.evaluateGlobalFilter(nodeUuid, rootNetworkUuid, List.of(equipmentType), filter);
 
         // Get the requested info for the filtered equipment ids
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, true);

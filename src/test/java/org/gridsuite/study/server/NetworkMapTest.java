@@ -736,8 +736,8 @@ class NetworkMapTest {
 
         List<IdentifiableInfos> resultList = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertEquals(2, resultList.size());
-        assertTrue(resultList.stream().anyMatch(info -> "GEN1".equals(info.getId())));
-        assertTrue(resultList.stream().anyMatch(info -> "GEN2".equals(info.getId())));
+        assertTrue(resultList.stream().anyMatch(info -> "GEN1".equals(info.getId()) && "Generator 1".equals(info.getName())));
+        assertTrue(resultList.stream().anyMatch(info -> "GEN2".equals(info.getId()) && "Generator 2".equals(info.getName())));
 
         wireMockStubs.verifyGlobalFilterEvaluate(globalFilterStubUuid, NETWORK_UUID_STRING, List.of(EquipmentType.GENERATOR));
         wireMockStubs.verifyNetworkElementsByIdsPost(elementsByIdsStubUuid, NETWORK_UUID_STRING, equipmentType, infoType, "[\"GEN1\",\"GEN2\"]");
