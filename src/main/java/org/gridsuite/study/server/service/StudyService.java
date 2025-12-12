@@ -52,7 +52,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
@@ -103,7 +102,6 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
-    private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
     NotificationService notificationService;
 
@@ -207,7 +205,7 @@ public class StudyService {
             @Lazy StudyService studyService,
             RootNetworkService rootNetworkService,
             RootNetworkNodeInfoService rootNetworkNodeInfoService,
-            DirectoryService directoryService, RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository) {
+            DirectoryService directoryService) {
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
@@ -245,7 +243,6 @@ public class StudyService {
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.directoryService = directoryService;
-        this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
