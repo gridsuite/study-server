@@ -49,7 +49,7 @@ import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResul
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.ResultParameters;
-import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
@@ -1004,7 +1004,7 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "The file is downloaded"),
         @ApiResponse(responseCode = "409", description = "Export not ready yet")
     })
-    public ResponseEntity<InputStreamResource> downloadExportedNetworkFile(
+    public ResponseEntity<Resource> downloadExportedNetworkFile(
             @Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "Root Network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
@@ -1013,13 +1013,9 @@ public class StudyController {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
         ExportNetworkStatus status = rootNetworkNodeInfoService.getExportNetworkStatus(nodeUuid, rootNetworkUuid, exportUuid);
         if (status == ExportNetworkStatus.RUNNING) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(null);
+            return ResponseEntity.status(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON).body(null);
         }
-        InputStreamResource resource = studyService.downloadExportedNetworkFile(exportUuid, userId);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(resource);
+        return networkConversionService.downloadExportedNetworkFile(exportUuid, userId);
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run")

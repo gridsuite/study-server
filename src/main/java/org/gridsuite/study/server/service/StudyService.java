@@ -65,7 +65,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
@@ -1059,10 +1058,6 @@ public class StudyService {
         UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, nodeUuid, rootNetworkUuid, variantId, fileName, format, userId, parametersJson);
         rootNetworkNodeInfoService.updateExportNetworkStatus(nodeUuid, rootNetworkUuid, exportUuid, ExportNetworkStatus.RUNNING);
         return exportUuid;
-    }
-
-    public InputStreamResource downloadExportedNetworkFile(UUID exportUuid, String userId) {
-        return networkConversionService.downloadFile(exportUuid, userId);
     }
 
     @Transactional(readOnly = true)

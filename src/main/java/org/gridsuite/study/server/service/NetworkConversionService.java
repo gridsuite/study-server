@@ -21,7 +21,7 @@ import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.gridsuite.study.server.error.StudyException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -130,24 +130,21 @@ public class NetworkConversionService {
         }
     }
 
-    public InputStreamResource downloadFile(UUID exportUuid, String userId) {
-        String path = UriComponentsBuilder.fromPath(
-                        DELIMITER + NETWORK_CONVERSION_API_VERSION + "/download-file")
-                .queryParam("exportUuid", exportUuid)
+    public ResponseEntity<Resource> downloadExportedNetworkFile(UUID exportUuid, String userId) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/download-file/{exportUuid}")
+                .buildAndExpand(exportUuid)
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-        ResponseEntity<InputStreamResource> response = restTemplate.exchange(
+        return restTemplate.exchange(
                 networkConversionServerBaseUri + path,
                 HttpMethod.GET,
                 entity,
-                InputStreamResource.class
+                Resource.class
         );
-
-        return response.getBody();
     }
 
     public void setNetworkConversionServerBaseUri(String networkConversionServerBaseUri) {

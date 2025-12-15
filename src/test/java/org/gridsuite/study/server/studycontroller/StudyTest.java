@@ -890,10 +890,12 @@ class StudyTest {
     void testConsumeNetworkExportFinishedSuccess(final MockWebServer mockWebServer) throws Exception {
         String userId = "userId";
         UUID studyUuid = createStudy(mockWebServer, userId, CASE_UUID);
-        NetworkExportReceiver receiver = new NetworkExportReceiver(studyUuid, UUID.randomUUID(), UUID.randomUUID(), userId);
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        NetworkExportReceiver receiver = new NetworkExportReceiver(studyUuid, rootNodeUuid, firstRootNetworkUuid, userId);
         String receiverJson = mapper.writeValueAsString(receiver);
         String encodedReceiver = URLEncoder.encode(receiverJson, StandardCharsets.UTF_8);
-        String errorMessage = "error";
+        String errorMessage = null;
         Map<String, Object> headers = new HashMap<>();
         headers.put(HEADER_RECEIVER, encodedReceiver);
         headers.put(HEADER_EXPORT_UUID, EXPORT_UUID.toString());
