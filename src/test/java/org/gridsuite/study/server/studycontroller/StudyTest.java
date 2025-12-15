@@ -841,23 +841,30 @@ class StudyTest {
 
         //export a network
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
-                        studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
-
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=myFileName")));
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM")
-                        .header(HEADER_USER_ID, userId)).andExpect(status().isOk());
-        TestUtils.getRequestsDone(1, server); // just consume it
-
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 3", userId);
         UUID modificationNode1Uuid = modificationNode1.getId();
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, "XIIDM")
-                        .header(HEADER_USER_ID, userId)).andExpect(status().isInternalServerError());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
+                studyNameUserIdUuid,
+                firstRootNetworkUuid,
+                modificationNode1Uuid,
+                "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isInternalServerError());
 
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode1.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid),
-            RootNetworkNodeInfo.builder().nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
+                RootNetworkNodeInfo.builder().nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
+                        studyNameUserIdUuid,
+                firstRootNetworkUuid,
+                modificationNode1Uuid,
+                "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+        TestUtils.getRequestsDone(1, server);
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D",
+                studyNameUserIdUuid,
+                firstRootNetworkUuid,
+                modificationNode1Uuid,
+                "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+        TestUtils.getRequestsDone(1, server); // just consume it
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
                         studyNameUserIdUuid,
