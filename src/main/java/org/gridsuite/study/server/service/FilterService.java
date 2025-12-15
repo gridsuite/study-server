@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
@@ -46,7 +47,8 @@ public class FilterService {
     private final RestTemplate restTemplate;
 
     @Getter // getter to facilitate to mock
-    private final String baseUri;
+    @Setter
+    private String baseUri;
 
     @Autowired
     public FilterService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {

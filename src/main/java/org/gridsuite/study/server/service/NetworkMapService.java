@@ -24,6 +24,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -84,6 +85,26 @@ public class NetworkMapService {
             .build(), builder);
 
         return restTemplate.getForObject(networkMapServerBaseUri + builder.build().toUriString(), String.class, networkUuid, elementId);
+    }
+
+    public String getElementsInfosByIds(UUID networkUuid,
+                                        String variantId,
+                                        String elementType,
+                                        String infoType,
+                                        Map<String, String> optionalParameters,
+                                        List<String> elementIds) {
+        if (elementIds == null || elementIds.isEmpty()) {
+            return "[]";
+        }
+
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/networks/{networkUuid}/elements-by-ids")
+                .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+                .queryParamIfPresent(QUERY_PARAM_VARIANT_ID, Optional.ofNullable(variantId));
+        queryParamInfoTypeParameters(InfoTypeParameters.builder()
+                .optionalParameters(optionalParameters)
+                .build(), builder);
+        return restTemplate.postForObject(networkMapServerBaseUri + builder.buildAndExpand(networkUuid).toUriString(), elementIds, String.class);
     }
 
     public String getAllElementsInfos(UUID networkUuid,
