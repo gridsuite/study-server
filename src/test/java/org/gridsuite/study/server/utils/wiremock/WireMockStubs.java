@@ -104,6 +104,26 @@ public class WireMockStubs {
         );
     }
 
+    public UUID stubNetworkElementsByIdsPost(String networkUuid, String elementType, String infoType, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements-by-ids"))
+                .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
+                .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
+                .willReturn(WireMock.ok()
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(responseBody))
+        ).getId();
+    }
+
+    public void verifyNetworkElementsByIdsPost(UUID stubUuid, String networkUuid, String elementType, String infoType, String requestBody) {
+        verifyPostRequest(wireMock, stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements-by-ids", false,
+                Map.of(
+                        QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType),
+                        QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType)
+                ),
+                requestBody
+        );
+    }
+
     public UUID stubNetworkElementsIdsPost(String networkUuid, String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements-ids"))
                 .willReturn(WireMock.ok().withBody(responseBody))
