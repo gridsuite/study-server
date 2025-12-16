@@ -32,11 +32,10 @@ public class UserProfileInfos {
 
     private UUID shortcircuitParameterId;
 
+    // note: this parameter is not managed by user-admin-server yet
     private UUID dynamicSecurityAnalysisParameterId;
 
     private UUID voltageInitParameterId;
-
-    private UUID stateEstimationParameterId;
 
     Integer maxAllowedBuilds;
 
