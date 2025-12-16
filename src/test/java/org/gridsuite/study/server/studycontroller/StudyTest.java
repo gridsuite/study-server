@@ -78,6 +78,7 @@ import org.springframework.data.util.Pair;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.GenericMessage;
@@ -894,12 +895,25 @@ class StudyTest {
     }
 
     @Test
-    void testConsumeNetworkExportFinishedSuccess(final MockWebServer mockWebServer) throws Exception {
+    void testConsumeNetworkExportFinished(final MockWebServer mockWebServer) throws Exception {
         String userId = "userId";
         UUID studyUuid = createStudy(mockWebServer, userId, CASE_UUID);
-        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
-        NetworkExportReceiver receiver = new NetworkExportReceiver(studyUuid, rootNodeUuid, firstRootNetworkUuid, userId);
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1", userId);
+        UUID modificationNode1Uuid = modificationNode1.getId();
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode1.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
+                RootNetworkNodeInfo.builder().nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
+                studyUuid,
+                firstRootNetworkUuid,
+                modificationNode1Uuid,
+                "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk()).andReturn();
+        UUID exportUuid = mapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
+        TestUtils.getRequestsDone(1, mockWebServer);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/download-file?exportUuid={exportUuid}",
+                studyUuid, firstRootNetworkUuid, modificationNode1Uuid, exportUuid).header(HEADER_USER_ID, userId)).andExpect(status().isConflict());
+        NetworkExportReceiver receiver = new NetworkExportReceiver(studyUuid, rootNodeUuid, modificationNode1Uuid, userId);
         String receiverJson = mapper.writeValueAsString(receiver);
         String encodedReceiver = URLEncoder.encode(receiverJson, StandardCharsets.UTF_8);
         String errorMessage = null;
