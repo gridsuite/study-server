@@ -102,11 +102,11 @@ public class RootNetworkNodeInfoEntity {
 
     @ElementCollection
     @CollectionTable(
-            name = "exportUuids",
+            name = "node_export",
             joinColumns = @JoinColumn(name = "root_network_node_info_id"),
-            foreignKey = @ForeignKey(name = "rootNetworkNodeInfo_exportUuids_fk")
+            foreignKey = @ForeignKey(name = "rootNetworkNodeInfo_nodeExport_fk")
     )
-    @MapKeyColumn(name = "export_uuid_key")
+    @MapKeyColumn(name = "export_uuid")
     @Column(name = "status")
     @Enumerated(EnumType.STRING)
     private Map<UUID, ExportNetworkStatus> exportNetworkUuids = new HashMap<>();
