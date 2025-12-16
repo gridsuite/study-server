@@ -267,6 +267,8 @@ class SensitivityAnalysisTest {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/supervision/results-count")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
+                } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=.*")) {
+                    return new MockResponse(200);
                 } else if (path.matches("/v1/networks/" + ".*" + "/factor-count")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), FAKE_RESULT_JSON);
                 } else if (path.matches("/v1/parameters")) {
@@ -808,10 +810,22 @@ class SensitivityAnalysisTest {
     @Test
     void testResetSensitivityAnalysisParametersUserHasValidParamsInProfile(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
-        UUID studyNameUserIdUuid = studyEntity.getId();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
 
-        var requests = TestUtils.getRequestsDone(3, server);
+        // run computation
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run",
+                studyUuid, firstRootNetworkUuid, modificationNode1.getId())
+                .header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
+        consumeSensitivityAnalysisResult(studyUuid, firstRootNetworkUuid, modificationNode1.getId(), SENSITIVITY_ANALYSIS_RESULT_UUID);
+
+        createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(5, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=SensitivityAnalysis&parametersUuid=.*&loadFlowParametersUuid=.*&variantId=" + VARIANT_ID + "&receiver=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=.*"))); // result has been invalidated by params reset
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING)));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
