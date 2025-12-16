@@ -620,6 +620,8 @@ class StudyTest {
                     return new MockResponse(500);
                 } else if (path.startsWith("/v1/networks/") && path.contains("/export/XIIDM")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(EXPORT_UUID));
+                } else if (path.contains("/v1/download-file/")) {
+                    return new MockResponse.Builder().code(200).build();
                 }
 
                 switch (path) {
@@ -909,11 +911,12 @@ class StudyTest {
                 firstRootNetworkUuid,
                 modificationNode1Uuid,
                 "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk()).andReturn();
-        UUID exportUuid = mapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
         TestUtils.getRequestsDone(1, mockWebServer);
+        UUID exportUuid = mapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
+        assertEquals(EXPORT_UUID, exportUuid);
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/download-file?exportUuid={exportUuid}",
                 studyUuid, firstRootNetworkUuid, modificationNode1Uuid, exportUuid).header(HEADER_USER_ID, userId)).andExpect(status().isConflict());
-        NetworkExportReceiver receiver = new NetworkExportReceiver(studyUuid, rootNodeUuid, modificationNode1Uuid, userId);
+        NetworkExportReceiver receiver = new NetworkExportReceiver(studyUuid, modificationNode1Uuid, firstRootNetworkUuid, userId);
         String receiverJson = mapper.writeValueAsString(receiver);
         String encodedReceiver = URLEncoder.encode(receiverJson, StandardCharsets.UTF_8);
         String errorMessage = null;
@@ -926,6 +929,9 @@ class StudyTest {
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
         assertEquals(EXPORT_UUID, mess.getHeaders().get(HEADER_EXPORT_UUID));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/download-file?exportUuid={exportUuid}",
+                studyUuid, firstRootNetworkUuid, modificationNode1Uuid, exportUuid).header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+        TestUtils.getRequestsDone(1, mockWebServer);
     }
 
     @Test
