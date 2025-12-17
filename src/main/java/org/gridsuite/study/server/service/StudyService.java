@@ -1943,6 +1943,16 @@ public class StudyService {
         }
     }
 
+    @Transactional
+    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes) {
+        InvalidateNodeTreeParameters invalidateNodeTreeParameters = withBlockNodes ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES : InvalidateNodeTreeParameters.ALL;
+        List<CompletableFuture<Void>> futures = getStudy(studyUuid).getRootNetworks().stream().map(rn ->
+            studyServerExecutionService.runAsync(() -> invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), invalidateNodeTreeParameters))
+        ).toList();
+
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+    }
+
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {
         networkModificationService.stopBuild(nodeUuid, rootNetworkUuid);
     }
@@ -2134,7 +2144,9 @@ public class StudyService {
             cf.join();
         }
 
-        emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
+        if (!networkModificationTreeService.isRootNode(nodeUuid)) {
+            emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
+        }
 
         if (startTime.get() != null) {
             LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,

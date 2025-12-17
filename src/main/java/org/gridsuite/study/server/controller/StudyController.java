@@ -1664,6 +1664,21 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/nodes/unbuild-all")
+    @Operation(summary = "unbuild all study nodes in all root networks")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All study nodes has been unbuilt in all root networks"),
+        @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
+    public ResponseEntity<Void> unbuildAllNodes(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        try {
+            studyService.assertNoBlockedNodeInStudy(studyUuid, rootNodeUuid);
+            studyService.unbuildNodeTree(studyUuid, rootNodeUuid, true);
+        } finally {
+            studyService.unblockNodeTree(studyUuid, rootNodeUuid);
+        }
+        return ResponseEntity.ok().build();
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build/stop")
     @Operation(summary = "stop a node build")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The build has been stopped"),
