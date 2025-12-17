@@ -16,6 +16,9 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyConstants;
+import org.gridsuite.study.server.dto.modification.*;
+import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
@@ -35,14 +38,12 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
-import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
@@ -2191,7 +2192,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void updateNetworkModificationsActivation(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId, boolean activated) {
+    public void updateNetworkModificationsMetadata(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId, NetworkModificationMetadata metadata) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
@@ -2199,8 +2200,10 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.updateModificationsActivation(groupId, modificationsUuids, activated);
-            invalidateNodeTree(studyUuid, nodeUuid);
+            networkModificationService.updateModificationsMetadata(groupId, modificationsUuids, metadata);
+            if (metadata.getActivated() != null) {
+                invalidateNodeTree(studyUuid, nodeUuid);
+            }
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
