@@ -860,7 +860,7 @@ public class RootNetworkNodeInfoService {
 
     @Transactional
     public void updateExportNetworkStatus(UUID exportUuid, ExportNetworkStatus status) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeExportNetworkNotNull(exportUuid)
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeExportNetworkExportUuid(exportUuid)
                 .stream()
                 .filter(rootNetworkNodeInfo -> rootNetworkNodeInfo.getNodeExportNetwork()
                         .stream().anyMatch(nodeExportEmbeddable -> nodeExportEmbeddable.getExportUuid().equals(exportUuid)))
