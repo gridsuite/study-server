@@ -105,7 +105,7 @@ public class RootNetworkNodeInfoEntity {
             joinColumns = @JoinColumn(name = "root_network_node_info_id"),
             foreignKey = @ForeignKey(name = "rootNetworkNodeInfo_nodeExport_fk")
     )
-    private Map<UUID, NodeExportEmbeddable> nodeExportNetwork = new HashMap<>();
+    private List<NodeExportEmbeddable> nodeExportNetwork = new ArrayList<>();
 
     @Column(name = "blockedNode")
     private Boolean blockedNode;

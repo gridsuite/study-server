@@ -3,13 +3,13 @@
     <changeSet author="rehiligha (generated)" id="1765554894804-18">
         <createTable tableName="node_export">
             <column name="root_network_node_info_id" type="UUID">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="node_exportPK"/>
+                <constraints nullable="false"/>
+            </column>
+            <column name="export_uuid" type="UUID">
+                <constraints nullable="false"/>
             </column>
             <column name="status" type="VARCHAR(255)">
                 <constraints nullable="false"/>
-            </column>
-            <column name="node_export_network_key" type="UUID">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="node_exportPK"/>
             </column>
         </createTable>
     </changeSet>

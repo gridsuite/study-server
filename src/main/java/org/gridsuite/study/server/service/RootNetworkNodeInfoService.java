@@ -862,25 +862,35 @@ public class RootNetworkNodeInfoService {
     public void updateExportNetworkStatus(UUID exportUuid, ExportNetworkStatus status) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeExportNetworkNotNull(exportUuid)
                 .stream()
-                .filter(rootNetworkNodeInfo -> rootNetworkNodeInfo.getNodeExportNetwork().containsKey(exportUuid))
+                .filter(rootNetworkNodeInfo -> rootNetworkNodeInfo.getNodeExportNetwork()
+                        .stream().anyMatch(nodeExportEmbeddable -> nodeExportEmbeddable.getExportUuid().equals(exportUuid)))
                 .findFirst()
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found for exportUuid=" + exportUuid));
-        rootNetworkNodeInfoEntity.getNodeExportNetwork().put(exportUuid, toNodeExportEmbeddable(status));
+        rootNetworkNodeInfoEntity.getNodeExportNetwork().stream()
+                .filter(nodeExportEmbeddable -> nodeExportEmbeddable.getExportUuid().equals(exportUuid))
+                .findFirst()
+                .ifPresentOrElse(nodeExportEmbeddable -> nodeExportEmbeddable.setStatus(status),
+                        () -> rootNetworkNodeInfoEntity.getNodeExportNetwork().add(toNodeExportEmbeddable(exportUuid, status)));
     }
 
     @Transactional
     public void updateExportNetworkStatus(UUID nodeUuid, UUID rootNetworkUuid, UUID exportUuid, ExportNetworkStatus status) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = findRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
-        rootNetworkNodeInfoEntity.getNodeExportNetwork().put(exportUuid, toNodeExportEmbeddable(status));
+        rootNetworkNodeInfoEntity.getNodeExportNetwork().stream()
+                .filter(e -> e.getExportUuid().equals(exportUuid))
+                .findFirst()
+                .ifPresentOrElse(nodeExportEmbeddable -> nodeExportEmbeddable.setStatus(status),
+                        () -> rootNetworkNodeInfoEntity.getNodeExportNetwork().add(toNodeExportEmbeddable(exportUuid, status)));
     }
 
     @Transactional
     public ExportNetworkStatus getExportNetworkStatus(UUID nodeUuid, UUID rootNetworkUuid, UUID exportUuid) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = findRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
-        return Optional.ofNullable(rootNetworkNodeInfoEntity.getNodeExportNetwork().get(exportUuid))
-                .map(NodeExportEmbeddable::getStatus).orElseThrow(() ->
-                        new StudyException(NOT_FOUND, "Export network not found for exportUuid=" + exportUuid)
-                );
+        return rootNetworkNodeInfoEntity.getNodeExportNetwork().stream()
+                .filter(nodeExportEmbeddable -> nodeExportEmbeddable.getExportUuid().equals(exportUuid))
+                .map(NodeExportEmbeddable::getStatus)
+                .findFirst()
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Export network not found for exportUuid=" + exportUuid));
     }
 
     private RootNetworkNodeInfoEntity findRootNetworkNodeInfo(UUID nodeUuid, UUID rootNetworkUuid) {
