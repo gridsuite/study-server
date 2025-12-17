@@ -9,21 +9,18 @@ package org.gridsuite.study.server.service;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
+import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -46,9 +43,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.networkmodificationtree.entities.NodeExportEmbeddable.toNodeExportEmbeddable;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -862,15 +860,21 @@ public class RootNetworkNodeInfoService {
 
     @Transactional
     public void updateExportNetworkStatus(UUID nodeUuid, UUID rootNetworkUuid, UUID exportUuid, ExportNetworkStatus status) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
-            .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        rootNetworkNodeInfoEntity.getExportNetworkUuids().put(exportUuid, status);
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = findRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
+        rootNetworkNodeInfoEntity.getNodeExportNetwork().put(exportUuid, toNodeExportEmbeddable(status));
     }
 
     @Transactional
     public ExportNetworkStatus getExportNetworkStatus(UUID nodeUuid, UUID rootNetworkUuid, UUID exportUuid) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = findRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
+        return Optional.ofNullable(rootNetworkNodeInfoEntity.getNodeExportNetwork().get(exportUuid))
+                .map(NodeExportEmbeddable::getStatus).orElseThrow(() ->
+                        new StudyException(NOT_FOUND, "Export network not found for exportUuid=" + exportUuid)
+                );
+    }
+
+    private RootNetworkNodeInfoEntity findRootNetworkNodeInfo(UUID nodeUuid, UUID rootNetworkUuid) {
+        return rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        return rootNetworkNodeInfoEntity.getExportNetworkUuids().get(exportUuid);
     }
 }
