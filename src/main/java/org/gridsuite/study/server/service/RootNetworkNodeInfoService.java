@@ -901,6 +901,10 @@ public class RootNetworkNodeInfoService {
     @Transactional
     public void clearNodeExportNetworks(UUID nodeUuid, UUID rootNetworkUuid) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfo = findRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
-        rootNetworkNodeInfo.getNodeExportNetwork().clear();
+        if (rootNetworkNodeInfo.getNodeExportNetwork() != null) {
+            rootNetworkNodeInfo.getNodeExportNetwork().clear();
+        } else {
+            rootNetworkNodeInfo.setNodeExportNetwork(new ArrayList<>());
+        }
     }
 }

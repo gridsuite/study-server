@@ -10,8 +10,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeExportEmbeddable;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -54,6 +57,8 @@ public class RootNetworkNodeInfo {
 
     private NodeBuildStatus nodeBuildStatus;
 
+    private List<NodeExportEmbeddable> nodeExportNetwork;
+
     public RootNetworkNodeInfoEntity toEntity() {
         return RootNetworkNodeInfoEntity.builder()
             .id(id)
@@ -72,6 +77,7 @@ public class RootNetworkNodeInfo {
             .stateEstimationResultUuid(stateEstimationResultUuid)
             .pccMinResultUuid(pccMinResultUuid)
             .nodeBuildStatus(nodeBuildStatus.toEntity())
+            .nodeExportNetwork(nodeExportNetwork != null ? nodeExportNetwork : new ArrayList<>())
             .build();
     }
 }

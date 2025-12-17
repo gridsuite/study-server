@@ -2140,13 +2140,13 @@ public class StudyService {
 
         InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.invalidateNodeTree(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
         invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
-        rootNetworkNodeInfoService.clearNodeExportNetworks(nodeUuid, rootNetworkUuid);
         CompletableFuture<Void> cf = deleteInvalidationInfos(invalidateNodeInfos);
         if (blocking) {
             cf.join();
         }
 
         if (!networkModificationTreeService.isRootNode(nodeUuid)) {
+            rootNetworkNodeInfoService.clearNodeExportNetworks(nodeUuid, rootNetworkUuid);
             emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
         }
 

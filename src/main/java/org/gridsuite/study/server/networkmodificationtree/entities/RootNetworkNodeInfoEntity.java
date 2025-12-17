@@ -142,6 +142,7 @@ public class RootNetworkNodeInfoEntity {
             .voltageInitResultUuid(voltageInitResultUuid)
             .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)
             .variantId(variantId)
+            .nodeExportNetwork(nodeExportNetwork)
             .build();
     }
 
