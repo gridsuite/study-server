@@ -897,4 +897,10 @@ public class RootNetworkNodeInfoService {
         return rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
+
+    @Transactional
+    public void clearNodeExportNetworks(UUID nodeUuid, UUID rootNetworkUuid) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo = findRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
+        rootNetworkNodeInfo.getNodeExportNetwork().clear();
+    }
 }
