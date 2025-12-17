@@ -341,11 +341,7 @@ public class SupervisionService {
     public void unbuildAllNodes(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        //TODO: to parallelize ?
-        studyService.getExistingBasicRootNetworkInfos(studyUuid).forEach(rootNetwork ->
-            studyService.invalidateNodeTree(studyUuid, rootNodeUuid, rootNetwork.rootNetworkUuid(), InvalidateNodeTreeParameters.ALL, true)
-        );
+        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false);
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }

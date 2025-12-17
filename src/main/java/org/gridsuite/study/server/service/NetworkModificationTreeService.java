@@ -1195,6 +1195,10 @@ public class NetworkModificationTreeService {
         return getNodeInfoEntity(nodeUuid).getReadOnly();
     }
 
+    public boolean isRootNode(UUID nodeUuid) {
+        return rootNodeInfoRepository.findById(nodeUuid).isPresent();
+    }
+
     // only used for tests
     @Transactional
     public UUID getParentNode(UUID nodeUuid, NodeType nodeType) {
