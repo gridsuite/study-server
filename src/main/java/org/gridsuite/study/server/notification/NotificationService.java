@@ -96,6 +96,10 @@ public class NotificationService {
     public static final String UPDATE_SPREADSHEET_TAB = "spreadsheetTabUpdated";
     public static final String UPDATE_SPREADSHEET_COLLECTION = "spreadsheetCollectionUpdated";
     public static final String UPDATE_SPREADSHEET_PARAMETERS = "spreadsheetParametersUpdated";
+    public static final String UPDATE_WORKSPACE_COLLECTION = "workspaceCollectionUpdated";
+    public static final String UPDATE_WORKSPACE = "workspaceUpdated";
+    public static final String UPDATE_PANELS = "panelsUpdated";
+    public static final String DELETE_PANELS = "panelsDeleted";
 
     public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
     public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
@@ -202,6 +206,26 @@ public class NotificationService {
     @PostCompletion
     public void emitSpreadsheetCollectionChanged(UUID studyUuid, UUID collectionUuid) {
         sendStudyUpdateMessage(studyUuid, UPDATE_SPREADSHEET_COLLECTION, MessageBuilder.withPayload(collectionUuid.toString()));
+    }
+
+    @PostCompletion
+    public void emitWorkspaceCollectionChanged(UUID studyUuid, UUID collectionUuid) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_WORKSPACE_COLLECTION, MessageBuilder.withPayload(collectionUuid.toString()));
+    }
+
+    @PostCompletion
+    public void emitWorkspaceChanged(UUID studyUuid, UUID workspaceId) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_WORKSPACE, MessageBuilder.withPayload(workspaceId.toString()));
+    }
+
+    @PostCompletion
+    public void emitPanelsUpdated(UUID studyUuid, UUID workspaceId, String panelIds) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_PANELS, MessageBuilder.withPayload(workspaceId.toString() + ":" + panelIds));
+    }
+
+    @PostCompletion
+    public void emitPanelsDeleted(UUID studyUuid, UUID workspaceId, String panelIds) {
+        sendStudyUpdateMessage(studyUuid, DELETE_PANELS, MessageBuilder.withPayload(workspaceId.toString() + ":" + panelIds));
     }
 
     @PostCompletion

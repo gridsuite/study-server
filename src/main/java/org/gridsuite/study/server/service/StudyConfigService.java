@@ -45,6 +45,9 @@ public class StudyConfigService {
     private static final String DIAGRAM_GRID_LAYOUT_URI = "/diagram-grid-layout";
     private static final String DIAGRAM_GRID_LAYOUT_WITH_ID_URI = DIAGRAM_GRID_LAYOUT_URI + UUID_PARAM;
 
+    private static final String WORKSPACE_COLLECTION_URI = "/workspace-collections";
+    private static final String WORKSPACE_COLLECTION_WITH_ID_URI = WORKSPACE_COLLECTION_URI + UUID_PARAM;
+
     private static final DiagramPosition DEFAULT_DIAGRAM_POSITION = new DiagramPosition(2, 2, 0, 0);
 
     private final RestTemplate restTemplate;
@@ -359,5 +362,132 @@ public class StudyConfigService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<DiagramGridLayout> httpEntity = new HttpEntity<>(diagramGridLayout, headers);
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+    }
+
+    // Workspace Collection
+    public UUID createDefaultWorkspaceCollection() {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACE_COLLECTION_URI + "/default")
+                .buildAndExpand()
+                .toUriString();
+        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+    }
+
+    public UUID createWorkspaceCollection(String workspaceCollection) {
+        var path = UriComponentsBuilder
+                .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACE_COLLECTION_URI)
+                .buildAndExpand()
+                .toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(workspaceCollection, headers);
+        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+    }
+
+    public String getWorkspaceCollection(UUID uuid) {
+        Objects.requireNonNull(uuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACE_COLLECTION_WITH_ID_URI)
+                .buildAndExpand(uuid).toUriString();
+        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+    }
+
+    public UUID getWorkspaceCollectionUuidOrElseCreateDefaults(StudyEntity studyEntity) {
+        if (studyEntity.getWorkspaceCollectionUuid() == null) {
+            studyEntity.setWorkspaceCollectionUuid(createDefaultWorkspaceCollection());
+        }
+        return studyEntity.getWorkspaceCollectionUuid();
+    }
+
+    public String updateWorkspaceCollection(UUID collectionUuid, String workspaceCollection) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACE_COLLECTION_WITH_ID_URI);
+        String path = uriBuilder.buildAndExpand(collectionUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(workspaceCollection, headers);
+        return restTemplate.exchange(
+            studyConfigServerBaseUri + path,
+            HttpMethod.PUT,
+            httpEntity,
+            String.class
+        ).getBody();
+    }
+
+    public void deleteWorkspaceCollection(UUID uuid) {
+        Objects.requireNonNull(uuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACE_COLLECTION_WITH_ID_URI)
+            .buildAndExpand(uuid)
+            .toUriString();
+        restTemplate.delete(studyConfigServerBaseUri + path);
+    }
+
+    public UUID duplicateWorkspaceCollection(UUID sourceUuid) {
+        Objects.requireNonNull(sourceUuid);
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACE_COLLECTION_URI)
+                .queryParam("duplicateFrom", sourceUuid)
+                .buildAndExpand().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
+        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+    }
+
+    // Workspace methods
+    public String getWorkspaces(UUID collectionUuid) {
+        Objects.requireNonNull(collectionUuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACE_COLLECTION_WITH_ID_URI + "/workspaces")
+                .buildAndExpand(collectionUuid).toUriString();
+        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+    }
+
+    public String getWorkspace(UUID collectionUuid, UUID workspaceId) {
+        Objects.requireNonNull(collectionUuid);
+        Objects.requireNonNull(workspaceId);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACE_COLLECTION_WITH_ID_URI + "/workspaces/{workspaceId}")
+                .buildAndExpand(collectionUuid, workspaceId).toUriString();
+        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+    }
+
+    public void updateWorkspace(UUID collectionUuid, UUID workspaceId, String workspaceDto) {
+        Objects.requireNonNull(collectionUuid);
+        Objects.requireNonNull(workspaceId);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACE_COLLECTION_WITH_ID_URI + "/workspaces/{workspaceId}")
+                .buildAndExpand(collectionUuid, workspaceId).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(workspaceDto, headers);
+        restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+    }
+
+    public String getPanels(UUID collectionUuid, UUID workspaceId, String ids) {
+        Objects.requireNonNull(collectionUuid);
+        Objects.requireNonNull(workspaceId);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACE_COLLECTION_WITH_ID_URI + "/workspaces/{workspaceId}/panels");
+        if (ids != null && !ids.isEmpty()) {
+            builder.queryParam("ids", ids);
+        }
+        String path = builder.buildAndExpand(collectionUuid, workspaceId).toUriString();
+        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+    }
+
+    public void createOrUpdatePanels(UUID collectionUuid, UUID workspaceId, String panelsDto) {
+        Objects.requireNonNull(collectionUuid);
+        Objects.requireNonNull(workspaceId);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACE_COLLECTION_WITH_ID_URI + "/workspaces/{workspaceId}/panels")
+                .buildAndExpand(collectionUuid, workspaceId).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(panelsDto, headers);
+        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
+    }
+
+    public void deletePanels(UUID collectionUuid, UUID workspaceId, String panelIds) {
+        Objects.requireNonNull(collectionUuid);
+        Objects.requireNonNull(workspaceId);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACE_COLLECTION_WITH_ID_URI + "/workspaces/{workspaceId}/panels")
+                .buildAndExpand(collectionUuid, workspaceId).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(panelIds, headers);
+        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.DELETE, httpEntity, Void.class);
     }
 }

@@ -67,6 +67,7 @@ public class ConsumerService {
     private final LoadFlowService loadFlowService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyConfigService studyConfigService;
+    private final WorkspaceService workspaceService;
     private final ShortCircuitService shortCircuitService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
@@ -84,6 +85,7 @@ public class ConsumerService {
                            NetworkModificationTreeService networkModificationTreeService,
                            SensitivityAnalysisService sensitivityAnalysisService,
                            StudyConfigService studyConfigService,
+                           WorkspaceService workspaceService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
@@ -97,6 +99,7 @@ public class ConsumerService {
         this.networkModificationTreeService = networkModificationTreeService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.studyConfigService = studyConfigService;
+        this.workspaceService = workspaceService;
         this.shortCircuitService = shortCircuitService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;
@@ -294,11 +297,12 @@ public class ConsumerService {
         UUID pccMinParametersUuid = createDefaultPccMinParameters();
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
         UUID diagramGridLayoutUuid = studyService.createGridLayoutFromNadDiagram(userId, userProfileInfos);
+        UUID workspaceCollectionUuid = createDefaultWorkspaceCollection();
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, workspaceCollectionUuid,
             importParameters, importReportUuid);
     }
 
@@ -476,6 +480,15 @@ public class ConsumerService {
             return studyConfigService.createDefaultSpreadsheetConfigCollection();
         } catch (final Exception e) {
             LOGGER.error("Error while creating default spreadsheet config collection", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultWorkspaceCollection() {
+        try {
+            return studyConfigService.createDefaultWorkspaceCollection();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default workspace collection", e);
             return null;
         }
     }
