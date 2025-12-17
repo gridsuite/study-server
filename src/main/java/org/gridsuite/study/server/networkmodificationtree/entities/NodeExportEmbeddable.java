@@ -26,7 +26,7 @@ import java.util.UUID;
 @Embeddable
 public class NodeExportEmbeddable {
 
-    @Column(name = "export_uuid", nullable = false)
+    @Column(name = "export_uuid", nullable = false, unique = true)
     private UUID exportUuid;
 
     @Enumerated(EnumType.STRING)

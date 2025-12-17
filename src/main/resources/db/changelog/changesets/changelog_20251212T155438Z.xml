@@ -16,4 +16,7 @@
     <changeSet author="rehiligha (generated)" id="1765554894804-20">
         <addForeignKeyConstraint baseColumnNames="root_network_node_info_id" baseTableName="node_export" constraintName="rootNetworkNodeInfo_nodeExport_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="root_network_node_info" validate="true"/>
     </changeSet>
+    <changeSet author="rehiligha (generated)" id="1765554894804-21">
+        <addUniqueConstraint columnNames="export_uuid" constraintName="uc_node_export_export_uuid_col" tableName="node_export"/>
+    </changeSet>
 </databaseChangeLog>
