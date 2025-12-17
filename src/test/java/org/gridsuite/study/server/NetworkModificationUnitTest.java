@@ -52,6 +52,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_INFOS;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_TYPE;
@@ -238,10 +239,14 @@ class NetworkModificationUnitTest {
     void unbuildAllNodes() {
         setupWithTwoRootNetwork();
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        List<UUID> rootNetworkUuids = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid).stream().map(RootNetworkInfos::getId).toList();
 
         studyController.unbuildAllNodes(studyUuid);
 
-        verify(networkModificationTreeService, times(2)).invalidateNodeTree(eq(rootNodeUuid), any(), eq(InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES));
+        ArgumentCaptor<UUID> rootNetworkUuidCaptor = ArgumentCaptor.forClass(UUID.class);
+        verify(networkModificationTreeService, times(2)).invalidateNodeTree(eq(rootNodeUuid), rootNetworkUuidCaptor.capture(), eq(InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES));
+        assertThat(rootNetworkUuids).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(rootNetworkUuidCaptor.getAllValues());
+
         // one for each root network
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));
