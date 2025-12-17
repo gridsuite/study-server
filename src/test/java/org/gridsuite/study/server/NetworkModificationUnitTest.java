@@ -241,7 +241,7 @@ class NetworkModificationUnitTest {
 
         studyController.unbuildAllNodes(studyUuid);
 
-        verify(networkModificationTreeService, times(2)).invalidateNodeTree(eq(rootNodeUuid), any(), eq(InvalidateNodeTreeParameters.ONLY_CHILDREN_WITH_BLOCKED_NODES));
+        verify(networkModificationTreeService, times(2)).invalidateNodeTree(eq(rootNodeUuid), any(), eq(InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES));
         // one for each root network
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));

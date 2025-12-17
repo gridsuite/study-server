@@ -1947,17 +1947,13 @@ public class StudyService {
     }
 
     @Transactional
-    public void unbuildAllStudyNodes(@NonNull UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-
-        List<CompletableFuture<Void>> futures = studyEntity.getRootNetworks().stream().map(rn ->
-            studyServerExecutionService.runAsync(() -> invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), InvalidateNodeTreeParameters.ONLY_CHILDREN_WITH_BLOCKED_NODES))
+    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes) {
+        InvalidateNodeTreeParameters invalidateNodeTreeParameters = withBlockNodes ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES : InvalidateNodeTreeParameters.ALL;
+        List<CompletableFuture<Void>> futures = getStudy(studyUuid).getRootNetworks().stream().map(rn ->
+            studyServerExecutionService.runAsync(() -> invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), invalidateNodeTreeParameters))
         ).toList();
 
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-
-        self.unblockNodeTree(studyUuid, rootNodeUuid);
     }
 
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {

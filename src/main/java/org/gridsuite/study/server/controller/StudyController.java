@@ -1668,7 +1668,13 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All study nodes has been unbuilt in all root networks"),
         @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
     public ResponseEntity<Void> unbuildAllNodes(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
-        studyService.unbuildAllStudyNodes(studyUuid);
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        try {
+            studyService.assertNoBlockedNodeInStudy(studyUuid, rootNodeUuid);
+            studyService.unbuildNodeTree(studyUuid, rootNodeUuid, true);
+        } finally {
+            studyService.unblockNodeTree(studyUuid, rootNodeUuid);
+        }
         return ResponseEntity.ok().build();
     }
 
