@@ -1071,11 +1071,12 @@ public class StudyService {
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
     }
 
-    public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String fileName, String format, String userId, String parametersJson) {
+    public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String fileName, String format, String userId, String parametersJson,
+                              boolean exportToExplorer, UUID parentDirectoryUuid, String description) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId, fileName, format, userId, parametersJson);
-        rootNetworkNodeInfoService.updateExportNetworkStatus(nodeUuid, rootNetworkUuid, exportUuid, ExportNetworkStatus.RUNNING);
+        rootNetworkNodeInfoService.updateExportNetworkStatus(nodeUuid, rootNetworkUuid, exportUuid, ExportNetworkStatus.RUNNING, exportToExplorer, parentDirectoryUuid, description);
         return exportUuid;
     }
 

@@ -993,9 +993,23 @@ public class StudyController {
             @PathVariable("format") String format,
             @RequestParam(value = "formatParameters", required = false) String parametersJson,
             @RequestParam(value = "fileName") String fileName,
+            @RequestParam(value = "exportToExplorer") boolean exportToExplorer,
+            @RequestParam(value = "parentDirectoryUuid", required = false) String parentDirectoryUuidStr,
+            @RequestParam(value = "description", required = false) String description,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
-        UUID exportUuid = studyService.exportNetwork(studyUuid, nodeUuid, rootNetworkUuid, fileName, format, userId, parametersJson);
+        UUID parentDirectoryUuid = parentDirectoryUuidStr != null ? UUID.fromString(parentDirectoryUuidStr) : null;
+
+        UUID exportUuid = studyService.exportNetwork(studyUuid,
+                                                        nodeUuid,
+                                                        rootNetworkUuid,
+                                                        fileName,
+                                                        format,
+                                                        userId,
+                                                        parametersJson,
+                                                        exportToExplorer,
+                                                        parentDirectoryUuid,
+                                                        description);
         return ResponseEntity.ok().body(exportUuid);
     }
 

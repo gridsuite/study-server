@@ -88,3 +88,6 @@ gridsuite:
     -
       name: directory-server
       base-uri: http://localhost:5026
+    -
+      name: explore-server
+      base-uri: http://localhost:5029

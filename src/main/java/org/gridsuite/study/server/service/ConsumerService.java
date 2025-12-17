@@ -23,6 +23,7 @@ import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeExportInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -30,9 +31,11 @@ import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.io.Resource;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -74,6 +77,8 @@ public class ConsumerService {
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
     private final PccMinService pccMinService;
+    private final NetworkConversionService networkConversionService;
+    private final ExploreService exploreService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -88,7 +93,8 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService, PccMinService pccMinService) {
+                           StateEstimationService stateEstimationService, PccMinService pccMinService,
+                           NetworkConversionService networkConversionService, ExploreService exploreService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -104,6 +110,8 @@ public class ConsumerService {
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
+        this.networkConversionService = networkConversionService;
+        this.exploreService = exploreService;
     }
 
     @Bean
@@ -847,8 +855,28 @@ public class ConsumerService {
                 UUID studyUuid = receiver.getStudyUuid();
                 String userId = receiver.getUserId();
                 UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
+
+                // With export uuid get
+                NodeExportInfos nodeExport = rootNetworkNodeInfoService.getNodeExportInfos(exportUuid);
+
+                boolean exportToExplorer = nodeExport != null && nodeExport.exportToExplorer();
+                if (exportToExplorer) {
+                    // first download file from conversion server
+                    Resource ressource = networkConversionService.downloadExportedNetworkFile(exportUuid, receiver.getUserId()).getBody();
+
+                    if (ressource != null) {
+                        File file = ressource.getFile();
+                        exploreService.createCase(
+                            file,
+                            file.getName(),
+                            nodeExport.directoryUuid(),
+                            receiver.getUserId(),
+                            nodeExport.description());
+                    }
+                }
+
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
-                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, userId, errorMessage);
+                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToExplorer, userId, errorMessage);
                 rootNetworkNodeInfoService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
