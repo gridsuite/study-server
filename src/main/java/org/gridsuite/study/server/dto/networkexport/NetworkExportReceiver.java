@@ -22,7 +22,5 @@ import java.util.UUID;
 @NoArgsConstructor
 public class NetworkExportReceiver {
     private UUID studyUuid;
-    private UUID nodeUuid;
-    private UUID rootNetworkUuid;
     private String userId;
 }

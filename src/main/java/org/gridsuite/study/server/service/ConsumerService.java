@@ -849,8 +849,7 @@ public class ConsumerService {
                 UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
                 notificationService.emitNetworkExportFinished(studyUuid, exportUuid, userId, errorMessage);
-                rootNetworkNodeInfoService.updateExportNetworkStatus(receiver.getNodeUuid(), receiver.getRootNetworkUuid(), exportUuid, errorMessage == null ?
-                        ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
+                rootNetworkNodeInfoService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
             }

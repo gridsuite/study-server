@@ -1078,7 +1078,7 @@ public class StudyService {
     public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String fileName, String format, String userId, String parametersJson) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, nodeUuid, rootNetworkUuid, variantId, fileName, format, userId, parametersJson);
+        UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId, fileName, format, userId, parametersJson);
         rootNetworkNodeInfoService.updateExportNetworkStatus(nodeUuid, rootNetworkUuid, exportUuid, ExportNetworkStatus.RUNNING);
         return exportUuid;
     }

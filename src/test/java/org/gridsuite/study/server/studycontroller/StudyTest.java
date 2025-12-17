@@ -915,7 +915,7 @@ class StudyTest {
         assertEquals(EXPORT_UUID, exportUuid);
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/download-file?exportUuid={exportUuid}",
                 studyUuid, firstRootNetworkUuid, modificationNode1Uuid, exportUuid).header(HEADER_USER_ID, userId)).andExpect(status().isConflict());
-        NetworkExportReceiver receiver = new NetworkExportReceiver(studyUuid, modificationNode1Uuid, firstRootNetworkUuid, userId);
+        NetworkExportReceiver receiver = new NetworkExportReceiver(studyUuid, userId);
         String receiverJson = mapper.writeValueAsString(receiver);
         String encodedReceiver = URLEncoder.encode(receiverJson, StandardCharsets.UTF_8);
         String errorMessage = null;

@@ -98,7 +98,7 @@ public class NetworkConversionService {
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public UUID exportNetwork(UUID networkUuid, UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String variantId, String fileName, String format, String userId, String parametersJson) {
+    public UUID exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, String fileName, String format, String userId, String parametersJson) {
 
         try {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
@@ -110,7 +110,7 @@ public class NetworkConversionService {
             if (!StringUtils.isEmpty(fileName)) {
                 uriComponentsBuilder.queryParam("fileName", fileName);
             }
-            String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NetworkExportReceiver(studyUuid, nodeUuid, rootNetworkUuid, userId)), StandardCharsets.UTF_8);
+            String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NetworkExportReceiver(studyUuid, userId)), StandardCharsets.UTF_8);
             uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver);
             String path = uriComponentsBuilder.buildAndExpand(networkUuid, format).toUriString();
 

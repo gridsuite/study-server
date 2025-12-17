@@ -40,6 +40,7 @@ public class InvalidateNodeInfos {
     private Set<UUID> pccMinResultUuids = new HashSet<>();
     private Set<UUID> dynamicSimulationResultUuids = new HashSet<>();
     private Set<UUID> dynamicSecurityAnalysisResultUuids = new HashSet<>();
+    private Set<UUID> exportNetworkUuids = new HashSet<>();
 
     public List<UUID> getNodeUuids() {
         return nodeUuids.stream().toList();
@@ -95,6 +96,10 @@ public class InvalidateNodeInfos {
 
     public List<UUID> getDynamicSecurityAnalysisResultUuids() {
         return dynamicSecurityAnalysisResultUuids.stream().toList();
+    }
+
+    public List<UUID> getExportNodeUuids() {
+        return exportNetworkUuids.stream().toList();
     }
 
     public void addReportUuid(UUID reportUuid) {
@@ -170,5 +175,6 @@ public class InvalidateNodeInfos {
         pccMinResultUuids.addAll(invalidateNodeInfos.getPccMinResultUuids());
         dynamicSimulationResultUuids.addAll(invalidateNodeInfos.getDynamicSimulationResultUuids());
         dynamicSecurityAnalysisResultUuids.addAll(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids());
+        exportNetworkUuids.addAll(invalidateNodeInfos.getExportNodeUuids());
     }
 }

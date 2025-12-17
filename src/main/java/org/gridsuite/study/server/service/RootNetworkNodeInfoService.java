@@ -859,6 +859,16 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional
+    public void updateExportNetworkStatus(UUID exportUuid, ExportNetworkStatus status) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeExportNetworkNotNull(exportUuid)
+                .stream()
+                .filter(rootNetworkNodeInfo -> rootNetworkNodeInfo.getNodeExportNetwork().containsKey(exportUuid))
+                .findFirst()
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found for exportUuid=" + exportUuid));
+        rootNetworkNodeInfoEntity.getNodeExportNetwork().put(exportUuid, toNodeExportEmbeddable(status));
+    }
+
+    @Transactional
     public void updateExportNetworkStatus(UUID nodeUuid, UUID rootNetworkUuid, UUID exportUuid, ExportNetworkStatus status) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = findRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
         rootNetworkNodeInfoEntity.getNodeExportNetwork().put(exportUuid, toNodeExportEmbeddable(status));
