@@ -68,6 +68,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriUtils;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -820,12 +821,16 @@ public class StudyService {
 
     private Map<String, Object> populateSldRequestInfos(Map<String, Object> sldRequestInfos, String voltageLevelId, UUID nodeUuid, UUID rootNetworkUuid) {
         List<CurrentLimitViolationInfos> violations = getCurrentLimitViolations(nodeUuid, rootNetworkUuid);
-        UUID shortCircuitResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT);
-        Map<String, Double> busIdToIccValues = shortCircuitResultUuid != null ?
-                shortCircuitService.getVoltageLevelIccValues(shortCircuitResultUuid, voltageLevelId) : Map.of();
+        Map<String, Double> busIdToIccValues = getBusIdToIccValuesMap(voltageLevelId, nodeUuid, rootNetworkUuid);
         sldRequestInfos.put(CURRENT_LIMIT_VIOLATIONS_INFOS, violations);
         sldRequestInfos.put(BUS_ID_TO_ICC_VALUES, busIdToIccValues);
         return sldRequestInfos;
+    }
+
+    private Map<String, Double> getBusIdToIccValuesMap(String voltageLevelId, UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID shortCircuitResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT);
+        return shortCircuitResultUuid != null ?
+            shortCircuitService.getVoltageLevelIccValues(shortCircuitResultUuid, voltageLevelId) : Map.of();
     }
 
     private void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, String userId, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
@@ -880,8 +885,25 @@ public class StudyService {
             networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
             elementType,
             infoTypeParameters.getInfoType(),
-            getOptionalParameters(elementType, studyEntity, loadFlowParameters),
+            getSingleElementOptionalParameters(elementId, elementType, studyEntity, nodeUuid, rootNetworkUuid, loadFlowParameters),
             elementId);
+    }
+
+    private Map<String, String> getSingleElementOptionalParameters(String elementId, String elementType, StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, LoadFlowParameters loadFlowParameters) {
+        Map<String, String> additionalParameters = getOptionalParameters(elementType, studyEntity, loadFlowParameters);
+
+        if (elementType.equalsIgnoreCase("voltage_level")) {
+            try {
+                additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_BUS_ID_TO_ICC_VALUES,
+                    UriUtils.encode(objectMapper.writeValueAsString(getBusIdToIccValuesMap(elementId, nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8)
+                );
+            } catch (JsonProcessingException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+
+        return additionalParameters;
     }
 
     private static Map<String, String> getOptionalParameters(String elementType, StudyEntity studyEntity, LoadFlowParameters loadFlowParameters) {
@@ -1168,7 +1190,8 @@ public class StudyService {
     @Transactional
     public boolean setSecurityAnalysisParametersValues(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        boolean userProfileIssue = createOrUpdateSecurityAnalysisParameters(studyUuid, studyEntity, parameters, userId);
+        boolean userProfileIssue = createOrUpdateSecurityAnalysisParameters(studyEntity, parameters, userId);
+        invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, SECURITY_ANALYSIS);
@@ -1732,7 +1755,6 @@ public class StudyService {
                 voltageInitService.updateVoltageInitParameters(existingVoltageInitParametersUuid, parameters);
             }
         }
-        invalidateVoltageInitStatusOnAllNodes(studyEntity.getId());
 
         return userProfileIssue;
     }
@@ -1747,7 +1769,7 @@ public class StudyService {
         }
     }
 
-    public boolean createOrUpdateSecurityAnalysisParameters(UUID studyUuid, StudyEntity studyEntity, String parameters, String userId) {
+    public boolean createOrUpdateSecurityAnalysisParameters(StudyEntity studyEntity, String parameters, String userId) {
         boolean userProfileIssue = false;
         UUID existingSecurityAnalysisParametersUuid = studyEntity.getSecurityAnalysisParametersUuid();
         UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
@@ -1772,7 +1794,6 @@ public class StudyService {
         } else {
             securityAnalysisService.updateSecurityAnalysisParameters(existingSecurityAnalysisParametersUuid, parameters);
         }
-        invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
 
         return userProfileIssue;
     }
@@ -2723,6 +2744,7 @@ public class StudyService {
             voltageInitParameters.setApplyModifications(parameters.isApplyModifications());
         }
         boolean userProfileIssue = createOrUpdateVoltageInitParameters(studyEntity, parameters.getComputationParameters(), userId);
+        invalidateVoltageInitStatusOnAllNodes(studyEntity.getId());
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, VOLTAGE_INITIALIZATION);
@@ -3023,16 +3045,16 @@ public class StudyService {
 
     @Transactional
     public boolean setDynamicSecurityAnalysisParameters(UUID studyUuid, String dsaParameter, String userId) {
-        boolean userProfileIssue = createOrUpdateDynamicSecurityAnalysisParameters(studyUuid, dsaParameter, userId);
+        StudyEntity studyEntity = getStudy(studyUuid);
+        boolean userProfileIssue = createOrUpdateDynamicSecurityAnalysisParameters(studyEntity, dsaParameter, userId);
+        invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_SECURITY_ANALYSIS);
         return userProfileIssue;
     }
 
-    public boolean createOrUpdateDynamicSecurityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-
+    public boolean createOrUpdateDynamicSecurityAnalysisParameters(StudyEntity studyEntity, String parameters, String userId) {
         boolean userProfileIssue = false;
         UUID existingDynamicSecurityAnalysisParametersUuid = studyEntity.getDynamicSecurityAnalysisParametersUuid();
         UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
@@ -3057,7 +3079,6 @@ public class StudyService {
         } else {
             dynamicSecurityAnalysisService.updateParameters(existingDynamicSecurityAnalysisParametersUuid, parameters);
         }
-        invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
 
         return userProfileIssue;
     }
@@ -3206,16 +3227,16 @@ public class StudyService {
 
     @Transactional
     public boolean setSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
-        boolean userProfileIssue = createOrUpdateSensitivityAnalysisParameters(studyUuid, parameters, userId);
+        StudyEntity studyEntity = getStudy(studyUuid);
+        boolean userProfileIssue = createOrUpdateSensitivityAnalysisParameters(studyEntity, parameters, userId);
+        invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, SENSITIVITY_ANALYSIS);
         return userProfileIssue;
     }
 
-    public boolean createOrUpdateSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-
+    public boolean createOrUpdateSensitivityAnalysisParameters(StudyEntity studyEntity, String parameters, String userId) {
         boolean userProfileIssue = false;
         UUID existingSensitivityAnalysisParametersUuid = studyEntity.getSensitivityAnalysisParametersUuid();
         UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
@@ -3240,7 +3261,6 @@ public class StudyService {
         } else {
             sensitivityAnalysisService.updateSensitivityAnalysisParameters(existingSensitivityAnalysisParametersUuid, parameters);
         }
-        invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
 
         return userProfileIssue;
     }
@@ -3410,6 +3430,7 @@ public class StudyService {
     public void setStateEstimationParametersValues(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         createOrUpdateStateEstimationParameters(studyEntity, parameters);
+        invalidateStateEstimationStatusOnAllNodes(studyEntity.getId());
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, STATE_ESTIMATION);
@@ -3423,7 +3444,6 @@ public class StudyService {
         } else {
             stateEstimationService.updateStateEstimationParameters(existingStateEstimationParametersUuid, parameters);
         }
-        invalidateStateEstimationStatusOnAllNodes(studyEntity.getId());
     }
 
     @Transactional
@@ -3436,6 +3456,7 @@ public class StudyService {
     public void setPccMinParameters(UUID studyUuid, String parameters, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         createOrUpdatePccMinParameters(studyEntity, parameters);
+        invalidatePccMinStatusOnAllNodes(studyEntity.getId());
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, PCC_MIN);
@@ -3449,7 +3470,6 @@ public class StudyService {
         } else {
             pccMinService.updatePccMinParameters(existingPccMinParametersUuid, parameters);
         }
-        invalidatePccMinStatusOnAllNodes(studyEntity.getId());
     }
 
     @Transactional
