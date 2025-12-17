@@ -202,6 +202,7 @@ class NetworkModificationUnitTest {
 
     @Test
     void updateDescription() {
+        setupWithOneRootNetwork();
         UUID modificationUuid = UUID.randomUUID();
         List<UUID> childrenNodes = List.of(node2Uuid, node4Uuid, node3Uuid);
 
