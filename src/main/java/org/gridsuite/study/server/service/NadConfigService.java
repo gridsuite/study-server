@@ -9,8 +9,7 @@ package org.gridsuite.study.server.service;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,11 +22,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class NadConfigService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(NadConfigService.class);
-
     private final SingleLineDiagramService singleLineDiagramService;
+    private final NotificationService notificationService;
 
-    public UUID saveNadConfig(@NonNull NadConfigInfos nadConfigInfos) {
+    public UUID saveNadConfig(@NonNull NadConfigInfos nadConfigInfos, UUID studyUuid) {
         UUID configUuid = nadConfigInfos.getId();
 
         if (configUuid == null) {
@@ -36,6 +34,8 @@ public class NadConfigService {
         } else {
             singleLineDiagramService.updateNadConfig(nadConfigInfos);
         }
+
+        notificationService.emitWorkspaceNadConfigUpdated(studyUuid, nadConfigInfos.getId());
 
         return nadConfigInfos.getId();
     }

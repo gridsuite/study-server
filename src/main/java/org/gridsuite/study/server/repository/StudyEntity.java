@@ -107,8 +107,8 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "diagramGridLayoutUuid")
     private UUID diagramGridLayoutUuid;
 
-    @Column(name = "workspaceCollectionUuid")
-    private UUID workspaceCollectionUuid;
+    @Column(name = "workspacesConfigUuid")
+    private UUID workspacesConfigUuid;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "study_voltage_init_parameters_id",

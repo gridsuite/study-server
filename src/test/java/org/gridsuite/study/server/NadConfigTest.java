@@ -206,7 +206,7 @@ class NadConfigTest {
             .willReturn(WireMock.serverError()));
 
         assertThrows(HttpServerErrorException.class, () -> {
-            nadConfigService.saveNadConfig(nadConfigInfos);
+            nadConfigService.saveNadConfig(nadConfigInfos, UUID.randomUUID());
         });
     }
 
@@ -221,7 +221,7 @@ class NadConfigTest {
             .willReturn(WireMock.serverError()));
 
         assertThrows(HttpServerErrorException.class, () -> {
-            nadConfigService.saveNadConfig(nadConfigInfos);
+            nadConfigService.saveNadConfig(nadConfigInfos, existingUuid);
         });
     }
 
