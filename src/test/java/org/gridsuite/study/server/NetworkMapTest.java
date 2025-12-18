@@ -22,6 +22,7 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
@@ -30,6 +31,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -48,11 +50,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.util.LinkedMultiValueMap;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -64,6 +70,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -135,6 +142,11 @@ class NetworkMapTest {
     private ObjectMapper objectMapper;
     @Autowired
     private TestUtils studyTestUtils;
+
+    @MockitoSpyBean
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    @MockitoBean
+    private ShortCircuitService shortCircuitService;
 
     @BeforeEach
     void setup(final MockWebServer server) throws Exception {
@@ -957,6 +969,46 @@ class NetworkMapTest {
                 .andReturn();
 
         wireMockStubs.verifyNominalVoltagesGet(stubUuid, NETWORK_UUID_STRING);
+    }
+
+    @Test
+    void testGetVoltageLevelInfoWithIcc(final MockWebServer server) throws Exception {
+        networkMapService.setNetworkMapServerBaseUri(wireMockServer.baseUrl());
+        //create study
+        StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        //params specific to the test
+        UUID shortcircuitResultUuid = UUID.randomUUID();
+        String voltageLevelId = "voltageLevelId";
+        Map<String, Double> iccByBusId = Map.of("busId1", 1.0, "busId2", 2.0);
+        String vlInfosAsString = "Voltage level infos";
+
+        String infoType = "TOOLTIP";
+        String elementType = "voltage_level";
+
+        //mock shortcircuit call
+        doReturn(shortcircuitResultUuid).when(rootNetworkNodeInfoService).getComputationResultUuid(rootNodeUuid, rootNetworkUuid, ComputationType.SHORT_CIRCUIT);
+        doReturn(iccByBusId).when(shortCircuitService).getVoltageLevelIccValues(shortcircuitResultUuid, voltageLevelId);
+
+        //get the voltage level map data info of a network
+        String busIdToIccJson = URLEncoder.encode(mapper.writeValueAsString(iccByBusId), StandardCharsets.UTF_8);
+        UUID stubUuid = wireMockStubs.stubNetworkElementInfosWithIccByBusIdValuesGet(NETWORK_UUID_STRING, elementType, infoType, voltageLevelId, busIdToIccJson, vlInfosAsString);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyNameUserIdUuid, rootNetworkUuid, rootNodeUuid, voltageLevelId)
+                .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
+                .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
+            )
+            .andExpect(status().isOk())
+            .andReturn();
+
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
+
+        // check shortcircuit call has been made and result has been passed to network map server
+        verify(shortCircuitService, times(1)).getVoltageLevelIccValues(shortcircuitResultUuid, voltageLevelId);
+        verify(rootNetworkNodeInfoService, times(1)).getComputationResultUuid(rootNodeUuid, rootNetworkUuid, ComputationType.SHORT_CIRCUIT);
+        wireMockStubs.verifyNetworkElementInfosWithIccByBusIdValuesGet(stubUuid, NETWORK_UUID_STRING, elementType, infoType, voltageLevelId, busIdToIccJson);
     }
 
     @AfterEach
