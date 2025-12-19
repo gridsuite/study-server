@@ -50,11 +50,14 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_PCC_MIN_UUID = "pccMinParametersUuid";
     public static final String QUERY_PARAM_SHORT_CIRCUIT_UUID = "shortCircuitParametersUuid";
     public static final String QUERY_PARAM_NETWORK_UUID = "networkUuid";
+    public static final String QUERY_PARAM_ROOT_NETWORK_UUID = "rootNetworkUuid";
     public static final String QUERY_PARAM_EQUIPMENT_TYPE = "equipmentType";
     public static final String QUERY_PARAM_EQUIPMENT_TYPES = "equipmentTypes";
     public static final String QUERY_PARAM_ELEMENT_TYPE = "elementType";
     public static final String QUERY_PARAM_SIDE = "side";
+    public static final String QUERY_PARAM_BUS_ID = "busId";
     public static final String QUERY_PARAM_NOMINAL_VOLTAGES = "nominalVoltages";
+    public static final String QUERY_PARAM_VOLTAGE_LEVEL_ID = "voltageLevelId";
     public static final String QUERY_PARAM_INFO_TYPE = "infoType";
     public static final String QUERY_PARAM_OPTIONAL_PARAMS = "optionalParameters";
     public static final String QUERY_FORMAT_OPTIONAL_PARAMS = QUERY_PARAM_OPTIONAL_PARAMS + "[%s]";
@@ -64,6 +67,8 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_PARAMETERS_UUID = "parametersUuid";
     public static final String QUERY_PARAM_FILTERS = "filters";
     public static final String QUERY_PARAM_GLOBAL_FILTERS = "globalFilters";
+    public static final String QUERY_PARAM_SORT = "sort";
+    public static final String QUERY_PARAM_MODE = "mode";
 
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";
