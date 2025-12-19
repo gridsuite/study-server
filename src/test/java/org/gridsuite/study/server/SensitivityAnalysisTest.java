@@ -803,8 +803,8 @@ class SensitivityAnalysisTest {
 
         var requests = TestUtils.getRequestsDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING))); // get retrieve user profile parameters ko
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING))); // update existing with dft
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING))); // post duplicate ko
     }
 
     @Test
@@ -827,8 +827,8 @@ class SensitivityAnalysisTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=SensitivityAnalysis&parametersUuid=.*&loadFlowParametersUuid=.*&variantId=" + VARIANT_ID + "&receiver=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=.*"))); // result has been invalidated by params reset
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING)));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // get retrieve user profile parameters ok
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING))); // put update existing parameters with parameters retrieved from user profile
     }
 
     @Test
@@ -837,8 +837,9 @@ class SensitivityAnalysisTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(2, server);
+        var requests = TestUtils.getRequestsDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // get retrieve user profile parameters ok
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters"))); // create parameters using retrieve parameters from user profile
     }
 }

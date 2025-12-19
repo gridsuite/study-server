@@ -17,6 +17,7 @@ import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.modification.*;
+import org.gridsuite.study.server.dto.securityanalysis.SecurityAnalysisParametersValues;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
@@ -543,6 +544,7 @@ public class StudyService {
                 removeVoltageInitParameters(s.getVoltageInitParametersUuid());
                 removeSensitivityAnalysisParameters(s.getSensitivityAnalysisParametersUuid());
                 removeDynamicSecurityAnalysisParameters(s.getDynamicSecurityAnalysisParametersUuid());
+                removeShortCircuitParameters(s.getShortCircuitParametersUuid());
                 removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removePccMinParameters(s.getPccMinParametersUuid());
@@ -1182,15 +1184,15 @@ public class StudyService {
     }
 
     @Transactional
-    public String getSecurityAnalysisParametersValues(UUID studyUuid) {
+    public SecurityAnalysisParametersValues getSecurityAnalysisParametersValues(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return securityAnalysisService.getSecurityAnalysisParameters(securityAnalysisService.getSecurityAnalysisParametersUuidOrElseCreateDefaults(studyEntity));
     }
 
     @Transactional
-    public boolean setSecurityAnalysisParametersValues(UUID studyUuid, String parameters, String userId) {
+    public boolean setSecurityAnalysisParametersValues(UUID studyUuid, SecurityAnalysisParametersValues saParameters, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        boolean userProfileIssue = createOrUpdateSecurityAnalysisParameters(studyEntity, parameters, userId);
+        boolean userProfileIssue = createOrUpdateSecurityAnalysisParameters(studyEntity, saParameters, userId);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -1222,9 +1224,9 @@ public class StudyService {
     }
 
     @Transactional
-    public boolean setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
+    public boolean setLoadFlowParameters(UUID studyUuid, LoadFlowParametersInfos lfParameters, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        boolean userProfileIssue = createOrUpdateLoadFlowParameters(studyEntity, parameters, userId);
+        boolean userProfileIssue = createOrUpdateLoadFlowParameters(studyEntity, lfParameters, userId);
         invalidateAllStudyLoadFlowStatus(studyUuid);
         invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
@@ -1353,7 +1355,7 @@ public class StudyService {
     @Transactional
     public boolean setShortCircuitParameters(UUID studyUuid, @Nullable String shortCircuitParametersInfos, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        boolean userProfileIssue = createOrUpdateShortcircuitParameters(studyEntity, shortCircuitParametersInfos, userId);
+        boolean userProfileIssue = createOrUpdateShortCircuitParameters(studyEntity, shortCircuitParametersInfos, userId);
         invalidateShortCircuitStatusOnAllNodes(studyUuid);
         invalidatePccMinStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
@@ -1364,7 +1366,7 @@ public class StudyService {
         return userProfileIssue;
     }
 
-    public boolean createOrUpdateShortcircuitParameters(StudyEntity studyEntity, String parameters, String userId) {
+    public boolean createOrUpdateShortCircuitParameters(StudyEntity studyEntity, String scParameters, String userId) {
         /* +-----------------------+----------------+-----------------------------------------+
          * | entity.parametersUuid | parametersInfo | action                                  |
          * | no                    | no             | create default ones                     |
@@ -1374,36 +1376,40 @@ public class StudyService {
          * +-----------------------+----------------+-----------------------------------------+
          */
         boolean userProfileIssue = false;
-        UUID existingShortcircuitParametersUuid = studyEntity.getShortCircuitParametersUuid();
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos.getShortcircuitParameterId() != null) {
-            // reset case, with existing profile, having default short circuit params
-            try {
-                UUID shortcircuitParametersFromProfileUuid = shortCircuitService.duplicateParameters(userProfileInfos.getShortcircuitParameterId());
-                studyEntity.setShortCircuitParametersUuid(shortcircuitParametersFromProfileUuid);
-                removeShortcircuitParameters(existingShortcircuitParametersUuid);
-                return userProfileIssue;
-            } catch (Exception e) {
-                userProfileIssue = true;
-                LOGGER.error(String.format("Could not duplicate short circuit parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getShortcircuitParameterId(), userId, userProfileInfos.getName()), e);
-                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+
+        UUID studySCParametersId = studyEntity.getShortCircuitParametersUuid();
+        String scParametersToUse = scParameters;
+
+        // When no parameters given try to use user's profile parameters
+        if (scParametersToUse == null) {
+            UserProfileInfos userProfileinfos = userAdminService.getUserProfile(userId);
+            UUID profileSParamId = userProfileinfos != null ? userProfileinfos.getShortcircuitParameterId() : null;
+
+            if (profileSParamId != null) {
+                try {
+                    scParametersToUse = shortCircuitService.getParameters(profileSParamId);
+                } catch (Exception e) {
+                    userProfileIssue = true;
+                    LOGGER.error(String.format("Could not retrieve short circuit parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                            profileSParamId, userId, userProfileinfos.getName()), e);
+                }
             }
         }
 
-        if (existingShortcircuitParametersUuid == null) {
-            existingShortcircuitParametersUuid = shortCircuitService.createParameters(parameters);
-            studyEntity.setShortCircuitParametersUuid(existingShortcircuitParametersUuid);
+        if (studySCParametersId == null) {
+            studySCParametersId = shortCircuitService.createParameters(scParametersToUse);
+            studyEntity.setShortCircuitParametersUuid(studySCParametersId);
         } else {
-            shortCircuitService.updateParameters(existingShortcircuitParametersUuid, parameters);
+            shortCircuitService.updateParameters(studySCParametersId, scParametersToUse);
         }
+
         return userProfileIssue;
     }
 
-    private void removeShortcircuitParameters(@Nullable UUID shortcircuitParametersUuid) {
+    private void removeShortCircuitParameters(@Nullable UUID shortcircuitParametersUuid) {
         if (shortcircuitParametersUuid != null) {
             try {
-                shortCircuitService.deleteShortcircuitParameters(shortcircuitParametersUuid);
+                shortCircuitService.deleteShortCircuitParameters(shortcircuitParametersUuid);
             } catch (Exception e) {
                 LOGGER.error("Could not remove short circuit parameters with uuid:" + shortcircuitParametersUuid, e);
             }
@@ -1674,37 +1680,55 @@ public class StudyService {
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
     }
 
-    public boolean createOrUpdateLoadFlowParameters(StudyEntity studyEntity, String parameters, String userId) {
-        boolean userProfileIssue = false;
-        UUID existingLoadFlowParametersUuid = studyEntity.getLoadFlowParametersUuid();
+    private LoadFlowParametersInfos buildLoadFlowParametersUsingProvider(LoadFlowParametersInfos lfParameters, String provider) {
+        return LoadFlowParametersInfos.builder()
+                .provider(provider)
+                .limitReduction(lfParameters.getLimitReduction())
+                .commonParameters(lfParameters.getCommonParameters())
+                .specificParametersPerProvider(lfParameters.getSpecificParametersPerProvider())
+                .limitReductions(lfParameters.getLimitReductions())
+                .build();
 
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos.getLoadFlowParameterId() != null) {
-            // reset case, with existing profile, having default LF params
-            try {
-                UUID loadFlowParametersFromProfileUuid = loadflowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
-                if (existingLoadFlowParametersUuid != null) {
-                    //For a reset to defaultValues we need to keep the provider if it exists because it's updated separately
-                    String keptProvider = loadflowService.getLoadFlowParameters(existingLoadFlowParametersUuid).getProvider();
-                    loadflowService.updateLoadFlowProvider(loadFlowParametersFromProfileUuid, keptProvider);
+    }
+
+    public boolean createOrUpdateLoadFlowParameters(StudyEntity studyEntity, LoadFlowParametersInfos lfParameters, String userId) {
+        boolean userProfileIssue = false;
+
+        UUID studyLFParametersId = studyEntity.getLoadFlowParametersUuid();
+        LoadFlowParametersInfos lfParametersToUse = lfParameters;
+
+        // When no parameters given try to use user's profile parameters
+        if (lfParametersToUse == null) {
+            UserProfileInfos userProfileinfos = userAdminService.getUserProfile(userId);
+            UUID profileLFParamId = userProfileinfos != null ? userProfileinfos.getLoadFlowParameterId() : null;
+
+            if (profileLFParamId != null) {
+                UUID lastCheckedParametersId = profileLFParamId;
+                try {
+                    LoadFlowParametersInfos userProfileLfParameters = loadflowService.getLoadFlowParameters(profileLFParamId);
+                    if (studyLFParametersId != null) {
+                        lastCheckedParametersId = studyLFParametersId;
+                        String keptProvider = loadflowService.getLoadFlowParameters(studyLFParametersId).getProvider(); // Keep current study provider as this setting is updated separately
+                        lfParametersToUse = buildLoadFlowParametersUsingProvider(userProfileLfParameters, keptProvider);
+                    } else {
+                        lfParametersToUse = userProfileLfParameters;
+                    }
+                } catch (Exception e) {
+                    userProfileIssue = true;
+                    LOGGER.error(String.format(
+                            "Could not retrieve loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                            lastCheckedParametersId, userId, userProfileinfos.getName()), e);
                 }
-                studyEntity.setLoadFlowParametersUuid(loadFlowParametersFromProfileUuid);
-                removeLoadFlowParameters(existingLoadFlowParametersUuid);
-                return userProfileIssue;
-            } catch (Exception e) {
-                userProfileIssue = true;
-                LOGGER.error(String.format("Could not duplicate loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                        userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
-                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
             }
         }
 
-        if (existingLoadFlowParametersUuid == null) {
-            existingLoadFlowParametersUuid = loadflowService.createLoadFlowParameters(parameters);
-            studyEntity.setLoadFlowParametersUuid(existingLoadFlowParametersUuid);
+        if (studyLFParametersId == null) {
+            studyLFParametersId = loadflowService.createLoadFlowParameters(lfParametersToUse);
+            studyEntity.setLoadFlowParametersUuid(studyLFParametersId);
         } else {
-            loadflowService.updateLoadFlowParameters(existingLoadFlowParametersUuid, parameters);
+            loadflowService.updateLoadFlowParameters(studyLFParametersId, lfParametersToUse);
         }
+
         return userProfileIssue;
     }
 
@@ -1727,32 +1751,35 @@ public class StudyService {
         });
     }
 
-    public boolean createOrUpdateVoltageInitParameters(StudyEntity studyEntity, VoltageInitParametersInfos parameters, String userId) {
+    public boolean createOrUpdateVoltageInitParameters(StudyEntity studyEntity, VoltageInitParametersInfos viParameters, String userId) {
         boolean userProfileIssue = false;
-        UUID existingVoltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos.getVoltageInitParameterId() != null) {
-            // reset case, with existing profile, having default voltage init params
-            try {
-                UUID voltageInitParametersFromProfileUuid = voltageInitService.duplicateVoltageInitParameters(userProfileInfos.getVoltageInitParameterId());
-                studyEntity.setVoltageInitParametersUuid(voltageInitParametersFromProfileUuid);
-                removeVoltageInitParameters(existingVoltageInitParametersUuid);
-                return userProfileIssue;
-            } catch (Exception e) {
-                userProfileIssue = true;
-                LOGGER.error(String.format("Could not duplicate voltage init parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getVoltageInitParameterId(), userId, userProfileInfos.getName()), e);
-                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+
+        UUID studyVIParametersId = studyEntity.getVoltageInitParametersUuid();
+        VoltageInitParametersInfos viParametersToUse = viParameters;
+
+        // When no parameters given try to use user's profile parameters
+        if (viParametersToUse == null) {
+            UserProfileInfos userProfileinfos = userAdminService.getUserProfile(userId);
+            UUID profileVIParamId = userProfileinfos != null ? userProfileinfos.getVoltageInitParameterId() : null;
+
+            if (profileVIParamId != null) {
+                try {
+                    viParametersToUse = voltageInitService.getVoltageInitParameters(profileVIParamId);
+                } catch (Exception e) {
+                    userProfileIssue = true;
+                    LOGGER.error(String.format("Could not retrieve voltage init parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                            profileVIParamId, userId, userProfileinfos.getName()), e);
+                }
             }
         }
 
-        if (existingVoltageInitParametersUuid == null) {
-            existingVoltageInitParametersUuid = voltageInitService.createVoltageInitParameters(parameters);
-            studyEntity.setVoltageInitParametersUuid(existingVoltageInitParametersUuid);
+        if (studyVIParametersId == null) {
+            studyVIParametersId = voltageInitService.createVoltageInitParameters(viParametersToUse);
+            studyEntity.setVoltageInitParametersUuid(studyVIParametersId);
         } else {
-            VoltageInitParametersInfos oldParameters = voltageInitService.getVoltageInitParameters(existingVoltageInitParametersUuid);
-            if (Objects.isNull(parameters) || !parameters.equals(oldParameters)) {
-                voltageInitService.updateVoltageInitParameters(existingVoltageInitParametersUuid, parameters);
+            VoltageInitParametersInfos currentStudyVIParameters = voltageInitService.getVoltageInitParameters(studyVIParametersId);
+            if (Objects.isNull(viParametersToUse) || !viParametersToUse.equals(currentStudyVIParameters)) {
+                voltageInitService.updateVoltageInitParameters(studyVIParametersId, viParametersToUse);
             }
         }
 
@@ -1769,30 +1796,53 @@ public class StudyService {
         }
     }
 
-    public boolean createOrUpdateSecurityAnalysisParameters(StudyEntity studyEntity, String parameters, String userId) {
+    private SecurityAnalysisParametersValues buildSecurityParametersUsingProvider(SecurityAnalysisParametersValues saParameters, String provider) {
+        return SecurityAnalysisParametersValues.builder()
+                .provider(provider)
+                .lowVoltageAbsoluteThreshold(saParameters.getLowVoltageAbsoluteThreshold())
+                .lowVoltageProportionalThreshold(saParameters.getLowVoltageProportionalThreshold())
+                .highVoltageAbsoluteThreshold(saParameters.getHighVoltageAbsoluteThreshold())
+                .highVoltageProportionalThreshold(saParameters.getHighVoltageProportionalThreshold())
+                .flowProportionalThreshold(saParameters.getFlowProportionalThreshold())
+                .limitReductions(saParameters.getLimitReductions())
+                .build();
+    }
+
+    public boolean createOrUpdateSecurityAnalysisParameters(StudyEntity studyEntity, SecurityAnalysisParametersValues saParameters, String userId) {
         boolean userProfileIssue = false;
-        UUID existingSecurityAnalysisParametersUuid = studyEntity.getSecurityAnalysisParametersUuid();
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
-            // reset case, with existing profile, having default security analysis params
-            try {
-                UUID securityAnalysisParametersFromProfileUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId());
-                studyEntity.setSecurityAnalysisParametersUuid(securityAnalysisParametersFromProfileUuid);
-                removeSecurityAnalysisParameters(existingSecurityAnalysisParametersUuid);
-                return userProfileIssue;
-            } catch (Exception e) {
-                userProfileIssue = true;
-                LOGGER.error(String.format("Could not duplicate security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                        userProfileInfos.getSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
-                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+
+        UUID studySAParametersId = studyEntity.getSecurityAnalysisParametersUuid();
+        SecurityAnalysisParametersValues saParametersToUse = saParameters;
+
+        // When no parameters given try to use user's profile parameters
+        if (saParametersToUse == null) {
+            UserProfileInfos userProfileinfos = userAdminService.getUserProfile(userId);
+            UUID profileSAParamId = userProfileinfos != null ? userProfileinfos.getSecurityAnalysisParameterId() : null;
+
+            if (profileSAParamId != null) {
+                UUID lastCheckedParametersId = profileSAParamId;
+                try {
+                    SecurityAnalysisParametersValues userProfileSAParameters = securityAnalysisService.getSecurityAnalysisParameters(profileSAParamId);
+                    if (studySAParametersId != null) {
+                        lastCheckedParametersId = studySAParametersId;
+                        String keptProvider = securityAnalysisService.getSecurityAnalysisParameters(studySAParametersId).getProvider();
+                        saParametersToUse = buildSecurityParametersUsingProvider(userProfileSAParameters, keptProvider);
+                    } else {
+                        saParametersToUse = userProfileSAParameters;
+                    }
+                } catch (Exception e) {
+                    userProfileIssue = true;
+                    LOGGER.error(String.format("Could not retrieve security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                            lastCheckedParametersId, userId, userProfileinfos.getName()), e);
+                }
             }
         }
 
-        if (existingSecurityAnalysisParametersUuid == null) {
-            existingSecurityAnalysisParametersUuid = securityAnalysisService.createSecurityAnalysisParameters(parameters);
-            studyEntity.setSecurityAnalysisParametersUuid(existingSecurityAnalysisParametersUuid);
+        if (studySAParametersId == null) {
+            studySAParametersId = securityAnalysisService.createSecurityAnalysisParameters(saParametersToUse);
+            studyEntity.setSecurityAnalysisParametersUuid(studySAParametersId);
         } else {
-            securityAnalysisService.updateSecurityAnalysisParameters(existingSecurityAnalysisParametersUuid, parameters);
+            securityAnalysisService.updateSecurityAnalysisParameters(studySAParametersId, saParametersToUse);
         }
 
         return userProfileIssue;
@@ -2799,42 +2849,51 @@ public class StudyService {
      * If configCollection is null, try to use the one from user profile, or system default if no profile.
      *
      * @param studyEntity the study entity
-     * @param configCollection the spreadsheet config collection (null means reset to default)
+     * @param spreadsheetConfigCollection the spreadsheet config collection (null means reset to default)
      * @param userId the user ID for retrieving profile
      * @return true if reset with user profile cannot be done, false otherwise
      */
-    private boolean createOrUpdateSpreadsheetConfigCollection(StudyEntity studyEntity, String configCollection, String userId) {
+    private boolean createOrUpdateSpreadsheetConfigCollection(StudyEntity studyEntity, String spreadsheetConfigCollection, String userId) {
         boolean userProfileIssue = false;
-        UUID existingSpreadsheetConfigCollectionUuid = studyEntity.getSpreadsheetConfigCollectionUuid();
 
-        UserProfileInfos userProfileInfos = configCollection == null ? userAdminService.getUserProfile(userId) : null;
-        if (configCollection == null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
-            // reset case, with existing profile, having default spreadsheet config collection
-            try {
-                UUID spreadsheetConfigCollectionFromProfileUuid = studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
-                studyEntity.setSpreadsheetConfigCollectionUuid(spreadsheetConfigCollectionFromProfileUuid);
-                removeSpreadsheetConfigCollection(existingSpreadsheetConfigCollectionUuid);
-                return userProfileIssue;
-            } catch (Exception e) {
-                userProfileIssue = true;
-                LOGGER.error(String.format("Could not duplicate spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default collection",
-                        userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
-                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default collection below
+        UUID studySCCId = studyEntity.getSpreadsheetConfigCollectionUuid();
+        String sccToUse = spreadsheetConfigCollection;
+
+        // When no spreadsheet config collection given try to use user's profile spreadsheet config collection
+        if (sccToUse == null) {
+            UserProfileInfos userProfileinfos = userAdminService.getUserProfile(userId);
+            UUID profileSCCId = userProfileinfos != null ? userProfileinfos.getSpreadsheetConfigCollectionId() : null;
+
+            if (profileSCCId != null) {
+                try {
+                    sccToUse = studyConfigService.getSpreadsheetConfigCollection(profileSCCId);
+                } catch (Exception e) {
+                    userProfileIssue = true;
+                    LOGGER.error(String.format(
+                            "Could not retrieve spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default collection",
+                            profileSCCId, userId, userProfileinfos.getName()), e);
+                }
             }
         }
 
-        if (configCollection != null) {
-            if (existingSpreadsheetConfigCollectionUuid == null) {
-                UUID newUuid = studyConfigService.createSpreadsheetConfigCollection(configCollection);
-                studyEntity.setSpreadsheetConfigCollectionUuid(newUuid);
+        if (studySCCId != null) {
+            if (sccToUse != null) {
+                studyConfigService.updateSpreadsheetConfigCollection(studySCCId, sccToUse);
             } else {
-                studyConfigService.updateSpreadsheetConfigCollection(existingSpreadsheetConfigCollectionUuid, configCollection);
+                // No config provided, use system default
+                UUID defaultCollectionId = studyConfigService.createDefaultSpreadsheetConfigCollection();
+                studyEntity.setSpreadsheetConfigCollectionUuid(defaultCollectionId);
+                removeSpreadsheetConfigCollection(studySCCId);
             }
         } else {
-            // No config provided, use system default
-            UUID defaultCollectionUuid = studyConfigService.createDefaultSpreadsheetConfigCollection();
-            studyEntity.setSpreadsheetConfigCollectionUuid(defaultCollectionUuid);
-            removeSpreadsheetConfigCollection(existingSpreadsheetConfigCollectionUuid);
+            if (sccToUse != null) {
+                studySCCId = studyConfigService.createSpreadsheetConfigCollection(sccToUse);
+                studyEntity.setSpreadsheetConfigCollectionUuid(studySCCId);
+            } else {
+                // No config provided, use system default
+                UUID defaultCollectionId = studyConfigService.createDefaultSpreadsheetConfigCollection();
+                studyEntity.setSpreadsheetConfigCollectionUuid(defaultCollectionId);
+            }
         }
 
         return userProfileIssue;
@@ -3066,30 +3125,33 @@ public class StudyService {
         return userProfileIssue;
     }
 
-    public boolean createOrUpdateDynamicSecurityAnalysisParameters(StudyEntity studyEntity, String parameters, String userId) {
+    public boolean createOrUpdateDynamicSecurityAnalysisParameters(StudyEntity studyEntity, String dsaParameters, String userId) {
         boolean userProfileIssue = false;
-        UUID existingDynamicSecurityAnalysisParametersUuid = studyEntity.getDynamicSecurityAnalysisParametersUuid();
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
-            // reset case, with existing profile, having default dynamic security analysis params
-            try {
-                UUID dynamicSecurityAnalysisParametersFromProfileUuid = dynamicSecurityAnalysisService.duplicateParameters(userProfileInfos.getDynamicSecurityAnalysisParameterId());
-                studyEntity.setDynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisParametersFromProfileUuid);
-                removeDynamicSecurityAnalysisParameters(existingDynamicSecurityAnalysisParametersUuid);
-                return userProfileIssue;
-            } catch (Exception e) {
-                userProfileIssue = true;
-                LOGGER.error(String.format("Could not duplicate dynamic security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                        userProfileInfos.getDynamicSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
-                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+
+        UUID studyDSAParametersId = studyEntity.getDynamicSecurityAnalysisParametersUuid();
+        String dsaParametersToUse = dsaParameters;
+
+        // When no parameters given try to use user's profile parameters
+        if (dsaParametersToUse == null) {
+            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
+            UUID profileDSAParamId = userProfileInfos != null ? userProfileInfos.getDynamicSecurityAnalysisParameterId() : null;
+
+            if (profileDSAParamId != null) {
+                try {
+                    dsaParametersToUse = dynamicSecurityAnalysisService.getParameters(profileDSAParamId);
+                } catch (Exception e) {
+                    userProfileIssue = true;
+                    LOGGER.error(String.format("Could not retrieve dynamic security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                            profileDSAParamId, userId, userProfileInfos.getName()), e);
+                }
             }
         }
 
-        if (existingDynamicSecurityAnalysisParametersUuid == null) {
-            UUID newDynamicSecurityAnalysisParametersUuid = dynamicSecurityAnalysisService.createParameters(parameters);
-            studyEntity.setDynamicSecurityAnalysisParametersUuid(newDynamicSecurityAnalysisParametersUuid);
+        if (studyDSAParametersId == null) {
+            studyDSAParametersId = dynamicSecurityAnalysisService.createParameters(dsaParametersToUse);
+            studyEntity.setDynamicSecurityAnalysisParametersUuid(studyDSAParametersId);
         } else {
-            dynamicSecurityAnalysisService.updateParameters(existingDynamicSecurityAnalysisParametersUuid, parameters);
+            dynamicSecurityAnalysisService.updateParameters(studyDSAParametersId, dsaParametersToUse);
         }
 
         return userProfileIssue;
@@ -3248,30 +3310,32 @@ public class StudyService {
         return userProfileIssue;
     }
 
-    public boolean createOrUpdateSensitivityAnalysisParameters(StudyEntity studyEntity, String parameters, String userId) {
+    public boolean createOrUpdateSensitivityAnalysisParameters(StudyEntity studyEntity, String saParameters, String userId) {
         boolean userProfileIssue = false;
-        UUID existingSensitivityAnalysisParametersUuid = studyEntity.getSensitivityAnalysisParametersUuid();
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos.getSensitivityAnalysisParameterId() != null) {
-            // reset case, with existing profile, having default sensitivity analysis params
-            try {
-                UUID sensitivityAnalysisParametersFromProfileUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId());
-                studyEntity.setSensitivityAnalysisParametersUuid(sensitivityAnalysisParametersFromProfileUuid);
-                removeSensitivityAnalysisParameters(existingSensitivityAnalysisParametersUuid);
-                return userProfileIssue;
-            } catch (Exception e) {
-                userProfileIssue = true;
-                LOGGER.error(String.format("Could not duplicate sensitivity analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getSensitivityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
-                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+
+        UUID studySAParametersId = studyEntity.getSensitivityAnalysisParametersUuid();
+        String saParametersToUse = saParameters;
+
+        if (saParametersToUse == null) {
+            UserProfileInfos userProfileinfos = userAdminService.getUserProfile(userId);
+            UUID profileSAParamId = userProfileinfos != null ? userProfileinfos.getSensitivityAnalysisParameterId() : null;
+
+            if (profileSAParamId != null) {
+                try {
+                    saParametersToUse = sensitivityAnalysisService.getSensitivityAnalysisParameters(profileSAParamId);
+                } catch (Exception e) {
+                    userProfileIssue = true;
+                    LOGGER.error(String.format("Could not retrieve sensitivity analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                            profileSAParamId, userId, userProfileinfos.getName()), e);
+                }
             }
         }
 
-        if (existingSensitivityAnalysisParametersUuid == null) {
-            existingSensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters);
-            studyEntity.setSensitivityAnalysisParametersUuid(existingSensitivityAnalysisParametersUuid);
+        if (studySAParametersId == null) {
+            studySAParametersId = sensitivityAnalysisService.createSensitivityAnalysisParameters(saParametersToUse);
+            studyEntity.setSensitivityAnalysisParametersUuid(studySAParametersId);
         } else {
-            sensitivityAnalysisService.updateSensitivityAnalysisParameters(existingSensitivityAnalysisParametersUuid, parameters);
+            sensitivityAnalysisService.updateSensitivityAnalysisParameters(studySAParametersId, saParametersToUse);
         }
 
         return userProfileIssue;

@@ -101,8 +101,8 @@ class SecurityAnalysisTest {
     private static final String CONTINGENCIES_JSON = "[{\"id\":\"l1\",\"elements\":[{\"id\":\"l1\",\"type\":\"BRANCH\"}]}]";
     private static final String CONTINGENCIES_COUNT = "2";
 
-    public static final String SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":0.0,\"lowVoltageProportionalThreshold\":0.0,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
-    private static final String SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":30.0,\"lowVoltageProportionalThreshold\":0.4,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
+    public static final String SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"provider\":\"LF_PROVIDER\",\"lowVoltageAbsoluteThreshold\":0.0,\"lowVoltageProportionalThreshold\":0.0,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1,\"limitReductions\":[]}";
+    private static final String SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON = "{\"provider\":\"LF_PROVIDER\",\"lowVoltageAbsoluteThreshold\":30.0,\"lowVoltageProportionalThreshold\":0.4,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1,\"limitReductions\":[]}";
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
@@ -651,14 +651,12 @@ class SecurityAnalysisTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
 
-        String mnBodyJson = objectWriter.writeValueAsString(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
-
         //update the parameters
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mnBodyJson)).andExpect(
+                        .content(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON)).andExpect(
                 status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID)));
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSecurityAnalysisParametersUuid());
@@ -675,7 +673,7 @@ class SecurityAnalysisTest {
                 post("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mnBodyJson)).andExpect(
+                        .content(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON)).andExpect(
                 status().isOk());
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -689,13 +687,12 @@ class SecurityAnalysisTest {
         UUID studyUuid = studyEntity.getId();
         assertNotNull(studyUuid);
         assertNull(studyEntity.getSecurityAnalysisParametersUuid());
-        String mnBodyJson = objectWriter.writeValueAsString(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
 
         //test update parameters without having already created parameters -> should call create instead of update
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
                         .header("userId", "userId")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mnBodyJson))
+                        .content(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON))
                 .andExpect(status().isOk());
 
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyUuid).orElseThrow().getSecurityAnalysisParametersUuid());
@@ -811,7 +808,7 @@ class SecurityAnalysisTest {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/security-analysis/parameters", studyNameUserIdUuid)
                     .header("userId", userId)
-                    .contentType(MediaType.ALL)
+                    .contentType(MediaType.APPLICATION_JSON)
                     .content(parameters))
             .andExpect(status().is(status.value()));
 
@@ -855,7 +852,7 @@ class SecurityAnalysisTest {
         var requests = TestUtils.getRequestsDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING))); // update existing with dft
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING))); // post duplicate ko
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING))); // get retrieve user profile parameters ko
     }
 
     @Test
@@ -879,12 +876,12 @@ class SecurityAnalysisTest {
 
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(5, server);
+        var requests = TestUtils.getRequestsDone(6, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=.*"))); // result has been invalidated by params reset
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING))); // 2 requests: 1 get for provider and then delete existing
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // get retrieve existing user profile parameters ok
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING))); // 2 requests: first: get existing study security analysis parameters to retrieve provider; second: put update existing parameters with retrieved parameters from user profile
     }
 
     @Test
@@ -893,8 +890,9 @@ class SecurityAnalysisTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(2, server);
+        var requests = TestUtils.getRequestsDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // get retrieve user profile parameters ok
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters"))); // post create parameters using parameters retrieved from user profile
     }
 }
