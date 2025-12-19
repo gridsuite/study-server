@@ -1098,8 +1098,8 @@ class VoltageInitTest {
 
         var requests = TestUtils.getRequestsDone(4, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING))); // get retrieve user profile parameters ko
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID_STRING))); // get/update existing with dft
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING))); // post duplicate ko
     }
 
     @Test
@@ -1118,12 +1118,12 @@ class VoltageInitTest {
 
         createOrUpdateParametersAndDoChecks(studyUuid, null, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(5, server);
+        var requests = TestUtils.getRequestsDone(6, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&reportType=VoltageInit&parametersUuid=.*&variantId=variant_1&rootNetworkName=rootNetworkName&nodeName=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=.*"))); // result has been invalidated by params reset
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID_STRING)));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING))); // 2 requests: first: get existing study voltage init parameters to check if current equals new parameters; second: put update existing with retrieved parameters from user profile
     }
 
     @Test
@@ -1132,9 +1132,10 @@ class VoltageInitTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, null, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(2, server);
+        var requests = TestUtils.getRequestsDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING))); // get retrieve user profile parameters ok
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters"))); // post create parameters using retrieved parameters ok
     }
 
     private StudyEntity insertDummyStudy(UUID networkUuid, UUID caseUuid, UUID voltageInitParametersUuid, boolean applyModifications) {

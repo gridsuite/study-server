@@ -241,9 +241,9 @@ public class LoadFlowService extends AbstractComputationService {
         return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersInfos.class);
     }
 
-    public UUID createLoadFlowParameters(String parameters) {
+    public UUID createLoadFlowParameters(LoadFlowParametersInfos lfParameters) {
 
-        Objects.requireNonNull(parameters);
+        Objects.requireNonNull(lfParameters);
 
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters")
@@ -253,7 +253,7 @@ public class LoadFlowService extends AbstractComputationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+        HttpEntity<LoadFlowParametersInfos> httpEntity = new HttpEntity<>(lfParameters, headers);
 
         return restTemplate.postForObject(loadFlowServerBaseUri + path, httpEntity, UUID.class);
     }
@@ -270,7 +270,7 @@ public class LoadFlowService extends AbstractComputationService {
         return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
     }
 
-    public void updateLoadFlowParameters(UUID parametersUuid, @Nullable String parameters) {
+    public void updateLoadFlowParameters(UUID parametersUuid, @Nullable LoadFlowParametersInfos lfParameters) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid)
@@ -279,7 +279,7 @@ public class LoadFlowService extends AbstractComputationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+        HttpEntity<LoadFlowParametersInfos> httpEntity = new HttpEntity<>(lfParameters, headers);
 
         restTemplate.put(loadFlowServerBaseUri + path, httpEntity);
     }
