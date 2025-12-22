@@ -228,9 +228,6 @@ gridsuite:
     -
       name: directory-server
       base-uri: http://directory-server/
-    -
-      name: explore-server
-      base-uri: http://explore-server/
 
 study:
   max-root-network-by-study: 4
