@@ -548,6 +548,7 @@ public class StudyService {
                 removePccMinParameters(s.getPccMinParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
                 removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
+                removeWorkspacesConfig(s.getWorkspacesConfigUuid());
                 removeNadConfigs(s.getNadConfigsUuids().stream().toList());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
@@ -616,7 +617,7 @@ public class StudyService {
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -630,7 +631,7 @@ public class StudyService {
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, importParameters, importReportUuid);
+                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, workspacesConfigUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
@@ -755,6 +756,11 @@ public class StudyService {
             copiedSpreadsheetConfigCollectionUuid = studyConfigService.duplicateSpreadsheetConfigCollection(sourceStudyEntity.getSpreadsheetConfigCollectionUuid());
         }
 
+        UUID copiedWorkspacesConfigUuid = null;
+        if (sourceStudyEntity.getWorkspacesConfigUuid() != null) {
+            copiedWorkspacesConfigUuid = studyConfigService.duplicateWorkspacesConfig(sourceStudyEntity.getWorkspacesConfigUuid());
+        }
+
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
         UUID copiedStateEstimationParametersUuid = null;
@@ -784,6 +790,7 @@ public class StudyService {
             .stateEstimationParametersUuid(copiedStateEstimationParametersUuid)
             .pccMinParametersUuid(copiedPccMinParametersUuid)
             .diagramGridLayoutUuid(diagramGridLayoutId)
+            .workspacesConfigUuid(copiedWorkspacesConfigUuid)
             .build());
     }
 
@@ -1511,7 +1518,7 @@ public class StudyService {
     public UUID saveNadConfig(UUID studyUuid, NadConfigInfos nadConfig) {
         StudyEntity studyEntity = getStudy(studyUuid);
 
-        UUID nadConfigUuid = nadConfigService.saveNadConfig(nadConfig);
+        UUID nadConfigUuid = nadConfigService.saveNadConfig(nadConfig, studyUuid);
 
         studyEntity.getNadConfigsUuids().add(nadConfigUuid);
 
@@ -1613,7 +1620,7 @@ public class StudyService {
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                     UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1631,6 +1638,7 @@ public class StudyService {
                 .pccMinParametersUuid(pccMinParametersUuid)
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
                 .diagramGridLayoutUuid(diagramGridLayoutUuid)
+                .workspacesConfigUuid(workspacesConfigUuid)
                 .monoRoot(true)
                 .build();
 
@@ -3646,6 +3654,76 @@ public class StudyService {
     public void resetFilters(UUID studyUuid, UUID configUuid) {
         studyConfigService.resetFilters(configUuid);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    // Workspaces Config methods
+    private UUID getWorkspacesConfigUuidOrElseCreateDefaults(StudyEntity studyEntity) {
+        if (studyEntity.getWorkspacesConfigUuid() == null) {
+            studyEntity.setWorkspacesConfigUuid(studyConfigService.createDefaultWorkspacesConfig());
+        }
+        return studyEntity.getWorkspacesConfigUuid();
+    }
+
+    private void removeWorkspacesConfig(@Nullable UUID workspacesConfigUuid) {
+        if (workspacesConfigUuid != null) {
+            try {
+                studyConfigService.deleteWorkspacesConfig(workspacesConfigUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove workspaces config with uuid:" + workspacesConfigUuid, e);
+            }
+        }
+    }
+
+    // Workspace methods
+    public String getWorkspacesMetadata(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        UUID workspacesConfigUuid = getWorkspacesConfigUuidOrElseCreateDefaults(studyEntity);
+        return studyConfigService.getWorkspacesMetadata(workspacesConfigUuid);
+    }
+
+    public String getWorkspace(UUID studyUuid, UUID workspaceId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return studyConfigService.getWorkspace(studyEntity.getWorkspacesConfigUuid(), workspaceId);
+    }
+
+    public void renameWorkspace(UUID studyUuid, UUID workspaceId, String name) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        studyConfigService.renameWorkspace(studyEntity.getWorkspacesConfigUuid(), workspaceId, name);
+        notificationService.emitWorkspaceUpdated(studyUuid, workspaceId);
+    }
+
+    // Panel methods
+    public String getWorkspacePanels(UUID studyUuid, UUID workspaceId, List<String> ids) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return studyConfigService.getWorkspacePanels(studyEntity.getWorkspacesConfigUuid(), workspaceId, ids);
+    }
+
+    public void createOrUpdateWorkspacePanels(UUID studyUuid, UUID workspaceId, String panelsDto) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        studyConfigService.createOrUpdateWorkspacePanels(studyEntity.getWorkspacesConfigUuid(), workspaceId, panelsDto);
+        String panelIds = extractWorkspacePanelIds(panelsDto);
+        notificationService.emitWorkspacePanelsUpdated(studyUuid, workspaceId, panelIds);
+    }
+
+    public void deleteWorkspacePanels(UUID studyUuid, UUID workspaceId, String panelIds) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        studyConfigService.deleteWorkspacePanels(studyEntity.getWorkspacesConfigUuid(), workspaceId, panelIds);
+        notificationService.emitWorkspacePanelsDeleted(studyUuid, workspaceId, panelIds);
+    }
+
+    private String extractWorkspacePanelIds(String panelsDto) {
+        try {
+            List<Map<String, Object>> panels = objectMapper.readValue(panelsDto, List.class);
+            String ids = panels.stream()
+                .map(panel -> panel.get("id"))
+                .filter(Objects::nonNull)
+                .map(id -> id.toString())
+                .collect(Collectors.joining(","));
+            return ids;
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Failed to extract panel IDs from DTO", e);
+            return "";
+        }
     }
 
     @Transactional(readOnly = true)
