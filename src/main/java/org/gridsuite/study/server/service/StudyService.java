@@ -2777,6 +2777,12 @@ public class StudyService {
         return studyConfigService.getSpreadsheetConfigCollection(studyConfigService.getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(studyEntity));
     }
 
+    @Transactional
+    public String getComputationResultFilters(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return studyConfigService.getComputationResultFilters(studyConfigService.getComputationResultFiltersUuidOrElseCreateDefaults(studyEntity));
+    }
+
     /**
      * Set spreadsheet config collection on study or reset to default one if empty body.
      * Default is the user profile one, or system default if no profile is available.
@@ -3615,6 +3621,14 @@ public class StudyService {
     public void setGlobalFilters(UUID studyUuid, UUID configUuid, String globalFilters) {
         studyConfigService.setGlobalFilters(configUuid, globalFilters);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public void setGlobalFiltersForComputationResult(UUID studyUuid, UUID configUuid, String globalFilters) {
+        studyConfigService.setGlobalFiltersForComputationResult(studyUuid, configUuid, globalFilters);
+    }
+
+    public void updateColumns(UUID studyUuid, UUID configUuid, UUID columnUuid, String columnInfos) {
+        studyConfigService.updateColumns(configUuid, columnUuid, columnInfos);
     }
 
     public void renameSpreadsheetConfig(UUID studyUuid, UUID configUuid, String newName) {
