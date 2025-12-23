@@ -17,11 +17,13 @@ import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeExportInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -73,6 +75,7 @@ public class ConsumerService {
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
     private final PccMinService pccMinService;
+    private final NetworkConversionService networkConversionService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -87,7 +90,8 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService, PccMinService pccMinService) {
+                           StateEstimationService stateEstimationService, PccMinService pccMinService,
+                           NetworkConversionService networkConversionService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -103,6 +107,7 @@ public class ConsumerService {
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
+        this.networkConversionService = networkConversionService;
     }
 
     @Bean
@@ -846,8 +851,16 @@ public class ConsumerService {
                 UUID studyUuid = receiver.getStudyUuid();
                 String userId = receiver.getUserId();
                 UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
+
+                // With export uuid get
+                NodeExportInfos nodeExport = rootNetworkNodeInfoService.getNodeExportInfos(exportUuid);
+
+                boolean exportToExplorer = nodeExport != null && nodeExport.exportToExplorer();
+                //Call case server and create case in directory
+
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
-                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, userId, errorMessage);
+                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToExplorer, userId, errorMessage);
+                rootNetworkNodeInfoService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
             }
