@@ -315,7 +315,7 @@ public class ShortCircuitService extends AbstractComputationService {
             .toUri(), new HttpEntity<>(headers), UUID.class);
     }
 
-    public void deleteShortcircuitParameters(UUID uuid) {
+    public void deleteShortCircuitParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
         String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(uuid)

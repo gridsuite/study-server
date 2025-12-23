@@ -83,7 +83,7 @@ class SpreadsheetConfigCollectionTest {
 
     private static final String NO_PROFILE_USER_ID = "noProfileUser";
     private static final String VALID_PROFILE_USER_ID = "validProfileUser";
-    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"spreadsheetConfigCollectionId\":\"" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "\"}";
+    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"spreadsheetConfigCollectionId\":\"" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "\"}";
 
     // UUID for testing delete failure
     private static final String ERROR_DELETE_COLLECTION_UUID_STRING = "7715da48-3390-47cb-8d9a-f936c8ca6a71";
@@ -397,14 +397,13 @@ class SpreadsheetConfigCollectionTest {
 
         // Check that the study has been updated with the new collection from user profile
         StudyEntity updatedStudy = studyRepository.findById(studyUuid).orElseThrow();
-        assertEquals(NEW_SPREADSHEET_CONFIG_COLLECTION_UUID, updatedStudy.getSpreadsheetConfigCollectionUuid());
+        assertEquals(SPREADSHEET_CONFIG_COLLECTION_UUID, updatedStudy.getSpreadsheetConfigCollectionUuid()); // Keep existing spreadsheet config collection id
 
         // Verify HTTP requests made to the server - should duplicate from a profile collection
         var requests = TestUtils.getRequestsDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/users/" + VALID_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=.*")));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING))); // delete old collection
-
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING))); // get retrieve user profile config collection
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING))); // put update existing config collection with user profile config collection
     }
 
     @Test
