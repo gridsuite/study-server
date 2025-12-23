@@ -14,7 +14,6 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
-import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.springframework.http.*;
@@ -329,19 +328,20 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
     }
 
-    public Long getSensitivityAnalysisFactorsCount(UUID networkUuid, String variantId, SensitivityFactorsIdsByGroup factorsIds, Boolean isInjectionsSet) {
+    public String getSensitivityAnalysisFactorCount(UUID networkUuid, String variantId, String sensitivityAnalysisParameters) {
         var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/factors-count")
-                .queryParam("isInjectionsSet", isInjectionsSet);
+                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/factor-count");
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
 
-        factorsIds.getIds().forEach((key, value) -> uriComponentsBuilder.queryParam(String.format("ids[%s]", key), value));
-
         var path = uriComponentsBuilder.buildAndExpand(networkUuid).toUriString();
 
-        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.GET, null, Long.class).getBody();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(sensitivityAnalysisParameters, headers);
+
+        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, String.class).getBody();
     }
 
     @Override
