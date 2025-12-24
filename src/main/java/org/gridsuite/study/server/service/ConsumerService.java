@@ -519,13 +519,11 @@ public class ConsumerService {
         String errorMessage = msg.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class);
         String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
         UUID resultUuid = null;
-        // resultUuid is only used for the voltage initialization computation, I don't know why
-        if (computationType == VOLTAGE_INITIALIZATION) {
-            String resultId = msg.getHeaders().get(RESULT_UUID, String.class);
-            if (resultId != null) {
-                resultUuid = UUID.fromString(resultId);
-            }
+        String resultId = msg.getHeaders().get(RESULT_UUID, String.class);
+        if (resultId != null) {
+            resultUuid = UUID.fromString(resultId);
         }
+
         if (!Strings.isBlank(receiver)) {
             NodeReceiver receiverObj = null;
             try {
