@@ -3622,8 +3622,8 @@ public class StudyService {
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
-    public void updateSpreadsheetConfigSort(UUID studyUuid, UUID configUuid, String newName) {
-        studyConfigService.updateSpreadsheetConfigSort(configUuid, newName);
+    public void updateSpreadsheetConfigSort(UUID studyUuid, UUID configUuid, String sortConfig) {
+        studyConfigService.updateSpreadsheetConfigSort(configUuid, sortConfig);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
