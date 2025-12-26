@@ -274,6 +274,15 @@ public class StudyConfigService {
         restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, String.class);
     }
 
+    public void updateSpreadsheetConfigSort(UUID configUuid, String sortConfig) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI + "/sort");
+        String path = uriBuilder.buildAndExpand(configUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(sortConfig, headers);
+        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, String.class);
+    }
+
     public void updateSpreadsheetConfig(UUID configUuid, String spreadsheetConfigInfos) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_WITH_ID_URI);
         String path = uriBuilder.buildAndExpand(configUuid).toUriString();

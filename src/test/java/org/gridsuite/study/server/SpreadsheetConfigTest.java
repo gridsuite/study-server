@@ -141,6 +141,35 @@ class SpreadsheetConfigTest {
     }
 
     @Test
+    void testUpdateSort() throws Exception {
+        StudyEntity studyEntity = insertStudy();
+        String configServerUrl = "/v1/spreadsheet-configs/" + SPREADSHEET_CONFIG_UUID + "/sort";
+
+        UUID stubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.noContent())).getId();
+
+        String body = objectMapper.writeValueAsString("some parameters");
+        mockMvc.perform(put("/v1/studies/{studyUuid}/spreadsheet-config/{configUuid}/sort", studyEntity.getId(), SPREADSHEET_CONFIG_UUID)
+                        .header("content-type", "application/json")
+                        .content(body))
+                .andExpect(status().isNoContent())
+                .andReturn();
+        checkSpreadsheetTabUpdateMessageReceived(studyEntity.getId());
+        WireMockUtils.verifyPutRequest(wireMockServer, stubId, configServerUrl, false, Map.of(), body);
+
+        stubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.notFound())).getId();
+
+        body = objectMapper.writeValueAsString("some parameters");
+        mockMvc.perform(put("/v1/studies/{studyUuid}/spreadsheet-config/{configUuid}/sort", studyEntity.getId(), SPREADSHEET_CONFIG_UUID)
+                        .header("content-type", "application/json")
+                        .content(body))
+                .andExpect(status().isNotFound())
+                .andReturn();
+        WireMockUtils.verifyPutRequest(wireMockServer, stubId, configServerUrl, false, Map.of(), body);
+    }
+
+    @Test
     void testDeleteColumn() throws Exception {
         StudyEntity studyEntity = insertStudy();
         String configServerUrl = "/v1/spreadsheet-configs/" + SPREADSHEET_CONFIG_UUID + "/columns/" + SPREADSHEET_CONFIG_COLUMN_UUID;
