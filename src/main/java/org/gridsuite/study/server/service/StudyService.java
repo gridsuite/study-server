@@ -1908,6 +1908,46 @@ public class StudyService {
         }
     }
 
+    @Transactional
+    public void buildSubtree(@NonNull UUID studyUuid, @NonNull UUID parentNodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+        AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(studyUuid, parentNodeUuid, rootNetworkUuid);
+        studySubTree.getChildren().forEach(child ->
+            buildStudySubTree(
+                child,
+                studyUuid,
+                rootNetworkUuid,
+                userId
+            )
+        );
+    }
+
+    private void buildStudySubTree(
+        @NonNull AbstractNode nodeToBuild,
+        @NonNull UUID studyUuid,
+        @NonNull UUID rootNetworkUuid,
+        @NonNull String userId
+    ) {
+        if (!NodeType.ROOT.equals(nodeToBuild.getType())) {
+            buildNode(
+                studyUuid,
+                nodeToBuild.getId(),
+                rootNetworkUuid,
+                userId,
+                null
+            );
+        }
+
+        nodeToBuild.getChildren()
+            .forEach(child ->
+                buildStudySubTree(
+                    child,
+                    studyUuid,
+                    rootNetworkUuid,
+                    userId
+                )
+            );
+    }
+
     public void handleBuildSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NetworkModificationResult networkModificationResult) {
         LOGGER.info("Build completed for node '{}'", nodeUuid);
 

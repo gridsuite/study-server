@@ -641,6 +641,10 @@ public class ConsumerService {
 
                 // send notifications
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                if (computationType == ComputationType.LOAD_FLOW && networkModificationTreeService.isSecurityNode(receiverObj.getNodeUuid())) {
+                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
+                    studyService.buildSubtree(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), userId);
+                }
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateResultType());
             }));
