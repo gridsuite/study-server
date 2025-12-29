@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -3674,11 +3675,10 @@ public class StudyService {
         }
     }
 
-    // Workspace methods
-    public String getWorkspacesMetadata(UUID studyUuid) {
+    public String getWorkspaces(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         UUID workspacesConfigUuid = getWorkspacesConfigUuidOrElseCreateDefaults(studyEntity);
-        return studyConfigService.getWorkspacesMetadata(workspacesConfigUuid);
+        return studyConfigService.getWorkspaces(workspacesConfigUuid);
     }
 
     public String getWorkspace(UUID studyUuid, UUID workspaceId) {
@@ -3713,13 +3713,12 @@ public class StudyService {
 
     private String extractWorkspacePanelIds(String panelsDto) {
         try {
-            List<Map<String, Object>> panels = objectMapper.readValue(panelsDto, List.class);
-            String ids = panels.stream()
+            List<Map<String, Object>> panels = objectMapper.readValue(panelsDto, new TypeReference<>() { });
+            return panels.stream()
                 .map(panel -> panel.get("id"))
                 .filter(Objects::nonNull)
-                .map(id -> id.toString())
+                .map(Object::toString)
                 .collect(Collectors.joining(","));
-            return ids;
         } catch (JsonProcessingException e) {
             LOGGER.error("Failed to extract panel IDs from DTO", e);
             return "";

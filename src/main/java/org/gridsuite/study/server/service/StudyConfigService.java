@@ -400,13 +400,6 @@ public class StudyConfigService {
         return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
     }
 
-    public String getWorkspacesMetadata(UUID collectionUuid) {
-        Objects.requireNonNull(collectionUuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + "/workspaces/metadata")
-                .buildAndExpand(collectionUuid).toUriString();
-        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
-    }
-
     public String getWorkspace(UUID collectionUuid, UUID workspaceId) {
         Objects.requireNonNull(collectionUuid);
         Objects.requireNonNull(workspaceId);

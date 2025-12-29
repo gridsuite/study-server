@@ -27,13 +27,13 @@ public class WorkspaceController {
         this.studyService = studyService;
     }
 
-    @GetMapping("/metadata")
+    @GetMapping("")
     @Operation(summary = "Get workspaces metadata")
     @ApiResponse(responseCode = "200", description = "Workspaces metadata retrieved")
     @ApiResponse(responseCode = "404", description = "Study not found")
-    public ResponseEntity<String> getWorkspacesMetadata(
+    public ResponseEntity<String> getWorkspaces(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok(studyService.getWorkspacesMetadata(studyUuid));
+        return ResponseEntity.ok(studyService.getWorkspaces(studyUuid));
     }
 
     @GetMapping("/{workspaceId}")
