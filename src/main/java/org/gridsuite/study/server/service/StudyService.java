@@ -40,10 +40,7 @@ import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -1893,6 +1890,10 @@ public class StudyService {
         buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, null);
     }
 
+    private void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userId) {
+        getStudyRootNetworks(studyUuid).forEach(rn -> buildNode(studyUuid, nodeUuid, rn.getId(), userId, null));
+    }
+
     private void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId, AbstractWorkflowInfos workflowInfos) {
         assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
@@ -3530,6 +3531,8 @@ public class StudyService {
         networkModificationTreeService.assertCreateNode(nodeId, nodeInfo.getNodeType(), insertMode);
         NetworkModificationNode newNode = networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
 
+        createNodePostAction(studyUuid, nodeId, newNode, userId);
+
         UUID parentUuid = networkModificationTreeService.getParentNodeUuid(newNode.getId()).orElse(null);
         notificationService.emitNodeInserted(study.getId(), parentUuid, newNode.getId(), insertMode, nodeId);
         // userId is null when creating initial nodes, we don't need to send element update notifications in this case
@@ -3539,12 +3542,19 @@ public class StudyService {
         return newNode;
     }
 
+    private void createNodePostAction(UUID studyUuid, UUID parentNodeUuid, NetworkModificationNode newNode, String userId) {
+        if (newNode.isSecurityNode() && networkModificationTreeService.isRootOrConstructionNode(parentNodeUuid)) {
+            buildNode(studyUuid, newNode.getId(), userId);
+        }
+    }
+
     @Transactional
     public NetworkModificationNode createSequence(UUID studyUuid, UUID parentNodeUuid, NodeSequenceType nodeSequenceType, String userId) {
         StudyEntity study = getStudy(studyUuid);
         networkModificationTreeService.assertIsRootOrConstructionNode(parentNodeUuid);
 
         NetworkModificationNode newParentNode = networkModificationTreeService.createTreeNodeFromNodeSequence(study, parentNodeUuid, nodeSequenceType);
+        createSequencePostAction(studyUuid, newParentNode.getId(), nodeSequenceType, userId);
 
         notificationService.emitSubtreeInserted(study.getId(), newParentNode.getId(), parentNodeUuid);
         // userId is null when creating initial nodes, we don't need to send element update notifications in this case
@@ -3552,6 +3562,12 @@ public class StudyService {
             notificationService.emitElementUpdated(study.getId(), userId);
         }
         return newParentNode;
+    }
+
+    private void createSequencePostAction(UUID studyUuid, UUID sequenceParentNode, NodeSequenceType nodeSequenceType, String userId) {
+        if (nodeSequenceType == NodeSequenceType.SECURITY_SEQUENCE) {
+            buildNode(studyUuid, sequenceParentNode, userId);
+        }
     }
 
     private List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {

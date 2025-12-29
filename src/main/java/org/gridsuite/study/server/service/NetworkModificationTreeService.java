@@ -598,9 +598,13 @@ public class NetworkModificationTreeService {
     }
 
     public void assertIsRootOrConstructionNode(UUID nodeUuid) {
-        if (!self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) && !isConstructionNode(nodeUuid)) {
+        if (!isRootOrConstructionNode(nodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
+    }
+
+    public boolean isRootOrConstructionNode(UUID nodeUuid) {
+        return self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) || isConstructionNode(nodeUuid);
     }
 
     private void assertInsertNode(
