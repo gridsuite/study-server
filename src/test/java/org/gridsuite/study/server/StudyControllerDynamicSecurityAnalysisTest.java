@@ -282,7 +282,6 @@ class StudyControllerDynamicSecurityAnalysisTest {
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
 
-        // resultUuid must be empty in database at this moment
         assertThat(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SECURITY_ANALYSIS)).isNotNull();
     }
 
