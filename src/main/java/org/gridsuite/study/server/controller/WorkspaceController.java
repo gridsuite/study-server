@@ -10,7 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.WorkspaceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,10 +21,10 @@ import java.util.UUID;
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/workspaces")
 @Tag(name = "Study server - Workspaces")
 public class WorkspaceController {
-    private final StudyService studyService;
+    private final WorkspaceService workspaceService;
 
-    public WorkspaceController(StudyService studyService) {
-        this.studyService = studyService;
+    public WorkspaceController(WorkspaceService workspaceService) {
+        this.workspaceService = workspaceService;
     }
 
     @GetMapping("")
@@ -33,7 +33,7 @@ public class WorkspaceController {
     @ApiResponse(responseCode = "404", description = "Study not found")
     public ResponseEntity<String> getWorkspaces(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok(studyService.getWorkspaces(studyUuid));
+        return ResponseEntity.ok(workspaceService.getWorkspaces(studyUuid));
     }
 
     @GetMapping("/{workspaceId}")
@@ -43,7 +43,7 @@ public class WorkspaceController {
     public ResponseEntity<String> getWorkspace(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable UUID workspaceId) {
-        return ResponseEntity.ok(studyService.getWorkspace(studyUuid, workspaceId));
+        return ResponseEntity.ok(workspaceService.getWorkspace(studyUuid, workspaceId));
     }
 
     @PutMapping("/{workspaceId}/name")
@@ -54,7 +54,7 @@ public class WorkspaceController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable UUID workspaceId,
             @RequestBody String name) {
-        studyService.renameWorkspace(studyUuid, workspaceId, name);
+        workspaceService.renameWorkspace(studyUuid, workspaceId, name);
         return ResponseEntity.noContent().build();
     }
 
@@ -66,7 +66,7 @@ public class WorkspaceController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable UUID workspaceId,
             @RequestParam(required = false) List<String> ids) {
-        return ResponseEntity.ok(studyService.getWorkspacePanels(studyUuid, workspaceId, ids));
+        return ResponseEntity.ok(workspaceService.getWorkspacePanels(studyUuid, workspaceId, ids));
     }
 
     @PostMapping("/{workspaceId}/panels")
@@ -77,7 +77,7 @@ public class WorkspaceController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable UUID workspaceId,
             @RequestBody String panelsDto) {
-        studyService.createOrUpdateWorkspacePanels(studyUuid, workspaceId, panelsDto);
+        workspaceService.createOrUpdateWorkspacePanels(studyUuid, workspaceId, panelsDto);
         return ResponseEntity.noContent().build();
     }
 
@@ -89,7 +89,7 @@ public class WorkspaceController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable UUID workspaceId,
             @RequestBody String panelIds) {
-        studyService.deleteWorkspacePanels(studyUuid, workspaceId, panelIds);
+        workspaceService.deleteWorkspacePanels(studyUuid, workspaceId, panelIds);
         return ResponseEntity.noContent().build();
     }
 }

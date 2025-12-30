@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -3657,74 +3656,6 @@ public class StudyService {
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
-    // Workspaces Config methods
-    private UUID getWorkspacesConfigUuidOrElseCreateDefaults(StudyEntity studyEntity) {
-        if (studyEntity.getWorkspacesConfigUuid() == null) {
-            studyEntity.setWorkspacesConfigUuid(studyConfigService.createDefaultWorkspacesConfig());
-        }
-        return studyEntity.getWorkspacesConfigUuid();
-    }
-
-    private void removeWorkspacesConfig(@Nullable UUID workspacesConfigUuid) {
-        if (workspacesConfigUuid != null) {
-            try {
-                studyConfigService.deleteWorkspacesConfig(workspacesConfigUuid);
-            } catch (Exception e) {
-                LOGGER.error("Could not remove workspaces config with uuid:" + workspacesConfigUuid, e);
-            }
-        }
-    }
-
-    public String getWorkspaces(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        UUID workspacesConfigUuid = getWorkspacesConfigUuidOrElseCreateDefaults(studyEntity);
-        return studyConfigService.getWorkspaces(workspacesConfigUuid);
-    }
-
-    public String getWorkspace(UUID studyUuid, UUID workspaceId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return studyConfigService.getWorkspace(studyEntity.getWorkspacesConfigUuid(), workspaceId);
-    }
-
-    public void renameWorkspace(UUID studyUuid, UUID workspaceId, String name) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        studyConfigService.renameWorkspace(studyEntity.getWorkspacesConfigUuid(), workspaceId, name);
-        notificationService.emitWorkspaceUpdated(studyUuid, workspaceId);
-    }
-
-    // Panel methods
-    public String getWorkspacePanels(UUID studyUuid, UUID workspaceId, List<String> ids) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return studyConfigService.getWorkspacePanels(studyEntity.getWorkspacesConfigUuid(), workspaceId, ids);
-    }
-
-    public void createOrUpdateWorkspacePanels(UUID studyUuid, UUID workspaceId, String panelsDto) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        studyConfigService.createOrUpdateWorkspacePanels(studyEntity.getWorkspacesConfigUuid(), workspaceId, panelsDto);
-        String panelIds = extractWorkspacePanelIds(panelsDto);
-        notificationService.emitWorkspacePanelsUpdated(studyUuid, workspaceId, panelIds);
-    }
-
-    public void deleteWorkspacePanels(UUID studyUuid, UUID workspaceId, String panelIds) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        studyConfigService.deleteWorkspacePanels(studyEntity.getWorkspacesConfigUuid(), workspaceId, panelIds);
-        notificationService.emitWorkspacePanelsDeleted(studyUuid, workspaceId, panelIds);
-    }
-
-    private String extractWorkspacePanelIds(String panelsDto) {
-        try {
-            List<Map<String, Object>> panels = objectMapper.readValue(panelsDto, new TypeReference<>() { });
-            return panels.stream()
-                .map(panel -> panel.get("id"))
-                .filter(Objects::nonNull)
-                .map(Object::toString)
-                .collect(Collectors.joining(","));
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to extract panel IDs from DTO", e);
-            return "";
-        }
-    }
-
     @Transactional(readOnly = true)
     public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid, String globalFilters) {
         UUID networkuuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
@@ -3756,6 +3687,16 @@ public class StudyService {
 
     private void removeDiagramGridLayout(@Nullable UUID diagramGridLayoutUuid) {
         diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
+    }
+
+    private void removeWorkspacesConfig(@Nullable UUID workspacesConfigUuid) {
+        if (workspacesConfigUuid != null) {
+            try {
+                studyConfigService.deleteWorkspacesConfig(workspacesConfigUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove workspaces config with uuid:" + workspacesConfigUuid, e);
+            }
+        }
     }
 
     public Optional<SpreadsheetParameters> getSpreadsheetParameters(@NonNull final UUID studyUuid) {
