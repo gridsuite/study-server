@@ -43,6 +43,7 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitPar
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
@@ -644,11 +645,15 @@ public class StudyController {
 
     private void handleMoveNetworkModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid, String userId) {
         studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
+        Map<UUID, NodeBuildStatus> buildStatusByRootNetworkUuid = studyService.getNodeBuildStatusByRootNetworkUuid(studyUuid, nodeUuid);
         studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
         try {
             studyService.moveNetworkModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, false, userId);
         } finally {
             studyService.unblockNodeTree(studyUuid, nodeUuid);
+            buildStatusByRootNetworkUuid.entrySet().stream()
+                .filter(entry -> entry.getValue().isBuilt())
+                .forEach(entry -> studyService.buildNode(studyUuid, nodeUuid, entry.getKey(), userId));
         }
     }
 
@@ -693,6 +698,9 @@ public class StudyController {
     private void handleMoveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
         studyService.assertNoBlockedNodeInStudy(studyUuid, originNodeUuid);
         studyService.assertNoBlockedNodeInStudy(studyUuid, targetNodeUuid);
+
+        Map<UUID, NodeBuildStatus> buildStatusByRootNetworkUuid = studyService.getNodeBuildStatusByRootNetworkUuid(studyUuid, originNodeUuid);
+
         boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
         try {
             studyService.moveNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, null, isTargetInDifferentNodeTree, userId);
@@ -701,6 +709,9 @@ public class StudyController {
             if (isTargetInDifferentNodeTree) {
                 studyService.unblockNodeTree(studyUuid, targetNodeUuid);
             }
+            buildStatusByRootNetworkUuid.entrySet().stream()
+                .filter(entry -> entry.getValue().isBuilt())
+                .forEach(entry -> studyService.buildNode(studyUuid, originNodeUuid, entry.getKey(), userId));
         }
     }
 

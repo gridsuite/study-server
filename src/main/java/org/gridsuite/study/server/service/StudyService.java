@@ -16,6 +16,10 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyConstants;
+import org.gridsuite.study.server.annotation.RebuildNodeIfPreviouslyBuilt;
+import org.gridsuite.study.server.annotation.RebuildNodeUuid;
+import org.gridsuite.study.server.annotation.RebuildStudyUuid;
+import org.gridsuite.study.server.annotation.RebuildUserId;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.error.StudyException;
@@ -68,6 +72,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
 
 import java.io.UncheckedIOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -1835,8 +1842,9 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
+    @RebuildNodeIfPreviouslyBuilt
     @Transactional
-    public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid, String userId) {
+    public void updateNetworkModification(@RebuildStudyUuid UUID studyUuid, String updateModificationAttributes, @RebuildNodeUuid UUID nodeUuid, UUID modificationUuid, @RebuildUserId String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
@@ -2222,7 +2230,8 @@ public class StudyService {
     }
 
     @Transactional
-    public void stashNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
+    @RebuildNodeIfPreviouslyBuilt
+    public void stashNetworkModifications(@RebuildStudyUuid  UUID studyUuid, @RebuildNodeUuid UUID nodeUuid, List<UUID> modificationsUuids, @RebuildUserId String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_STASHING_IN_PROGRESS);
         try {
@@ -2239,7 +2248,12 @@ public class StudyService {
     }
 
     @Transactional
-    public void updateNetworkModificationsMetadata(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId, NetworkModificationMetadata metadata) {
+    @RebuildNodeIfPreviouslyBuilt
+    public void updateNetworkModificationsMetadata(@RebuildStudyUuid UUID studyUuid,
+                                                   @RebuildNodeUuid UUID nodeUuid,
+                                                   List<UUID> modificationsUuids,
+                                                   @RebuildUserId String userId,
+                                                   NetworkModificationMetadata metadata) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
@@ -2258,7 +2272,14 @@ public class StudyService {
     }
 
     @Transactional
-    public void updateNetworkModificationsActivationInRootNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationsUuids, String userId, boolean activated) {
+    @RebuildNodeIfPreviouslyBuilt
+    public void updateNetworkModificationsActivationInRootNetwork(
+        @RebuildStudyUuid UUID studyUuid,
+        @RebuildNodeUuid UUID nodeUuid,
+        UUID rootNetworkUuid,
+        Set<UUID> modificationsUuids,
+        @RebuildUserId String userId,
+        boolean activated) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         networkModificationService.verifyModifications(networkModificationTreeService.getModificationGroupUuid(nodeUuid), modificationsUuids);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, Optional.of(rootNetworkUuid), childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
@@ -2275,7 +2296,8 @@ public class StudyService {
     }
 
     @Transactional
-    public void restoreNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
+    @RebuildNodeIfPreviouslyBuilt
+    public void restoreNetworkModifications(@RebuildStudyUuid UUID studyUuid, @RebuildNodeUuid UUID nodeUuid, List<UUID> modificationsUuids, @RebuildUserId String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_RESTORING_IN_PROGRESS);
         try {
@@ -2442,6 +2464,14 @@ public class StudyService {
     }
 
     @Transactional
+    public Map<UUID, NodeBuildStatus> getNodeBuildStatusByRootNetworkUuid(UUID studyUuid, UUID nodeUuid) {
+        return getStudyRootNetworks(studyUuid).stream().collect(Collectors.toMap(
+            RootNetworkEntity::getId,
+            rn -> rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rn.getId()).map(rni -> rni.getNodeBuildStatus().toDto()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"))
+        ));
+    }
+
+    @Transactional
     public RootNetworkIndexationStatus getRootNetworkIndexationStatus(UUID studyUuid, UUID rootNetworkUuid) {
         StudyEntity study = getStudy(studyUuid);
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
@@ -2453,7 +2483,13 @@ public class StudyService {
     }
 
     @Transactional
-    public void moveNetworkModifications(@NonNull UUID studyUuid, UUID targetNodeUuid, @NonNull UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, boolean isTargetInDifferentNodeTree, String userId) {
+    public void moveNetworkModifications(@NonNull UUID studyUuid,
+                                         UUID targetNodeUuid,
+                                         @NonNull UUID originNodeUuid,
+                                         List<UUID> modificationUuidList,
+                                         UUID beforeUuid,
+                                         boolean isTargetInDifferentNodeTree,
+                                         String userId) {
         boolean isTargetDifferentNode = !targetNodeUuid.equals(originNodeUuid);
 
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
