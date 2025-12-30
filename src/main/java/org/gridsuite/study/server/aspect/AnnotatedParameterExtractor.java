@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2025, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.study.server.aspect;
 
 import org.springframework.core.MethodParameter;
@@ -5,7 +11,15 @@ import org.springframework.core.MethodParameter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
-public class AnnotatedParameterExtractor { //TODO: improve throws
+/**
+ * @author Kevin Le Saulnier <kevin.le-saulnier at rte-france.com>
+ */
+public final class AnnotatedParameterExtractor {
+    private AnnotatedParameterExtractor() {
+        throw new AssertionError("Utility class should not be instantiated");
+    }
+
+    // extract annotated parameter with checked type - if not found, found multiple times, or found with wrong type, this throw an exception
     public static <T> T extractRequiredParameter(
         Method method,
         Object[] args,

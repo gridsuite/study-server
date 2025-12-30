@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2025, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.study.server.aspect;
 
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -8,17 +14,17 @@ import org.gridsuite.study.server.annotation.RebuildNodeUuid;
 import org.gridsuite.study.server.annotation.RebuildStudyUuid;
 import org.gridsuite.study.server.annotation.RebuildUserId;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.springframework.stereotype.Component;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * @author Kevin Le Saulnier <kevin.le-saulnier at rte-france.com>
+ */
 @Aspect
 @Component
 public class RebuildNodeIfPreviouslyBuiltAspect {

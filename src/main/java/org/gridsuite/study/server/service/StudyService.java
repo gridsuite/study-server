@@ -72,9 +72,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
 
 import java.io.UncheckedIOException;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -2231,7 +2228,7 @@ public class StudyService {
 
     @Transactional
     @RebuildNodeIfPreviouslyBuilt
-    public void stashNetworkModifications(@RebuildStudyUuid  UUID studyUuid, @RebuildNodeUuid UUID nodeUuid, List<UUID> modificationsUuids, @RebuildUserId String userId) {
+    public void stashNetworkModifications(@RebuildStudyUuid UUID studyUuid, @RebuildNodeUuid UUID nodeUuid, List<UUID> modificationsUuids, @RebuildUserId String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_STASHING_IN_PROGRESS);
         try {
