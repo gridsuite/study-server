@@ -1266,4 +1266,32 @@ public class NetworkModificationTreeService {
 
         return nodeInfo;
     }
+
+    @Transactional
+    public List<UUID> getHighestNodeUuids(UUID node1Uuid, UUID node2Uuid) {
+        if (node1Uuid.equals(node2Uuid)) {
+            return List.of(node1Uuid);
+        }
+
+        Set<UUID> ancestorsOfA = new HashSet<>();
+
+        NodeEntity currentNode = getNodeEntity(node1Uuid).getParentNode();
+        while (currentNode != null) {
+            ancestorsOfA.add(currentNode.getIdNode());
+            currentNode = currentNode.getParentNode();
+        }
+
+        currentNode = getNodeEntity(node2Uuid).getParentNode();
+        while (currentNode != null) {
+            if (currentNode.getIdNode().equals(node1Uuid)) {
+                return List.of(node1Uuid);
+            }
+            if (ancestorsOfA.contains(currentNode.getIdNode())) {
+                return List.of(node2Uuid);
+            }
+            currentNode = currentNode.getParentNode();
+        }
+
+        return List.of(node1Uuid, node2Uuid);
+    }
 }

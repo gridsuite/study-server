@@ -682,7 +682,7 @@ public class StudyController {
                 if (!studyUuid.equals(originStudyUuid)) {
                     throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
                 }
-                rebuildPreviouslyBuiltNodeHandler.execute(studyUuid, nodeUuid, userId,
+                rebuildPreviouslyBuiltNodeHandler.execute(studyUuid, nodeUuid, originNodeUuid, userId,
                     () -> handleMoveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId));
                 break;
         }
