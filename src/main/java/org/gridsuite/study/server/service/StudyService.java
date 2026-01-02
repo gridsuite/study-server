@@ -63,6 +63,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
@@ -1885,6 +1886,11 @@ public class StudyService {
         return getVoltageLevelTopologyInfos(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, path);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void buildNodeInNewTransaction(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+        buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, null);
+    }
+
     @Transactional
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, null);
@@ -1910,43 +1916,23 @@ public class StudyService {
     }
 
     @Transactional
-    public void buildSubtree(@NonNull UUID studyUuid, @NonNull UUID parentNodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+    public void buildFirstLevelChildren(@NonNull UUID studyUuid, @NonNull UUID parentNodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(studyUuid, parentNodeUuid, rootNetworkUuid);
-        studySubTree.getChildren().forEach(child ->
-            buildStudySubTree(
-                child,
-                studyUuid,
-                rootNetworkUuid,
-                userId
-            )
-        );
-    }
+        long builtNodesUpToQuota = getBuiltNodesUpToQuota(studyUuid, rootNetworkUuid, userId);
+        for (AbstractNode child : studySubTree.getChildren()) {
+            if (builtNodesUpToQuota <= 0) {
+                return;
+            }
 
-    private void buildStudySubTree(
-        @NonNull AbstractNode nodeToBuild,
-        @NonNull UUID studyUuid,
-        @NonNull UUID rootNetworkUuid,
-        @NonNull String userId
-    ) {
-        if (!NodeType.ROOT.equals(nodeToBuild.getType())) {
             buildNode(
                 studyUuid,
-                nodeToBuild.getId(),
+                child.getId(),
                 rootNetworkUuid,
                 userId,
                 null
             );
+            builtNodesUpToQuota--;
         }
-
-        nodeToBuild.getChildren()
-            .forEach(child ->
-                buildStudySubTree(
-                    child,
-                    studyUuid,
-                    rootNetworkUuid,
-                    userId
-                )
-            );
     }
 
     public void handleBuildSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NetworkModificationResult networkModificationResult) {
@@ -1956,6 +1942,13 @@ public class StudyService {
             NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
 
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
+    }
+
+    private long getBuiltNodesUpToQuota(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+        return userAdminService.getUserMaxAllowedBuilds(userId).map(maxBuilds -> {
+            long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
+            return maxBuilds - nbBuiltNodes;
+        }).orElse(Long.MAX_VALUE);
     }
 
     public void assertCanBuildNode(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
@@ -3545,7 +3538,12 @@ public class StudyService {
         networkModificationTreeService.assertCreateNode(nodeId, nodeInfo.getNodeType(), insertMode);
         NetworkModificationNode newNode = networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
 
-        createNodePostAction(studyUuid, nodeId, newNode, userId);
+        try {
+            createNodePostAction(studyUuid, nodeId, newNode, userId);
+        } catch (Exception e) {
+            // if post action fails, don't interrupt / rollback current transaction
+            LOGGER.warn(e.getMessage());
+        }
 
         UUID parentUuid = networkModificationTreeService.getParentNodeUuid(newNode.getId()).orElse(null);
         notificationService.emitNodeInserted(study.getId(), parentUuid, newNode.getId(), insertMode, nodeId);

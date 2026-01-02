@@ -640,15 +640,26 @@ public class ConsumerService {
                 // unblock node
                 handleUnblockNode(receiverObj, computationType);
 
-                // send notifications
+                // build 1st level children if loadflow results
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                if (computationType == ComputationType.LOAD_FLOW && networkModificationTreeService.isSecurityNode(receiverObj.getNodeUuid())) {
-                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
-                    studyService.buildSubtree(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), userId);
+                String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
+                if (computationType == LOAD_FLOW) {
+                    handleLoadFlowSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, userId);
                 }
+
+                // send notifications
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateResultType());
             }));
+    }
+
+    private void handleLoadFlowSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
+        if (userId != null && networkModificationTreeService.isSecurityNode(nodeUuid)) {
+            LoadFlowStatus loadFlowStatus = loadFlowService.getLoadFlowStatus(resultUuid);
+            if (loadFlowStatus == LoadFlowStatus.CONVERGED) {
+                studyService.buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, userId);
+            }
+        }
     }
 
     Optional<NodeReceiver> getNodeReceiver(Message<String> msg) {

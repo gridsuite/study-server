@@ -1355,7 +1355,8 @@ public class StudyController {
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-        handleCreateNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
+        rebuildPreviouslyBuiltNodeHandler.execute(studyUuid, nodeUuid, userId,
+            () -> handleCreateNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId));
         return ResponseEntity.ok().build();
     }
 
