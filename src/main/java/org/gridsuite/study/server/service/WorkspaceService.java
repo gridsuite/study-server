@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -23,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
@@ -37,15 +37,18 @@ public class WorkspaceService {
     private final StudyRepository studyRepository;
     private final StudyConfigService studyConfigService;
     private final NotificationService notificationService;
+    private final SingleLineDiagramService singleLineDiagramService;
     private final ObjectMapper objectMapper;
 
     public WorkspaceService(StudyRepository studyRepository,
                            StudyConfigService studyConfigService,
                            NotificationService notificationService,
+                           SingleLineDiagramService singleLineDiagramService,
                            ObjectMapper objectMapper) {
         this.studyRepository = studyRepository;
         this.studyConfigService = studyConfigService;
         this.notificationService = notificationService;
+        this.singleLineDiagramService = singleLineDiagramService;
         this.objectMapper = objectMapper;
     }
 
@@ -105,21 +108,60 @@ public class WorkspaceService {
     @Transactional
     public void deleteWorkspacePanels(UUID studyUuid, UUID workspaceId, String panelIds) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        studyConfigService.deleteWorkspacePanels(studyEntity.getWorkspacesConfigUuid(), workspaceId, panelIds);
+
+        // Delete panels and get saved NAD config UUIDs
+        List<UUID> savedNadConfigUuids = studyConfigService.deleteWorkspacePanels(
+            studyEntity.getWorkspacesConfigUuid(),
+            workspaceId,
+            panelIds
+        );
+
+        // Delete saved NAD configs from single-line-diagram server
+        if (!savedNadConfigUuids.isEmpty()) {
+            singleLineDiagramService.deleteDiagramConfigs(savedNadConfigUuids);
+        }
+
         notificationService.emitWorkspacePanelsDeleted(studyUuid, workspaceId, panelIds);
+    }
+
+    @Transactional
+    public UUID saveNadConfig(UUID studyUuid, UUID workspaceId, NadConfigInfos nadConfigInfos) {
+        getStudy(studyUuid);
+        // Save NAD config to single-line-diagram server
+        UUID configUuid = nadConfigInfos.getId();
+        if (configUuid == null) {
+            nadConfigInfos.setId(UUID.randomUUID());
+            singleLineDiagramService.createDiagramConfigs(List.of(nadConfigInfos));
+        } else {
+            singleLineDiagramService.updateNadConfig(nadConfigInfos);
+        }
+
+        UUID savedNadConfigUuid = nadConfigInfos.getId();
+        // Emit notification
+        notificationService.emitWorkspaceNadConfigUpdated(studyUuid, savedNadConfigUuid);
+
+        return savedNadConfigUuid;
+    }
+
+    @Transactional
+    public void deleteNadConfig(UUID studyUuid, UUID savedNadConfigUuid) {
+        getStudy(studyUuid);
+        // Delete NAD config from single-line-diagram server
+        singleLineDiagramService.deleteDiagramConfigs(List.of(savedNadConfigUuid));
     }
 
     private String extractWorkspacePanelIds(String panelsDto) {
         try {
             List<Map<String, Object>> panels = objectMapper.readValue(panelsDto, new TypeReference<>() { });
-            return panels.stream()
+            List<String> panelIds = panels.stream()
                 .map(panel -> panel.get("id"))
                 .filter(Objects::nonNull)
                 .map(Object::toString)
-                .collect(Collectors.joining(","));
+                .toList();
+            return objectMapper.writeValueAsString(panelIds);
         } catch (JsonProcessingException e) {
             LOGGER.error("Failed to extract panel IDs from DTO", e);
-            return "";
+            return "[]";
         }
     }
 }

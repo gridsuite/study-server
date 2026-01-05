@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.gridsuite.study.server.service.WorkspaceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -90,6 +91,30 @@ public class WorkspaceController {
             @PathVariable UUID workspaceId,
             @RequestBody String panelIds) {
         workspaceService.deleteWorkspacePanels(studyUuid, workspaceId, panelIds);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{workspaceId}/saved-nad-configs")
+    @Operation(summary = "Save NAD config")
+    @ApiResponse(responseCode = "200", description = "NAD config saved")
+    @ApiResponse(responseCode = "404", description = "Study not found")
+    public ResponseEntity<UUID> saveNadConfig(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable UUID workspaceId,
+            @RequestBody NadConfigInfos nadConfigInfos) {
+        UUID savedNadConfigUuid = workspaceService.saveNadConfig(studyUuid, workspaceId, nadConfigInfos);
+        return ResponseEntity.ok(savedNadConfigUuid);
+    }
+
+    @DeleteMapping("/{workspaceId}/saved-nad-configs/{savedNadConfigUuid}")
+    @Operation(summary = "Delete saved NAD config")
+    @ApiResponse(responseCode = "204", description = "Saved NAD config deleted")
+    @ApiResponse(responseCode = "404", description = "Study not found")
+    public ResponseEntity<Void> deleteNadConfig(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable UUID workspaceId,
+            @PathVariable UUID savedNadConfigUuid) {
+        workspaceService.deleteNadConfig(studyUuid, savedNadConfigUuid);
         return ResponseEntity.noContent().build();
     }
 }

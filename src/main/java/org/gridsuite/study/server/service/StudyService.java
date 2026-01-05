@@ -24,7 +24,6 @@ import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsI
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
-import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -548,6 +547,11 @@ public class StudyService {
                 removePccMinParameters(s.getPccMinParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
                 removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
+                // Remove saved NAD configs from workspace panels
+                if (s.getWorkspacesConfigUuid() != null) {
+                    List<UUID> savedNadConfigUuids = studyConfigService.getAllSavedNadConfigUuids(s.getWorkspacesConfigUuid());
+                    removeNadConfigs(savedNadConfigUuids);
+                }
                 removeWorkspacesConfig(s.getWorkspacesConfigUuid());
                 removeNadConfigs(s.getNadConfigsUuids().stream().toList());
             });
@@ -758,7 +762,14 @@ public class StudyService {
 
         UUID copiedWorkspacesConfigUuid = null;
         if (sourceStudyEntity.getWorkspacesConfigUuid() != null) {
-            copiedWorkspacesConfigUuid = studyConfigService.duplicateWorkspacesConfig(sourceStudyEntity.getWorkspacesConfigUuid());
+            // Get all saved NAD config UUIDs from source workspace
+            List<UUID> sourceNadConfigUuids = studyConfigService.getAllSavedNadConfigUuids(sourceStudyEntity.getWorkspacesConfigUuid());
+
+            // Duplicate NAD configs and get mapping
+            Map<UUID, UUID> nadConfigMapping = singleLineDiagramService.duplicateNadConfigs(sourceNadConfigUuids);
+
+            // Duplicate workspaces config with NAD config mapping
+            copiedWorkspacesConfigUuid = studyConfigService.duplicateWorkspacesConfig(sourceStudyEntity.getWorkspacesConfigUuid(), nadConfigMapping);
         }
 
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
@@ -1512,26 +1523,6 @@ public class StudyService {
         } else {
             return null;
         }
-    }
-
-    @Transactional
-    public UUID saveNadConfig(UUID studyUuid, NadConfigInfos nadConfig) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-
-        UUID nadConfigUuid = nadConfigService.saveNadConfig(nadConfig, studyUuid);
-
-        studyEntity.getNadConfigsUuids().add(nadConfigUuid);
-
-        return nadConfigUuid;
-    }
-
-    @Transactional
-    public void deleteNadConfig(UUID studyUuid, UUID nadConfigUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-
-        nadConfigService.deleteNadConfigs(List.of(nadConfigUuid));
-
-        studyEntity.getNadConfigsUuids().remove(nadConfigUuid);
     }
 
     private void removeNadConfigs(List<UUID> nadConfigUuids) {

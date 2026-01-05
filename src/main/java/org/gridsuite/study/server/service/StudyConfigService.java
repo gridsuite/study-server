@@ -13,10 +13,12 @@ import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.DiagramPos
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -381,14 +383,14 @@ public class StudyConfigService {
         restTemplate.delete(studyConfigServerBaseUri + path);
     }
 
-    public UUID duplicateWorkspacesConfig(UUID sourceUuid) {
+    public UUID duplicateWorkspacesConfig(UUID sourceUuid, Map<UUID, UUID> nadConfigMapping) {
         Objects.requireNonNull(sourceUuid);
         var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_URI)
                 .queryParam("duplicateFrom", sourceUuid)
                 .buildAndExpand().toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
+        HttpEntity<Map<UUID, UUID>> httpEntity = new HttpEntity<>(nadConfigMapping, headers);
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
@@ -441,7 +443,7 @@ public class StudyConfigService {
         restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
     }
 
-    public void deleteWorkspacePanels(UUID collectionUuid, UUID workspaceId, String panelIds) {
+    public List<UUID> deleteWorkspacePanels(UUID collectionUuid, UUID workspaceId, String panelIds) {
         Objects.requireNonNull(collectionUuid);
         Objects.requireNonNull(workspaceId);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + "/workspaces/{workspaceId}/panels")
@@ -449,6 +451,25 @@ public class StudyConfigService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(panelIds, headers);
-        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.DELETE, httpEntity, Void.class);
+        ResponseEntity<List<UUID>> response = restTemplate.exchange(
+            studyConfigServerBaseUri + path,
+            HttpMethod.DELETE,
+            httpEntity,
+            new ParameterizedTypeReference<>() { }
+        );
+        return response.getBody() != null ? response.getBody() : List.of();
+    }
+
+    public List<UUID> getAllSavedNadConfigUuids(UUID collectionUuid) {
+        Objects.requireNonNull(collectionUuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + "/saved-nad-config-uuids")
+                .buildAndExpand(collectionUuid).toUriString();
+        ResponseEntity<List<UUID>> response = restTemplate.exchange(
+            studyConfigServerBaseUri + path,
+            HttpMethod.GET,
+            null,
+            new ParameterizedTypeReference<>() { }
+        );
+        return response.getBody() != null ? response.getBody() : List.of();
     }
 }

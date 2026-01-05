@@ -24,6 +24,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -193,6 +194,15 @@ public class SingleLineDiagramService {
         HttpEntity<NetworkAreaDiagramLayoutDetails> httpEntity = new HttpEntity<>(headers);
 
         return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, UUID.class);
+    }
+
+    public Map<UUID, UUID> duplicateNadConfigs(List<UUID> sourceNadConfigUuids) {
+        Map<UUID, UUID> mapping = new HashMap<>();
+        for (UUID sourceUuid : sourceNadConfigUuids) {
+            UUID newUuid = duplicateNadConfig(sourceUuid);
+            mapping.put(sourceUuid, newUuid);
+        }
+        return mapping;
     }
 
     public void updateNadConfig(NadConfigInfos nadConfigInfos) {
