@@ -22,9 +22,7 @@ import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,7 +77,7 @@ class RootNetworkControllerTest {
     private static final UUID SHORTCIRCUIT_PARAMETERS_UUID = UUID.fromString("00000000-bd22-4a75-83d3-9e530245c7f4");
     private static final UUID SPREADSHEET_CONFIG_COLLECTION_UUID = UUID.fromString("77700000-bd22-4a75-83d3-9e530245c7f4");
 
-    private WireMockServer wireMockServer;
+    private static WireMockServer wireMockServer;
     private WireMockStubs wireMockStubs;
 
     @Autowired
@@ -125,10 +123,21 @@ class RootNetworkControllerTest {
     @MockitoBean
     private StudyConfigService studyConfigService;
 
-    @BeforeEach
-    void setup() {
+    @BeforeAll
+    static void initWireMock(@Autowired InputDestination input) {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
         wireMockServer.start();
+    }
+
+    @AfterAll
+    static void shutdownWireMock() {
+        if (wireMockServer != null) {
+            wireMockServer.shutdown();
+        }
+    }
+
+    @BeforeEach
+    void setup() {
         wireMockStubs = new WireMockStubs(wireMockServer);
 
         objectWriter = mapper.writer().withDefaultPrettyPrinter();
@@ -334,7 +343,7 @@ class RootNetworkControllerTest {
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
 
         try {
-            TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
+            TestUtils.assertWiremockServerRequestsEmptyThenClear(wireMockServer);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         }
