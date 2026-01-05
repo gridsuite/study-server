@@ -25,7 +25,6 @@ import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
-import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -109,10 +108,6 @@ class SensitivityAnalysisTest {
     private static final UUID CASE_2_UUID = UUID.fromString(CASE_2_UUID_STRING);
     private static final String CASE_3_UUID_STRING = "790769f9-bd31-43be-be46-e50296951e32";
     private static final UUID CASE_3_UUID = UUID.fromString(CASE_3_UUID_STRING);
-    private static final List<UUID> MONITORED_BRANCHES_FILTERS_UUID = List.of(UUID.randomUUID());
-    private static final List<UUID> INJECTIONS_FILTERS_UUID = List.of(UUID.randomUUID());
-    private static final List<UUID> CONTINGENCIES_FILTERS_UUID = List.of(UUID.randomUUID());
-    private static final SensitivityFactorsIdsByGroup IDS = SensitivityFactorsIdsByGroup.builder().ids(Map.of("0", MONITORED_BRANCHES_FILTERS_UUID, "1", INJECTIONS_FILTERS_UUID, "2", CONTINGENCIES_FILTERS_UUID)).build();
 
     private static final String SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":30.0,\"voltageVoltageSensitivityValueThreshold\":0.4,\"flowVoltageSensitivityValueThreshold\":0.0,\"angleFlowSensitivityValueThreshold\":0.0}";
 
@@ -274,8 +269,8 @@ class SensitivityAnalysisTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "1");
                 } else if (path.matches("/v1/results/invalidate-status\\?resultUuid=.*")) {
                     return new MockResponse(200);
-                } else if (path.matches("/v1/networks/" + ".*" + "/factors-count\\?isInjectionsSet" + "&ids.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "4");
+                } else if (path.matches("/v1/networks/" + ".*" + "/factor-count")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), FAKE_RESULT_JSON);
                 } else if (path.matches("/v1/parameters")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING));
                 } else if (path.matches("/v1/users/" + NO_PROFILE_USER_ID + "/profile")) {
@@ -741,22 +736,21 @@ class SensitivityAnalysisTest {
     }
 
     @Test
-    void testGetSensitivityAnalysisFactorsCount(final MockWebServer server) throws Exception {
+    void testGetSensitivityAnalysisFactorCount(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        MockHttpServletRequestBuilder requestBuilder = get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factors-count", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid);
-        IDS.getIds().forEach((key, list) -> requestBuilder.queryParam(String.format("ids[%s]", key), list.stream().map(UUID::toString).toArray(String[]::new)));
-
+        MockHttpServletRequestBuilder requestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factor-count", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid);
+        requestBuilder.content(SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON);
         String resultAsString = mockMvc.perform(requestBuilder.header("userId", "userId"))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        assertEquals("4", resultAsString);
+        assertEquals(FAKE_RESULT_JSON, resultAsString);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + ".*" + "/factors-count.*")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + ".*" + "/factor-count.*")));
     }
 
     private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {

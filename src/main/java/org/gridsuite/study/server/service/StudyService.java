@@ -3621,6 +3621,11 @@ public class StudyService {
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
+    public void updateSpreadsheetConfigSort(UUID studyUuid, UUID configUuid, String sortConfig) {
+        studyConfigService.updateSpreadsheetConfigSort(configUuid, sortConfig);
+        notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
     public void updateSpreadsheetConfig(UUID studyUuid, UUID configUuid, String spreadsheetConfigInfos) {
         studyConfigService.updateSpreadsheetConfig(configUuid, spreadsheetConfigInfos);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
