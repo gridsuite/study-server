@@ -1886,11 +1886,6 @@ public class StudyService {
         return getVoltageLevelTopologyInfos(nodeUuidToSearchIn, rootNetworkUuid, voltageLevelId, path);
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void buildNodeInNewTransaction(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
-        buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, null);
-    }
-
     @Transactional
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, null);

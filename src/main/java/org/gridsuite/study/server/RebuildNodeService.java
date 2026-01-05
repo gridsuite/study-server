@@ -4,7 +4,6 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.handler.RebuildPreviouslyBuiltNodeHandler;
 import org.gridsuite.study.server.service.StudyService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
@@ -20,31 +19,26 @@ public class RebuildNodeService {
         this.studyService = studyService;
     }
 
-    @Transactional
     public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid, String userId) {
         rebuildPreviouslyBuiltNodeHandler.execute(studyUuid, nodeUuid, userId,
             () -> studyService.updateNetworkModification(studyUuid, updateModificationAttributes, nodeUuid, modificationUuid, userId));
     }
 
-    @Transactional
     public void stashNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         rebuildPreviouslyBuiltNodeHandler.execute(studyUuid, nodeUuid, userId,
             () -> studyService.stashNetworkModifications(studyUuid, nodeUuid, modificationsUuids, userId));
     }
 
-    @Transactional
     public void updateNetworkModificationsMetadata(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId, NetworkModificationMetadata metadata) {
         rebuildPreviouslyBuiltNodeHandler.execute(studyUuid, nodeUuid, userId,
             () -> studyService.updateNetworkModificationsMetadata(studyUuid, nodeUuid, modificationsUuids, userId, metadata));
     }
 
-    @Transactional
     public void updateNetworkModificationsActivationInRootNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationsUuids, String userId, boolean activated) {
         rebuildPreviouslyBuiltNodeHandler.execute(studyUuid, nodeUuid, userId,
             () -> studyService.updateNetworkModificationsActivationInRootNetwork(studyUuid, nodeUuid, rootNetworkUuid, modificationsUuids, userId, activated));
     }
 
-    @Transactional
     public void restoreNetworkModifications(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
         rebuildPreviouslyBuiltNodeHandler.execute(studyUuid, nodeUuid, userId,
             () -> studyService.restoreNetworkModifications(studyUuid, nodeUuid, modificationsUuids, userId));

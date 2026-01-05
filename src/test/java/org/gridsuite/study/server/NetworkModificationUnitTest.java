@@ -13,6 +13,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.handler.RebuildPreviouslyBuiltNodeHandler;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
@@ -129,6 +130,8 @@ class NetworkModificationUnitTest {
 
     @MockitoSpyBean
     private NetworkModificationTreeService networkModificationTreeService;
+    @MockitoBean
+    private RebuildPreviouslyBuiltNodeHandler rebuildPreviouslyBuiltNodeHandler;
 
     @BeforeEach
     void setup() {
@@ -137,6 +140,18 @@ class NetworkModificationUnitTest {
         nodeRepository.deleteAll();
         rootNetworkRepository.deleteAll();
         studyRepository.deleteAll();
+
+        doAnswer(inv -> {
+            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
+            return null;
+        }).when(rebuildPreviouslyBuiltNodeHandler)
+            .execute(any(), any(), any(), anyString(), any(Runnable.class));
+
+        doAnswer(inv -> {
+            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
+            return null;
+        }).when(rebuildPreviouslyBuiltNodeHandler)
+            .execute(any(), any(), anyString(), any(Runnable.class));
     }
 
     @Test

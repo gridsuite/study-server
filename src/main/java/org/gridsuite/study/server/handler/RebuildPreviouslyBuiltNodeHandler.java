@@ -27,7 +27,7 @@ public class RebuildPreviouslyBuiltNodeHandler {
         this.networkModificationTreeService = networkModificationTreeService;
     }
 
-    public <T> T execute(
+    private <T> T execute(
         UUID studyUuid,
         UUID node1Uuid,
         UUID node2Uuid,
@@ -94,8 +94,10 @@ public class RebuildPreviouslyBuiltNodeHandler {
                     return null;
                 }
             );
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException(e); //TODO: better exception
+            throw new RuntimeException(e); //TODO improve exception handling
         }
     }
 
@@ -117,8 +119,10 @@ public class RebuildPreviouslyBuiltNodeHandler {
                     return null;
                 }
             );
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException(e); //TODO: better exception
+            throw new RuntimeException(e); //TODO improve exception handling
         }
     }
 
