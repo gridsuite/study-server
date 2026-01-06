@@ -75,7 +75,7 @@ import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -163,7 +163,7 @@ class LoadFlowTest {
     private LoadFlowService loadFlowService;
     @Autowired
     private StudyRepository studyRepository;
-    @Autowired
+    @MockitoSpyBean
     private UserAdminService userAdminService;
     @Autowired
     private ReportService reportService;
@@ -1041,6 +1041,12 @@ class LoadFlowTest {
         jsonObject.put("variantId", variantId);
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
+
+        if (nodeType == NetworkModificationNodeType.SECURITY) {
+            // with new development, when node is of security type, we build it after creation
+            // to prevent existing tests to fail, we set it to 0 to keep previous behaviour -> we don't build security node after creation
+            doReturn(Optional.of(0)).when(userAdminService).getUserMaxAllowedBuilds("userId");
+        }
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());

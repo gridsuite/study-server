@@ -215,7 +215,7 @@ class NetworkModificationTest {
     @Autowired
     private StateEstimationService stateEstimationService;
 
-    @Autowired
+    @MockitoSpyBean
     private UserAdminService userAdminService;
 
     @MockitoBean
@@ -2521,8 +2521,7 @@ class NetworkModificationTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
-        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1", NetworkModificationNodeType.CONSTRUCTION
-            , BuildStatus.BUILT, userId);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1", NetworkModificationNodeType.SECURITY, BuildStatus.BUILT, userId);
         UUID modificationNode1Uuid = modificationNode1.getId();
         // In this node, let's say we have all computations results
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
@@ -2978,6 +2977,12 @@ class NetworkModificationTest {
         jsonObject.put("variantId", variantId);
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
+
+        if (nodeType == NetworkModificationNodeType.SECURITY) {
+            // with new development, when node is of security type, we build it after creation
+            // to prevent existing tests to fail, we set it to 0 to keep previous behaviour -> we don't build security node after creation
+            doReturn(Optional.of(0)).when(userAdminService).getUserMaxAllowedBuilds("userId");
+        }
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).header(USER_ID_HEADER, userId).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());

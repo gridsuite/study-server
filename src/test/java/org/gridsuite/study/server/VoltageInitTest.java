@@ -33,6 +33,7 @@ import org.gridsuite.study.server.dto.modification.ModificationApplicationContex
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.voltageinit.parameters.*;
+import org.gridsuite.study.server.handler.RebuildPreviouslyBuiltNodeHandler;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -240,7 +241,7 @@ class VoltageInitTest {
     @Autowired
     private VoltageInitService voltageInitService;
 
-    @Autowired
+    @MockitoSpyBean
     private UserAdminService userAdminService;
 
     @MockitoBean
@@ -272,6 +273,9 @@ class VoltageInitTest {
 
     @Autowired
     private VoltageInitResultConsumer voltageInitResultConsumer;
+
+    @MockitoBean
+    private RebuildPreviouslyBuiltNodeHandler rebuildPreviouslyBuiltNodeHandler;
 
     //output destinations
     private final String studyUpdateDestination = "study.update";
@@ -414,6 +418,19 @@ class VoltageInitTest {
     private void initMockBeans(Network network) {
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
         when(networkStoreService.getNetwork(SECOND_NETWORK_UUID)).thenReturn(network);
+
+        doAnswer(inv -> {
+            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
+            return null;
+        }).when(rebuildPreviouslyBuiltNodeHandler)
+            .execute(any(), any(), any(), anyString(), any(Runnable.class));
+
+        doAnswer(inv -> {
+            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
+            return null;
+        }).when(rebuildPreviouslyBuiltNodeHandler)
+            .execute(any(), any(), anyString(), any(Runnable.class));
+
     }
 
     private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, StudyVoltageInitParameters parameters, String userId, HttpStatusCode status) throws Exception {
@@ -1156,7 +1173,7 @@ class VoltageInitTest {
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid,
-                modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY, BuildStatus.NOT_BUILT);
+                modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION, BuildStatus.NOT_BUILT);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
@@ -1173,6 +1190,12 @@ class VoltageInitTest {
         jsonObject.put("variantId", variantId);
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
+
+        if (nodeType == NetworkModificationNodeType.SECURITY) {
+            // with new development, when node is of security type, we build it after creation
+            // to prevent existing tests to fail, we set it to 0 to keep previous behaviour -> we don't build security node after creation
+            doReturn(Optional.of(0)).when(userAdminService).getUserMaxAllowedBuilds("userId");
+        }
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
