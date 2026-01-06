@@ -56,7 +56,7 @@ public class RebuildPreviouslyBuiltNodeHandler {
 
         try {
             rootNetworkUuidsWithBuiltNodeAfterMap.forEach((nodeUuid, rootNetworkUuidsWithBuiltNodeAfter) -> {
-                Set<UUID> rootNetworkUuidsWithBuiltNodeBefore = rootNetworkUuidsWithBuiltNodeBeforeMap.get(nodeUuid);
+                Set<UUID> rootNetworkUuidsWithBuiltNodeBefore = rootNetworkUuidsWithBuiltNodeBeforeMap.getOrDefault(nodeUuid, Set.of());
 
                 rootNetworkUuidsWithBuiltNodeBefore.stream()
                     .filter(uuid -> !rootNetworkUuidsWithBuiltNodeAfter.contains(uuid))

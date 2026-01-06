@@ -6,10 +6,7 @@
  */
 package org.gridsuite.study.server.studycontroller;
 
-
 import mockwebserver3.junit5.internal.MockWebServerExtension;
-import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.RebuildNodeService;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
@@ -19,10 +16,8 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Set;
@@ -32,9 +27,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
@@ -46,15 +38,17 @@ class StudyControllerRebuildNodeHandlerTest {
 
     @MockitoBean
     private RebuildPreviouslyBuiltNodeHandler rebuildPreviouslyBuiltNodeHandler;
+    // this test is only making sure all those endpoint are actually calling rebuildPreviouslyBuiltNodeHandler
+    // we mock studyService since we don't cover all the assertions
     @MockitoBean
     private StudyService studyService;
 
     @Autowired
     private StudyController studyController;
 
-    private UUID nodeUuid = UUID.randomUUID();
-    private UUID studyUuid = UUID.randomUUID();
-    private String userId = "userId";
+    private final UUID nodeUuid = UUID.randomUUID();
+    private final UUID studyUuid = UUID.randomUUID();
+    private final String userId = "userId";
 
     @Test
     void testCreateNetworkModification() {

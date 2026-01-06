@@ -80,7 +80,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.*;
-import java.util.concurrent.Callable;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
@@ -285,7 +284,6 @@ class NetworkModificationTest {
             return null;
         }).when(rebuildPreviouslyBuiltNodeHandler)
             .execute(any(), any(), anyString(), any(Runnable.class));
-
 
         synchronizeStudyServerExecutionService(studyServerExecutionService);
 
