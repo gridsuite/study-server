@@ -87,9 +87,6 @@ class RootNetworkControllerTest {
     private OutputDestination output;
 
     @Autowired
-    private InputDestination input;
-
-    @Autowired
     private CaseService caseService;
 
     @Autowired
