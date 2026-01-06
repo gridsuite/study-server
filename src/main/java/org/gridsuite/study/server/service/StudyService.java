@@ -2063,7 +2063,6 @@ public class StudyService {
         invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
 
         deleteInvalidationInfos(invalidateNodeInfos);
-        rootNetworkNodeInfoService.clearNodeExportNetworks(nodeUuid, rootNetworkUuid);
         emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode.ALL);
 
         if (startTime.get() != null) {
@@ -2146,7 +2145,6 @@ public class StudyService {
         }
 
         if (!networkModificationTreeService.isRootNode(nodeUuid)) {
-            rootNetworkNodeInfoService.clearNodeExportNetworks(nodeUuid, rootNetworkUuid);
             emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
         }
 

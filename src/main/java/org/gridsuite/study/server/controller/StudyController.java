@@ -1011,7 +1011,7 @@ public class StudyController {
             @Parameter(description = "Export UUID") @RequestParam("exportUuid") UUID exportUuid,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
-        ExportNetworkStatus status = rootNetworkNodeInfoService.getExportNetworkStatus(nodeUuid, rootNetworkUuid, exportUuid);
+        ExportNetworkStatus status = rootNetworkNodeInfoService.getExportNetworkStatus(exportUuid);
         if (status == ExportNetworkStatus.RUNNING) {
             return ResponseEntity.status(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON).body(null);
         }
