@@ -1273,23 +1273,32 @@ public class NetworkModificationTreeService {
             return List.of(node1Uuid);
         }
 
-        Set<UUID> ancestorsOfA = new HashSet<>();
+        // 1️⃣ Ancêtres de node1
+        Set<UUID> ancestorsOfNode1 = new HashSet<>();
+        NodeEntity current = getNodeEntity(node1Uuid).getParentNode();
 
-        NodeEntity currentNode = getNodeEntity(node1Uuid).getParentNode();
-        while (currentNode != null) {
-            ancestorsOfA.add(currentNode.getIdNode());
-            currentNode = currentNode.getParentNode();
+        while (current != null) {
+            ancestorsOfNode1.add(current.getIdNode());
+            current = current.getParentNode();
         }
 
-        currentNode = getNodeEntity(node2Uuid).getParentNode();
-        while (currentNode != null) {
-            if (currentNode.getIdNode().equals(node1Uuid)) {
+        // 2️⃣ Remontée depuis node2
+        current = getNodeEntity(node2Uuid).getParentNode();
+        while (current != null) {
+            UUID currentId = current.getIdNode();
+
+            // node1 est ancêtre de node2
+            if (currentId.equals(node1Uuid)) {
                 return List.of(node1Uuid);
             }
-            if (ancestorsOfA.contains(currentNode.getIdNode())) {
-                return List.of(node2Uuid);
-            }
-            currentNode = currentNode.getParentNode();
+
+            // ancêtre commun ≠ relation hiérarchique directe → on ignore
+            current = current.getParentNode();
+        }
+
+        // 3️⃣ Vérifier l’inverse SANS rebalayer tout
+        if (ancestorsOfNode1.contains(node2Uuid)) {
+            return List.of(node2Uuid);
         }
 
         return List.of(node1Uuid, node2Uuid);

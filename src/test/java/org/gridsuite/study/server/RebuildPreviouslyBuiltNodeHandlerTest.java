@@ -44,6 +44,7 @@ class RebuildPreviouslyBuiltNodeHandlerTest {
     void setUp() {
         doReturn(List.of(node1Uuid, node2Uuid)).when(networkModificationTreeService).getHighestNodeUuids(node1Uuid, node2Uuid);
         doReturn(List.of(node1Uuid)).when(networkModificationTreeService).getHighestNodeUuids(node1Uuid, node1Uuid);
+        doReturn(false).when(networkModificationTreeService).isRootOrConstructionNode(any());
     }
 
     @Test
@@ -78,7 +79,8 @@ class RebuildPreviouslyBuiltNodeHandlerTest {
         InOrder inOrder = Mockito.inOrder(runnable, studyService);
         inOrder.verify(runnable, times(1)).run();
         inOrder.verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
-        inOrder.verify(studyService, times(1)).buildNode(studyUuid, node2Uuid, rootNetworkUuid, userId);
+        // this does not need to be checked in order, what matters is that "runnable" is called BEFORE nodes are rebuilt
+        Mockito.verify(studyService, times(1)).buildNode(studyUuid, node2Uuid, rootNetworkUuid, userId);
     }
 
     @Test
@@ -155,5 +157,21 @@ class RebuildPreviouslyBuiltNodeHandlerTest {
         InOrder inOrder = Mockito.inOrder(runnable, studyService);
         inOrder.verify(runnable, times(1)).run();
         inOrder.verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
+    }
+
+    @Test
+    void testRebuildConstructionNode() {
+        Runnable runnable = Mockito.spy(Runnable.class);
+        doReturn(
+            Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT)),
+            Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT))
+        ).when(studyService).getNodeBuildStatusByRootNetworkUuid(studyUuid, node1Uuid);
+
+        doReturn(true).when(networkModificationTreeService).isRootOrConstructionNode(any());
+
+        rebuildPreviouslyBuiltNodeHandler.execute(studyUuid, node1Uuid, userId, runnable);
+
+        Mockito.verify(runnable, times(1)).run();
+        Mockito.verify(studyService, times(0)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }
 }

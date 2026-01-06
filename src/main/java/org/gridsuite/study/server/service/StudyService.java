@@ -1911,16 +1911,16 @@ public class StudyService {
 
     @Transactional
     public void buildFirstLevelChildren(@NonNull UUID studyUuid, @NonNull UUID parentNodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
-        AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(studyUuid, parentNodeUuid, rootNetworkUuid);
+        List<NodeEntity> firstLevelChildren = networkModificationTreeService.getChildren(parentNodeUuid);
         long builtNodesUpToQuota = getBuiltNodesUpToQuota(studyUuid, rootNetworkUuid, userId);
-        for (AbstractNode child : studySubTree.getChildren()) {
+        for (NodeEntity child : firstLevelChildren) {
             if (builtNodesUpToQuota <= 0) {
                 return;
             }
 
             buildNode(
                 studyUuid,
-                child.getId(),
+                child.getIdNode(),
                 rootNetworkUuid,
                 userId,
                 null

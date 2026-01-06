@@ -352,19 +352,31 @@ class LoadFlowTest {
         assertEquals(isNodeBlocked, networkNodeInfoEntity.get().getBlockedNode());
     }
 
-    private void consumeLoadFlowResult(UUID studyUuid, UUID rootNetworkUuid, NetworkModificationNode modificationNode) throws JsonProcessingException {
+    private void consumeLoadFlowResult(MockWebServer server, UUID studyUuid, UUID rootNetworkUuid, NetworkModificationNode modificationNode) throws JsonProcessingException {
         UUID nodeUuid = modificationNode.getId();
 
         assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
 
+        doNothing().when(studyService).buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, "userId");
+
         // consume loadflow result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
-        MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", LOADFLOW_RESULT_UUID, "withRatioTapChangers", false, HEADER_RECEIVER, resultUuidJson));
+        MessageHeaders messageHeaders = new MessageHeaders(
+            Map.of(
+                "resultUuid", LOADFLOW_RESULT_UUID,
+                "withRatioTapChangers", false,
+                HEADER_RECEIVER, resultUuidJson,
+                USER_ID_HEADER, "userId"));
         consumerService.consumeLoadFlowResult().accept(MessageBuilder.createMessage("", messageHeaders));
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
 
         assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
+        if (modificationNode.isSecurityNode()) {
+            // if running successful loadflow on security node -> first children are built
+            assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + LOADFLOW_RESULT_UUID + "/status")));
+            verify(studyService, times(1)).buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, "userId");
+        }
     }
 
     @Test
@@ -425,7 +437,7 @@ class LoadFlowTest {
         }
         assertRequestsDone(server, expectedRequestsPatterns);
 
-        consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode);
+        consumeLoadFlowResult(server, studyNameUserIdUuid, firstRootNetworkUuid, modificationNode);
 
         // get loadflow result
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/result", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)).andExpectAll(
@@ -496,7 +508,7 @@ class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         assertRequestsDone(server, List.of("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
 
-        consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1);
+        consumeLoadFlowResult(server, studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1);
 
         // get computing status
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
@@ -552,7 +564,7 @@ class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         assertRequestsDone(server, List.of("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
 
-        consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1);
+        consumeLoadFlowResult(server, studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1);
     }
 
     @Test
@@ -589,7 +601,7 @@ class LoadFlowTest {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         assertRequestsDone(server, List.of("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2));
 
-        consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3);
+        consumeLoadFlowResult(server, studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3);
 
         //Test result count
         testResultCount(server);
