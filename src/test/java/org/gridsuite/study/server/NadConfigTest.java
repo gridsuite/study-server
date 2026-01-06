@@ -197,35 +197,6 @@ class NadConfigTest {
     }
 
     @Test
-    void testNadConfigServiceCreateWithError() {
-        NadConfigInfos nadConfigInfos = NadConfigInfos.builder()
-            .id(null)
-            .build();
-
-        wireMockServer.stubFor(WireMock.post(DELIMITER + "v1/network-area-diagram/configs")
-            .willReturn(WireMock.serverError()));
-
-        assertThrows(HttpServerErrorException.class, () -> {
-            nadConfigService.saveNadConfig(nadConfigInfos, UUID.randomUUID());
-        });
-    }
-
-    @Test
-    void testNadConfigServiceUpdateWithError() {
-        UUID existingUuid = UUID.randomUUID();
-        NadConfigInfos nadConfigInfos = NadConfigInfos.builder()
-            .id(existingUuid)
-            .build();
-
-        wireMockServer.stubFor(WireMock.put(DELIMITER + "v1/network-area-diagram/config/" + existingUuid)
-            .willReturn(WireMock.serverError()));
-
-        assertThrows(HttpServerErrorException.class, () -> {
-            nadConfigService.saveNadConfig(nadConfigInfos, existingUuid);
-        });
-    }
-
-    @Test
     void testNadConfigServiceDeleteWithError() {
         UUID nadConfigUuid = UUID.randomUUID();
 

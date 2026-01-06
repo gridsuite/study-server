@@ -10,12 +10,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.gridsuite.study.server.service.WorkspaceService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -94,27 +95,28 @@ public class WorkspaceController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{workspaceId}/saved-nad-configs")
+    @PostMapping("/{workspaceId}/panels/{panelId}/saved-nad-config")
     @Operation(summary = "Save NAD config")
-    @ApiResponse(responseCode = "200", description = "NAD config saved")
+    @ApiResponse(responseCode = "201", description = "NAD config saved")
     @ApiResponse(responseCode = "404", description = "Study not found")
     public ResponseEntity<UUID> saveNadConfig(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable UUID workspaceId,
-            @RequestBody NadConfigInfos nadConfigInfos) {
-        UUID savedNadConfigUuid = workspaceService.saveNadConfig(studyUuid, workspaceId, nadConfigInfos);
-        return ResponseEntity.ok(savedNadConfigUuid);
+            @PathVariable UUID panelId,
+            @RequestBody Map<String, Object> nadConfigData) {
+        UUID savedNadConfigUuid = workspaceService.saveNadConfig(studyUuid, workspaceId, panelId, nadConfigData);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedNadConfigUuid);
     }
 
-    @DeleteMapping("/{workspaceId}/saved-nad-configs/{savedNadConfigUuid}")
+    @DeleteMapping("/{workspaceId}/panels/{panelId}/saved-nad-config")
     @Operation(summary = "Delete saved NAD config")
     @ApiResponse(responseCode = "204", description = "Saved NAD config deleted")
     @ApiResponse(responseCode = "404", description = "Study not found")
     public ResponseEntity<Void> deleteNadConfig(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable UUID workspaceId,
-            @PathVariable UUID savedNadConfigUuid) {
-        workspaceService.deleteNadConfig(studyUuid, savedNadConfigUuid);
+            @PathVariable UUID panelId) {
+        workspaceService.deleteNadConfig(studyUuid, workspaceId, panelId);
         return ResponseEntity.noContent().build();
     }
 }

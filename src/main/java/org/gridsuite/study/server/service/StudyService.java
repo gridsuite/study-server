@@ -547,11 +547,6 @@ public class StudyService {
                 removePccMinParameters(s.getPccMinParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
                 removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
-                // Remove saved NAD configs from workspace panels
-                if (s.getWorkspacesConfigUuid() != null) {
-                    List<UUID> savedNadConfigUuids = studyConfigService.getAllSavedNadConfigUuids(s.getWorkspacesConfigUuid());
-                    removeNadConfigs(savedNadConfigUuids);
-                }
                 removeWorkspacesConfig(s.getWorkspacesConfigUuid());
                 removeNadConfigs(s.getNadConfigsUuids().stream().toList());
             });
@@ -762,14 +757,7 @@ public class StudyService {
 
         UUID copiedWorkspacesConfigUuid = null;
         if (sourceStudyEntity.getWorkspacesConfigUuid() != null) {
-            // Get all saved NAD config UUIDs from source workspace
-            List<UUID> sourceNadConfigUuids = studyConfigService.getAllSavedNadConfigUuids(sourceStudyEntity.getWorkspacesConfigUuid());
-
-            // Duplicate NAD configs and get mapping
-            Map<UUID, UUID> nadConfigMapping = singleLineDiagramService.duplicateNadConfigs(sourceNadConfigUuids);
-
-            // Duplicate workspaces config with NAD config mapping
-            copiedWorkspacesConfigUuid = studyConfigService.duplicateWorkspacesConfig(sourceStudyEntity.getWorkspacesConfigUuid(), nadConfigMapping);
+            copiedWorkspacesConfigUuid = studyConfigService.duplicateWorkspacesConfig(sourceStudyEntity.getWorkspacesConfigUuid());
         }
 
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
