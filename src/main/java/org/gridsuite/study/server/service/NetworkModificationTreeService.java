@@ -1273,34 +1273,25 @@ public class NetworkModificationTreeService {
             return List.of(node1Uuid);
         }
 
-        // 1️⃣ Ancêtres de node1
-        Set<UUID> ancestorsOfNode1 = new HashSet<>();
-        NodeEntity current = getNodeEntity(node1Uuid).getParentNode();
-
-        while (current != null) {
-            ancestorsOfNode1.add(current.getIdNode());
-            current = current.getParentNode();
+        if (isAncestor(node1Uuid, node2Uuid)) {
+            return List.of(node1Uuid);
         }
 
-        // 2️⃣ Remontée depuis node2
-        current = getNodeEntity(node2Uuid).getParentNode();
-        while (current != null) {
-            UUID currentId = current.getIdNode();
-
-            // node1 est ancêtre de node2
-            if (currentId.equals(node1Uuid)) {
-                return List.of(node1Uuid);
-            }
-
-            // ancêtre commun ≠ relation hiérarchique directe → on ignore
-            current = current.getParentNode();
-        }
-
-        // 3️⃣ Vérifier l’inverse SANS rebalayer tout
-        if (ancestorsOfNode1.contains(node2Uuid)) {
+        if (isAncestor(node2Uuid, node1Uuid)) {
             return List.of(node2Uuid);
         }
 
         return List.of(node1Uuid, node2Uuid);
+    }
+
+    private boolean isAncestor(UUID ancestorUuid, UUID nodeUuid) {
+        NodeEntity current = getNodeEntity(nodeUuid).getParentNode();
+        while (current != null) {
+            if (current.getIdNode().equals(ancestorUuid)) {
+                return true;
+            }
+            current = current.getParentNode();
+        }
+        return false;
     }
 }

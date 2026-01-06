@@ -640,7 +640,7 @@ public class ConsumerService {
                 // unblock node
                 handleUnblockNode(receiverObj, computationType);
 
-                // build 1st level children if loadflow results
+                // build 1st level children if loadflow is converged, and node if of security type
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
                 if (computationType == LOAD_FLOW) {
