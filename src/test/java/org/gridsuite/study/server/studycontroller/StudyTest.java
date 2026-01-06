@@ -43,6 +43,7 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
+import org.gridsuite.study.server.handler.RebuildPreviouslyBuiltNodeHandler;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
@@ -370,6 +371,8 @@ class StudyTest {
 
     @MockitoSpyBean
     ConsumerService consumeService;
+    @MockitoBean
+    private RebuildPreviouslyBuiltNodeHandler rebuildPreviouslyBuiltNodeHandler;
 
     private void initMockBeans(Network network) {
         when(equipmentInfosService.getEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("32"));
@@ -387,6 +390,18 @@ class StudyTest {
                 .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
 
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
+
+        doAnswer(inv -> {
+            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
+            return null;
+        }).when(rebuildPreviouslyBuiltNodeHandler)
+            .execute(any(), any(), any(), anyString(), any(Runnable.class));
+
+        doAnswer(inv -> {
+            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
+            return null;
+        }).when(rebuildPreviouslyBuiltNodeHandler)
+            .execute(any(), any(), anyString(), any(Runnable.class));
 
         // Synchronize for tests
         synchronizeStudyServerExecutionService(studyServerExecutionService);
@@ -1175,12 +1190,12 @@ class StudyTest {
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName, String userId) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid,
-                modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY, BuildStatus.NOT_BUILT, userId);
+                modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION, BuildStatus.NOT_BUILT, userId);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus, String userId) throws Exception {
-        return createNetworkModificationNode(studyUuid, parentNodeUuid, modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY, buildStatus, userId);
+        return createNetworkModificationNode(studyUuid, parentNodeUuid, modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION, buildStatus, userId);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,

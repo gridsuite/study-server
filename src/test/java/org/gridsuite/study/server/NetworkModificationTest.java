@@ -36,6 +36,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.handler.RebuildPreviouslyBuiltNodeHandler;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
@@ -213,7 +214,7 @@ class NetworkModificationTest {
     @Autowired
     private StateEstimationService stateEstimationService;
 
-    @Autowired
+    @MockitoSpyBean
     private UserAdminService userAdminService;
 
     @MockitoBean
@@ -261,6 +262,9 @@ class NetworkModificationTest {
     @Autowired
     private PccMinService pccMinService;
 
+    @MockitoBean
+    RebuildPreviouslyBuiltNodeHandler rebuildPreviouslyBuiltNodeHandler;
+
     @BeforeEach
     void setup(final MockWebServer server) {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
@@ -269,6 +273,17 @@ class NetworkModificationTest {
         network.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
 
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
+        doAnswer(inv -> {
+            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
+            return null;
+        }).when(rebuildPreviouslyBuiltNodeHandler)
+            .execute(any(), any(), any(), anyString(), any(Runnable.class));
+
+        doAnswer(inv -> {
+            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
+            return null;
+        }).when(rebuildPreviouslyBuiltNodeHandler)
+            .execute(any(), any(), anyString(), any(Runnable.class));
 
         synchronizeStudyServerExecutionService(studyServerExecutionService);
 
@@ -2931,13 +2946,13 @@ class NetworkModificationTest {
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid, String variantId, String nodeName, String userId) throws Exception {
-        return createNetworkModificationNode(studyUuid, parentNodeUuid, UUID.randomUUID(), variantId, nodeName, NetworkModificationNodeType.SECURITY, userId);
+        return createNetworkModificationNode(studyUuid, parentNodeUuid, UUID.randomUUID(), variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION, userId);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName, String userId) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid,
-            modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY, BuildStatus.NOT_BUILT, userId);
+            modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION, BuildStatus.NOT_BUILT, userId);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
@@ -2960,6 +2975,12 @@ class NetworkModificationTest {
         jsonObject.put("variantId", variantId);
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
+
+        if (nodeType == NetworkModificationNodeType.SECURITY) {
+            // with new development, when node is of security type, we build it after creation
+            // to prevent existing tests to fail, we set it to 0 to keep previous behaviour -> we don't build security node after creation
+            doReturn(Optional.of(0)).when(userAdminService).getUserMaxAllowedBuilds("userId");
+        }
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).header(USER_ID_HEADER, userId).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());

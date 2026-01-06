@@ -598,9 +598,13 @@ public class NetworkModificationTreeService {
     }
 
     public void assertIsRootOrConstructionNode(UUID nodeUuid) {
-        if (!self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) && !isConstructionNode(nodeUuid)) {
+        if (!isRootOrConstructionNode(nodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
+    }
+
+    public boolean isRootOrConstructionNode(UUID nodeUuid) {
+        return self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) || isConstructionNode(nodeUuid);
     }
 
     private void assertInsertNode(
@@ -1261,5 +1265,42 @@ public class NetworkModificationTreeService {
         nodeInfo.getChildren().forEach(child -> self.createNodeTree(study, nodeInfo.getId(), (NetworkModificationNode) child));
 
         return nodeInfo;
+    }
+
+    @Transactional
+    public List<UUID> getHighestNodeUuids(UUID node1Uuid, UUID node2Uuid) {
+        if (node1Uuid.equals(node2Uuid)) {
+            return List.of(node1Uuid);
+        }
+
+        // 1️⃣ Ancêtres de node1
+        Set<UUID> ancestorsOfNode1 = new HashSet<>();
+        NodeEntity current = getNodeEntity(node1Uuid).getParentNode();
+
+        while (current != null) {
+            ancestorsOfNode1.add(current.getIdNode());
+            current = current.getParentNode();
+        }
+
+        // 2️⃣ Remontée depuis node2
+        current = getNodeEntity(node2Uuid).getParentNode();
+        while (current != null) {
+            UUID currentId = current.getIdNode();
+
+            // node1 est ancêtre de node2
+            if (currentId.equals(node1Uuid)) {
+                return List.of(node1Uuid);
+            }
+
+            // ancêtre commun ≠ relation hiérarchique directe → on ignore
+            current = current.getParentNode();
+        }
+
+        // 3️⃣ Vérifier l’inverse SANS rebalayer tout
+        if (ancestorsOfNode1.contains(node2Uuid)) {
+            return List.of(node2Uuid);
+        }
+
+        return List.of(node1Uuid, node2Uuid);
     }
 }
