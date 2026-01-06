@@ -266,7 +266,7 @@ class NetworkModificationTest {
     RebuildPreviouslyBuiltNodeHandler rebuildPreviouslyBuiltNodeHandler;
 
     @BeforeEach
-    void setup(final MockWebServer server) throws Exception {
+    void setup(final MockWebServer server) {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
         network.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID);

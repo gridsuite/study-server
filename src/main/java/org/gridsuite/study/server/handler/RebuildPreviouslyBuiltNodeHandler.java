@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Component
@@ -32,14 +32,14 @@ public class RebuildPreviouslyBuiltNodeHandler {
         UUID node1Uuid,
         UUID node2Uuid,
         String userId,
-        Callable<T> operation
-    ) throws Exception {
+        Supplier<T> operation
+    ) {
         // if node 1 and 2 are in the same "subtree", rebuild only the highest one - otherwise, rebuild both
         List<UUID> nodesToReBuild = networkModificationTreeService.getHighestNodeUuids(node1Uuid, node2Uuid).stream()
             .filter(Predicate.not(networkModificationTreeService::isRootOrConstructionNode)).toList();
 
         if (nodesToReBuild.isEmpty()) {
-            return operation.call();
+            return operation.get();
         }
 
         Map<UUID, Set<UUID>> rootNetworkUuidsWithBuiltNodeBeforeMap = nodesToReBuild.stream().collect(Collectors.toMap(
@@ -47,7 +47,7 @@ public class RebuildPreviouslyBuiltNodeHandler {
             nodeUuid -> getRootNetworkWhereNotHasToBeRebuilt(studyUuid, nodeUuid)
         ));
 
-        T result = operation.call();
+        T result = operation.get();
 
         Map<UUID, Set<UUID>> rootNetworkUuidsWithBuiltNodeAfterMap = nodesToReBuild.stream().collect(Collectors.toMap(
             nodeUuid -> nodeUuid,
@@ -83,22 +83,16 @@ public class RebuildPreviouslyBuiltNodeHandler {
         String userId,
         Runnable operation
     ) {
-        try {
-            execute(
-                studyUuid,
-                nodeUuid,
-                nodeUuid,
-                userId,
-                () -> {
-                    operation.run();
-                    return null;
-                }
-            );
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException(e); //TODO improve exception handling
-        }
+        execute(
+            studyUuid,
+            nodeUuid,
+            nodeUuid,
+            userId,
+            () -> {
+                operation.run();
+                return null;
+            }
+        );
     }
 
     public void execute(
@@ -108,22 +102,16 @@ public class RebuildPreviouslyBuiltNodeHandler {
         String userId,
         Runnable operation
     ) {
-        try {
-            execute(
-                studyUuid,
-                node1Uuid,
-                node2Uuid,
-                userId,
-                () -> {
-                    operation.run();
-                    return null;
-                }
-            );
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException(e); //TODO improve exception handling
-        }
+        execute(
+            studyUuid,
+            node1Uuid,
+            node2Uuid,
+            userId,
+            () -> {
+                operation.run();
+                return null;
+            }
+        );
     }
 
     private Set<UUID> getRootNetworkWhereNotHasToBeRebuilt(UUID studyUuid, UUID nodeUuid) {

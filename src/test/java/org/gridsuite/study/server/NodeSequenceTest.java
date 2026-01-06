@@ -164,11 +164,6 @@ class NodeSequenceTest {
         return networkModificationTreeService.createNode(studyEntity, parentNodeUuid, NetworkModificationNode.builder().name(name).nodeType(networkModificationNodeType).build(), InsertMode.CHILD, userId);
     }
 
-    private void assertNodeHasBeenBuilt(UUID nodeUuid, String userId) {
-        verify(userAdminService, times(1)).getUserMaxAllowedBuilds(userId);
-        verify(networkModificationService, times(1)).buildNode(eq(nodeUuid), any(), any(), eq(null));
-    }
-
     void checkSecuritySequence(AbstractNode nNode, String nameSuffix) {
         NetworkModificationNodeInfoEntity nNodeEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nNode.getId());
         assertEquals(SecuritySequence.N_NODE_NAME + nameSuffix, nNodeEntity.getName());
