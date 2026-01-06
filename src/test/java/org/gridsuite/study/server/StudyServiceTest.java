@@ -331,7 +331,6 @@ class StudyServiceTest {
                         N4
          */
 
-
         // quota not reached, all first level children of N1 will be built
         doReturn(Optional.of(10)).when(userAdminService).getUserMaxAllowedBuilds(userId);
         doReturn(0L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
