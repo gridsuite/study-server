@@ -7,7 +7,6 @@
 
 package org.gridsuite.study.server.repository.networkmodificationtree;
 
-import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.springframework.data.jpa.repository.JpaRepository;
