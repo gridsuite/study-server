@@ -15,7 +15,10 @@ import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
@@ -99,14 +102,6 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "pccMinResultUuid")
     private UUID pccMinResultUuid;
 
-    @ElementCollection
-    @CollectionTable(
-            name = "node_export",
-            joinColumns = @JoinColumn(name = "root_network_node_info_id"),
-            foreignKey = @ForeignKey(name = "rootNetworkNodeInfo_nodeExport_fk")
-    )
-    private List<NodeExportEmbeddable> nodeExportNetwork = new ArrayList<>();
-
     @Column(name = "blockedNode")
     private Boolean blockedNode;
 
@@ -142,7 +137,6 @@ public class RootNetworkNodeInfoEntity {
             .voltageInitResultUuid(voltageInitResultUuid)
             .shortCircuitAnalysisResultUuid(shortCircuitAnalysisResultUuid)
             .variantId(variantId)
-            .nodeExportNetwork(nodeExportNetwork)
             .build();
     }
 

@@ -14,7 +14,6 @@ import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
-import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
@@ -259,12 +258,12 @@ public class RootNetworkNodeInfoService {
         }
 
         invalidateComputationResults(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
-        clearNodeExportNetworks(rootNetworkNodeInfoEntity);
+        clearNodeExportNetworks(rootNetworkNodeInfoEntity.getNodeInfo().getNode());
         return invalidateNodeInfos;
     }
 
-    private static void clearNodeExportNetworks(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
-        rootNetworkNodeInfoEntity.setNodeExportNetwork(null);
+    static void clearNodeExportNetworks(NodeEntity nodeEntity) {
+        nodeEntity.setNodeExportNetwork(new ArrayList<>());
     }
 
     /**
@@ -859,28 +858,5 @@ public class RootNetworkNodeInfoService {
     public void stopPccMin(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
         pccMinService.stopPccMin(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
-    }
-
-    @Transactional
-    public void updateExportNetworkStatus(UUID nodeUuid, UUID rootNetworkUuid, UUID exportUuid, ExportNetworkStatus status) {
-        findRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).getNodeExportNetwork().add(NodeExportEmbeddable.toNodeExportEmbeddable(exportUuid, status));
-    }
-
-    @Transactional
-    public void updateExportNetworkStatus(UUID exportUuid, ExportNetworkStatus status) {
-        rootNetworkNodeInfoRepository.findAll().forEach(rootNode -> {
-            rootNode.getNodeExportNetwork().stream().filter(e -> e.getExportUuid().equals(exportUuid)).findFirst().ifPresent(e -> e.setStatus(status));
-        });
-    }
-
-    @Transactional
-    public ExportNetworkStatus getExportNetworkStatus(UUID exportUuid) {
-        return rootNetworkNodeInfoRepository.findByNodeExportNetworkExportUuid(exportUuid).map(NodeExportEmbeddable::getStatus)
-                .orElseThrow(() -> new StudyException(NOT_FOUND, "Export network status not found for exportUuid=" + exportUuid));
-    }
-
-    private RootNetworkNodeInfoEntity findRootNetworkNodeInfo(UUID nodeUuid, UUID rootNetworkUuid) {
-        return rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
-                .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
 }

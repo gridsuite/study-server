@@ -8,7 +8,6 @@ package org.gridsuite.study.server.repository.rootnetwork;
 
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeExportEmbeddable;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -64,9 +63,6 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
     boolean existsByStudyUuidAndBuildStatus(UUID studyUuid, BuildStatus buildStatus);
 
     List<RootNetworkNodeInfoEntity> getAllByRootNetworkIdAndNodeInfoIdIn(UUID rootNetworkUuid, List<UUID> nodesUuids);
-
-    @Query("SELECT nee FROM RootNetworkNodeInfoEntity rnni JOIN rnni.nodeExportNetwork nee WHERE nee.exportUuid = :exportUuid")
-    Optional<NodeExportEmbeddable> findByNodeExportNetworkExportUuid(UUID exportUuid);
 
     @Query(value = "SELECT count(rnni) > 0 FROM RootNetworkNodeInfoEntity rnni WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodesUuids AND rnni.blockedNode = true ")
     boolean existsByNodeUuidsAndBlockedNode(UUID rootNetworkUuid, List<UUID> nodesUuids);
