@@ -912,8 +912,7 @@ class StudyTest {
                 "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk()).andReturn();
         TestUtils.getRequestsDone(1, mockWebServer);
         UUID exportUuid = mapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/download-file?exportUuid={exportUuid}",
-                studyUuid, firstRootNetworkUuid, modificationNode1Uuid, exportUuid).header(HEADER_USER_ID, userId)).andExpect(status().isConflict());
+        mockMvc.perform(get("/v1/download-file?exportUuid={exportUuid}", exportUuid).header(HEADER_USER_ID, userId)).andExpect(status().isConflict());
         NetworkExportReceiver receiver = new NetworkExportReceiver(studyUuid, userId);
         String receiverJson = mapper.writeValueAsString(receiver);
         String encodedReceiver = URLEncoder.encode(receiverJson, StandardCharsets.UTF_8);
@@ -927,8 +926,7 @@ class StudyTest {
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
         assertEquals(exportUuid, mess.getHeaders().get(HEADER_EXPORT_UUID));
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/download-file?exportUuid={exportUuid}",
-                studyUuid, firstRootNetworkUuid, modificationNode1Uuid, exportUuid).header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+        mockMvc.perform(get("/v1/download-file?exportUuid={exportUuid}", exportUuid).header(HEADER_USER_ID, userId)).andExpect(status().isOk());
         TestUtils.getRequestsDone(1, mockWebServer);
     }
 
