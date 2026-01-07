@@ -1005,12 +1005,8 @@ public class StudyController {
         @ApiResponse(responseCode = "409", description = "Export not ready yet")
     })
     public ResponseEntity<Resource> downloadExportedNetworkFile(
-            @Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-            @Parameter(description = "Root Network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "Export UUID") @RequestParam("exportUuid") UUID exportUuid,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
         ExportNetworkStatus status = networkModificationTreeService.getExportNetworkStatus(exportUuid);
         if (status == ExportNetworkStatus.RUNNING) {
             return ResponseEntity.status(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON).body(null);
