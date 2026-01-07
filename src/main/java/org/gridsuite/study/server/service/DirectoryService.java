@@ -48,13 +48,14 @@ public class DirectoryService {
 
     public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId) {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements");
-        ElementAttributes elementAttributes = new ElementAttributes(elementUuid, elementName, type, userId, 0, description );
+        ElementAttributes elementAttributes = new ElementAttributes(elementUuid, elementName, type, userId, 0, description);
+        String path = pathBuilder.buildAndExpand(directoryUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("userId", userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<ElementAttributes> requestEntity = new HttpEntity<>(elementAttributes, headers);
-        restTemplate.exchange(pathBuilder.buildAndExpand(directoryUuid).toUriString(), HttpMethod.POST, requestEntity, ElementAttributes.class);
+        restTemplate.exchange(directoryServerServerBaseUri + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
     }
 }

@@ -860,10 +860,8 @@ public class ConsumerService {
                 // With export uuid get
                 NodeExportInfos nodeExport = rootNetworkNodeInfoService.getNodeExportInfos(exportUuid);
 
-                boolean exportToExplorer = false;
-                if (nodeExport != null) {
-                    exportToExplorer = nodeExport.exportToExplorer();
-
+                boolean exportToExplorer = nodeExport != null && nodeExport.exportToExplorer();
+                if (exportToExplorer) {
                     //Call case server and create case in directory
                     UUID caseUuid = caseService.createCase(exportUuid, exportFolder, nodeExport.filename());
                     directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.filename(), DirectoryService.CASE, userId);
