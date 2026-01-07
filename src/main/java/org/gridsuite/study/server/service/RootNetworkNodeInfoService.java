@@ -876,13 +876,14 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional
-    public void updateExportNetworkStatus(UUID nodeUuid, UUID rootNetworkUuid, UUID exportUuid, ExportNetworkStatus status, boolean exportToExplorer, UUID directoryUuid, String description) {
+    public void updateExportNetworkStatus(UUID nodeUuid, UUID rootNetworkUuid, UUID exportUuid, ExportNetworkStatus status, boolean exportToExplorer, UUID directoryUuid,
+                                          String filename, String description) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = findRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
         rootNetworkNodeInfoEntity.getNodeExportNetwork().stream()
                 .filter(e -> e.getExportUuid().equals(exportUuid))
                 .findFirst()
                 .ifPresentOrElse(nodeExportEmbeddable -> nodeExportEmbeddable.setStatus(status),
-                        () -> rootNetworkNodeInfoEntity.getNodeExportNetwork().add(toNodeExportEmbeddable(exportUuid, status, exportToExplorer, directoryUuid, description)));
+                        () -> rootNetworkNodeInfoEntity.getNodeExportNetwork().add(toNodeExportEmbeddable(exportUuid, status, exportToExplorer, directoryUuid, filename, description)));
     }
 
     @Transactional

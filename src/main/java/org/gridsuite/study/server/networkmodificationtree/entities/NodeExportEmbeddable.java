@@ -40,6 +40,9 @@ public class NodeExportEmbeddable {
     @Column(name = "directory_uuid")
     private UUID directoryUuid;
 
+    @Column(name = "filename")
+    private String filename;
+
     @Column(name = "description")
     private String description;
 
@@ -51,17 +54,19 @@ public class NodeExportEmbeddable {
                 .build();
     }
 
-    public static NodeExportEmbeddable toNodeExportEmbeddable(UUID exportUuid, ExportNetworkStatus status, boolean exportToExplorer, UUID directoryUuid, String description) {
+    public static NodeExportEmbeddable toNodeExportEmbeddable(UUID exportUuid, ExportNetworkStatus status, boolean exportToExplorer, UUID directoryUuid,
+                                                              String filename, String description) {
         return NodeExportEmbeddable.builder()
                 .exportUuid(exportUuid)
                 .status(status)
                 .exportToExplorer(exportToExplorer)
                 .directoryUuid(directoryUuid)
+                .filename(filename)
                 .description(description)
                 .build();
     }
 
     public NodeExportInfos toNodeExportInfos() {
-        return new NodeExportInfos(exportUuid, status, exportToExplorer, directoryUuid, description);
+        return new NodeExportInfos(exportUuid, status, exportToExplorer, directoryUuid, filename, description);
     }
 }

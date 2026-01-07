@@ -8,7 +8,12 @@ package org.gridsuite.study.server.service;
 
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.ElementAttributes;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -22,6 +27,7 @@ import static org.gridsuite.study.server.StudyConstants.DIRECTORY_API_VERSION;
  */
 @Service
 public class DirectoryService {
+    static final String CASE = "CASE";
 
     private final RestTemplate restTemplate;
 
@@ -38,5 +44,17 @@ public class DirectoryService {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements/{elementUuid}/name");
         String path = pathBuilder.buildAndExpand(elementUuid).toUriString();
         return restTemplate.getForObject(directoryServerServerBaseUri + path, String.class);
+    }
+
+    public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId) {
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements");
+        ElementAttributes elementAttributes = new ElementAttributes(elementUuid, elementName, type, userId, 0, description );
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("userId", userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<ElementAttributes> requestEntity = new HttpEntity<>(elementAttributes, headers);
+        restTemplate.exchange(pathBuilder.buildAndExpand(directoryUuid).toUriString(), HttpMethod.POST, requestEntity, ElementAttributes.class);
     }
 }

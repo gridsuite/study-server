@@ -8,5 +8,6 @@ public record NodeExportInfos(UUID exportUuid,
                               ExportNetworkStatus status,
                               boolean exportToExplorer,
                               UUID directoryUuid,
+                              String filename,
                               String description) {
 }

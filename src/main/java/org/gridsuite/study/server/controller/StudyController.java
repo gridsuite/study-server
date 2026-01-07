@@ -1009,6 +1009,7 @@ public class StudyController {
                                                         parametersJson,
                                                         exportToExplorer,
                                                         parentDirectoryUuid,
+                                                        fileName,
                                                         description);
         return ResponseEntity.ok().body(exportUuid);
     }

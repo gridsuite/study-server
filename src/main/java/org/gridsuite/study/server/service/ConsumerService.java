@@ -30,6 +30,7 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationSer
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -76,6 +77,7 @@ public class ConsumerService {
     private final StateEstimationService stateEstimationService;
     private final PccMinService pccMinService;
     private final NetworkConversionService networkConversionService;
+    private final DirectoryService directoryService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -91,7 +93,7 @@ public class ConsumerService {
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                            StateEstimationService stateEstimationService, PccMinService pccMinService,
-                           NetworkConversionService networkConversionService) {
+                           NetworkConversionService networkConversionService, NetworkService networkService, DirectoryService directoryService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -108,6 +110,7 @@ public class ConsumerService {
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
         this.networkConversionService = networkConversionService;
+        this.directoryService = directoryService;
     }
 
     @Bean
@@ -844,6 +847,7 @@ public class ConsumerService {
 
     public void consumeNetworkExportFinished(Message<String> msg) {
         String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
+        String exportFolder = msg.getHeaders().get(HEADER_EXPORT_FOLDER, String.class);
         if (receiverString != null) {
             NetworkExportReceiver receiver;
             try {
@@ -855,8 +859,14 @@ public class ConsumerService {
                 // With export uuid get
                 NodeExportInfos nodeExport = rootNetworkNodeInfoService.getNodeExportInfos(exportUuid);
 
-                boolean exportToExplorer = nodeExport != null && nodeExport.exportToExplorer();
-                //Call case server and create case in directory
+                boolean exportToExplorer = false;
+                if (nodeExport != null) {
+                    exportToExplorer = nodeExport.exportToExplorer();
+
+                    //Call case server and create case in directory
+                    UUID caseUuid = caseService.createCase(exportUuid, exportFolder, nodeExport.filename());
+                    directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.filename(), DirectoryService.CASE, userId);
+                }
 
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
                 notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToExplorer, userId, errorMessage);
