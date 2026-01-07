@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.securityanalysis.SecurityAnalysisParametersValues;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
@@ -225,13 +226,13 @@ public class SecurityAnalysisService extends AbstractComputationService {
         }
     }
 
-    public void updateSecurityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
+    public void updateSecurityAnalysisParameters(UUID parametersUuid, @Nullable SecurityAnalysisParametersValues saParameters) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{uuid}");
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+        HttpEntity<SecurityAnalysisParametersValues> httpEntity = new HttpEntity<>(saParameters, headers);
 
         restTemplate.put(securityAnalysisServerBaseUri + path, httpEntity);
     }
@@ -250,13 +251,13 @@ public class SecurityAnalysisService extends AbstractComputationService {
         return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public String getSecurityAnalysisParameters(UUID parametersUuid) {
+    public SecurityAnalysisParametersValues getSecurityAnalysisParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid).toUriString();
 
-        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
+        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, SecurityAnalysisParametersValues.class);
     }
 
     public UUID getSecurityAnalysisParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
@@ -286,7 +287,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 
-    public UUID createSecurityAnalysisParameters(String parameters) {
+    public UUID createSecurityAnalysisParameters(SecurityAnalysisParametersValues saParameters) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters")
                 .buildAndExpand()
@@ -294,7 +295,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+        HttpEntity<SecurityAnalysisParametersValues> httpEntity = new HttpEntity<>(saParameters, headers);
 
         return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
