@@ -998,7 +998,7 @@ public class StudyController {
         return ResponseEntity.ok().body(exportUuid);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/download-file")
+    @GetMapping(value = "/download-file")
     @Operation(summary = "Download exported network file")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The file is downloaded"),
