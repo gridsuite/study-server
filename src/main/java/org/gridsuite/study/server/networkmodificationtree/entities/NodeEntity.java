@@ -60,7 +60,10 @@ public class NodeEntity {
     @CollectionTable(
             name = "node_export",
             joinColumns = @JoinColumn(name = "node_id", foreignKey = @ForeignKey(name = "node_export_node_fk")),
-            indexes = @Index(name = "node_export_node_id_idx", columnList = "node_id")
+            indexes = {
+                @Index(name = "node_export_node_id_idx", columnList = "node_id"),
+                @Index(name = "node_export_export_uuid_idx", columnList = "export_uuid")
+            }
     )
     @OrderColumn(name = "export_order")
     private List<NodeExportEmbeddable> nodeExportNetwork = new ArrayList<>();

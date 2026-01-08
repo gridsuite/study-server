@@ -23,6 +23,9 @@
         <createIndex indexName="node_export_node_id_idx" tableName="node_export">
             <column name="node_id"/>
         </createIndex>
+        <createIndex indexName="node_export_export_uuid_idx" tableName="node_export">
+            <column name="export_uuid"/>
+        </createIndex>
     </changeSet>
     <changeSet author="rehiligha (generated)" id="1767797277163-22">
         <addForeignKeyConstraint baseColumnNames="node_id" baseTableName="node_export" constraintName="node_export_node_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="node" validate="true"/>
