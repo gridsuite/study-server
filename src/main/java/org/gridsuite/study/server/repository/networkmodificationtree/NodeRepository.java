@@ -10,6 +10,7 @@ package org.gridsuite.study.server.repository.networkmodificationtree;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.NativeQuery;
 
 import java.util.List;
@@ -27,6 +28,13 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
     List<NodeEntity> findAllByStudyId(UUID id);
 
     List<NodeEntity> findAllByStudyIdAndTypeAndStashed(UUID id, NodeType type, boolean stashed);
+
+    @NativeQuery("SELECT ne.status FROM node_export ne WHERE ne.export_uuid = :exportUuid")
+    Optional<String> findExportStatus(UUID exportUuid);
+
+    @Modifying
+    @NativeQuery("UPDATE node_export SET status = :status WHERE export_uuid = :exportUuid")
+    void updateExportNetworkStatus(UUID exportUuid, String status);
 
     @NativeQuery("WITH RECURSIVE NodeHierarchy (id_node) AS ( " +
             "  SELECT n0.id_node" +

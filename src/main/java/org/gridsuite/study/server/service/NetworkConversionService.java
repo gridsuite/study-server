@@ -17,10 +17,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
+import org.gridsuite.study.server.error.StudyException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -34,7 +35,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NETWORK_EXPORT_FAILED;
 
 @Service
 public class NetworkConversionService {
@@ -127,6 +128,23 @@ public class NetworkConversionService {
         } catch (Exception e) {
             throw new StudyException(NETWORK_EXPORT_FAILED, e.getMessage());
         }
+    }
+
+    public ResponseEntity<Resource> downloadExportedNetworkFile(UUID exportUuid, String userId) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/download-file/{exportUuid}")
+                .buildAndExpand(exportUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        return restTemplate.exchange(
+                networkConversionServerBaseUri + path,
+                HttpMethod.GET,
+                entity,
+                Resource.class
+        );
     }
 
     public void setNetworkConversionServerBaseUri(String networkConversionServerBaseUri) {

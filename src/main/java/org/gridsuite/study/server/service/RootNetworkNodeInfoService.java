@@ -219,7 +219,6 @@ public class RootNetworkNodeInfoService {
         }
 
         invalidateComputationResults(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
-
         return invalidateNodeInfos;
     }
 

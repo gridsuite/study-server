@@ -30,6 +30,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
 import org.gridsuite.study.server.dto.modification.*;
+import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
@@ -1082,8 +1083,9 @@ public class StudyService {
     public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String fileName, String format, String userId, String parametersJson) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-
-        return networkConversionService.exportNetwork(networkUuid, studyUuid, variantId, fileName, format, userId, parametersJson);
+        UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId, fileName, format, userId, parametersJson);
+        networkModificationTreeService.updateExportNetworkStatus(nodeUuid, exportUuid, ExportNetworkStatus.RUNNING);
+        return exportUuid;
     }
 
     @Transactional(readOnly = true)
@@ -2109,7 +2111,6 @@ public class StudyService {
         invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
 
         deleteInvalidationInfos(invalidateNodeInfos);
-
         emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode.ALL);
 
         if (startTime.get() != null) {
@@ -2186,7 +2187,6 @@ public class StudyService {
 
         InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.invalidateNodeTree(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
         invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
-
         CompletableFuture<Void> cf = deleteInvalidationInfos(invalidateNodeInfos);
         if (blocking) {
             cf.join();
