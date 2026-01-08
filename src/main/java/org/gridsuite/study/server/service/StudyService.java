@@ -16,9 +16,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyConstants;
-import org.gridsuite.study.server.dto.modification.*;
-import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
@@ -32,13 +29,16 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
+import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
@@ -50,6 +50,7 @@ import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -82,11 +83,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.StudyConstants.BUS_ID_TO_ICC_VALUES;
 import static org.gridsuite.study.server.StudyConstants.CURRENT_LIMIT_VIOLATIONS_INFOS;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.notification.NotificationService.ALL_COMPUTATION_STATUS;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -125,6 +127,7 @@ public class StudyService {
     private final SecurityAnalysisService securityAnalysisService;
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private final DynamicMarginCalculationService dynamicMarginCalculationService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
@@ -150,6 +153,7 @@ public class StudyService {
         SENSITIVITY_ANALYSIS("SensitivityAnalysis"),
         DYNAMIC_SIMULATION("DynamicSimulation"),
         DYNAMIC_SECURITY_ANALYSIS("DynamicSecurityAnalysis"),
+        DYNAMIC_MARGIN_CALCULATION("DynamicMarginCalculation"),
         VOLTAGE_INITIALIZATION("VoltageInit"),
         STATE_ESTIMATION("StateEstimation"),
         PCC_MIN("PccMin");
@@ -190,6 +194,7 @@ public class StudyService {
         SensitivityAnalysisService sensitivityAnalysisService,
         DynamicSimulationService dynamicSimulationService,
         DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+        DynamicMarginCalculationService dynamicMarginCalculationService,
         VoltageInitService voltageInitService,
         DynamicSimulationEventService dynamicSimulationEventService,
         StudyConfigService studyConfigService,
@@ -227,6 +232,7 @@ public class StudyService {
         this.caseService = caseService;
         this.dynamicSimulationService = dynamicSimulationService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
+        this.dynamicMarginCalculationService = dynamicMarginCalculationService;
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
@@ -543,6 +549,7 @@ public class StudyService {
                 removeVoltageInitParameters(s.getVoltageInitParametersUuid());
                 removeSensitivityAnalysisParameters(s.getSensitivityAnalysisParametersUuid());
                 removeDynamicSecurityAnalysisParameters(s.getDynamicSecurityAnalysisParametersUuid());
+                removeDynamicMarginCalculationParameters(s.getDynamicMarginCalculationParametersUuid());
                 removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removePccMinParameters(s.getPccMinParametersUuid());
@@ -615,7 +622,8 @@ public class StudyService {
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos, UUID loadFlowParametersUuid,
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
-                                              UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
+                                              UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID dynamicMarginCalculationParametersUuid,
+                                              UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
                                               UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
@@ -629,7 +637,8 @@ public class StudyService {
                 caseInfos, loadFlowParametersUuid,
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
-                sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
+                sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid,
+                dynamicSecurityAnalysisParametersUuid, dynamicMarginCalculationParametersUuid,
                 stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
@@ -1230,11 +1239,13 @@ public class StudyService {
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
         invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
         invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
+        invalidateDynamicMarginCalculationStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, LOAD_FLOW);
         return userProfileIssue;
@@ -1317,7 +1328,7 @@ public class StudyService {
                     return dynamicSecurityAnalysisService.getProvider(userProfileInfos.getDynamicSecurityAnalysisParameterId());
                 } catch (Exception e) {
                     LOGGER.error(String.format("Could not get dynamic security analysis provider with id '%s' from user/profile '%s/%s'. Using default provider",
-                            userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
+                            userProfileInfos.getDynamicSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
                     // in case of read error (ex: wrong/dangling uuid in the profile), move on with default provider below
                 }
             }
@@ -1336,6 +1347,37 @@ public class StudyService {
             invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
             notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_SECURITY_ANALYSIS);
+
+        });
+    }
+
+    public String getDefaultDynamicMarginCalculationProvider(String userId) {
+        if (userId != null) {
+            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
+            if (userProfileInfos.getDynamicMarginCalculationParameterId() != null) {
+                try {
+                    return dynamicMarginCalculationService.getProvider(userProfileInfos.getDynamicMarginCalculationParameterId());
+                } catch (Exception e) {
+                    LOGGER.error(String.format("Could not get dynamic margin calculation provider with id '%s' from user/profile '%s/%s'. Using default provider",
+                            userProfileInfos.getDynamicMarginCalculationParameterId(), userId, userProfileInfos.getName()), e);
+                    // in case of read error (ex: wrong/dangling uuid in the profile), move on with default provider below
+                }
+            }
+        }
+        return dynamicMarginCalculationService.getDefaultProvider();
+    }
+
+    public String getDynamicMarginCalculationProvider(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return dynamicMarginCalculationService.getProvider(studyEntity.getDynamicMarginCalculationParametersUuid());
+    }
+
+    public void updateDynamicMarginCalculationProvider(UUID studyUuid, String provider, String userId) {
+        updateProvider(studyUuid, userId, studyEntity -> {
+            dynamicMarginCalculationService.updateProvider(studyEntity.getDynamicMarginCalculationParametersUuid(), provider);
+            invalidateDynamicMarginCalculationStatusOnAllNodes(studyUuid);
+            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
+            notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_MARGIN_CALCULATION);
 
         });
     }
@@ -1557,6 +1599,10 @@ public class StudyService {
         dynamicSecurityAnalysisService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SECURITY_ANALYSIS));
     }
 
+    public void invalidateDynamicMarginCalculationStatusOnAllNodes(UUID studyUuid) {
+        dynamicMarginCalculationService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_MARGIN_CALCULATION));
+    }
+
     public void invalidateAllStudyLoadFlowStatus(UUID studyUuid) {
         invalidateSecurityNodeTreeWithLoadFlowResults(studyUuid);
         invalidateLoadFlowStatusOnAllNodes(studyUuid);
@@ -1612,7 +1658,8 @@ public class StudyService {
                                                     CaseInfos caseInfos, UUID loadFlowParametersUuid,
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
-                                                    UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
+                                                    UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID dynamicMarginCalculationParametersUuid,
+                                                    UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
                                                     UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
@@ -1627,6 +1674,7 @@ public class StudyService {
                 .voltageInitParameters(new StudyVoltageInitParametersEntity())
                 .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
                 .dynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisParametersUuid)
+                .dynamicMarginCalculationParametersUuid(dynamicMarginCalculationParametersUuid)
                 .stateEstimationParametersUuid(stateEstimationParametersUuid)
                 .pccMinParametersUuid(pccMinParametersUuid)
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
@@ -2307,6 +2355,7 @@ public class StudyService {
             studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(invalidateNodeInfos.getVoltageInitResultUuids())),
             studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(invalidateNodeInfos.getDynamicSimulationResultUuids())),
             studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(invalidateNodeInfos.getDynamicMarginCalculationResultUuids())),
             studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(invalidateNodeInfos.getStateEstimationResultUuids())),
             studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(invalidateNodeInfos.getPccMinResultUuids()))
         );
@@ -2327,6 +2376,7 @@ public class StudyService {
             studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(deleteNodeInfos.getVoltageInitResultUuids())),
             studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(deleteNodeInfos.getDynamicSimulationResultUuids())),
             studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(deleteNodeInfos.getDynamicSecurityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(deleteNodeInfos.getDynamicMarginCalculationResultUuids())),
             studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(deleteNodeInfos.getStateEstimationResultUuids())),
             studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(deleteNodeInfos.getPccMinResultUuids()))
         );
@@ -2915,7 +2965,7 @@ public class StudyService {
     public void setDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersInfos dsParameter, String userId) {
         updateDynamicSimulationParameters(studyUuid, DynamicSimulationService.toEntity(dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters(), objectMapper));
 
-        // Dynamic security analysis depend on dynamic simulation => must invalidate
+        // Dynamic security analysis depends on dynamic simulation => must invalidate
         invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
 
@@ -3155,6 +3205,119 @@ public class StudyService {
 
     // --- Dynamic Security Analysis service methods END --- //
 
+    // --- Dynamic Margin Calculation service methods BEGIN --- //
+
+    public UUID getDynamicMarginCalculationParametersUuid(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return studyEntity.getDynamicMarginCalculationParametersUuid();
+    }
+
+    @Transactional
+    public String getDynamicMarginCalculationParameters(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return dynamicMarginCalculationService.getParameters(
+                dynamicMarginCalculationService.getDynamicMarginCalculationParametersUuidOrElseCreateDefault(studyEntity));
+    }
+
+    @Transactional
+    public boolean setDynamicMarginCalculationParameters(UUID studyUuid, String dsaParameter, String userId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        boolean userProfileIssue = createOrUpdateDynamicMarginCalculationParameters(studyEntity, dsaParameter, userId);
+        invalidateDynamicMarginCalculationStatusOnAllNodes(studyUuid);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_MARGIN_CALCULATION);
+        return userProfileIssue;
+    }
+
+    public boolean createOrUpdateDynamicMarginCalculationParameters(StudyEntity studyEntity, String parameters, String userId) {
+        boolean userProfileIssue = false;
+        UUID existingDynamicMarginCalculationParametersUuid = studyEntity.getDynamicMarginCalculationParametersUuid();
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
+        if (parameters == null && userProfileInfos.getDynamicMarginCalculationParameterId() != null) {
+            // reset case, with existing profile, having default dynamic margin calculation params
+            try {
+                UUID dynamicMarginCalculationParametersFromProfileUuid = dynamicMarginCalculationService.duplicateParameters(userProfileInfos.getDynamicMarginCalculationParameterId());
+                studyEntity.setDynamicMarginCalculationParametersUuid(dynamicMarginCalculationParametersFromProfileUuid);
+                removeDynamicMarginCalculationParameters(existingDynamicMarginCalculationParametersUuid);
+                return userProfileIssue;
+            } catch (Exception e) {
+                userProfileIssue = true;
+                LOGGER.error(String.format("Could not duplicate dynamic margin calculation parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                        userProfileInfos.getDynamicMarginCalculationParameterId(), userId, userProfileInfos.getName()), e);
+                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+            }
+        }
+
+        if (existingDynamicMarginCalculationParametersUuid == null) {
+            UUID newDynamicMarginCalculationParametersUuid = dynamicMarginCalculationService.createParameters(parameters);
+            studyEntity.setDynamicMarginCalculationParametersUuid(newDynamicMarginCalculationParametersUuid);
+        } else {
+            dynamicMarginCalculationService.updateParameters(existingDynamicMarginCalculationParametersUuid, parameters);
+        }
+
+        return userProfileIssue;
+    }
+
+    private void removeDynamicMarginCalculationParameters(@Nullable UUID dynamicMarginCalculationParametersUuid) {
+        if (dynamicMarginCalculationParametersUuid != null) {
+            try {
+                dynamicMarginCalculationService.deleteParameters(dynamicMarginCalculationParametersUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove dynamic margin calculation parameters with uuid:" + dynamicMarginCalculationParametersUuid, e);
+            }
+        }
+    }
+
+    @Transactional
+    public UUID runDynamicMarginCalculation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) throws JsonProcessingException {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
+
+        return handleDynamicMarginCalculationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+    }
+
+    private UUID handleDynamicMarginCalculationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) throws JsonProcessingException {
+
+        // pre-condition check
+        if (!rootNetworkNodeInfoService.isLoadflowConverged(nodeUuid, rootNetworkUuid)) {
+            throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic margin calculation");
+        }
+
+        // clean previous result if exist
+        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION);
+        if (prevResultUuid != null) {
+            dynamicMarginCalculationService.deleteResults(List.of(prevResultUuid));
+        }
+
+        // get dynamic simulation parameters entity
+        DynamicSimulationParametersInfos dynamicSimulationParametersInfos = getDynamicSimulationParameters(studyEntity);
+        String dynamicSimulationParametersInfosJson = objectMapper.writeValueAsString(dynamicSimulationParametersInfos);
+
+        // get dynamic security analysis parameters uuid
+        UUID dynamicSecurityAnalysisParametersUuid = getDynamicSecurityAnalysisParametersUuid(studyEntity.getId());
+
+        // get dynamic margin calculation parameters uuid
+        UUID dynamicMarginCalculationParametersUuid = getDynamicMarginCalculationParametersUuid(studyEntity.getId());
+
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(DYNAMIC_MARGIN_CALCULATION.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION, reportUuid);
+
+        // launch dynamic margin calculation
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        UUID dynamicMarginCalculationResultUuid = dynamicMarginCalculationService.runDynamicMarginCalculation(studyEntity.getDynamicSimulationProvider(),
+            nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, dynamicSecurityAnalysisParametersUuid, dynamicMarginCalculationParametersUuid, dynamicSimulationParametersInfosJson, userId, debug);
+
+        // update result uuid and notification
+        updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicMarginCalculationResultUuid, DYNAMIC_MARGIN_CALCULATION);
+        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
+
+        return dynamicMarginCalculationResultUuid;
+    }
+
+    // --- Dynamic Margin Calculation service methods END --- //
+
     public String getNetworkElementsIds(UUID nodeUuid, UUID rootNetworkUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, String equipmentType, List<Double> nominalVoltages) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         return networkMapService.getElementsIds(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
@@ -3298,15 +3461,9 @@ public class StudyService {
         if (!InvalidateNodeTreeParameters.ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         }
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        ALL_COMPUTATION_STATUS.stream()
+            .filter(computationStatus -> computationStatus != NotificationService.UPDATE_TYPE_LOADFLOW_STATUS)
+            .forEach(computationStatus -> notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, computationStatus));
     }
 
     @Transactional(readOnly = true)

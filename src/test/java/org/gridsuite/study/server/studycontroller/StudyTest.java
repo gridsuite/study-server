@@ -115,7 +115,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -1528,8 +1529,8 @@ class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
 
-    private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
-        // assert that the broker message has been sent for updating model status
+    private void checkUpdateStatusMessageReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
+        // assert that the broker message has been sent for updating status
         Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
@@ -1540,17 +1541,8 @@ class StudyTest {
         assertEquals(updateType, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+    private void checkUpdateStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
+        ALL_COMPUTATION_STATUS.forEach(computationStatus -> checkUpdateStatusMessageReceived(studyUuid, nodeUuid, computationStatus));
     }
 
     private void checkNodeBuildStatusUpdatedMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
@@ -1688,7 +1680,7 @@ class StudyTest {
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
-        checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
+        checkUpdateStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -1704,7 +1696,7 @@ class StudyTest {
             .content(createLoadAttributes)
             .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
-        checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
+        checkUpdateStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -1719,6 +1711,7 @@ class StudyTest {
                 .oneBusShortCircuitAnalysisResultUuid(UUID.randomUUID())
                 .dynamicSimulationResultUuid(UUID.randomUUID())
                 .dynamicSecurityAnalysisResultUuid(UUID.randomUUID())
+                .dynamicMarginCalculationResultUuid(UUID.randomUUID())
                 .voltageInitResultUuid(UUID.randomUUID())
                 .stateEstimationResultUuid(UUID.randomUUID())
                 .pccMinResultUuid(UUID.randomUUID())
@@ -1854,6 +1847,9 @@ class StudyTest {
             numberOfRequests++;
         }
         if (studyEntity.getDynamicSecurityAnalysisParametersUuid() != null) {
+            numberOfRequests++;
+        }
+        if (studyEntity.getDynamicMarginCalculationParametersUuid() != null) {
             numberOfRequests++;
         }
         if (studyEntity.getStateEstimationParametersUuid() != null) {
@@ -2043,7 +2039,7 @@ class StudyTest {
                         .content(createTwoWindingsTransformerAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
-        checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
+        checkUpdateStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2058,7 +2054,7 @@ class StudyTest {
                 .content(createLoadAttributes)
                 .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
-        checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
+        checkUpdateStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2309,7 +2305,7 @@ class StudyTest {
         wireMockStubs.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
 
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(emptyNode.getId(), emptyNodeChild.getId()));
-        checkComputationStatusMessageReceived();
+        checkComputationStatusMessagesReceived();
 
         checkSubtreeMovedMessageSent(study1Uuid, emptyNode.getId(), node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2332,27 +2328,9 @@ class StudyTest {
                 .header(USER_ID_HEADER, "userId")).andExpect(status().isNotFound());
     }
 
-    private void checkComputationStatusMessageReceived() {
-        //loadflow_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //securityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //sensitivityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //shortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //oneBusShortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicSimulation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicSecurityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //voltageInit_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //stateEstimation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //pccMin_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+    private void checkComputationStatusMessagesReceived() {
+        // check notified status for all computations
+        ALL_COMPUTATION_STATUS.forEach(computationStatus -> assertNotNull(output.receive(TIMEOUT, studyUpdateDestination)));
     }
 
     @Test
@@ -2375,7 +2353,7 @@ class StudyTest {
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
+        checkUpdateStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2390,7 +2368,7 @@ class StudyTest {
                 .content(createLoadAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
+        checkUpdateStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2503,7 +2481,7 @@ class StudyTest {
                 .andExpect(status().isOk());
 
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(node3.getId()));
-        checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
+        checkUpdateStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2524,7 +2502,7 @@ class StudyTest {
                         .content(createLoadAttributes)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
+        checkUpdateStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2644,7 +2622,7 @@ class StudyTest {
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
+        checkUpdateStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2659,7 +2637,7 @@ class StudyTest {
                 .content(createLoadAttributes)
                 .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
+        checkUpdateStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -2717,26 +2695,8 @@ class StudyTest {
         if (wasBuilt) {
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         }
-        //loadflow_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //securityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //sensitivityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //shortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //oneBusShortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicSimulation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicSecurityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //voltageInit_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //stateEstimation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //pccMin_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+
+        checkComputationStatusMessagesReceived();
 
         if (!nodeHasModifications) {
             return;
@@ -2750,26 +2710,7 @@ class StudyTest {
             if (wasBuilt) {
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             }
-            //loadflow_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //securityAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //sensitivityAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //shortCircuitAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //oneBusShortCircuitAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //dynamicSimulation_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //dynamicSecurityAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //voltageInit_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //stateEstimation_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //pccMin_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            checkComputationStatusMessagesReceived();
         });
 
         if (wasBuilt) {
@@ -2804,7 +2745,7 @@ class StudyTest {
         output.receive(TIMEOUT, studyUpdateDestination); // nodeCreated
 
         if (checkMessagesForStatusModels) {
-            checkUpdateModelsStatusMessagesReceived(targetStudyUuid, nodesAfterDuplication.get(0));
+            checkUpdateStatusMessagesReceived(targetStudyUuid, nodesAfterDuplication.get(0));
         }
         checkElementUpdatedMessageSent(targetStudyUuid, userId);
 

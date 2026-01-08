@@ -44,6 +44,8 @@ public class DeleteNodeInfos {
 
     private List<UUID> dynamicSecurityAnalysisResultUuids = new ArrayList<>();
 
+    private List<UUID> dynamicMarginCalculationResultUuids = new ArrayList<>();
+
     private List<UUID> stateEstimationResultUuids = new ArrayList<>();
 
     private List<UUID> pccMinResultUuids = new ArrayList<>();
@@ -78,6 +80,10 @@ public class DeleteNodeInfos {
 
     public void addDynamicSecurityAnalysisResultUuid(UUID dynamicSecurityAnalysisResultUuid) {
         dynamicSecurityAnalysisResultUuids.add(dynamicSecurityAnalysisResultUuid);
+    }
+
+    public void addDynamicMarginCalculationResultUuid(UUID dynamicMarginCalculationResultUuid) {
+        dynamicMarginCalculationResultUuids.add(dynamicMarginCalculationResultUuid);
     }
 
     public void addSensitivityAnalysisResultUuid(UUID sensitivityAnalysisResultUuid) {

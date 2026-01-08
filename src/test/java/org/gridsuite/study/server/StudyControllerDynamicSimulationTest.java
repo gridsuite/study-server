@@ -336,8 +336,8 @@ class StudyControllerDynamicSimulationTest {
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
 
-        // resultUuid must be empty in database at this moment
-        assertThat(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SIMULATION)).isNull();
+        // resultUuid must always be present in database at this moment
+        assertThat(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SIMULATION)).isEqualTo(RESULT_UUID);
     }
 
     @Test
@@ -713,7 +713,7 @@ class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    void testSetDynamicSecurityAnalysisProvider() throws Exception {
+    void testSetDynamicSimulationProvider() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();

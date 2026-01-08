@@ -9,7 +9,10 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.controller.StudyController;
-import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
+import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
+import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.error.StudyException;
@@ -54,9 +57,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_INFOS;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_TYPE;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.utils.TestUtils.checkUpdateStatusMessagesReceived;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -172,7 +176,7 @@ class NetworkModificationUnitTest {
         assertNodeBuildStatus(node3Uuid, BuildStatus.NOT_BUILT);
         assertNodeBuildStatus(node4Uuid, BuildStatus.BUILT);
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid));
-        checkUpdateModelsStatusMessagesReceived(studyUuid, node1Uuid);
+        checkUpdateStatusMessagesReceived(studyUuid, node1Uuid, output);
         Mockito.verify(networkService).deleteVariants(NETWORK_UUID, List.of(VARIANT_1));
 
         // Unbuild security node with LF -> children invalidation
@@ -191,7 +195,7 @@ class NetworkModificationUnitTest {
         assertNodeBuildStatus(node3Uuid, BuildStatus.NOT_BUILT);
         assertNodeBuildStatus(node4Uuid, BuildStatus.NOT_BUILT);
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node2Uuid, node4Uuid));
-        checkUpdateModelsStatusMessagesReceived(studyUuid, node2Uuid);
+        checkUpdateStatusMessagesReceived(studyUuid, node2Uuid, output);
         Mockito.verify(networkService).deleteVariants(NETWORK_UUID, List.of(VARIANT_4, VARIANT_2));
     }
 
@@ -285,7 +289,7 @@ class NetworkModificationUnitTest {
 
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         checkUpdateBuildStateMessageReceived(studyUuid, nodesToUnbuild);
-        checkUpdateModelsStatusMessagesReceived(studyUuid, nodeWithModification);
+        checkUpdateStatusMessagesReceived(studyUuid, nodeWithModification, output);
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_FINISHED);
 
         NetworkModificationNodeInfoEntity node1Infos = networkModificationNodeInfoRepository.findById(node1Uuid).orElseThrow(() -> new UnsupportedOperationException(SHOULD_NOT_RETURN_NULL_MESSAGE));
@@ -319,31 +323,6 @@ class NetworkModificationUnitTest {
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(new TreeSet<>(nodeUuids), new TreeSet<>((List) headersStatus.get(NotificationService.HEADER_NODES)));
         assertEquals(NotificationService.NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
-    }
-
-    private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
-        // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals("", new String(messageStatus.getPayload()));
-        MessageHeaders headersStatus = messageStatus.getHeaders();
-        assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
-        if (nodeUuid != null) {
-            assertEquals(nodeUuid, headersStatus.get(NotificationService.HEADER_NODE));
-        }
-        assertEquals(updateType, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
-    }
-
-    private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
     }
 
     private StudyEntity insertStudy() {
