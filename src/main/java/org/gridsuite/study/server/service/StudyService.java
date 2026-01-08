@@ -3462,7 +3462,7 @@ public class StudyService {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         }
         ALL_COMPUTATION_STATUS.stream()
-            .filter(computationStatus -> computationStatus != NotificationService.UPDATE_TYPE_LOADFLOW_STATUS)
+            .filter(computationStatus -> !computationStatus.equals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS))
             .forEach(computationStatus -> notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, computationStatus));
     }
 
