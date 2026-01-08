@@ -1075,14 +1075,14 @@ public class StudyController {
 
     @PostMapping(value = "/studies/{studyUuid}/loadflow/parameters")
     @Operation(summary = "set loadflow parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set"),
-                           @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
-    public ResponseEntity<Void> setLoadflowParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String lfParameter,
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Loadflow parameters updated successfully"),
+                           @ApiResponse(responseCode = "204", description = "Loadflow parameters reset with user profile unsuccessful")})
+    public ResponseEntity<Void> setLoadFlowParameters(
+            @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Load flow parameters infos") @RequestBody(required = false) LoadFlowParametersInfos lfParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertNoBlockedNodeInStudy(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid));
-        return studyService.setLoadFlowParameters(studyUuid, lfParameter, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+        return studyService.setLoadFlowParameters(studyUuid, lfParameters, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/loadflow/parameters")

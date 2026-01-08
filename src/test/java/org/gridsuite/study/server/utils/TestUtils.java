@@ -52,21 +52,21 @@ public final class TestUtils {
 
     private static final long TIMEOUT = 100;
     public static final String USER_DEFAULT_PROFILE_JSON = """
-        {
-            "id":null,
-            "name":"default profile",
-            "loadFlowParameterId":null,
-            "securityAnalysisParameterId":null,
-            "sensitivityAnalysisParameterId":null,
-            "shortcircuitParameterId":null,
-            "voltageInitParameterId":null,
-            "allLinksValid":null,
-            "maxAllowedCases":20,
-            "maxAllowedBuilds":20,
-            "spreadsheetConfigCollectionId":null,
-            "networkVisualizationParameterId":null,
-            "diagramConfigId":null
-        }""";
+            {
+                "id":null,
+                "name":"default profile",
+                "loadFlowParameterId":null,
+                "securityAnalysisParameterId":null,
+                "sensitivityAnalysisParameterId":null,
+                "shortcircuitParameterId":null,
+                "voltageInitParameterId":null,
+                "allLinksValid":null,
+                "maxAllowedCases":20,
+                "maxAllowedBuilds":20,
+                "spreadsheetConfigCollectionId":null,
+                "networkVisualizationParameterId":null,
+                "diagramConfigId":null
+            }""";
 
     private final RootNetworkRepository rootNetworkRepository;
 
@@ -108,6 +108,28 @@ public final class TestUtils {
         assertTrue(recordedRequest.getPath().matches(path));
     }
 
+    public static boolean doRequestsMatch(Map<String, List<String>> detailedRequests, String expectedPath, List<String> expectedRequests) {
+        Optional<String> matchedPath = detailedRequests.keySet().stream().filter(k -> k.matches(expectedPath)).findFirst();
+        if (matchedPath.isPresent()) {
+            List<String> actualRequests = detailedRequests.get(matchedPath.get());
+            return expectedRequests.containsAll(actualRequests) && actualRequests.containsAll(expectedRequests);
+        }
+        return false;
+    }
+
+    public static Map<String, List<String>> getDetailedRequestsDone(int n, MockWebServer server) {
+        return IntStream.range(0, n).mapToObj(i -> {
+            try {
+                return Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS));
+            } catch (InterruptedException e) {
+                throw new UncheckedInterruptedException(e);
+            }
+        }).collect(Collectors.groupingBy(
+                RecordedRequest::getPath,
+                Collectors.mapping(RecordedRequest::getMethod, Collectors.toList())
+        ));
+    }
+
     public static Set<String> getRequestsDone(int n, MockWebServer server) {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
@@ -127,13 +149,13 @@ public final class TestUtils {
                                                UUID sensitivityParametersUuid,
                                                boolean applyModifications) {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
-            .loadFlowParametersUuid(loadFlowParametersUuid)
-            .shortCircuitParametersUuid(shortCircuitParametersUuid)
-            .voltageInitParametersUuid(voltageInitParametersUuid)
-            .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
-            .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
-            .voltageInitParameters(new StudyVoltageInitParametersEntity(applyModifications))
-            .build();
+                .loadFlowParametersUuid(loadFlowParametersUuid)
+                .shortCircuitParametersUuid(shortCircuitParametersUuid)
+                .voltageInitParametersUuid(voltageInitParametersUuid)
+                .securityAnalysisParametersUuid(securityAnalysisParametersUuid)
+                .sensitivityAnalysisParametersUuid(sensitivityParametersUuid)
+                .voltageInitParameters(new StudyVoltageInitParametersEntity(applyModifications))
+                .build();
         RootNetworkEntity rootNetworkEntity = RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").tag("dum").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId(networkId).networkUuid(networkUuid).reportUuid(importReportUuid).build();
         studyEntity.addRootNetwork(rootNetworkEntity);
 
@@ -181,7 +203,7 @@ public final class TestUtils {
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, UUID reportUuid) {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
 //            .shortCircuitParametersUuid(UUID.randomUUID())
-            .build();
+                .build();
         studyEntity.addRootNetwork(RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").tag("dum").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId("netId").networkUuid(networkUuid).reportUuid(reportUuid).build());
 
         return studyEntity;
@@ -189,10 +211,10 @@ public final class TestUtils {
 
     public static NetworkModificationNode createModificationNodeInfo(String name) {
         return NetworkModificationNode.builder()
-            .name(name)
-            .description("")
-            .modificationGroupUuid(UUID.randomUUID())
-            .children(Collections.emptyList()).build();
+                .name(name)
+                .description("")
+                .modificationGroupUuid(UUID.randomUUID())
+                .children(Collections.emptyList()).build();
     }
 
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {

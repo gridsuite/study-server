@@ -852,10 +852,11 @@ class SecurityAnalysisTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
 
-        var requests = TestUtils.getRequestsDone(3, server);
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING))); // update existing with dft
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING))); // post duplicate ko
+        Map<String, List<String>> detailedRequests = TestUtils.getDetailedRequestsDone(3, server);
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile", List.of("GET"))); // GET: Retrieve user profile infos
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters/" + PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING, List.of("GET"))); // GET: Retrieve user profile security analysis parameters (failure)
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, List.of("PUT"))); // PUT: Update existing security analysis parameters with user profile parameters
+
     }
 
     @Test
@@ -879,12 +880,12 @@ class SecurityAnalysisTest {
 
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(5, server);
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*")));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=.*"))); // result has been invalidated by params reset
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING))); // 2 requests: 1 get for provider and then delete existing
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+        Map<String, List<String>> detailedRequests = TestUtils.getDetailedRequestsDone(5, server);
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*contingencyListName=" + CONTINGENCY_LIST_NAME + "&receiver=.*nodeUuid.*", List.of("POST")));
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/results/invalidate-status\\?resultUuid=.*", List.of("PUT"))); // PUT: result has been invalidated by params reset
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile", List.of("GET"))); // GET: Retrieve user profile infos
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters/" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, List.of("GET"))); // GET: Retrieve user profile security analysis parameters
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, List.of("PUT"))); // PUT: Update existing security analysis parameters with user profile parameters
     }
 
     @Test
@@ -893,8 +894,9 @@ class SecurityAnalysisTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+        Map<String, List<String>> detailedRequests = TestUtils.getDetailedRequestsDone(3, server);
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile", List.of("GET"))); // GET: Retrieve user profile infos
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters/" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, List.of("GET"))); // GET: Retrieve user profile security analysis parameters
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters", List.of("POST"))); // POST: create security analysis parameters with user profile parameters
     }
 }

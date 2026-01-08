@@ -694,16 +694,14 @@ class LoadFlowTest {
                 .header(HEADER_USER_ID, "userId")).andExpect(status().isOk());
     }
 
-    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
+    private void resetParametersAndDoChecks(UUID studyUuid, String userId, HttpStatusCode expectedStatus) throws Exception {
         mockMvc.perform(
-                post("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)
-                    .header("userId", userId)
-                    .contentType(MediaType.ALL)
-                    .content(parameters))
-                .andExpect(status().is(status.value()));
+                post("/v1/studies/{studyUuid}/loadflow/parameters", studyUuid)
+                        .header("userId", userId))
+                .andExpect(status().is(expectedStatus.value()));
 
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -715,7 +713,33 @@ class LoadFlowTest {
         assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
-        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+    }
+
+    private void updateParametersAndDoChecks(UUID studyUuid, String parameters, String userId, HttpStatusCode expectedStatus) throws Exception {
+        mockMvc.perform(
+                post("/v1/studies/{studyUuid}/loadflow/parameters", studyUuid)
+                    .header("userId", userId)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(parameters))
+                .andExpect(status().is(expectedStatus.value()));
+
+        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+
+        message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
+        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
         message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
@@ -724,58 +748,58 @@ class LoadFlowTest {
     void testResetLoadFlowParametersUserHasNoProfile(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING))); // update existing with dft
+        Map<String, List<String>> detailedRequests = TestUtils.getDetailedRequestsDone(2, server);
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/users/" + NO_PROFILE_USER_ID + "/profile", List.of("GET"))); // GET: Retrieve user profile infos
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING, List.of("PUT"))); // PUT: Update parameters with default
     }
 
     @Test
     void testResetLoadFlowParametersUserHasNoParamsInProfile(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING))); // update existing with dft
+        Map<String, List<String>> detailedRequests = TestUtils.getDetailedRequestsDone(2, server);
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/users/" + NO_PARAMS_IN_PROFILE_USER_ID + "/profile", List.of("GET"))); // GET: Retrieve user profile infos
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING, List.of("PUT"))); // PUT: Update parameters with default
     }
 
     @Test
     void testResetLoadFlowParametersUserHasInvalidParamsInProfile(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
+        resetParametersAndDoChecks(studyNameUserIdUuid, INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
 
-        var requests = TestUtils.getRequestsDone(3, server);
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING))); // update existing with dft
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING))); // post duplicate ko
+        Map<String, List<String>> detailedRequests = TestUtils.getDetailedRequestsDone(3, server);
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/users/" + INVALID_PARAMS_IN_PROFILE_USER_ID + "/profile", List.of("GET"))); // GET: Retrieve user profile infos
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters/" + PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING, List.of("GET"))); // GET: Retrieve user profile loadflow parameters (failure here)
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING, List.of("PUT"))); // PUT: Update existing loadflow parameters with default
     }
 
     @Test
     void testResetLoadFlowParametersUserHasValidParamsInProfile(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(5, server);
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING))); // 2 requests: 1 get for provider and then delete existing
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING + "/provider"))); // patch duplicated params for provider
+        Map<String, List<String>> detailedRequests = TestUtils.getDetailedRequestsDone(3, server);
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile", List.of("GET"))); // GET: Retrieve user profile infos
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters/" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING, List.of("GET"))); // GET: Retrieve user profile loadflow parameters
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING, List.of("PUT"))); // PUT: Update existing loadflow parameters with user profile parameters
     }
 
     @Test
     void testResetLoadFlowParametersUserHasValidParamsInProfileButNoExistingLoadflowParams(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        resetParametersAndDoChecks(studyNameUserIdUuid, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok
+        Map<String, List<String>> detailedRequests = TestUtils.getDetailedRequestsDone(3, server);
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile", List.of("GET"))); // GET: Retrieve user profile infos
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters/" + PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING, List.of("GET"))); // GET: Retrieve user profile loadflow parameters
+        assertTrue(TestUtils.doRequestsMatch(detailedRequests, "/v1/parameters", List.of("POST"))); // POST: Create new loadflow parameters using user profile parameters
     }
 
     // the following testGetDefaultProviders tests are related to StudyTest::testGetDefaultProviders but with a user and different profile cases
@@ -832,7 +856,7 @@ class LoadFlowTest {
 
         JSONAssert.assertEquals(LOADFLOW_DEFAULT_PARAMETERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
 
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, "userId", HttpStatus.OK);
+        updateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, "userId", HttpStatus.OK);
 
         //checking update is registered
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
@@ -846,7 +870,7 @@ class LoadFlowTest {
 
         studyNameUserIdUuid = studyEntity2.getId();
 
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, "userId", HttpStatus.OK);
+        updateParametersAndDoChecks(studyNameUserIdUuid, LOADFLOW_DEFAULT_PARAMETERS_JSON, "userId", HttpStatus.OK);
 
         //get initial loadFlow parameters
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/loadflow/parameters", studyNameUserIdUuid)).andExpectAll(
