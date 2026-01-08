@@ -998,14 +998,14 @@ public class StudyController {
         return ResponseEntity.ok().body(exportUuid);
     }
 
-    @GetMapping(value = "/download-file")
+    @GetMapping(value = "/download-file/{exportUuid}")
     @Operation(summary = "Download exported network file")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The file is downloaded"),
         @ApiResponse(responseCode = "409", description = "Export not ready yet")
     })
     public ResponseEntity<Resource> downloadExportedNetworkFile(
-            @Parameter(description = "Export UUID") @RequestParam("exportUuid") UUID exportUuid,
+            @PathVariable("exportUuid") UUID exportUuid,
             @RequestHeader(HEADER_USER_ID) String userId) {
         ExportNetworkStatus status = networkModificationTreeService.getExportNetworkStatus(exportUuid);
         if (status == ExportNetworkStatus.RUNNING) {
