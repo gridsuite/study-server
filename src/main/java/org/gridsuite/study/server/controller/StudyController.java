@@ -14,11 +14,13 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
+import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
@@ -33,8 +35,8 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
+import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
-import org.gridsuite.study.server.dto.sensianalysis.SensitivityFactorsIdsByGroup;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
@@ -47,6 +49,7 @@ import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResul
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.ResultParameters;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
@@ -60,7 +63,6 @@ import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.annotation.Nullable;
 import java.beans.PropertyEditorSupport;
 import java.util.*;
 
@@ -533,6 +535,24 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkElementsInfos(studyUuid, nodeUuid, rootNetworkUuid, substationsIds, infoType, elementType, inUpstreamBuiltParentNode, nominalVoltages));
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements-by-global-filter")
+    @Operation(summary = "Get network elements infos by evaluating a global filter")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The list of network elements infos matching the filter"),
+        @ApiResponse(responseCode = "404", description = "The study/root network/node is not found")
+    })
+    public ResponseEntity<String> getNetworkElementsInfosByGlobalFilter(
+            @Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "Root network uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @Parameter(description = "Node uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "The equipment type to filter and return") @RequestParam(name = "equipmentType") @NonNull EquipmentType equipmentType,
+            @Parameter(description = "Info type (e.g., LIST, TAB, MAP, FORM)") @RequestParam(name = "infoType", defaultValue = "LIST") String infoType,
+            @RequestBody @NonNull GlobalFilter filter) {
+        studyService.assertIsRootNetworkAndNodeInStudy(studyUuid, rootNetworkUuid, nodeUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(studyService.getNetworkElementsInfosByGlobalFilter(studyUuid, nodeUuid, rootNetworkUuid, equipmentType, infoType, filter));
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements/{elementId}")
     @Operation(summary = "Get network elements infos")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of network elements infos")})
@@ -962,7 +982,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(formatsJson);
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}")
     @Operation(summary = "export the study's network in the given format")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network in the given format")})
     public ResponseEntity<UUID> exportNetwork(
@@ -975,7 +995,23 @@ public class StudyController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
         UUID exportUuid = studyService.exportNetwork(studyUuid, nodeUuid, rootNetworkUuid, fileName, format, userId, parametersJson);
-        return ResponseEntity.accepted().body(exportUuid);
+        return ResponseEntity.ok().body(exportUuid);
+    }
+
+    @GetMapping(value = "/download-file/{exportUuid}")
+    @Operation(summary = "Download exported network file")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The file is downloaded"),
+        @ApiResponse(responseCode = "409", description = "Export not ready yet")
+    })
+    public ResponseEntity<Resource> downloadExportedNetworkFile(
+            @PathVariable("exportUuid") UUID exportUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        ExportNetworkStatus status = networkModificationTreeService.getExportNetworkStatus(exportUuid);
+        if (status == ExportNetworkStatus.RUNNING) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON).body(null);
+        }
+        return networkConversionService.downloadExportedNetworkFile(exportUuid, userId);
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run")
@@ -1385,17 +1421,17 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", params = "activated")
-    @Operation(summary = "Update 'activated' value for a network modifications for a node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the activation status for network modifications on a node"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Void> updateNetworkModificationsActivation(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                          @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
-                                                          @Parameter(description = "New activated value") @RequestParam(name = "activated", required = true) Boolean activated,
-                                                          @RequestHeader(HEADER_USER_ID) String userId) {
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
+    @Operation(summary = "Updates the metadata of a network modification")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the metadata of a network modification"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<Void> updateNetworkModificationsMetadata(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                   @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                   @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") List<UUID> networkModificationUuids,
+                                                                   @RequestBody NetworkModificationMetadata metadata,
+                                                                   @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-        studyService.updateNetworkModificationsActivation(studyUuid, nodeUuid, networkModificationUuids, userId, activated);
+        studyService.updateNetworkModificationsMetadata(studyUuid, nodeUuid, networkModificationUuids, userId, metadata);
         return ResponseEntity.ok().build();
     }
 
@@ -1642,6 +1678,21 @@ public class StudyController {
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
         studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/unbuild-all")
+    @Operation(summary = "unbuild all study nodes in all root networks")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All study nodes has been unbuilt in all root networks"),
+        @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
+    public ResponseEntity<Void> unbuildAllNodes(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        try {
+            studyService.assertNoBlockedNodeInStudy(studyUuid, rootNodeUuid);
+            studyService.unbuildNodeTree(studyUuid, rootNodeUuid, true);
+        } finally {
+            studyService.unblockNodeTree(studyUuid, rootNodeUuid);
+        }
         return ResponseEntity.ok().build();
     }
 
@@ -2162,17 +2213,16 @@ public class StudyController {
         return studyService.setSensitivityAnalysisParameters(studyUuid, sensitivityAnalysisParameters, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factors-count")
-    @Operation(summary = "Get the factors count of sensitivity parameters")
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factor-count")
+    @Operation(summary = "Get the factor count of sensitivity parameters")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The factors count of sensitivity parameters")})
-    public ResponseEntity<Long> getSensitivityAnalysisFactorsCount(
+    public ResponseEntity<String> getSensitivityAnalysisFactorCount(
             @PathVariable("studyUuid") UUID studyUuid,
             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "Is Injections Set") @RequestParam(name = "isInjectionsSet", required = false) Boolean isInjectionsSet,
-            SensitivityFactorsIdsByGroup factorsIds) {
-        return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisFactorsCount(rootNetworkService.getNetworkUuid(rootNetworkUuid),
-            networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid), factorsIds, isInjectionsSet));
+            @RequestBody String sensitivityAnalysisParameters) {
+        return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisFactorCount(rootNetworkService.getNetworkUuid(rootNetworkUuid),
+            networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid), sensitivityAnalysisParameters));
     }
 
     @GetMapping(value = "/servers/infos")

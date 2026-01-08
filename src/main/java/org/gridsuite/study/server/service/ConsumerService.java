@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
@@ -519,8 +520,9 @@ public class ConsumerService {
         String errorMessage = msg.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class);
         String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
         UUID resultUuid = null;
-        // resultUuid is only used for the voltage initialization computation, I don't know why
-        if (computationType == VOLTAGE_INITIALIZATION) {
+
+        var computationsToReset = List.of(DYNAMIC_SIMULATION, DYNAMIC_SECURITY_ANALYSIS);
+        if (!computationsToReset.contains(computationType)) {
             String resultId = msg.getHeaders().get(RESULT_UUID, String.class);
             if (resultId != null) {
                 resultUuid = UUID.fromString(resultId);
@@ -847,6 +849,7 @@ public class ConsumerService {
                 String userId = receiver.getUserId();
                 UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
+                networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
                 notificationService.emitNetworkExportFinished(studyUuid, exportUuid, userId, errorMessage);
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);

@@ -319,11 +319,11 @@ class VoltageInitTest {
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = Objects.requireNonNull(request.getMethod());
-                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3)) {
+                if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3 + "&rootNetworkName=.*&nodeName=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitResultUuidStr2);
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + ".*")) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + ".*" + "&rootNetworkName=.*&nodeName=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitResultUuidStr);
-                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)) {
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID + "&rootNetworkName=.*&nodeName=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), voltageInitErrorResultUuidStr);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_RESULT_JSON);
@@ -568,7 +568,7 @@ class VoltageInitTest {
 
         consumeVoltageInitResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, VOLTAGE_INIT_RESULT_UUID, true);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&debug=true")));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&debug=true&rootNetworkName=.*&nodeName=.*")));
 
         // get voltage init result
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/result", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)).andExpectAll(
@@ -619,7 +619,9 @@ class VoltageInitTest {
 
         consumeVoltageInitFailed(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r ->
+            r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&reportType=VoltageInit&parametersUuid=.*&variantId=" + VARIANT_ID + "&rootNetworkName=.*&nodeName=.*")
+        ));
 
         testResultCount(server); //Test result count
         testDeleteResults(server, 1); //Delete Voltage init results
@@ -680,7 +682,7 @@ class VoltageInitTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode4Uuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_3 + "&rootNetworkName=.*&nodeName=.*")));
 
         consumeVoltageInitResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode4Uuid, VOLTAGE_INIT_CANCEL_FAILED_UUID, false);
 
@@ -780,7 +782,9 @@ class VoltageInitTest {
 
         consumeVoltageInitResult(studyUuid, rootNetworkUuid, nodeUuuid, VOLTAGE_INIT_RESULT_UUID, false);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r ->
+            r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&reportType=VoltageInit&parametersUuid=.*&variantId=" + VARIANT_ID_2 + "&rootNetworkName=.*&nodeName=.*")
+        ));
 
         // just retrieve modifications list from modificationNode3Uuid
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyUuid, rootNetworkUuid, nodeUuuid)
@@ -837,7 +841,7 @@ class VoltageInitTest {
 
         consumeVoltageInitResult(studyUuid, firstRootNetworkUuid, nodeUuid, VOLTAGE_INIT_RESULT_UUID, false);
 
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + VARIANT_ID_2 + "&rootNetworkName=.*&nodeName=.*")));
 
         // clone and insert voltage-init modification
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyUuid, firstRootNetworkUuid, nodeUuid)
@@ -867,7 +871,7 @@ class VoltageInitTest {
     }
 
     NodeEntity insertRootNode(StudyEntity study, UUID nodeId) {
-        NodeEntity node = nodeRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null));
+        NodeEntity node = nodeRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null, new ArrayList<>()));
         RootNodeInfoEntity rootNodeInfo = new RootNodeInfoEntity();
         rootNodeInfo.setIdNode(node.getIdNode());
         rootNodeInfoRepository.save(rootNodeInfo);
@@ -876,8 +880,8 @@ class VoltageInitTest {
 
     private NodeEntity insertNode(StudyEntity study, NodeEntity parentNode, String firstVariantId, String secondVariantId,
                                   RootNetworkEntity firstRootNetworkEntity, RootNetworkEntity secondRootNetworkEntity) {
-        NodeEntity nodeEntity = nodeRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
-        NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).modificationGroupUuid(UUID.randomUUID()).nodeType(NetworkModificationNodeType.SECURITY).build());
+        NodeEntity nodeEntity = nodeRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null, new ArrayList<>()));
+        NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).name("node").modificationGroupUuid(UUID.randomUUID()).nodeType(NetworkModificationNodeType.SECURITY).build());
         createNodeLinks(firstRootNetworkEntity, modificationNodeInfoEntity, firstVariantId, UUID.randomUUID(), BuildStatus.BUILT);
         createNodeLinks(secondRootNetworkEntity, modificationNodeInfoEntity, secondVariantId, UUID.randomUUID(), BuildStatus.NOT_BUILT);
         rootNetworkRepository.save(firstRootNetworkEntity);
@@ -1101,10 +1105,22 @@ class VoltageInitTest {
     @Test
     void testResetVoltageInitParametersUserHasValidParamsInProfile(final MockWebServer server) throws Exception {
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID, VOLTAGE_INIT_PARAMETERS_UUID, false);
-        UUID studyNameUserIdUuid = studyEntity.getId();
-        createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, null, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
 
-        var requests = TestUtils.getRequestsDone(3, server);
+        // run computation
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run",
+                        studyEntity.getId(), firstRootNetworkUuid, modificationNode1.getId()).header("userId", "userId"))
+                .andExpect(status().isOk());
+        consumeVoltageInitResult(studyEntity.getId(), firstRootNetworkUuid, modificationNode1.getId(), VOLTAGE_INIT_RESULT_UUID, false);
+
+        createOrUpdateParametersAndDoChecks(studyUuid, null, VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
+
+        var requests = TestUtils.getRequestsDone(5, server);
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&reportType=VoltageInit&parametersUuid=.*&variantId=variant_1&rootNetworkName=rootNetworkName&nodeName=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/results/invalidate-status\\?resultUuid=.*"))); // result has been invalidated by params reset
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + VALID_PARAMS_IN_PROFILE_USER_ID + "/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters/" + VOLTAGE_INIT_PARAMETERS_UUID_STRING)));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING))); // post duplicate ok

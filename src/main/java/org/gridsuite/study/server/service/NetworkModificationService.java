@@ -14,6 +14,7 @@ import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
+import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -175,21 +176,20 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
-    public void updateModificationsActivation(UUID groupUUid, List<UUID> modificationsUuids, boolean activated) {
+    public void updateModificationsMetadata(UUID groupUUid, List<UUID> modificationsUuids, NetworkModificationMetadata metadata) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
             .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH)
             .queryParam(UUIDS, modificationsUuids)
             .queryParam(GROUP_UUID, groupUUid)
-            .queryParam(QUERY_PARAM_ACTIVATED, activated)
             .buildAndExpand()
             .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
+        HttpEntity<NetworkModificationMetadata> httpEntity = new HttpEntity<>(metadata, headers);
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 

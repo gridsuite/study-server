@@ -131,6 +131,19 @@ public class SpreadsheetConfigController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{id}/sort")
+    @Operation(summary = "Update the spreadsheet configuration sort",
+            description = "Update the spreadsheet configuration sort")
+    @ApiResponse(responseCode = "204", description = "Configuration sort updated")
+    @ApiResponse(responseCode = "404", description = "Configuration not found")
+    public ResponseEntity<Void> updateSpreadsheetConfigSort(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "ID of the configuration to update") @PathVariable UUID id,
+            @Parameter(description = "New sort configuration") @RequestBody String sortConfig) {
+        studyService.updateSpreadsheetConfigSort(studyUuid, id, sortConfig);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{id}/reset-filters")
     @Operation(summary = "Reset global and column filters",
             description = "Reset all columns filters in a spreadsheet configuration as well as the global filter")

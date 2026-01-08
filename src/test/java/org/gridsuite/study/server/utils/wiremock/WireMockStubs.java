@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_BUS_ID_TO_ICC_VALUES;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.*;
 
 /**
@@ -57,6 +58,15 @@ public class WireMockStubs {
         ).getId();
     }
 
+    public UUID stubNetworkElementInfosWithIccByBusIdValuesGet(String networkUuid, String elementType, String infoType, String elementId, String iccByBusIdValues, String responseBody) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements" + DELIMITER + elementId))
+            .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
+            .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
+            .withQueryParam("optionalParameters[" + QUERY_PARAM_BUS_ID_TO_ICC_VALUES + "]", WireMock.equalTo(iccByBusIdValues))
+            .willReturn(WireMock.ok().withBody(responseBody))
+        ).getId();
+    }
+
     public UUID stubNetworkElementInfosGetNotFound(String networkUuid, String elementType, String infoType, String elementId) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements" + DELIMITER + elementId))
                 .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
@@ -79,6 +89,13 @@ public class WireMockStubs {
                    QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType)));
     }
 
+    public void verifyNetworkElementInfosWithIccByBusIdValuesGet(UUID stubUuid, String networkUuid, String elementType, String infoType, String elementId, String iccByBusIdValues) {
+        verifyGetRequest(wireMock, stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements" + DELIMITER + elementId,
+            Map.of(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType),
+                QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType),
+                "optionalParameters[" + QUERY_PARAM_BUS_ID_TO_ICC_VALUES + "]", WireMock.equalTo(iccByBusIdValues)));
+    }
+
     public UUID stubNetworkElementsInfosPost(String networkUuid, String infoType, String elementType, List<Double> nominalVoltages, String responseBody) {
         MappingBuilder requestPatternBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements"))
                 .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
@@ -99,6 +116,26 @@ public class WireMockStubs {
                 Map.of(
                         QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType),
                         QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType)
+                ),
+                requestBody
+        );
+    }
+
+    public UUID stubNetworkElementsByIdsPost(String networkUuid, String elementType, String infoType, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements-by-ids"))
+                .withQueryParam(QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType))
+                .withQueryParam(QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType))
+                .willReturn(WireMock.ok()
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(responseBody))
+        ).getId();
+    }
+
+    public void verifyNetworkElementsByIdsPost(UUID stubUuid, String networkUuid, String elementType, String infoType, String requestBody) {
+        verifyPostRequest(wireMock, stubUuid, URI_NETWORK_DATA + DELIMITER + networkUuid + DELIMITER + "elements-by-ids", false,
+                Map.of(
+                        QUERY_PARAM_ELEMENT_TYPE, WireMock.equalTo(elementType),
+                        QUERY_PARAM_INFO_TYPE, WireMock.equalTo(infoType)
                 ),
                 requestBody
         );

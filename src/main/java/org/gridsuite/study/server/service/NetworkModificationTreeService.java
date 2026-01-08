@@ -10,10 +10,11 @@ import com.powsybl.commons.report.ReportNode;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
+import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -79,7 +80,7 @@ public class NetworkModificationTreeService {
     }
 
     private NodeEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
-        NodeEntity newNode = nodesRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
+        NodeEntity newNode = nodesRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null, new ArrayList<>()));
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
         }
@@ -397,7 +398,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public NodeEntity createRoot(StudyEntity study) {
-        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null));
+        NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null, new ArrayList<>()));
         rootNodeInfoRepository.save(
             RootNodeInfoEntity.builder()
                 .idNode(node.getIdNode())
@@ -1195,6 +1196,10 @@ public class NetworkModificationTreeService {
         return getNodeInfoEntity(nodeUuid).getReadOnly();
     }
 
+    public boolean isRootNode(UUID nodeUuid) {
+        return rootNodeInfoRepository.findById(nodeUuid).isPresent();
+    }
+
     // only used for tests
     @Transactional
     public UUID getParentNode(UUID nodeUuid, NodeType nodeType) {
@@ -1257,5 +1262,22 @@ public class NetworkModificationTreeService {
         nodeInfo.getChildren().forEach(child -> self.createNodeTree(study, nodeInfo.getId(), (NetworkModificationNode) child));
 
         return nodeInfo;
+    }
+
+    @Transactional
+    public void updateExportNetworkStatus(UUID nodeUuid, UUID exportUuid, ExportNetworkStatus status) {
+        nodesRepository.getReferenceById(nodeUuid).getNodeExportNetwork().add(NodeExportEmbeddable.toNodeExportEmbeddable(exportUuid, status));
+    }
+
+    @Transactional
+    public void updateExportNetworkStatus(UUID exportUuid, ExportNetworkStatus status) {
+        nodesRepository.updateExportNetworkStatus(exportUuid, status.name());
+    }
+
+    @Transactional
+    public ExportNetworkStatus getExportNetworkStatus(UUID exportUuid) {
+        return nodesRepository.findExportStatus(exportUuid)
+                .map(ExportNetworkStatus::valueOf)
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "No export found for exportUuid=" + exportUuid));
     }
 }
