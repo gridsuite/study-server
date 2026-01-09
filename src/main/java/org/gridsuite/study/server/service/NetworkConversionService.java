@@ -18,6 +18,7 @@ import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -98,7 +99,7 @@ public class NetworkConversionService {
         return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public UUID exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, String fileName, String format, String userId, String parametersJson) {
+    public UUID exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, String filename, NodeExportInfos exportInfos, String format, String userId, String parametersJson) {
 
         try {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
@@ -107,11 +108,15 @@ public class NetworkConversionService {
                 uriComponentsBuilder.queryParam("variantId", variantId);
             }
 
-            if (!StringUtils.isEmpty(fileName)) {
-                uriComponentsBuilder.queryParam("fileName", fileName);
+            if (!StringUtils.isEmpty(filename)) {
+                uriComponentsBuilder.queryParam("fileName", filename);
             }
             String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NetworkExportReceiver(studyUuid, userId)), StandardCharsets.UTF_8);
             uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver);
+
+            String exportInfosStr = URLEncoder.encode(objectMapper.writeValueAsString(exportInfos), StandardCharsets.UTF_8);
+            uriComponentsBuilder.queryParam(QUERY_PARAM_EXPORT_INFOS, exportInfosStr);
+
             String path = uriComponentsBuilder.buildAndExpand(networkUuid, format).toUriString();
 
             HttpHeaders headers = new HttpHeaders();
