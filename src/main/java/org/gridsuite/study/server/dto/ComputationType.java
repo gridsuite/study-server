@@ -1,7 +1,10 @@
 package org.gridsuite.study.server.dto;
 
 import lombok.Getter;
+import org.apache.commons.lang3.exception.UncheckedException;
 import org.gridsuite.study.server.notification.NotificationService;
+
+import java.util.UUID;
 
 @Getter
 public enum ComputationType {
@@ -17,6 +20,9 @@ public enum ComputationType {
     SHORT_CIRCUIT("Short circuit analysis", "shortCircuitAnalysisResultUuid",
             NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT,
             NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_FAILED),
+    SHORT_CIRCUIT_ONE_BUS("One bus Short circuit analysis", "oneBusShortCircuitAnalysisResultUuid",
+            NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT,
+            NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_FAILED),
     VOLTAGE_INITIALIZATION("Voltage init", "voltageInitResultUuid",
             NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT,
             NotificationService.UPDATE_TYPE_VOLTAGE_INIT_FAILED),
@@ -26,9 +32,9 @@ public enum ComputationType {
     DYNAMIC_SECURITY_ANALYSIS("Dynamic security analysis", "dynamicSecurityAnalysisResultUuid",
             NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_RESULT,
             NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_FAILED),
-    SHORT_CIRCUIT_ONE_BUS("One bus Short circuit analysis", "oneBusShortCircuitAnalysisResultUuid",
-            NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_RESULT,
-            NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_FAILED),
+    DYNAMIC_MARGIN_CALCULATION("Dynamic margin calculation", "dynamicMarginCalculationResultUuid",
+            NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_RESULT,
+            NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_FAILED),
     STATE_ESTIMATION("State estimation", "stateEstimationResultUuid",
         NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_RESULT,
         NotificationService.UPDATE_TYPE_STATE_ESTIMATION_FAILED),
@@ -48,5 +54,33 @@ public enum ComputationType {
         this.updateStatusType = updateStatusType;
         this.updateResultType = updateResultType;
         this.updateFailedType = updateFailedType;
+    }
+
+    public UUID getResultUuid(Object object) {
+        try {
+            // Transform fieldName (e.g., "loadFlowResultUuid") to getter ("getLoadFlowResultUuid")
+            String getterName = "get" + resultUuidLabel.substring(0, 1).toUpperCase() + resultUuidLabel.substring(1);
+            return (UUID) object.getClass().getMethod(getterName).invoke(object);
+        } catch (Exception e) {
+            throw new UncheckedException(e);
+        }
+    }
+
+    private void updateResultUuid(Object object, UUID resultUuid, String updatePrefix) {
+        try {
+            // Transform fieldName (e.g., "loadFlowResultUuid") to setter ("setLoadFlowResultUuid")
+            String getterName = updatePrefix + resultUuidLabel.substring(0, 1).toUpperCase() + resultUuidLabel.substring(1);
+            object.getClass().getMethod(getterName, UUID.class).invoke(object, resultUuid);
+        } catch (Exception e) {
+            throw new UncheckedException(e);
+        }
+    }
+
+    public void setResultUuid(Object object, UUID resultUuid) {
+        updateResultUuid(object, resultUuid, "set");
+    }
+
+    public void addResultUuid(Object object, UUID resultUuid) {
+        updateResultUuid(object, resultUuid, "add");
     }
 }
