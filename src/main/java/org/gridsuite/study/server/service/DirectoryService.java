@@ -13,7 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -44,6 +46,17 @@ public class DirectoryService {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements/{elementUuid}/name");
         String path = pathBuilder.buildAndExpand(elementUuid).toUriString();
         return restTemplate.getForObject(directoryServerServerBaseUri + path, String.class);
+    }
+
+    public boolean elementExists(UUID directoryUuid, String elementName, String type) {
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements/{elementName}/types/{type}");
+        String path = pathBuilder.buildAndExpand(directoryUuid, elementName, type).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        ResponseEntity<Void> response = restTemplate.exchange(directoryServerServerBaseUri + path, HttpMethod.HEAD, request, Void.class);
+        return response.getStatusCode() == HttpStatus.OK;
     }
 
     public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId) {
