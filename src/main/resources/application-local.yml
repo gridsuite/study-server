@@ -1,0 +1,90 @@
+server:
+  port: 5001
+
+spring:
+  rabbitmq:
+    addresses: localhost
+  elasticsearch:
+    uris:
+      - http://localhost:9200
+    ## to fill if authentication is needed
+    # username:
+    # password:
+
+powsybl-ws:
+  database:
+    host: localhost
+
+powsybl:
+  services:
+    network-store-server:
+      base-uri: http://localhost:8080
+    case-server:
+      base-uri: http://localhost:5000
+    network-conversion-server:
+      base-uri: http://localhost:5003
+    single-line-diagram-server:
+      base-uri: http://localhost:5005
+
+gridsuite:
+  services:
+    -
+      name: geo-data-server
+      base-uri: http://localhost:8087
+    -
+      name: network-map-server
+      base-uri: http://localhost:5006
+    -
+      name: network-modification-server
+      base-uri: http://localhost:5007
+    -
+      name: loadflow-server
+      base-uri: http://localhost:5008
+    -
+      name: actions-server
+      base-uri: http://localhost:5022
+    -
+      name: security-analysis-server
+      base-uri: http://localhost:5023
+    -
+      name: report-server
+      base-uri: http://localhost:5028
+    -
+      name: sensitivity-analysis-server
+      base-uri: http://localhost:5030
+    -
+      name: shortcircuit-server
+      base-uri: http://localhost:5031
+    -
+      name: dynamic-simulation-server
+      base-uri: http://localhost:5032
+    -
+      name: dynamic-security-analysis-server
+      base-uri: http://localhost:5040
+    -
+      name: timeseries-server
+      base-uri: http://localhost:5037
+    -
+      name: dynamic-mapping-server
+      base-uri: http://localhost:5036
+    -
+      name: voltage-init-server
+      base-uri: http://localhost:5038
+    -
+      name: filter-server
+      base-uri: http://localhost:5027
+    -
+      name: user-admin-server
+      base-uri: http://localhost:5033
+    -
+      name: state-estimation-server
+      base-uri: http://localhost:6040
+    -
+      name: pcc-min-server
+      base-uri: http://localhost:6042
+    -
+      name: study-config-server
+      base-uri: http://localhost:5035/
+    -
+      name: directory-server
+      base-uri: http://localhost:5026
