@@ -855,12 +855,7 @@ public class ConsumerService {
                 UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
 
                 // With export uuid get
-                Optional<NodeReceiver> receiverObj = getNodeReceiver(msg);
-                NodeExportInfos nodeExport = null;
-                if (receiverObj.isPresent()) {
-                    UUID nodeUuid = receiverObj.get().getNodeUuid();
-                    nodeExport = networkModificationTreeService.getNodeExportInfos(nodeUuid, exportUuid);
-                }
+                NodeExportInfos nodeExport = networkModificationTreeService.getNodeExportInfos(exportUuid);
 
                 if (nodeExport != null && nodeExport.exportToExplorer()) {
                     //Call case server and create case in directory

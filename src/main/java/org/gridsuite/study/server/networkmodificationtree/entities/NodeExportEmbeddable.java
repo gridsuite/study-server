@@ -12,7 +12,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import lombok.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeExportInfos;
 
 import java.util.UUID;
 
@@ -68,9 +67,5 @@ public class NodeExportEmbeddable {
                 .filename(filename)
                 .description(description)
                 .build();
-    }
-
-    public NodeExportInfos toNodeExportInfos() {
-        return new NodeExportInfos(exportUuid, status, exportToExplorer, directoryUuid, filename, description);
     }
 }
