@@ -1,9 +1,9 @@
 <?xml version="1.1" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
-    <changeSet author="rehiligha (generated)" id="1765554894804-18">
+    <changeSet author="rehiligha (generated)" id="1767797277163-18">
         <createTable tableName="node_export">
-            <column name="root_network_node_info_id" type="UUID">
-                <constraints nullable="false"/>
+            <column name="node_id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="node_exportPK"/>
             </column>
             <column name="export_uuid" type="UUID">
                 <constraints nullable="false"/>
@@ -11,12 +11,23 @@
             <column name="status" type="VARCHAR(255)">
                 <constraints nullable="false"/>
             </column>
+            <column name="export_order" type="INT">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="node_exportPK"/>
+            </column>
         </createTable>
     </changeSet>
-    <changeSet author="rehiligha (generated)" id="1765554894804-20">
-        <addForeignKeyConstraint baseColumnNames="root_network_node_info_id" baseTableName="node_export" constraintName="rootNetworkNodeInfo_nodeExport_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id" referencedTableName="root_network_node_info" validate="true"/>
-    </changeSet>
-    <changeSet author="rehiligha (generated)" id="1765554894804-21">
+    <changeSet author="rehiligha (generated)" id="1767797277163-19">
         <addUniqueConstraint columnNames="export_uuid" constraintName="uc_node_export_export_uuid_col" tableName="node_export"/>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1767797277163-21">
+        <createIndex indexName="node_export_node_id_idx" tableName="node_export">
+            <column name="node_id"/>
+        </createIndex>
+        <createIndex indexName="node_export_export_uuid_idx" tableName="node_export">
+            <column name="export_uuid"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="rehiligha (generated)" id="1767797277163-22">
+        <addForeignKeyConstraint baseColumnNames="node_id" baseTableName="node_export" constraintName="node_export_node_fk" deferrable="false" initiallyDeferred="false" referencedColumnNames="id_node" referencedTableName="node" validate="true"/>
     </changeSet>
 </databaseChangeLog>

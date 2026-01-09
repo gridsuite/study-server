@@ -868,8 +868,8 @@ public class ConsumerService {
                 }
 
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
+                networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
                 notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToExplorer, userId, errorMessage);
-                rootNetworkNodeInfoService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
             }

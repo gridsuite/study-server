@@ -48,7 +48,6 @@ import java.util.stream.Stream;
 import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
-import static org.gridsuite.study.server.networkmodificationtree.entities.NodeExportEmbeddable.toNodeExportEmbeddable;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -262,7 +261,6 @@ public class RootNetworkNodeInfoService {
         }
 
         invalidateComputationResults(rootNetworkNodeInfoEntity, invalidateTreeParameters.computationsInvalidationMode());
-
         return invalidateNodeInfos;
     }
 

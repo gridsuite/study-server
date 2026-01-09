@@ -2076,7 +2076,6 @@ public class StudyService {
         invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
 
         deleteInvalidationInfos(invalidateNodeInfos);
-        rootNetworkNodeInfoService.clearNodeExportNetworks(nodeUuid, rootNetworkUuid);
         emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode.ALL);
 
         if (startTime.get() != null) {
