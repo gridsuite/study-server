@@ -1285,7 +1285,7 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public NodeExportInfos getNodeExportInfos(UUID exportUuid, UUID nodeUuid) {
+    public NodeExportInfos getNodeExportInfos(UUID nodeUuid, UUID exportUuid) {
         List<NodeExportEmbeddable> nodesExport = nodesRepository.getReferenceById(nodeUuid).getNodeExportNetwork();
         nodesExport.stream().filter(embeddable -> embeddable.getExportUuid().equals(exportUuid)).toList();
         return !CollectionUtils.isEmpty(nodesExport) ? nodesExport.getFirst().toNodeExportInfos() : null;

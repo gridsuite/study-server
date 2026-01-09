@@ -858,7 +858,8 @@ public class ConsumerService {
                 Optional<NodeReceiver> receiverObj = getNodeReceiver(msg);
                 NodeExportInfos nodeExport = null;
                 if (receiverObj.isPresent()) {
-                    nodeExport = networkModificationTreeService.getNodeExportInfos(receiverObj.get().getNodeUuid(), exportUuid);
+                    UUID nodeUuid = receiverObj.get().getNodeUuid();
+                    nodeExport = networkModificationTreeService.getNodeExportInfos(nodeUuid, exportUuid);
                 }
 
                 if (nodeExport != null && nodeExport.exportToExplorer()) {
