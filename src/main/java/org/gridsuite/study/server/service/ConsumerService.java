@@ -23,7 +23,7 @@ import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeExportInfos;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -846,6 +846,9 @@ public class ConsumerService {
     public void consumeNetworkExportFinished(Message<String> msg) {
         String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
         String exportFolder = msg.getHeaders().get(HEADER_EXPORT_FOLDER, String.class);
+        String exportInfosStr = msg.getHeaders().get(HEADER_EXPORT_INFOS, String.class);
+        String fileName = msg.getHeaders().get(HEADER_FILE_NAME, String.class);
+
         if (receiverString != null) {
             NetworkExportReceiver receiver;
             try {
@@ -855,17 +858,23 @@ public class ConsumerService {
                 UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
 
                 // With export uuid get
-                NodeExportInfos nodeExport = networkModificationTreeService.getNodeExportInfos(exportUuid);
+                NodeExportInfos nodeExport = null;
+                if (exportInfosStr != null) {
+                    nodeExport = objectMapper.readValue(URLDecoder.decode(exportInfosStr, StandardCharsets.UTF_8), NodeExportInfos.class);
+                }
 
-                if (nodeExport != null && nodeExport.exportToExplorer()) {
+                boolean exportToExplorer = false;
+
+                if (nodeExport != null) {
                     //Call case server and create case in directory
-                    UUID caseUuid = caseService.createCase(exportUuid, exportFolder, nodeExport.filename());
-                    directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.filename(), DirectoryService.CASE, userId);
+                    exportToExplorer = nodeExport.exportToExplorer();
+                    UUID caseUuid = caseService.createCase(exportUuid, exportFolder, fileName);
+                    directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, fileName, DirectoryService.CASE, userId);
                 }
 
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
                 networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
-                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, false/*exportToExplorer*/, userId, errorMessage);
+                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToExplorer, userId, errorMessage);
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
             }

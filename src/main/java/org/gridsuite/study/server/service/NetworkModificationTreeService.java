@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -1265,11 +1266,10 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void updateExportNetworkStatus(UUID nodeUuid, UUID exportUuid, ExportNetworkStatus status, boolean exportToExplorer, UUID directoryUuid,
-                                          String filename, String description) {
+    public void updateExportNetworkStatus(UUID nodeUuid, UUID exportUuid, ExportNetworkStatus status) {
         nodesRepository.getReferenceById(nodeUuid).getNodeExportNetwork()
                 .add(NodeExportEmbeddable
-                .toNodeExportEmbeddable(exportUuid, status, exportToExplorer, directoryUuid, filename, description));
+                .toNodeExportEmbeddable(exportUuid, status));
     }
 
     @Transactional

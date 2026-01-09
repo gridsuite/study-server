@@ -31,6 +31,7 @@ import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
@@ -1072,22 +1073,17 @@ public class StudyService {
     }
 
     public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String fileName, String format, String userId, String parametersJson,
-                              boolean exportToExplorer, UUID parentDirectoryUuid, String filename, String description) {
+                              boolean exportToExplorer, UUID parentDirectoryUuid, String description) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId, fileName, format, userId, parametersJson);
+        UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId, fileName,
+            new NodeExportInfos(exportToExplorer, parentDirectoryUuid, description), format, userId, parametersJson);
 
         if (exportToExplorer && directoryService.elementExists(parentDirectoryUuid, fileName, DirectoryService.CASE)) {
             throw new StudyException(ELEMENT_ALREADY_EXISTS);
         }
 
-        networkModificationTreeService.updateExportNetworkStatus(nodeUuid,
-                                                                exportUuid,
-                                                                ExportNetworkStatus.RUNNING,
-                                                                exportToExplorer,
-                                                                parentDirectoryUuid,
-                                                                filename,
-                                                                description);
+        networkModificationTreeService.updateExportNetworkStatus(nodeUuid, exportUuid, ExportNetworkStatus.RUNNING);
         return exportUuid;
     }
 
