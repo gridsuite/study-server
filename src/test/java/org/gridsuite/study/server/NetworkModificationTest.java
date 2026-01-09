@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -22,14 +23,6 @@ import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
-import lombok.SneakyThrows;
-import mockwebserver3.Dispatcher;
-import mockwebserver3.MockResponse;
-import mockwebserver3.MockWebServer;
-import mockwebserver3.RecordedRequest;
-import mockwebserver3.junit5.internal.MockWebServerExtension;
-import okhttp3.Headers;
-import okhttp3.HttpUrl;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
@@ -49,16 +42,16 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.gridsuite.study.server.utils.*;
+import org.gridsuite.study.server.utils.MatcherJson;
+import org.gridsuite.study.server.utils.SendInput;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
-import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
@@ -81,9 +74,10 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR_MESSAGE;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_NODE_BUILDS_EXCEEDED;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
@@ -101,7 +95,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
-@ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
 @SpringBootTest
 @DisableElasticsearch
@@ -125,15 +118,14 @@ class NetworkModificationTest {
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
 
-    private static final UUID LOADFLOW_RESULT_UUID = UUID.randomUUID();
-    private static final UUID DYNAMIC_SIMULATION_RESULT_UUID = UUID.randomUUID();
-    private static final UUID DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
+    private static final String LOADFLOW_RESULT_UUID = "0c8de3c9-6f4d-4b3e-9c4a-8f7e5a9b1d2e";
+    private static final String DYNAMIC_SIMULATION_RESULT_UUID = "1d9ef4d0-7f5e-5c4f-0d5b-9f8f6b0c2e3f";
+    private static final String DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID = "2e0f05e1-8a6f-6d50-1e6c-0a9071d3f40a";
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
 
     private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-    private static final LoadFlowStatus LOADFLOW_STATUS = LoadFlowStatus.CONVERGED;
 
     private static final String SHORTCIRCUIT_ANALYSIS_RESULT_UUID = "72f94d64-4fc6-11ed-bdc3-0242ac120002";
     private static final String ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID = "72f94d88-4fc6-11ed-bdc3-0242ac120009";
@@ -152,8 +144,6 @@ class NetworkModificationTest {
     private static final String PCC_MIN_STATUS_JSON = "\"COMPLETED\"";
 
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
-
-    private static final Report REPORT_TEST = Report.builder().id(UUID.randomUUID()).message("test").severity(StudyConstants.Severity.WARN).build();
 
     private static final String TEST_FILE = "testCase.xiidm";
 
@@ -262,7 +252,7 @@ class NetworkModificationTest {
     private PccMinService pccMinService;
 
     @BeforeEach
-    void setup(final MockWebServer server) {
+    void setup() throws Exception {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
         network.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID);
@@ -279,8 +269,7 @@ class NetworkModificationTest {
         wireMockServer.start();
 
         // Ask the server for its URL. You'll need this to make HTTP requests.
-        HttpUrl baseHttpUrl = server.url("");
-        String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
+        String baseUrl = wireMockServer.baseUrl();
         reportService.setReportServerBaseUri(baseUrl);
         loadFlowService.setLoadFlowServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
@@ -293,9 +282,8 @@ class NetworkModificationTest {
         doReturn(baseUrl).when(dynamicSimulationClient).getBaseUri();
         doReturn(baseUrl).when(dynamicSecurityAnalysisClient).getBaseUri();
 
-        String baseUrlWireMock = wireMockServer.baseUrl();
-        networkModificationService.setNetworkModificationServerBaseUri(baseUrlWireMock);
-        userAdminService.setUserAdminServerBaseUri(baseUrlWireMock);
+        networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
+        userAdminService.setUserAdminServerBaseUri(baseUrl);
 
         buildOkStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Map.of("payload", DEFAULT_BUILD_RESULT, "destination", "build.result"))
@@ -322,115 +310,6 @@ class NetworkModificationTest {
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
         userNoProfileStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID_NO_PROFILE + "/profile/max-builds"))
                 .willReturn(WireMock.notFound())).getId();
-
-        final Dispatcher dispatcher = new Dispatcher() {
-            @SneakyThrows
-            @Override
-            @NotNull
-            public MockResponse dispatch(RecordedRequest request) {
-                String path = Objects.requireNonNull(request.getPath());
-
-                if (path.matches("/v1/reports/.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(REPORT_TEST));
-                } else if (path.matches("/v1/reports")) {
-                    return new MockResponse(200);
-                } else if (("/v1/results/invalidate-status?resultUuid=" + SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
-                    return new MockResponse(200);
-                } else if (("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
-                } else if (("/v1/results?resultsUuids=" + SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
-                    if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SECURITY_ANALYSIS_STATUS_JSON);
-                    }
-                    return new MockResponse(500);
-                } else if (("/v1/results/invalidate-status?resultUuid=" + DYNAMIC_SIMULATION_RESULT_UUID).equals(path)) {
-                    return new MockResponse(200);
-                } else if (("/v1/results/" + DYNAMIC_SIMULATION_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED));
-                } else if (("/v1/results?resultsUuids=" + DYNAMIC_SIMULATION_RESULT_UUID).equals(path)) {
-                    if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED));
-                    }
-                    return new MockResponse(500);
-                } else if (("/v1/results/invalidate-status?resultUuid=" + DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
-                    return new MockResponse(200);
-                } else if (("/v1/results/" + DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED));
-                } else if (("/v1/results?resultsUuids=" + DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID).equals(path)) {
-                    if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED));
-                    }
-                    return new MockResponse(500);
-                } else if (("/v1/results/invalidate-status?resultUuid=" + SENSITIVITY_ANALYSIS_RESULT_UUID).equals(path)) {
-                    return new MockResponse(200);
-                } else if (("/v1/results/" + SENSITIVITY_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
-                } else if (("/v1/results?resultsUuids=" + SENSITIVITY_ANALYSIS_RESULT_UUID).equals(path)) {
-                    if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SENSITIVITY_ANALYSIS_STATUS_JSON);
-                    }
-                    return new MockResponse(500);
-                } else if (("/v1/results/invalidate-status?resultUuid=" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
-                    return new MockResponse(200);
-                } else if (("/v1/results/invalidate-status?resultUuid=" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
-                    return new MockResponse(200);
-                } else if (("/v1/results/" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
-                } else if (("/v1/results/" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
-                } else if (("/v1/results?resultsUuids=" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
-                    if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
-                    }
-                    return new MockResponse(500);
-                } else if (("/v1/results?resultsUuids=" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID).equals(path)) {
-                    if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON);
-                    }
-                    return new MockResponse(500);
-                } else if (("/v1/results/invalidate-status?resultUuid=" + VOLTAGE_INIT_RESULT_UUID).equals(path)) {
-                    return new MockResponse(200);
-                } else if (("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_STATUS_JSON);
-                } else if (("/v1/results?resultsUuids=" + VOLTAGE_INIT_RESULT_UUID).equals(path)) {
-                    if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_STATUS_JSON);
-                    }
-                    return new MockResponse(500);
-                } else if (("/v1/results/invalidate-status?resultUuid=" + LOADFLOW_RESULT_UUID).equals(path)) {
-                    return new MockResponse(200);
-                } else if (("/v1/results/" + LOADFLOW_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(LOADFLOW_STATUS));
-                } else if (("/v1/results?resultsUuids=" + LOADFLOW_RESULT_UUID).equals(path)) {
-                    if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(LOADFLOW_STATUS));
-                    }
-                    return new MockResponse(500);
-                } else if (("/v1/results/invalidate-status?resultUuid=" + STATE_ESTIMATION_RESULT_UUID).equals(path)) {
-                    return new MockResponse(200);
-                } else if (("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), STATE_ESTIMATION_STATUS_JSON);
-                } else if (("/v1/results?resultsUuids=" + STATE_ESTIMATION_RESULT_UUID).equals(path)) {
-                    if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), STATE_ESTIMATION_STATUS_JSON);
-                    }
-                    return new MockResponse(500);
-                    } else if (("/v1/results/invalidate-status?resultUuid=" + PCC_MIN_RESULT_UUID).equals(path)) {
-                    return new MockResponse(200);
-                } else if (("/v1/results/" + PCC_MIN_RESULT_UUID + "/status").equals(path)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), STATE_ESTIMATION_STATUS_JSON);
-                } else if (("/v1/results?resultsUuids=" + PCC_MIN_RESULT_UUID).equals(path)) {
-                    if (request.getMethod().equals("DELETE")) {
-                        return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), PCC_MIN_STATUS_JSON);
-                    }
-                    return new MockResponse(500);
-                } else {
-                    LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
-                    return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
-                }
-            }
-        };
-        server.setDispatcher(dispatcher);
     }
 
     @Test
@@ -666,7 +545,8 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testNetworkModificationSwitch(final MockWebServer server) throws Exception {
+    void testNetworkModificationSwitch() throws Exception {
+        UUID deleteReportsStubId = wireMockStubs.stubDeleteReports();
 
         MvcResult mvcResult;
         String resultAsString;
@@ -760,8 +640,7 @@ class NetworkModificationTest {
         modificationBody = Pair.of(bodyJson, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNode1Uuid, NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(1, server);
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
+        wireMockStubs.verifyDeleteReports(deleteReportsStubId);
 
         // modificationNode2 is still built
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode1Uuid, firstRootNetworkUuid).getGlobalBuildStatus());
@@ -2411,7 +2290,10 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testNodesInvalidation(final MockWebServer server) throws Exception {
+    void testNodesInvalidation() throws Exception {
+        UUID deleteReportsStubId = wireMockStubs.stubDeleteReports();
+        ComputationResultStubIds stubIds = stubAllComputationResults();
+
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
@@ -2457,15 +2339,19 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
         wireMockStubs.verifyNetworkModificationPut(stubUuid, MODIFICATION_UUID, generatorAttributesUpdated);
-        var requests = TestUtils.getRequestsWithBodyDone(15, server);
-        assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + SECURITY_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + SENSITIVITY_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + VOLTAGE_INIT_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + PCC_MIN_RESULT_UUID)));
-        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/results\\?resultsUuids=" + STATE_ESTIMATION_RESULT_UUID)));
+        wireMockStubs.verifyDeleteReports(deleteReportsStubId);
+        List.of(
+            SECURITY_ANALYSIS_RESULT_UUID,
+            SENSITIVITY_ANALYSIS_RESULT_UUID,
+            SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
+            ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
+            VOLTAGE_INIT_RESULT_UUID,
+            PCC_MIN_RESULT_UUID,
+            STATE_ESTIMATION_RESULT_UUID
+        ).forEach(resultUuid -> {
+            wireMockStubs.verifyDeleteResult(stubIds.deleteResultStubIds().get(resultUuid), resultUuid);
+            wireMockStubs.verifyGetResultStatus(stubIds.getStatusStubIds().get(resultUuid), resultUuid);
+        });
 
         // Mark nodes 2 and 3 status as built
         rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode2Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
@@ -2493,12 +2379,13 @@ class NetworkModificationTest {
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode3Uuid, firstRootNetworkUuid).getGlobalBuildStatus());
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(jsonCreateLoadInfos, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNode2Uuid, NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
-
-        TestUtils.assertServerRequestsEmptyThenShutdown(server);
     }
 
     @Test
-    void testRemoveLoadFlowComputationReport(final MockWebServer server) throws Exception {
+    void testRemoveLoadFlowComputationReport() throws Exception {
+        UUID deleteReportsStubId = wireMockStubs.stubDeleteReports();
+        ComputationResultStubIds stubIds = stubAllComputationResults();
+
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyNameUserIdUuid = studyEntity.getId();
@@ -2508,10 +2395,10 @@ class NetworkModificationTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
         // In this node, let's say we have all computations results
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        rootNetworkNodeInfoEntity.setLoadFlowResultUuid(LOADFLOW_RESULT_UUID);
+        rootNetworkNodeInfoEntity.setLoadFlowResultUuid(UUID.fromString(LOADFLOW_RESULT_UUID));
         rootNetworkNodeInfoEntity.setSecurityAnalysisResultUuid(UUID.fromString(SECURITY_ANALYSIS_RESULT_UUID));
-        rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(DYNAMIC_SIMULATION_RESULT_UUID);
-        rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID);
+        rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(UUID.fromString(DYNAMIC_SIMULATION_RESULT_UUID));
+        rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(UUID.fromString(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setSensitivityAnalysisResultUuid(UUID.fromString(SENSITIVITY_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setShortCircuitAnalysisResultUuid(UUID.fromString(SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
         rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(UUID.fromString(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID));
@@ -2556,9 +2443,10 @@ class NetworkModificationTest {
         wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
         wireMockStubs.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
 
-        var requests = TestUtils.getRequestsDone(20, server); // 1 status LF + 2 x 9 computations + 1 report
+        // 1 status LF + 2 x 9 computations + 1 report
+        wireMockStubs.verifyDeleteResult(stubIds.deleteResultStubIds().get(LOADFLOW_RESULT_UUID), LOADFLOW_RESULT_UUID);
+        wireMockStubs.verifyGetResultStatus(stubIds.getStatusStubIds().get(LOADFLOW_RESULT_UUID), LOADFLOW_RESULT_UUID, 2);
         List.of(
-                LOADFLOW_RESULT_UUID,
                 SECURITY_ANALYSIS_RESULT_UUID,
                 DYNAMIC_SIMULATION_RESULT_UUID,
                 DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID,
@@ -2567,12 +2455,12 @@ class NetworkModificationTest {
                 ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
                 VOLTAGE_INIT_RESULT_UUID,
                 STATE_ESTIMATION_RESULT_UUID
-        ).forEach(uuid -> {
-            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results?resultsUuids=" + uuid)));
-            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/results/" + uuid + "/status")));
+        ).forEach(resultUuid -> {
+            wireMockStubs.verifyDeleteResult(stubIds.deleteResultStubIds().get(resultUuid), resultUuid);
+            wireMockStubs.verifyGetResultStatus(stubIds.getStatusStubIds().get(resultUuid), resultUuid);
         });
         // requests for computation sub-report deletion
-        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/reports")));
+        wireMockStubs.verifyDeleteReports(deleteReportsStubId);
     }
 
     @Test
@@ -2786,6 +2674,39 @@ class NetworkModificationTest {
         WireMockUtils.verifyGetRequest(wireMockServer, userProfileQuotaStubId, "/v1/users/" + USER_ID + "/profile/max-builds", Map.of());
 
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).getGlobalBuildStatus());  // node is not built
+    }
+
+    private record ComputationResultStubIds(Map<String, UUID> deleteResultStubIds, Map<String, UUID> getStatusStubIds) {
+    }
+
+    private ComputationResultStubIds stubAllComputationResults() throws JsonProcessingException {
+        Map<String, UUID> deleteResultStubIds = new HashMap<>();
+        Map<String, UUID> getStatusStubIds = new HashMap<>();
+        List.of(
+            LOADFLOW_RESULT_UUID,
+            SECURITY_ANALYSIS_RESULT_UUID,
+            DYNAMIC_SIMULATION_RESULT_UUID,
+            DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID,
+            SENSITIVITY_ANALYSIS_RESULT_UUID,
+            SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
+            ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
+            VOLTAGE_INIT_RESULT_UUID,
+            STATE_ESTIMATION_RESULT_UUID,
+            PCC_MIN_RESULT_UUID
+        ).forEach(resultUuid -> {
+            deleteResultStubIds.put(resultUuid, wireMockStubs.stubDeleteResult(resultUuid));
+        });
+        getStatusStubIds.put(LOADFLOW_RESULT_UUID, wireMockStubs.stubGetResultStatus(LOADFLOW_RESULT_UUID, mapper.writeValueAsString(LoadFlowStatus.CONVERGED)));
+        getStatusStubIds.put(SECURITY_ANALYSIS_RESULT_UUID, wireMockStubs.stubGetResultStatus(SECURITY_ANALYSIS_RESULT_UUID, SECURITY_ANALYSIS_STATUS_JSON));
+        getStatusStubIds.put(DYNAMIC_SIMULATION_RESULT_UUID, wireMockStubs.stubGetResultStatus(DYNAMIC_SIMULATION_RESULT_UUID, objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED)));
+        getStatusStubIds.put(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID, wireMockStubs.stubGetResultStatus(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID, objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED)));
+        getStatusStubIds.put(SENSITIVITY_ANALYSIS_RESULT_UUID, wireMockStubs.stubGetResultStatus(SENSITIVITY_ANALYSIS_RESULT_UUID, SENSITIVITY_ANALYSIS_STATUS_JSON));
+        getStatusStubIds.put(SHORTCIRCUIT_ANALYSIS_RESULT_UUID, wireMockStubs.stubGetResultStatus(SHORTCIRCUIT_ANALYSIS_RESULT_UUID, SHORTCIRCUIT_ANALYSIS_STATUS_JSON));
+        getStatusStubIds.put(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, wireMockStubs.stubGetResultStatus(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON));
+        getStatusStubIds.put(VOLTAGE_INIT_RESULT_UUID, wireMockStubs.stubGetResultStatus(VOLTAGE_INIT_RESULT_UUID, VOLTAGE_INIT_STATUS_JSON));
+        getStatusStubIds.put(STATE_ESTIMATION_RESULT_UUID, wireMockStubs.stubGetResultStatus(STATE_ESTIMATION_RESULT_UUID, STATE_ESTIMATION_STATUS_JSON));
+        getStatusStubIds.put(PCC_MIN_RESULT_UUID, wireMockStubs.stubGetResultStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON));
+        return new ComputationResultStubIds(deleteResultStubIds, getStatusStubIds);
     }
 
     private void checkEquipmentCreatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
@@ -3046,7 +2967,7 @@ class NetworkModificationTest {
     }
 
     @AfterEach
-    void tearDown(final MockWebServer server) throws Exception {
+    void tearDown() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
 
@@ -3054,7 +2975,6 @@ class NetworkModificationTest {
 
         try {
             TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
-            TestUtils.assertServerRequestsEmptyThenShutdown(server);
         } catch (UncheckedInterruptedException e) {
             LOGGER.error("Error while attempting to get the request done : ", e);
         }
