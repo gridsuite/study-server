@@ -23,14 +23,12 @@ import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeExportInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
@@ -76,7 +74,6 @@ public class ConsumerService {
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
     private final PccMinService pccMinService;
-    private final NetworkConversionService networkConversionService;
     private final DirectoryService directoryService;
 
     public ConsumerService(ObjectMapper objectMapper,
@@ -93,7 +90,7 @@ public class ConsumerService {
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                            StateEstimationService stateEstimationService, PccMinService pccMinService,
-                           NetworkConversionService networkConversionService, NetworkService networkService, DirectoryService directoryService) {
+                           DirectoryService directoryService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -109,7 +106,6 @@ public class ConsumerService {
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
-        this.networkConversionService = networkConversionService;
         this.directoryService = directoryService;
     }
 
@@ -858,18 +854,18 @@ public class ConsumerService {
                 UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
 
                 // With export uuid get
-                NodeExportInfos nodeExport = rootNetworkNodeInfoService.getNodeExportInfos(exportUuid);
+                /*NodeExportInfos nodeExport = rootNetworkNodeInfoService.getNodeExportInfos(exportUuid);
 
                 boolean exportToExplorer = nodeExport != null && nodeExport.exportToExplorer();
                 if (exportToExplorer) {
                     //Call case server and create case in directory
                     UUID caseUuid = caseService.createCase(exportUuid, exportFolder, nodeExport.filename());
                     directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.filename(), DirectoryService.CASE, userId);
-                }
+                }*/
 
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
                 networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
-                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToExplorer, userId, errorMessage);
+                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, false/*exportToExplorer*/, userId, errorMessage);
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
             }

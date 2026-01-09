@@ -1081,14 +1081,13 @@ public class StudyService {
             throw new StudyException(ELEMENT_ALREADY_EXISTS);
         }
 
-        rootNetworkNodeInfoService.updateExportNetworkStatus(nodeUuid,
-                                                            rootNetworkUuid,
-                                                            exportUuid,
-                                                            ExportNetworkStatus.RUNNING,
-                                                            exportToExplorer,
-                                                            parentDirectoryUuid,
-                                                            filename,
-                                                            description);
+        networkModificationTreeService.updateExportNetworkStatus(nodeUuid,
+                                                                exportUuid,
+                                                                ExportNetworkStatus.RUNNING,
+                                                                exportToExplorer,
+                                                                parentDirectoryUuid,
+                                                                filename,
+                                                                description);
         return exportUuid;
     }
 
@@ -2158,7 +2157,6 @@ public class StudyService {
         }
 
         if (!networkModificationTreeService.isRootNode(nodeUuid)) {
-            rootNetworkNodeInfoService.clearNodeExportNetworks(nodeUuid, rootNetworkUuid);
             emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
         }
 

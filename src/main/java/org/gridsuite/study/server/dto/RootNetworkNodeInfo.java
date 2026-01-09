@@ -76,7 +76,6 @@ public class RootNetworkNodeInfo {
             .stateEstimationResultUuid(stateEstimationResultUuid)
             .pccMinResultUuid(pccMinResultUuid)
             .nodeBuildStatus(nodeBuildStatus.toEntity())
-            .nodeExportNetwork(nodeExportNetwork != null ? nodeExportNetwork : new ArrayList<>())
             .build();
     }
 }

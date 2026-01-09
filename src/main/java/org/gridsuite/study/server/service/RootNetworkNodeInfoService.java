@@ -8,20 +8,17 @@ package org.gridsuite.study.server.service;
 
 import com.powsybl.timeseries.DoubleTimeSeries;
 import lombok.NonNull;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
-import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeExportInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
@@ -858,65 +855,14 @@ public class RootNetworkNodeInfoService {
         pccMinService.stopPccMin(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
     }
 
-    @Transactional
-    public void updateExportNetworkStatus(UUID exportUuid, ExportNetworkStatus status) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeExportNetworkExportUuid(exportUuid)
-                .stream()
-                .filter(rootNetworkNodeInfo -> rootNetworkNodeInfo.getNodeExportNetwork()
-                        .stream().anyMatch(nodeExportEmbeddable -> nodeExportEmbeddable.getExportUuid().equals(exportUuid)))
-                .findFirst()
-                .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found for exportUuid=" + exportUuid));
-        rootNetworkNodeInfoEntity.getNodeExportNetwork().stream()
-                .filter(nodeExportEmbeddable -> nodeExportEmbeddable.getExportUuid().equals(exportUuid))
-                .findFirst()
-                .ifPresentOrElse(nodeExportEmbeddable -> nodeExportEmbeddable.setStatus(status),
-                        () -> rootNetworkNodeInfoEntity.getNodeExportNetwork().add(toNodeExportEmbeddable(exportUuid, status)));
-    }
-
-    @Transactional
-    public void updateExportNetworkStatus(UUID nodeUuid, UUID rootNetworkUuid, UUID exportUuid, ExportNetworkStatus status, boolean exportToExplorer, UUID directoryUuid,
-                                          String filename, String description) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = findRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
-        rootNetworkNodeInfoEntity.getNodeExportNetwork().stream()
-                .filter(e -> e.getExportUuid().equals(exportUuid))
-                .findFirst()
-                .ifPresentOrElse(nodeExportEmbeddable -> nodeExportEmbeddable.setStatus(status),
-                        () -> rootNetworkNodeInfoEntity.getNodeExportNetwork().add(toNodeExportEmbeddable(exportUuid, status, exportToExplorer, directoryUuid, filename, description)));
-    }
-
-    @Transactional
-    public ExportNetworkStatus getExportNetworkStatus(UUID nodeUuid, UUID rootNetworkUuid, UUID exportUuid) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = findRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
-        return rootNetworkNodeInfoEntity.getNodeExportNetwork().stream()
-                .filter(nodeExportEmbeddable -> nodeExportEmbeddable.getExportUuid().equals(exportUuid))
-                .map(NodeExportEmbeddable::getStatus)
-                .findFirst()
-                .orElseThrow(() -> new StudyException(NOT_FOUND, "Export network not found for exportUuid=" + exportUuid));
-    }
-
-    @Transactional
-    public NodeExportInfos getNodeExportInfos(UUID exportUuid) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeExportNetworkExportUuid(exportUuid).getFirst();
+/*    @Transactional
+    public NodeExportInfos getNodeExportInfos(UUID exportUuid, UUID rootNetworkUuid) {
+        Optional<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(exportUuid, rootNetworkUuid);
         List<NodeExportEmbeddable> nodesExport = null;
-        if (rootNetworkNodeInfoEntity != null) {
-            nodesExport = rootNetworkNodeInfoEntity.getNodeExportNetwork()
+        if (rootNetworkNodeInfoEntity.isPresent()) {
+            nodesExport = rootNetworkNodeInfoEntity.get().getNodeExportNetwork()
                 .stream().filter(embeddable -> embeddable.getExportUuid().equals(exportUuid)).toList();
         }
         return CollectionUtils.isNotEmpty(nodesExport) ? nodesExport.getFirst().toNodeExportInfos() : null;
-    }
-
-    private RootNetworkNodeInfoEntity findRootNetworkNodeInfo(UUID nodeUuid, UUID rootNetworkUuid) {
-        return rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
-                .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-    }
-
-    @Transactional
-    public void clearNodeExportNetworks(UUID nodeUuid, UUID rootNetworkUuid) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo = findRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
-        if (rootNetworkNodeInfo.getNodeExportNetwork() != null) {
-            rootNetworkNodeInfo.getNodeExportNetwork().clear();
-        } else {
-            rootNetworkNodeInfo.setNodeExportNetwork(new ArrayList<>());
-        }
-    }
+    }*/
 }

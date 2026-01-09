@@ -12,6 +12,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import lombok.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeExportInfos;
 
 import java.util.UUID;
 
@@ -53,8 +54,12 @@ public class NodeExportEmbeddable {
                 .build();
     }
 
-    public static NodeExportEmbeddable toNodeExportEmbeddable(UUID exportUuid, ExportNetworkStatus status, boolean exportToExplorer, UUID directoryUuid,
-                                                              String filename, String description) {
+    public static NodeExportEmbeddable toNodeExportEmbeddable(UUID exportUuid,
+                                                              ExportNetworkStatus status,
+                                                              boolean exportToExplorer,
+                                                              UUID directoryUuid,
+                                                              String filename,
+                                                              String description) {
         return NodeExportEmbeddable.builder()
                 .exportUuid(exportUuid)
                 .status(status)

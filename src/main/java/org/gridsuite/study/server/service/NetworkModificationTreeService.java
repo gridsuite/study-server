@@ -1265,8 +1265,11 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public void updateExportNetworkStatus(UUID nodeUuid, UUID exportUuid, ExportNetworkStatus status) {
-        nodesRepository.getReferenceById(nodeUuid).getNodeExportNetwork().add(NodeExportEmbeddable.toNodeExportEmbeddable(exportUuid, status));
+    public void updateExportNetworkStatus(UUID nodeUuid, UUID exportUuid, ExportNetworkStatus status, boolean exportToExplorer, UUID directoryUuid,
+                                          String filename, String description) {
+        nodesRepository.getReferenceById(nodeUuid).getNodeExportNetwork()
+                .add(NodeExportEmbeddable
+                .toNodeExportEmbeddable(exportUuid, status, exportToExplorer, directoryUuid, filename, description));
     }
 
     @Transactional
