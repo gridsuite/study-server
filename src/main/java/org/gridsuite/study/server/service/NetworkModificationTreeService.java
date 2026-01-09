@@ -1283,4 +1283,11 @@ public class NetworkModificationTreeService {
                 .map(ExportNetworkStatus::valueOf)
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "No export found for exportUuid=" + exportUuid));
     }
+
+    @Transactional
+    public NodeExportInfos getNodeExportInfos(UUID exportUuid, UUID nodeUuid) {
+        List<NodeExportEmbeddable> nodesExport = nodesRepository.getReferenceById(nodeUuid).getNodeExportNetwork();
+        nodesExport.stream().filter(embeddable -> embeddable.getExportUuid().equals(exportUuid)).toList();
+        return !CollectionUtils.isEmpty(nodesExport) ? nodesExport.getFirst().toNodeExportInfos() : null;
+    }
 }

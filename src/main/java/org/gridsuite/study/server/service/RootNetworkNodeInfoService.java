@@ -854,15 +854,4 @@ public class RootNetworkNodeInfoService {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
         pccMinService.stopPccMin(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
     }
-
-/*    @Transactional
-    public NodeExportInfos getNodeExportInfos(UUID exportUuid, UUID rootNetworkUuid) {
-        Optional<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(exportUuid, rootNetworkUuid);
-        List<NodeExportEmbeddable> nodesExport = null;
-        if (rootNetworkNodeInfoEntity.isPresent()) {
-            nodesExport = rootNetworkNodeInfoEntity.get().getNodeExportNetwork()
-                .stream().filter(embeddable -> embeddable.getExportUuid().equals(exportUuid)).toList();
-        }
-        return CollectionUtils.isNotEmpty(nodesExport) ? nodesExport.getFirst().toNodeExportInfos() : null;
-    }*/
 }

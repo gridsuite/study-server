@@ -23,6 +23,7 @@ import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeExportInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -854,14 +855,17 @@ public class ConsumerService {
                 UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
 
                 // With export uuid get
-                /*NodeExportInfos nodeExport = rootNetworkNodeInfoService.getNodeExportInfos(exportUuid);
+                Optional<NodeReceiver> receiverObj = getNodeReceiver(msg);
+                NodeExportInfos nodeExport = null;
+                if (receiverObj.isPresent()) {
+                    nodeExport = networkModificationTreeService.getNodeExportInfos(receiverObj.get().getNodeUuid(), exportUuid);
+                }
 
-                boolean exportToExplorer = nodeExport != null && nodeExport.exportToExplorer();
-                if (exportToExplorer) {
+                if (nodeExport != null && nodeExport.exportToExplorer()) {
                     //Call case server and create case in directory
                     UUID caseUuid = caseService.createCase(exportUuid, exportFolder, nodeExport.filename());
                     directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.filename(), DirectoryService.CASE, userId);
-                }*/
+                }
 
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
                 networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
