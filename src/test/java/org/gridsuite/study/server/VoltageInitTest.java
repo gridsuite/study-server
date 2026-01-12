@@ -888,7 +888,7 @@ class VoltageInitTest {
     }
 
     NodeEntity insertRootNode(StudyEntity study, UUID nodeId) {
-        NodeEntity node = nodeRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null));
+        NodeEntity node = nodeRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null, new ArrayList<>()));
         RootNodeInfoEntity rootNodeInfo = new RootNodeInfoEntity();
         rootNodeInfo.setIdNode(node.getIdNode());
         rootNodeInfoRepository.save(rootNodeInfo);
@@ -897,7 +897,7 @@ class VoltageInitTest {
 
     private NodeEntity insertNode(StudyEntity study, NodeEntity parentNode, String firstVariantId, String secondVariantId,
                                   RootNetworkEntity firstRootNetworkEntity, RootNetworkEntity secondRootNetworkEntity) {
-        NodeEntity nodeEntity = nodeRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
+        NodeEntity nodeEntity = nodeRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null, new ArrayList<>()));
         NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).name("node").modificationGroupUuid(UUID.randomUUID()).nodeType(NetworkModificationNodeType.SECURITY).build());
         createNodeLinks(firstRootNetworkEntity, modificationNodeInfoEntity, firstVariantId, UUID.randomUUID(), BuildStatus.BUILT);
         createNodeLinks(secondRootNetworkEntity, modificationNodeInfoEntity, secondVariantId, UUID.randomUUID(), BuildStatus.NOT_BUILT);

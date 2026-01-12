@@ -48,10 +48,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeSet;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -369,7 +366,7 @@ class NetworkModificationUnitTest {
     }
 
     private NodeEntity insertNode(StudyEntity study, UUID nodeId, NetworkModificationNodeType nodeType, String variantId, UUID reportUuid, NodeEntity parentNode, List<RootNetworkEntity> rootNetworkEntities, BuildStatus buildStatus) {
-        NodeEntity nodeEntity = nodeRepository.save(new NodeEntity(nodeId, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null));
+        NodeEntity nodeEntity = nodeRepository.save(new NodeEntity(nodeId, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null, new ArrayList<>()));
         NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).nodeType(nodeType).modificationGroupUuid(UUID.randomUUID()).build());
         rootNetworkEntities.forEach(rn -> {
             createNodeLinks(rn, modificationNodeInfoEntity, variantId, reportUuid, buildStatus);
@@ -387,7 +384,7 @@ class NetworkModificationUnitTest {
     }
 
     private NodeEntity insertRootNode(StudyEntity study) {
-        NodeEntity node = nodeRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null));
+        NodeEntity node = nodeRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null, new ArrayList<>()));
         RootNodeInfoEntity rootNodeInfo = new RootNodeInfoEntity();
         rootNodeInfo.setIdNode(node.getIdNode());
         rootNodeInfoRepository.save(rootNodeInfo);
