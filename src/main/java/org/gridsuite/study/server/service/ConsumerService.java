@@ -867,6 +867,7 @@ public class ConsumerService {
 
                 if (nodeExport != null && nodeExport.exportToExplorer()) {
                     //Call case server and create case in directory
+                    exportToExplorer = true;
                     UUID caseUuid = caseService.createCase(exportUuid, exportFolder, fileName);
                     directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, fileName, DirectoryService.CASE, userId);
                 }
