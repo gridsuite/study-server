@@ -1912,9 +1912,9 @@ public class StudyService {
     @Transactional
     public void buildFirstLevelChildren(@NonNull UUID studyUuid, @NonNull UUID parentNodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         List<NodeEntity> firstLevelChildren = networkModificationTreeService.getChildren(parentNodeUuid);
-        long builtNodesUpToQuota = getBuiltNodesUpToQuota(studyUuid, rootNetworkUuid, userId);
+        long allowedBuildNodesUpToQuota = getAllowedBuildNodesUpToQuota(studyUuid, rootNetworkUuid, userId);
         for (NodeEntity child : firstLevelChildren) {
-            if (builtNodesUpToQuota <= 0) {
+            if (allowedBuildNodesUpToQuota <= 0) {
                 return;
             }
 
@@ -1925,7 +1925,7 @@ public class StudyService {
                 userId,
                 null
             );
-            builtNodesUpToQuota--;
+            allowedBuildNodesUpToQuota--;
         }
     }
 
@@ -1938,7 +1938,7 @@ public class StudyService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
     }
 
-    private long getBuiltNodesUpToQuota(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+    private long getAllowedBuildNodesUpToQuota(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         return userAdminService.getUserMaxAllowedBuilds(userId).map(maxBuilds -> {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
             return maxBuilds - nbBuiltNodes;
@@ -2448,13 +2448,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void moveNetworkModifications(@NonNull UUID studyUuid,
-                                         UUID targetNodeUuid,
-                                         @NonNull UUID originNodeUuid,
-                                         List<UUID> modificationUuidList,
-                                         UUID beforeUuid,
-                                         boolean isTargetInDifferentNodeTree,
-                                         String userId) {
+    public void moveNetworkModifications(@NonNull UUID studyUuid, UUID targetNodeUuid, @NonNull UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, boolean isTargetInDifferentNodeTree, String userId) {
         boolean isTargetDifferentNode = !targetNodeUuid.equals(originNodeUuid);
 
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);

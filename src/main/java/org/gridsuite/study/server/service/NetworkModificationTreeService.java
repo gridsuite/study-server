@@ -604,7 +604,7 @@ public class NetworkModificationTreeService {
     }
 
     public boolean isRootOrConstructionNode(UUID nodeUuid) {
-        return self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) || isConstructionNode(nodeUuid);
+        return getNodeEntity(nodeUuid).getType() == NodeType.ROOT || isConstructionNode(nodeUuid);
     }
 
     private void assertInsertNode(
