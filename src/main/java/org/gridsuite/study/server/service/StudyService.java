@@ -1076,12 +1076,13 @@ public class StudyService {
                               boolean exportToExplorer, UUID parentDirectoryUuid, String description) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId, fileName,
-            new NodeExportInfos(exportToExplorer, parentDirectoryUuid, description), format, userId, parametersJson);
 
         if (exportToExplorer && directoryService.elementExists(parentDirectoryUuid, fileName, DirectoryService.CASE)) {
             throw new StudyException(ELEMENT_ALREADY_EXISTS);
         }
+
+        UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId, fileName,
+            new NodeExportInfos(exportToExplorer, parentDirectoryUuid, description), format, userId, parametersJson);
 
         networkModificationTreeService.updateExportNetworkStatus(nodeUuid, exportUuid, ExportNetworkStatus.RUNNING);
         return exportUuid;
