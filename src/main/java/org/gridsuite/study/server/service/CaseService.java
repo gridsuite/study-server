@@ -93,9 +93,9 @@ public class CaseService {
             .queryParam("caseUuid", caseUuid)
             .queryParam("folderName", folderName)
             .queryParam("fileName", fileName)
-            .buildAndExpand(caseUuid)
+            .build()
             .toUriString();
 
-        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.POST, null, UUID.class, caseUuid).getBody();
+        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 }
