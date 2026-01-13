@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.service.client;
 
 import lombok.Getter;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestTemplate;
@@ -22,7 +23,8 @@ public abstract class AbstractRestClient implements RestClient {
 
     private final RestTemplate restTemplate;
 
-    private final String baseUri;
+    @Setter
+    private String baseUri;
 
     protected AbstractRestClient(String baseUri, RestTemplate restTemplate) {
         this.baseUri = baseUri;

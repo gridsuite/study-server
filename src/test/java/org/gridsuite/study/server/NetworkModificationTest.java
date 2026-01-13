@@ -1921,7 +1921,7 @@ class NetworkModificationTest {
         Pair<List<UUID>, List<ModificationApplicationContext>> expectedBody = Pair.of(Collections.singletonList(modification1), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNodeUuid, NETWORK_UUID)));
         String expectedBodyStr = mapper.writeValueAsString(expectedBody);
         String url = "/v1/groups/" + modificationNode.getModificationGroupUuid();
-        WireMockUtils.verifyPutRequestWithUrlMatching(wireMockServer, groupStubId, url, Map.of(
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
                         "action", WireMock.equalTo("MOVE"),
                         "originGroupUuid", WireMock.equalTo(modificationNode.getModificationGroupUuid().toString()),
                         "build", WireMock.equalTo("false")),
@@ -1936,7 +1936,7 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
         url = "/v1/groups/" + modificationNode.getModificationGroupUuid();
-        WireMockUtils.verifyPutRequestWithUrlMatching(wireMockServer, groupStubId, url, Map.of(
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
                         "action", WireMock.equalTo("MOVE"),
                         "originGroupUuid", WireMock.equalTo(modificationNode.getModificationGroupUuid().toString()),
                         "build", WireMock.equalTo("false"),
@@ -2003,7 +2003,7 @@ class NetworkModificationTest {
         Pair<List<UUID>, List<ModificationApplicationContext>> modificationBody = Pair.of(List.of(modification1, modification2), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
         String expectedBody = mapper.writeValueAsString(modificationBody);
         String url = "/v1/groups/" + node1.getModificationGroupUuid();
-        WireMockUtils.verifyPutRequestWithUrlMatching(wireMockServer, groupStubId, url, Map.of(
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
                         "action", WireMock.equalTo("COPY")),
                 expectedBody);
 
@@ -2035,7 +2035,7 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
 
         url = "/v1/groups/" + node1.getModificationGroupUuid();
-        WireMockUtils.verifyPutRequestWithUrlMatching(wireMockServer, groupStubId, url, Map.of(
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
                         "action", WireMock.equalTo("COPY")),
                 expectedBody);
     }
@@ -2075,7 +2075,7 @@ class NetworkModificationTest {
         Pair<List<UUID>, List<ModificationApplicationContext>> modificationBody = Pair.of(modifications, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(studyTestUtils.getOneRootNetworkUuid(studyEntity1.getId()), node1.getId(), NETWORK_UUID)));
         String expectedBody = mapper.writeValueAsString(modificationBody);
         String url = "/v1/groups/" + node1.getModificationGroupUuid();
-        WireMockUtils.verifyPutRequestWithUrlMatching(wireMockServer, groupStubId, url, Map.of(
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
                 "action", WireMock.equalTo("COPY")),
             expectedBody);
 
@@ -2155,7 +2155,7 @@ class NetworkModificationTest {
         Pair<List<UUID>, List<ModificationApplicationContext>> expectedBody = Pair.of(List.of(modification1, modification2), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
         String expectedBodyStr = mapper.writeValueAsString(expectedBody);
         String url = "/v1/groups/" + node1.getModificationGroupUuid();
-        WireMockUtils.verifyPutRequestWithUrlMatching(wireMockServer, groupStubId, url, Map.of(
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
                         "action", WireMock.equalTo("MOVE"),
                         "originGroupUuid", WireMock.equalTo(node1.getModificationGroupUuid().toString()),
                         "build", WireMock.equalTo("false")),
@@ -2180,7 +2180,7 @@ class NetworkModificationTest {
         expectedBody = Pair.of(List.of(modification1, modification2), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
         expectedBodyStr = mapper.writeValueAsString(expectedBody);
         url = "/v1/groups/" + node2.getModificationGroupUuid();
-        WireMockUtils.verifyPutRequestWithUrlMatching(wireMockServer, groupStubId, url, Map.of(
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
                         "action", WireMock.equalTo("MOVE"),
                         "originGroupUuid", WireMock.equalTo(node1.getModificationGroupUuid().toString()),
                         "build", WireMock.equalTo("true")),

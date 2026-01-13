@@ -9,6 +9,7 @@ package org.gridsuite.study.server.utils.wiremock;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.admin.model.ServeEventQuery;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.matching.MultiValuePattern;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
@@ -44,13 +45,21 @@ public final class WireMockUtils {
         verifyRequest(wireMockServer, stubId, requestBuilder, queryParams, body, nbRequests);
     }
 
-    public static void verifyPutRequestWithUrlMatching(WireMockServer wireMockServer, UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams, String body) {
-        verifyPutRequest(wireMockServer, stubId, urlPath, true, queryParams, body);
+    public static void verifyPutRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams, String body) {
+        verifyPutRequest(wireMockServer, stubId, urlPath, false, queryParams, body, 1);
     }
 
     public static void verifyPutRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body) {
+        verifyPutRequest(wireMockServer, stubId, urlPath, regexMatching, queryParams, body, 1);
+    }
+
+    public static void verifyPutRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams, String body, int nbRequests) {
         RequestPatternBuilder requestBuilder = regexMatching ? WireMock.putRequestedFor(WireMock.urlPathMatching(urlPath)) : WireMock.putRequestedFor(WireMock.urlPathEqualTo(urlPath));
-        verifyRequest(wireMockServer, stubId, requestBuilder, queryParams, body, 1);
+        verifyRequest(wireMockServer, stubId, requestBuilder, queryParams, body, nbRequests);
+    }
+
+    public static void verifyDeleteRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams) {
+        verifyDeleteRequest(wireMockServer, stubId, urlPath, false, queryParams, 1);
     }
 
     public static void verifyDeleteRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams) {
@@ -63,11 +72,36 @@ public final class WireMockUtils {
     }
 
     public static void verifyGetRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams) {
-        verifyGetRequest(wireMockServer, stubId, urlPath, queryParams, 1);
+        verifyGetRequest(wireMockServer, stubId, urlPath, false, queryParams, 1);
     }
 
-    public static void verifyGetRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams, int nbRequests) {
+    public static void verifyGetRequest(WireMockServer wireMockServer, UUID stubId, String urlPath,
+                                        Map<String, StringValuePattern> queryParams, int nbRequests) {
+        verifyGetRequest(wireMockServer, stubId, urlPath, false, queryParams, nbRequests);
+    }
+
+    public static void verifyGetRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, boolean regexMatching,
+                                        Map<String, StringValuePattern> queryParams, int nbRequests) {
+        RequestPatternBuilder requestBuilder = regexMatching
+            ? WireMock.getRequestedFor(WireMock.urlPathMatching(urlPath))
+            : WireMock.getRequestedFor(WireMock.urlPathEqualTo(urlPath));
+        verifyRequest(wireMockServer, stubId, requestBuilder, queryParams, null, nbRequests);
+    }
+
+    public static void verifyGetRequestWithMultiValueParams(WireMockServer wireMockServer, UUID stubId, String urlPath,
+                                                            Map<String, MultiValuePattern> multiValueQueryParams) {
         RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo(urlPath));
+        multiValueQueryParams.forEach(requestBuilder::withQueryParam);
+        wireMockServer.verify(1, requestBuilder);
+        removeRequestForStub(wireMockServer, stubId, 1);
+    }
+
+    public static void verifyHeadRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams) {
+        verifyHeadRequest(wireMockServer, stubId, urlPath, queryParams, 1);
+    }
+
+    public static void verifyHeadRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams, int nbRequests) {
+        RequestPatternBuilder requestBuilder = WireMock.headRequestedFor(WireMock.urlPathEqualTo(urlPath));
         verifyRequest(wireMockServer, stubId, requestBuilder, queryParams, null, nbRequests);
     }
 
@@ -81,9 +115,26 @@ public final class WireMockUtils {
     }
 
     public static void removeRequestForStub(WireMockServer wireMockServer, UUID stubId, int nbRequests) {
-        List<ServeEvent> serveEvents = wireMockServer.getServeEvents(ServeEventQuery.forStubMapping(stubId)).getServeEvents();
-        assertEquals(nbRequests, serveEvents.size());
-        for (ServeEvent serveEvent : serveEvents) {
+        List<ServeEvent> matchedServeEvents = wireMockServer.getServeEvents(ServeEventQuery.forStubMapping(stubId)).getServeEvents();
+        List<ServeEvent> otherServeEvents = wireMockServer.getAllServeEvents().stream()
+            .filter(event -> event.getStubMapping().getId() != null && !event.getStubMapping().getId().equals(stubId))
+            .toList();
+        StringBuilder requestsInfo = new StringBuilder();
+        matchedServeEvents.forEach(event -> requestsInfo
+            .append("\nStub ID ").append(event.getStubMapping().getId())
+            .append("\nURL: ").append(event.getRequest().getUrl())
+            .append("\nMethod: ").append(event.getRequest().getMethod())
+            .append("\nQuery params: ").append(event.getRequest().getQueryParams())
+            .append("\nBody: ").append(event.getRequest().getBodyAsString()));
+        StringBuilder otherRequestsInfo = new StringBuilder();
+        otherServeEvents.forEach(event -> otherRequestsInfo
+            .append("\nStub ID ").append(event.getStubMapping().getId())
+            .append("\nURL: ").append(event.getRequest().getUrl())
+            .append("\nMethod: ").append(event.getRequest().getMethod())
+            .append("\nQuery params: ").append(event.getRequest().getQueryParams())
+            .append("\nBody: ").append(event.getRequest().getBodyAsString()));
+        assertEquals(nbRequests, matchedServeEvents.size(), "Wrong number of requests for stub " + stubId + " \n Matched requests : " + requestsInfo + "\n Remaining requests : " + otherRequestsInfo);
+        for (ServeEvent serveEvent : matchedServeEvents) {
             wireMockServer.removeServeEvent(serveEvent.getId());
         }
     }
