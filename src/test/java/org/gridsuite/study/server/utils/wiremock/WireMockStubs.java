@@ -751,6 +751,14 @@ public class WireMockStubs {
             Map.of("reportIds", WireMock.havingExactly(reportIdMatchers)));
     }
 
+    public void verifyGetReportLogs(UUID stubId, List<UUID> reportIds) {
+        StringValuePattern[] reportIdMatchers = reportIds.stream()
+            .map(uuid -> WireMock.equalTo(uuid.toString()))
+            .toArray(StringValuePattern[]::new);
+        verifyGetRequestWithMultiValueParams(wireMock, stubId, "/v1/reports/logs",
+            Map.of("reportIds", WireMock.havingExactly(reportIdMatchers)));
+    }
+
     public void verifyReindexAll(UUID stubId, String networkUuid) {
         verifyPostRequest(wireMock, stubId, "/v1/networks/" + networkUuid + "/reindex-all", Map.of());
     }

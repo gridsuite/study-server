@@ -141,7 +141,7 @@ class StudyTest {
     private static final String USER_ID_HEADER = "userId";
     private static final UUID NETWORK_UUID = UUID.fromString(NETWORK_UUID_STRING);
     private static final UUID CLONED_NETWORK_UUID = UUID.fromString(CLONED_NETWORK_UUID_STRING);
-    private static final UUID NOT_EXISTING_NETWORK_UUID = UUID.randomUUID();
+    private static final UUID NOT_EXISTING_NETWORK_UUID = UUID.fromString("38400000-8cf0-11bd-b23e-10b96e4ef00f");
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);
     private static final UUID NOT_EXISTING_NETWORK_CASE_UUID = UUID.fromString(NOT_EXISTING_NETWORK_CASE_UUID_STRING);
     private static final UUID CLONED_CASE_UUID = UUID.fromString(CLONED_CASE_UUID_STRING);
@@ -954,7 +954,7 @@ class StudyTest {
         UUID node1ReportId = networkModificationTreeService.getReportUuid(node1.getId(), firstRootNetworkUuid).orElseThrow();
         UUID node2ReportId = networkModificationTreeService.getReportUuid(node2.getId(), firstRootNetworkUuid).orElseThrow();
 
-        UUID stubGetReportLogsSearchId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/reports/logs/search"))
+        UUID stubGetReportLogsId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/reports/logs"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .withBody(mapper.writeValueAsString(REPORT_PAGE)))).getId();
 
@@ -972,7 +972,7 @@ class StudyTest {
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<ReportLog> reportLogs = mapper.readValue(resultAsString, new TypeReference<ReportPage>() { }).content();
         assertEquals(1, reportLogs.size());
-        wireMockStubs.verifyGetReportLogsSearch(stubGetReportLogsSearchId, List.of(rootNodeReportId, modificationNodeReportId, node1ReportId, node2ReportId));
+        wireMockStubs.verifyGetReportLogs(stubGetReportLogsId, List.of(rootNodeReportId, modificationNodeReportId, node1ReportId, node2ReportId));
 
         //get logs of node2 and all its parents (should not get node3 logs) with severityFilter and messageFilter param
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, node2.getId()).header(USER_ID_HEADER, "userId"))
@@ -980,7 +980,7 @@ class StudyTest {
         resultAsString = mvcResult.getResponse().getContentAsString();
         reportLogs = mapper.readValue(resultAsString, new TypeReference<ReportPage>() { }).content();
         assertEquals(1, reportLogs.size());
-        wireMockStubs.verifyGetReportLogsSearch(stubGetReportLogsSearchId, List.of(rootNodeReportId, modificationNodeReportId, node1ReportId, node2ReportId));
+        wireMockStubs.verifyGetReportLogs(stubGetReportLogsId, List.of(rootNodeReportId, modificationNodeReportId, node1ReportId, node2ReportId));
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid, String variantId, String nodeName, String userId) throws Exception {
