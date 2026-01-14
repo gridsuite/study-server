@@ -1027,10 +1027,14 @@ class StudyTest {
     }
 
     private UUID createStudyWithStubs(String userId, UUID caseUuid) throws Exception {
+        return createStudyWithStubs(userId, caseUuid, NETWORK_INFOS);
+    }
+
+    private UUID createStudyWithStubs(String userId, UUID caseUuid, NetworkInfos networkInfos) throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(userId, null, caseUuid.toString());
         CreateParameterStubs createParameterStubs = stubCreateParameters();
 
-        UUID studyUuid = createStudy(userId, caseUuid);
+        UUID studyUuid = createStudy(userId, caseUuid, networkInfos);
 
         createStudyStubs.verify(wireMockStubs);
         createParameterStubs.verify(wireMockStubs, 1, 7, 1, 1);
@@ -1039,9 +1043,13 @@ class StudyTest {
     }
 
     private UUID createStudy(String userId, UUID caseUuid) throws Exception {
+        return createStudy(userId, caseUuid, NETWORK_INFOS);
+    }
+
+    private UUID createStudy(String userId, UUID caseUuid, NetworkInfos networkInfos) throws Exception {
         CountDownLatch countDownLatch = new CountDownLatch(1);
         UUID postNetworkStubId = wireMockStubs.networkConversionServer
-            .stubImportNetworkWithPostAction(caseUuid.toString(), FIRST_VARIANT_ID, NETWORK_INFOS, "UCTE", countDownLatch);
+            .stubImportNetworkWithPostAction(caseUuid.toString(), FIRST_VARIANT_ID, networkInfos, "UCTE", countDownLatch);
         UUID stubDisableCaseExpirationId = wireMockStubs.caseServer.stubDisableCaseExpiration(caseUuid.toString());
 
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", caseUuid)
@@ -2871,7 +2879,7 @@ class StudyTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", UUID.randomUUID(), UUID.randomUUID()))
             .andExpectAll(status().isNotFound());
 
-        UUID notExistingNetworkStudyUuid = createStudyWithStubs("userId", NOT_EXISTING_NETWORK_CASE_UUID);
+        UUID notExistingNetworkStudyUuid = createStudyWithStubs("userId", NOT_EXISTING_NETWORK_CASE_UUID, NOT_EXISTING_NETWORK_INFOS);
         UUID notExistingNetworkRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(notExistingNetworkStudyUuid);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", notExistingNetworkStudyUuid, notExistingNetworkRootNetworkUuid))
@@ -2894,6 +2902,8 @@ class StudyTest {
                         content().string("NOT_INDEXED"));
         indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
 
+        wireMockStubs.verifyIndexedEquipments(stubIndexedEquipmentsNoContentId, NETWORK_UUID_STRING);
+
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", study1Uuid, study1RootNetworkUuid))
             .andExpect(status().isOk());
 
@@ -2901,13 +2911,13 @@ class StudyTest {
         Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals(study1Uuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
+        wireMockStubs.verifyReindexAll(stubReindexAllId, NETWORK_UUID_STRING);
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", study1Uuid, study1RootNetworkUuid))
             .andExpectAll(status().isOk(),
                         content().string("INDEXED"));
 
-        wireMockStubs.verifyReindexAll(stubReindexAllId, NETWORK_UUID_STRING);
-        wireMockStubs.verifyIndexedEquipments(stubIndexedEquipmentsId, NETWORK_UUID_STRING, 2);
+        wireMockStubs.verifyIndexedEquipments(stubIndexedEquipmentsId, NETWORK_UUID_STRING);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", study1Uuid, study1RootNetworkUuid))
             .andExpect(status().is5xxServerError());
