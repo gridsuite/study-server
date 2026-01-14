@@ -383,27 +383,6 @@ class StudyTest {
         }
     }
 
-    private static class CreateParameterStubs {
-        UUID stubCreateParametersId;
-        UUID stubParametersDefaultId;
-        UUID stubSpreadsheetConfigDefaultId;
-        UUID stubNetworkVisualizationParamsDefaultId;
-
-        public void verify(WireMockStubs wireMockStubs, int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests) {
-            if (stubCreateParametersId != null) {
-                wireMockStubs.verifyParameters(stubCreateParametersId, createParametersNbRequests);
-            }
-            if (stubParametersDefaultId != null) {
-                wireMockStubs.verifyParametersDefault(stubParametersDefaultId, parametersDefaultNbRequests);
-            }
-            if (stubSpreadsheetConfigDefaultId != null) {
-                wireMockStubs.verifySpreadsheetConfigDefault(stubSpreadsheetConfigDefaultId, spreadsheetConfigDefaultNbRequests);
-            }
-            if (stubNetworkVisualizationParamsDefaultId != null) {
-                wireMockStubs.verifyNetworkVisualizationParamsDefault(stubNetworkVisualizationParamsDefaultId, networkVisualizationParamsDefaultNbRequests);
-            }
-        }
-    }
 
     private static class DuplicateParameterStubs {
         UUID stubParametersDuplicateFromId;
@@ -451,13 +430,18 @@ class StudyTest {
         return stubs;
     }
 
-    private CreateParameterStubs stubCreateParameters() throws Exception {
-        CreateParameterStubs stubs = new CreateParameterStubs();
-        stubs.stubCreateParametersId = wireMockStubs.stubParameters(mapper.writeValueAsString(UUID.randomUUID()));
-        stubs.stubParametersDefaultId = wireMockStubs.stubParametersDefault(mapper.writeValueAsString(UUID.randomUUID()));
-        stubs.stubSpreadsheetConfigDefaultId = wireMockStubs.stubSpreadsheetConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
-        stubs.stubNetworkVisualizationParamsDefaultId = wireMockStubs.stubNetworkVisualizationParamsDefault(DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
-        return stubs;
+    private void stubCreateParameters() throws Exception {
+        wireMockStubs.stubParameters(mapper.writeValueAsString(UUID.randomUUID()));
+        wireMockStubs.stubParametersDefault(mapper.writeValueAsString(UUID.randomUUID()));
+        wireMockStubs.stubSpreadsheetConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
+        wireMockStubs.stubNetworkVisualizationParamsDefault(DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
+    }
+
+    private void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests) {
+        wireMockStubs.verifyParameters(createParametersNbRequests);
+        wireMockStubs.verifyParametersDefault(parametersDefaultNbRequests);
+        wireMockStubs.verifySpreadsheetConfigDefault(spreadsheetConfigDefaultNbRequests);
+        wireMockStubs.verifyNetworkVisualizationParamsDefault(networkVisualizationParamsDefaultNbRequests);
     }
 
     private DuplicateParameterStubs stubDuplicateParameters() throws Exception {
@@ -839,9 +823,9 @@ class StudyTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
 
-        UUID stubGetReportId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/reports/[^/]+"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/reports/[^/]+"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .withBody(mapper.writeValueAsString(REPORT_TEST)))).getId();
+                .withBody(mapper.writeValueAsString(REPORT_TEST))));
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report?reportType=NETWORK_MODIFICATION", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn();
@@ -849,7 +833,7 @@ class StudyTest {
         List<Report> reports = mapper.readValue(resultAsString, new TypeReference<>() { });
         assertEquals(1, reports.size());
         assertThat(reports.get(0), new MatcherReport(REPORT_TEST));
-        wireMockStubs.verifyGetReport(stubGetReportId);
+        wireMockStubs.verifyGetReport();
     }
 
     @Test
@@ -858,7 +842,7 @@ class StudyTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
-        UUID stubGetReportLogsId = wireMockStubs.stubGetReportsLogs(mapper.writeValueAsString(REPORT_PAGE));
+        wireMockStubs.stubGetReportsLogs(mapper.writeValueAsString(REPORT_PAGE));
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?reportId=" + REPORT_ID, studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn();
@@ -866,7 +850,7 @@ class StudyTest {
         List<ReportLog> reportLogs = mapper.readValue(resultAsString, new TypeReference<ReportPage>() { }).content();
         assertEquals(1, reportLogs.size());
         assertThat(reportLogs.get(0), new MatcherReportLog(REPORT_LOGS.getFirst()));
-        wireMockStubs.verifyGetReportLogs(stubGetReportLogsId, REPORT_ID.toString());
+        wireMockStubs.verifyGetReportLogs(REPORT_ID.toString());
 
         //test with severityFilter and messageFilter param
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?reportId=" + REPORT_ID + "&severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
@@ -875,7 +859,7 @@ class StudyTest {
         reportLogs = mapper.readValue(resultAsString, new TypeReference<ReportPage>() { }).content();
         assertEquals(1, reportLogs.size());
         assertThat(reportLogs.get(0), new MatcherReportLog(REPORT_LOGS.getFirst()));
-        wireMockStubs.verifyGetReportLogs(stubGetReportLogsId, REPORT_ID.toString(), "WARN", "testMsgFilter");
+        wireMockStubs.verifyGetReportLogs(REPORT_ID.toString(), "WARN", "testMsgFilter");
     }
 
     @Test
@@ -884,16 +868,16 @@ class StudyTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
-        UUID stubGetReportLogsId = wireMockStubs.stubGetReportsLogs(mapper.writeValueAsString(REPORT_PAGE));
+        wireMockStubs.stubGetReportsLogs(mapper.writeValueAsString(REPORT_PAGE));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?reportId=" + REPORT_ID + "&paged=true&page=1&size=10", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        wireMockStubs.verifyGetReportLogsPaged(stubGetReportLogsId, REPORT_ID.toString(), 1, 10);
+        wireMockStubs.verifyGetReportLogsPaged(REPORT_ID.toString(), 1, 10);
 
         //test with severityFilter and messageFilter param
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?reportId=" + REPORT_ID + "&paged=true&page=1&size=10&severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        wireMockStubs.verifyGetReportLogsPaged(stubGetReportLogsId, REPORT_ID.toString(), 1, 10, "WARN", "testMsgFilter");
+        wireMockStubs.verifyGetReportLogsPaged(REPORT_ID.toString(), 1, 10, "WARN", "testMsgFilter");
     }
 
     @Test
@@ -902,16 +886,16 @@ class StudyTest {
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
-        UUID stubGetReportLogsId = wireMockStubs.stubGetReportsLogs(mapper.writeValueAsString(REPORT_PAGE));
+        wireMockStubs.stubGetReportsLogs(mapper.writeValueAsString(REPORT_PAGE));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs/search?reportId=" + REPORT_ID + "&searchTerm=testTerm&pageSize=10", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        wireMockStubs.verifyGetReportLogsSearchWithReportId(stubGetReportLogsId, REPORT_ID.toString(), "testTerm", 10);
+        wireMockStubs.verifyGetReportLogsSearchWithReportId(REPORT_ID.toString(), "testTerm", 10);
 
         //test with severityFilter and messageFilter param
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs/search?reportId=" + REPORT_ID + "&searchTerm=testTerm&pageSize=10&severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
-        wireMockStubs.verifyGetReportLogsSearchWithReportId(stubGetReportLogsId, REPORT_ID.toString(), "testTerm", 10, "WARN", "testMsgFilter");
+        wireMockStubs.verifyGetReportLogsSearchWithReportId(REPORT_ID.toString(), "testTerm", 10, "WARN", "testMsgFilter");
     }
 
     @Test
@@ -1032,12 +1016,12 @@ class StudyTest {
 
     private UUID createStudyWithStubs(String userId, UUID caseUuid, NetworkInfos networkInfos) throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(userId, null, caseUuid.toString());
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
 
         UUID studyUuid = createStudy(userId, caseUuid, networkInfos);
 
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 1, 7, 1, 1);
+        verifyCreateParameters(1, 7, 1, 1);
 
         return studyUuid;
     }
@@ -1074,7 +1058,7 @@ class StudyTest {
 
     private UUID createStudyWithDuplicateCase(String userId, UUID caseUuid) throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(userId, null, caseUuid.toString());
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         UUID stubDisableCaseExpirationClonedId = wireMockStubs.caseServer.stubDisableCaseExpiration(CLONED_CASE_UUID_STRING);
         UUID stubDuplicateCaseId = wireMockStubs.caseServer.stubDuplicateCaseWithBody(CASE_UUID_STRING, mapper.writeValueAsString(CLONED_CASE_UUID));
 
@@ -1101,7 +1085,7 @@ class StudyTest {
         // note: it's a new case UUID
         wireMockStubs.networkConversionServer.verifyImportNetwork(postNetworkStubId, CLONED_CASE_UUID_STRING, FIRST_VARIANT_ID);
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 1, 7, 1, 1);
+        verifyCreateParameters(1, 7, 1, 1);
         wireMockStubs.caseServer.verifyDuplicateCase(stubDuplicateCaseId, caseUuid.toString());
         wireMockStubs.caseServer.verifyDisableCaseExpiration(stubDisableCaseExpirationClonedId, CLONED_CASE_UUID_STRING);
         return studyUuid;
@@ -1240,7 +1224,7 @@ class StudyTest {
         CountDownLatch countDownLatch = new CountDownLatch(1);
 
         CreateStudyStubs createStudyStubs = stubCreateStudy("userId", USER_DEFAULT_PROFILE_JSON, NEW_STUDY_CASE_UUID);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
 
         UUID postNetworkStubId = wireMockStubs.networkConversionServer
             .stubImportNetworkWithPostAction(NEW_STUDY_CASE_UUID, FIRST_VARIANT_ID, NETWORK_INFOS, "UCTE", countDownLatch);
@@ -1338,7 +1322,7 @@ class StudyTest {
 
         // Verify HTTP requests were sent to remote services
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 1, 7, 1, 1);
+        verifyCreateParameters(1, 7, 1, 1);
         wireMockStubs.caseServer.verifyDisableCaseExpiration(stubDisableCaseExpirationId, NEW_STUDY_CASE_UUID);
         wireMockStubs.networkConversionServer.verifyImportNetwork(postNetworkStubId, NEW_STUDY_CASE_UUID, FIRST_VARIANT_ID);
     }
@@ -1416,146 +1400,146 @@ class StudyTest {
     @Test
     void testCreateStudyWithDefaultLoadflowUserHasNoParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
 
         createStudy(NO_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 1, 7, 1, 1);
+        verifyCreateParameters(1, 7, 1, 1);
     }
 
     @Test
     void testCreateStudyWithDefaultLoadflowUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
-        UUID stubParametersDuplicateFromNotFoundId = wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING);
+        wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING);
 
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 4, 0, 0);
-        wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromNotFoundId, PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING);
+        verifyCreateParameters(0, 4, 0, 0);
+        wireMockStubs.verifyParametersDuplicateFrom(PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
     }
 
     @Test
     void testCreateStudyWithDefaultLoadflowUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
-        UUID stubParametersDuplicateFromId = wireMockStubs.stubParametersDuplicateFrom(PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING, DUPLICATED_LOADFLOW_PARAMS_JSON);
+        wireMockStubs.stubParametersDuplicateFrom(PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING, DUPLICATED_LOADFLOW_PARAMS_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 3, 0, 0);
-        wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromId, PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING);
+        verifyCreateParameters(0, 3, 0, 0);
+        wireMockStubs.verifyParametersDuplicateFrom(PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
     }
 
     @Test
     void testCreateStudyWithDefaultSecurityAnalysisUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
-        UUID stubParametersDuplicateFromNotFoundId = wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
+        wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
 
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 4, 0, 0);
-        wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromNotFoundId, PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
+        verifyCreateParameters(0, 4, 0, 0);
+        wireMockStubs.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
     }
 
     @Test
     void testCreateStudyWithDefaultSecurityAnalysisUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
-        UUID stubParametersDuplicateFromId = wireMockStubs.stubParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_SECURITY_ANALYSIS_PARAMS_JSON);
+        wireMockStubs.stubParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_SECURITY_ANALYSIS_PARAMS_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 3, 0, 0);
-        wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromId, PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
+        verifyCreateParameters(0, 3, 0, 0);
+        wireMockStubs.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
     }
 
     @Test
     void testCreateStudyWithDefaultSensitivityAnalysisUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
-        UUID stubParametersDuplicateFromNotFoundId = wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
+        wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
 
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 4, 0, 0);
-        wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromNotFoundId, PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
+        verifyCreateParameters(0, 4, 0, 0);
+        wireMockStubs.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
     }
 
     @Test
     void testCreateStudyWithDefaultSensitivityAnalysisUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
-        UUID stubParametersDuplicateFromId = wireMockStubs.stubParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_SENSITIVITY_ANALYSIS_PARAMS_JSON);
+        wireMockStubs.stubParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_SENSITIVITY_ANALYSIS_PARAMS_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 3, 0, 0);
-        wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromId, PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
+        verifyCreateParameters(0, 3, 0, 0);
+        wireMockStubs.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
     }
 
     @Test
     void testCreateStudyWithDefaultShortcircuitUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
-        UUID stubParametersDuplicateFromNotFoundId = wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_SHORTCIRCUIT_INVALID_PARAMETERS_UUID_STRING);
+        wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_SHORTCIRCUIT_INVALID_PARAMETERS_UUID_STRING);
 
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 4, 0, 0);
-        wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromNotFoundId, PROFILE_SHORTCIRCUIT_INVALID_PARAMETERS_UUID_STRING);
+        verifyCreateParameters(0, 4, 0, 0);
+        wireMockStubs.verifyParametersDuplicateFrom(PROFILE_SHORTCIRCUIT_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
     }
 
     @Test
     void testCreateStudyWithDefaultShortcircuitUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
-        UUID stubParametersDuplicateFromId = wireMockStubs.stubParametersDuplicateFrom(PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING, DUPLICATED_SHORTCIRCUIT_PARAMS_JSON);
+        wireMockStubs.stubParametersDuplicateFrom(PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING, DUPLICATED_SHORTCIRCUIT_PARAMS_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 3, 0, 0);
-        wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromId, PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING);
+        verifyCreateParameters(0, 3, 0, 0);
+        wireMockStubs.verifyParametersDuplicateFrom(PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
     }
 
     @Test
     void testCreateStudyWithDefaultSpreadsheetConfigCollectionUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
         UUID stubSpreadsheetConfigDuplicateFromNotFoundId = wireMockStubs.stubSpreadsheetConfigDuplicateFromNotFound(PROFILE_SPREADSHEET_CONFIG_COLLECTION_INVALID_UUID_STRING);
 
@@ -1563,7 +1547,7 @@ class StudyTest {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 3, 1, 0);
+        verifyCreateParameters(0, 3, 1, 0);
         wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromNotFoundId, PROFILE_SPREADSHEET_CONFIG_COLLECTION_INVALID_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 5, 0, 1);
     }
@@ -1571,7 +1555,7 @@ class StudyTest {
     @Test
     void testCreateStudyWithDefaultSpreadsheetConfigCollectionUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
         UUID stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFrom(PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING, DUPLICATED_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
 
@@ -1579,7 +1563,7 @@ class StudyTest {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 3, 0, 0);
+        verifyCreateParameters(0, 3, 0, 0);
         wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromId, PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 5, 0, 1);
     }
@@ -1587,7 +1571,7 @@ class StudyTest {
     @Test
     void testCreateStudyWithDefaultNetworkVisualizationsParametersUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
         UUID stubNetworkVisualizationParamsDuplicateFromNotFoundId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromNotFound(PROFILE_NETWORK_VISUALIZATION_INVALID_PARAMETERS_UUID_STRING);
 
@@ -1595,7 +1579,7 @@ class StudyTest {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 3, 0, 1);
+        verifyCreateParameters(0, 3, 0, 1);
         wireMockStubs.verifyNetworkVisualizationParamsDuplicateFrom(stubNetworkVisualizationParamsDuplicateFromNotFoundId, PROFILE_NETWORK_VISUALIZATION_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 5, 1, 0);
     }
@@ -1603,7 +1587,7 @@ class StudyTest {
     @Test
     void testCreateStudyWithDefaultNetworkVisualizationsParametersUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
         UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFrom(PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING, DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
 
@@ -1611,7 +1595,7 @@ class StudyTest {
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 3, 0, 0);
+        verifyCreateParameters(0, 3, 0, 0);
         wireMockStubs.verifyNetworkVisualizationParamsDuplicateFrom(stubNetworkVisualizationParamsDuplicateFromId, PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 5, 1, 0);
     }
@@ -1619,32 +1603,32 @@ class StudyTest {
     @Test
     void testCreateStudyWithDefaultVoltageInitUserHasInvalidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
-        UUID stubParametersDuplicateFromNotFoundId = wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING);
+        wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING);
 
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 1, 3, 0, 0);
-        wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromNotFoundId, PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING);
+        verifyCreateParameters(1, 3, 0, 0);
+        wireMockStubs.verifyParametersDuplicateFrom(PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
     }
 
     @Test
     void testCreateStudyWithDefaultVoltageInitUserHasValidParamsInProfile() throws Exception {
         CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        CreateParameterStubs createParameterStubs = stubCreateParameters();
+        stubCreateParameters();
         DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
-        UUID stubParametersDuplicateFromId = wireMockStubs.stubParametersDuplicateFrom(PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING, DUPLICATED_VOLTAGE_INIT_PARAMS_JSON);
+        wireMockStubs.stubParametersDuplicateFrom(PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING, DUPLICATED_VOLTAGE_INIT_PARAMS_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
         createStudyStubs.verify(wireMockStubs);
-        createParameterStubs.verify(wireMockStubs, 0, 3, 0, 0);
-        wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromId, PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING);
+        verifyCreateParameters(0, 3, 0, 0);
+        wireMockStubs.verifyParametersDuplicateFrom(PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
     }
 
@@ -1657,7 +1641,7 @@ class StudyTest {
         // add modification on node "node1"
         String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
 
-        UUID stubPostId = wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
+        wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), rootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
@@ -1668,12 +1652,12 @@ class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkUuid, node1.getId(), NETWORK_UUID)));
-        wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+        wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         // add modification on node "node2"
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
 
-        stubPostId = wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
+        wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), rootNetworkUuid)
             .contentType(MediaType.APPLICATION_JSON)
             .content(createLoadAttributes)
@@ -1684,7 +1668,7 @@ class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkUuid, node2.getId(), NETWORK_UUID)));
-        wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+        wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getOneRootNetworkUuid(study1Uuid),
             RootNetworkNodeInfo.builder()
@@ -1834,29 +1818,25 @@ class StudyTest {
             .willReturn(WireMock.ok())).getId();
         UUID stubUuid = wireMockStubs.stubDuplicateModificationGroup(mapper.writeValueAsString(Map.of()));
         UUID stubUserProfileId = wireMockStubs.stubUserProfile(userId);
+        UUID stubUserProfileNadConfigId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + NAD_CONFIG_USER_ID + "/profile"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(USER_PROFILE_WITH_DIAGRAM_CONFIG_PARAMS_JSON))).getId();
         UUID stubDuplicateCaseId = wireMockStubs.caseServer.stubDuplicateCaseWithBody(CASE_UUID_STRING, mapper.writeValueAsString(CLONED_CASE_UUID));
-        // Reports stubs
         UUID stubReportsDuplicateId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/reports/.*/duplicate"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
 
-        UUID stubParametersDuplicateFromId = wireMockStubs.stubParametersDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
+        wireMockStubs.stubParametersDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromAny(DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
 
-        //TODO ?
-//        // Diagram grid layout stubs
-//        UUID stubDiagramGridLayoutId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/diagram-grid-layout"))
-//            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
-//
-//        // Network area diagram config stubs
-//        UUID stubNetworkAreaDiagramConfigId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-area-diagram/config"))
-//            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
-//            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
-//
-//        // Directory elements stubs
-//        UUID stubElementNameId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/elements/" + PROFILE_DIAGRAM_CONFIG_UUID_STRING + "/name"))
-//            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(NAD_ELEMENT_NAME)))).getId();
+        // NAD specific mocks
+        UUID stubDiagramGridLayoutId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/diagram-grid-layout"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
+        UUID stubNetworkAreaDiagramConfigId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-area-diagram/config"))
+            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
+        UUID stubElementNameId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/elements/" + PROFILE_DIAGRAM_CONFIG_UUID_STRING + "/name"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(NAD_ELEMENT_NAME)))).getId();
 
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                         .header(USER_ID_HEADER, userId))
@@ -1950,39 +1930,40 @@ class StudyTest {
         RootNetworkEntity rootNetworkEntity = studyTestUtils.getOneRootNetwork(duplicatedStudy.getId());
         wireMockStubs.verifyReindexAll(stubReindexAllId, rootNetworkEntity.getNetworkUuid().toString());
         wireMockStubs.caseServer.verifyDuplicateCase(stubDuplicateCaseId, CASE_UUID_STRING, "false");
-        wireMockStubs.verifyUserProfile(stubUserProfileId, userId);
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
-            wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromId, sourceStudy.getVoltageInitParametersUuid().toString());
+            wireMockStubs.verifyParametersDuplicateFrom(sourceStudy.getVoltageInitParametersUuid().toString());
         }
         if (sourceStudy.getLoadFlowParametersUuid() != null) {
-            wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromId, sourceStudy.getLoadFlowParametersUuid().toString());
+            wireMockStubs.verifyParametersDuplicateFrom(sourceStudy.getLoadFlowParametersUuid().toString());
         }
         if (sourceStudy.getShortCircuitParametersUuid() != null) {
-            wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromId, sourceStudy.getShortCircuitParametersUuid().toString());
+            wireMockStubs.verifyParametersDuplicateFrom(sourceStudy.getShortCircuitParametersUuid().toString());
         }
         if (sourceStudy.getSecurityAnalysisParametersUuid() != null) {
-            wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromId, sourceStudy.getSecurityAnalysisParametersUuid().toString());
+            wireMockStubs.verifyParametersDuplicateFrom(sourceStudy.getSecurityAnalysisParametersUuid().toString());
         }
         if (sourceStudy.getSensitivityAnalysisParametersUuid() != null) {
-            wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromId, sourceStudy.getSensitivityAnalysisParametersUuid().toString());
+            wireMockStubs.verifyParametersDuplicateFrom(sourceStudy.getSensitivityAnalysisParametersUuid().toString());
         }
         if (sourceStudy.getNetworkVisualizationParametersUuid() != null) {
             wireMockStubs.verifyNetworkVisualizationParamsDuplicateFrom(stubNetworkVisualizationParamsDuplicateFromId, sourceStudy.getNetworkVisualizationParametersUuid().toString());
         }
         if (sourceStudy.getStateEstimationParametersUuid() != null) {
-            wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromId, sourceStudy.getStateEstimationParametersUuid().toString());
+            wireMockStubs.verifyParametersDuplicateFrom(sourceStudy.getStateEstimationParametersUuid().toString());
         }
         if (sourceStudy.getPccMinParametersUuid() != null) {
-            wireMockStubs.verifyParametersDuplicateFrom(stubParametersDuplicateFromId, sourceStudy.getPccMinParametersUuid().toString());
+            wireMockStubs.verifyParametersDuplicateFrom(sourceStudy.getPccMinParametersUuid().toString());
         }
         if (sourceStudy.getSpreadsheetConfigCollectionUuid() != null) {
             wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromId, sourceStudy.getSpreadsheetConfigCollectionUuid().toString());
         }
         if (NAD_CONFIG_USER_ID.equals(userId)) {
-            //TODO why broken ?
-//            wireMockStubs.verifyNetworkAreaDiagramConfig(stubNetworkAreaDiagramConfigId);
-//            wireMockStubs.verifyElementNameGet(stubElementNameId, PROFILE_DIAGRAM_CONFIG_UUID_STRING);
-//            wireMockStubs.verifyDiagramGridLayout(stubDiagramGridLayoutId);
+            wireMockStubs.verifyUserProfile(stubUserProfileNadConfigId, userId);
+            wireMockStubs.verifyNetworkAreaDiagramConfig(stubNetworkAreaDiagramConfigId);
+            wireMockStubs.verifyElementNameGet(stubElementNameId, PROFILE_DIAGRAM_CONFIG_UUID_STRING);
+            wireMockStubs.verifyDiagramGridLayout(stubDiagramGridLayoutId);
+        } else {
+            wireMockStubs.verifyUserProfile(stubUserProfileId, userId);
         }
         wireMockStubs.verifyReportsDuplicate(stubReportsDuplicateId);
 
@@ -2011,7 +1992,7 @@ class StudyTest {
 
         // add modification on node "node1"
         String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
-        UUID stubPostId = wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
+        wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), firstRootNetworkUuid)
                         .content(createTwoWindingsTransformerAttributes).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
@@ -2021,11 +2002,11 @@ class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
-        wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+        wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         // add modification on node "node2"
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
-        stubPostId = wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
+        wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), firstRootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLoadAttributes)
@@ -2036,7 +2017,7 @@ class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
-        wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+        wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getOneRootNetworkUuid(study1Uuid),
             RootNetworkNodeInfo.builder()
@@ -2347,7 +2328,7 @@ class StudyTest {
 
         // add modification on node "node1"
         String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
-        UUID stubPostId = wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
+        wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), firstRootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
@@ -2358,11 +2339,11 @@ class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
-        wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+        wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         // add modification on node "node2"
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
-        stubPostId = wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
+        wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), firstRootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLoadAttributes)
@@ -2373,7 +2354,7 @@ class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
-        wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+        wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getOneRootNetworkUuid(study1Uuid),
             RootNetworkNodeInfo.builder()
@@ -2475,7 +2456,7 @@ class StudyTest {
         UUID deleteModificationIndexStub = wireMockStubs.stubNetworkModificationDeleteIndex();
         UUID stubDeleteReportsId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
             .willReturn(WireMock.ok())).getId();
-        UUID stubPostId = wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
+        wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), firstRootNetworkUuid)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createTwoWindingsTransformerAttributes)
@@ -2488,7 +2469,7 @@ class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
-        wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+        wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
         wireMockStubs.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
 
         // Invalidation node 3
@@ -2498,7 +2479,7 @@ class StudyTest {
 
         // add modification on node "node2"
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
-        stubPostId = wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
+        wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), firstRootNetworkUuid)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createLoadAttributes)
@@ -2509,7 +2490,7 @@ class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
-        wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+        wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), firstRootNetworkUuid,
             RootNetworkNodeInfo.builder()
@@ -2617,7 +2598,7 @@ class StudyTest {
         NetworkModificationNode study2Node2 = createNetworkModificationNode(study2Uuid, study2ModificationNodeUuid, VARIANT_ID_2, "node2", userId);
 
         // add modification on study 1 node "node1"
-        UUID stubPostId = wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
+        wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), firstRootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -2629,10 +2610,10 @@ class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
-        wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+        wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         // add modification on node "node2"
-        stubPostId = wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
+        wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), firstRootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -2644,7 +2625,7 @@ class StudyTest {
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
-        wireMockStubs.verifyNetworkModificationPostWithVariant(stubPostId, getModificationContextJsonString(mapper, modificationBody));
+        wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         //study 2 node2 should not have any child
         List<NodeEntity> allNodes = networkModificationTreeService.getAllNodes(study2Uuid);

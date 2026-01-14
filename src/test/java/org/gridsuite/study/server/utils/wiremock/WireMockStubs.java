@@ -232,13 +232,13 @@ public class WireMockStubs {
         verifyGetRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count", Map.of(QUERY_PARAM_STASHED, WireMock.equalTo("false")));
     }
 
-    public void verifyNetworkModificationPost(UUID stubId, String requestBody) {
+    public void verifyNetworkModificationPost(String requestBody) {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, URI_NETWORK_MODIFICATION, false,
             Map.of("groupUuid", WireMock.matching(".*")),
             requestBody);
     }
 
-    public void verifyNetworkModificationPostWithVariant(UUID stubId, String requestBody) {
+    public void verifyNetworkModificationPostWithVariant(String requestBody) {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, URI_NETWORK_MODIFICATION, false,
             Map.of("groupUuid", WireMock.matching(".*")),
             requestBody);
@@ -707,37 +707,37 @@ public class WireMockStubs {
                 .withBody(body))).getId();
     }
 
-    public void verifyGetReport(UUID stubId) {
+    public void verifyGetReport() {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/.*", true,
             Map.of("severityLevels", WireMock.matching(".*"), "defaultName", WireMock.matching(".*")), 1);
     }
 
-    public void verifyGetReportLogs(UUID stubId, String reportId) {
+    public void verifyGetReportLogs(String reportId) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/" + reportId + "/logs", Map.of());
     }
 
-    public void verifyGetReportLogs(UUID stubId, String reportId, String severityLevels, String message) {
+    public void verifyGetReportLogs(String reportId, String severityLevels, String message) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/" + reportId + "/logs",
             Map.of("severityLevels", WireMock.equalTo(severityLevels), "message", WireMock.equalTo(message)));
     }
 
-    public void verifyGetReportLogsPaged(UUID stubId, String reportId, int page, int size) {
+    public void verifyGetReportLogsPaged(String reportId, int page, int size) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/" + reportId + "/logs",
             Map.of("paged", WireMock.equalTo("true"), "page", WireMock.equalTo(String.valueOf(page)), "size", WireMock.equalTo(String.valueOf(size))));
     }
 
-    public void verifyGetReportLogsPaged(UUID stubId, String reportId, int page, int size, String severityLevels, String message) {
+    public void verifyGetReportLogsPaged(String reportId, int page, int size, String severityLevels, String message) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/" + reportId + "/logs",
             Map.of("paged", WireMock.equalTo("true"), "page", WireMock.equalTo(String.valueOf(page)), "size", WireMock.equalTo(String.valueOf(size)),
                 "severityLevels", WireMock.equalTo(severityLevels), "message", WireMock.equalTo(message)));
     }
 
-    public void verifyGetReportLogsSearchWithReportId(UUID stubId, String reportId, String searchTerm, int pageSize) {
+    public void verifyGetReportLogsSearchWithReportId(String reportId, String searchTerm, int pageSize) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/" + reportId + "/logs/search",
             Map.of("searchTerm", WireMock.equalTo(searchTerm), "pageSize", WireMock.equalTo(String.valueOf(pageSize))));
     }
 
-    public void verifyGetReportLogsSearchWithReportId(UUID stubId, String reportId, String searchTerm, int pageSize, String severityLevels, String message) {
+    public void verifyGetReportLogsSearchWithReportId(String reportId, String searchTerm, int pageSize, String severityLevels, String message) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/" + reportId + "/logs/search",
             Map.of("searchTerm", WireMock.equalTo(searchTerm), "pageSize", WireMock.equalTo(String.valueOf(pageSize)),
                 "severityLevels", WireMock.equalTo(severityLevels), "message", WireMock.equalTo(message)));
@@ -873,23 +873,23 @@ public class WireMockStubs {
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
     }
 
-    public void verifyParameters(UUID stubId, int nbRequests) {
+    public void verifyParameters(int nbRequests) {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of(), nbRequests);
     }
 
-    public void verifyParametersDefault(UUID stubId, int nbRequests) {
+    public void verifyParametersDefault(int nbRequests) {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters/default", Map.of(), nbRequests);
     }
 
-    public void verifyParametersDuplicateFrom(UUID stubId, String duplicateFromUuid) {
-        verifyParametersDuplicateFrom(stubId, duplicateFromUuid, 1);
+    public void verifyParametersDuplicateFrom(String duplicateFromUuid) {
+        verifyParametersDuplicateFrom(duplicateFromUuid, 1);
     }
 
-    public void verifyParametersDuplicateFrom(UUID stubId, String duplicateFromUuid, int nbRequests) {
+    public void verifyParametersDuplicateFrom(String duplicateFromUuid, int nbRequests) {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
     }
 
-    public void verifySpreadsheetConfigDefault(UUID stubId, int nbRequests) {
+    public void verifySpreadsheetConfigDefault(int nbRequests) {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/spreadsheet-config-collections/default", Map.of(), nbRequests);
     }
 
@@ -901,7 +901,7 @@ public class WireMockStubs {
         verifyPostRequest(wireMock, stubId, "/v1/spreadsheet-config-collections", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
     }
 
-    public void verifyNetworkVisualizationParamsDefault(UUID stubId, int nbRequests) {
+    public void verifyNetworkVisualizationParamsDefault(int nbRequests) {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/network-visualizations-params/default", Map.of(), nbRequests);
     }
 
@@ -925,7 +925,6 @@ public class WireMockStubs {
         verifyPostRequest(wireMock, stubId, "/v1/network-visualizations-params", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
     }
 
-    //TODO ?
     public void verifyNetworkAreaDiagramConfig(UUID stubId) {
         verifyPostRequest(wireMock, stubId, "/v1/network-area-diagram/config", Map.of("duplicateFrom", WireMock.matching(".*")));
     }
