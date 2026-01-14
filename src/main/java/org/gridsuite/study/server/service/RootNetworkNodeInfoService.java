@@ -628,9 +628,13 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
+    public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String globalFilters, String filters, Sort sort, String csvTranslations) {
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(()
+                -> new StudyException(NOT_FOUND, "Root network not found"));
+        String variantId = rootNetworkNodeInfoEntity.getVariantId();
+        UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
-        return securityAnalysisService.getSecurityAnalysisResultCsv(resultUuid, resultType, csvTranslations);
+        return securityAnalysisService.getSecurityAnalysisResultCsv(resultUuid, networkUuid, variantId, resultType, globalFilters, filters, sort, csvTranslations);
     }
 
     @Transactional(readOnly = true)
