@@ -71,7 +71,7 @@
         },
         {
           "uuid": "abffff0f-4037-4aef-8929-191927037e64",
-          "name": "q (MVar)",
+          "name": "q (Mvar)",
           "type": "NUMBER",
           "precision": 1,
           "formula": "q",
@@ -107,7 +107,7 @@
         },
         {
           "uuid": "c8f35705-6e37-47e1-af95-ff25556c643c",
-          "name": "Target Q (MVar)",
+          "name": "Target Q (Mvar)",
           "type": "NUMBER",
           "precision": 1,
           "formula": "targetQ",
