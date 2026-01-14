@@ -252,7 +252,7 @@ class NetworkModificationTest {
     private PccMinService pccMinService;
 
     @BeforeEach
-    void setup() throws Exception {
+    void setup() {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
         Network network = new XMLImporter().importData(dataSource, new NetworkFactoryImpl(), null);
         network.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_ID);
