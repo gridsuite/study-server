@@ -33,7 +33,6 @@ import org.gridsuite.study.server.dto.modification.ModificationApplicationContex
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.voltageinit.parameters.*;
-import org.gridsuite.study.server.handler.RebuildPreviouslyBuiltNodeHandler;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -208,7 +207,7 @@ class VoltageInitTest {
 
     private ObjectWriter objectWriter;
 
-    @Autowired
+    @MockitoSpyBean
     private NetworkModificationTreeService networkModificationTreeService;
 
     @MockitoSpyBean
@@ -273,9 +272,6 @@ class VoltageInitTest {
 
     @Autowired
     private VoltageInitResultConsumer voltageInitResultConsumer;
-
-    @MockitoBean
-    private RebuildPreviouslyBuiltNodeHandler rebuildPreviouslyBuiltNodeHandler;
 
     //output destinations
     private final String studyUpdateDestination = "study.update";
@@ -419,18 +415,7 @@ class VoltageInitTest {
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
         when(networkStoreService.getNetwork(SECOND_NETWORK_UUID)).thenReturn(network);
 
-        doAnswer(inv -> {
-            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
-            return null;
-        }).when(rebuildPreviouslyBuiltNodeHandler)
-            .execute(any(), any(), any(), anyString(), any(Runnable.class));
-
-        doAnswer(inv -> {
-            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
-            return null;
-        }).when(rebuildPreviouslyBuiltNodeHandler)
-            .execute(any(), any(), anyString(), any(Runnable.class));
-
+        doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
     }
 
     private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, StudyVoltageInitParameters parameters, String userId, HttpStatusCode status) throws Exception {

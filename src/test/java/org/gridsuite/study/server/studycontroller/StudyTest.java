@@ -43,7 +43,6 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
-import org.gridsuite.study.server.handler.RebuildPreviouslyBuiltNodeHandler;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
@@ -341,7 +340,7 @@ class StudyTest {
     @Autowired
     private StudyRepository studyRepository;
 
-    @Autowired
+    @MockitoSpyBean
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
@@ -371,8 +370,6 @@ class StudyTest {
 
     @MockitoSpyBean
     ConsumerService consumeService;
-    @MockitoBean
-    private RebuildPreviouslyBuiltNodeHandler rebuildPreviouslyBuiltNodeHandler;
 
     private void initMockBeans(Network network) {
         when(equipmentInfosService.getEquipmentInfosCount()).then((Answer<Long>) invocation -> Long.parseLong("32"));
@@ -391,17 +388,7 @@ class StudyTest {
 
         doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
 
-        doAnswer(inv -> {
-            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
-            return null;
-        }).when(rebuildPreviouslyBuiltNodeHandler)
-            .execute(any(), any(), any(), anyString(), any(Runnable.class));
-
-        doAnswer(inv -> {
-            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
-            return null;
-        }).when(rebuildPreviouslyBuiltNodeHandler)
-            .execute(any(), any(), anyString(), any(Runnable.class));
+        doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
 
         // Synchronize for tests
         synchronizeStudyServerExecutionService(studyServerExecutionService);

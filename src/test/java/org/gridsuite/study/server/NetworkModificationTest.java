@@ -36,7 +36,6 @@ import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.error.StudyException;
-import org.gridsuite.study.server.handler.RebuildPreviouslyBuiltNodeHandler;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
@@ -50,7 +49,10 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
-import org.gridsuite.study.server.utils.*;
+import org.gridsuite.study.server.utils.MatcherJson;
+import org.gridsuite.study.server.utils.RequestWithBody;
+import org.gridsuite.study.server.utils.SendInput;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
@@ -82,9 +84,10 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR_MESSAGE;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_NODE_BUILDS_EXCEEDED;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
@@ -187,7 +190,7 @@ class NetworkModificationTest {
     @Autowired
     private ObjectMapper mapper;
 
-    @Autowired
+    @MockitoSpyBean
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
@@ -262,9 +265,6 @@ class NetworkModificationTest {
     @Autowired
     private PccMinService pccMinService;
 
-    @MockitoBean
-    RebuildPreviouslyBuiltNodeHandler rebuildPreviouslyBuiltNodeHandler;
-
     @BeforeEach
     void setup(final MockWebServer server) {
         ReadOnlyDataSource dataSource = new ResourceDataSource("testCase", new ResourceSet("", TEST_FILE));
@@ -273,17 +273,8 @@ class NetworkModificationTest {
         network.getVariantManager().setWorkingVariant(VariantManagerConstants.INITIAL_VARIANT_ID);
 
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
-        doAnswer(inv -> {
-            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
-            return null;
-        }).when(rebuildPreviouslyBuiltNodeHandler)
-            .execute(any(), any(), any(), anyString(), any(Runnable.class));
 
-        doAnswer(inv -> {
-            inv.getArgument(inv.getArguments().length - 1, Runnable.class).run();
-            return null;
-        }).when(rebuildPreviouslyBuiltNodeHandler)
-            .execute(any(), any(), anyString(), any(Runnable.class));
+        doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
 
         synchronizeStudyServerExecutionService(studyServerExecutionService);
 

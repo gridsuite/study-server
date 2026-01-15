@@ -1897,6 +1897,9 @@ public class StudyService {
     }
 
     private void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId, AbstractWorkflowInfos workflowInfos) {
+        if (networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()) {
+            return;
+        }
         assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
 
@@ -2429,7 +2432,7 @@ public class StudyService {
     }
 
     @Transactional
-    public Map<UUID, NodeBuildStatus> getNodeBuildStatusByRootNetworkUuid(UUID studyUuid, UUID nodeUuid) {
+    public Map<UUID, NodeBuildStatus> getNodeBuildStatusByRootNetwork(UUID studyUuid, UUID nodeUuid) {
         return getStudyRootNetworks(studyUuid).stream().collect(Collectors.toMap(
             RootNetworkEntity::getId,
             rn -> rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rn.getId()).map(rni -> rni.getNodeBuildStatus().toDto()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"))
