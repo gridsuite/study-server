@@ -488,7 +488,7 @@ public class NotificationService {
         sendStudyUpdateMessage(studyUuid, NETWORK_EXPORT_FINISHED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_EXPORT_UUID, exportUuid)
-                .setHeader(HEADER_EXPORT_TO_EXPLORER, exportoExplorer.toString())
+                .setHeader(HEADER_EXPORT_TO_EXPLORER, exportoExplorer)
                 .setHeader(HEADER_ERROR, error)
         );
     }
