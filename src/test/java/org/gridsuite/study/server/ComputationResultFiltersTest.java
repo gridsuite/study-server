@@ -37,6 +37,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -53,7 +54,7 @@ class ComputationResultFiltersTest {
     private static final String COMPUTATION_FILTERS_JSON = "{\"computationResultFilters\":[]}";
     private static final UUID COMPUTATION_FILTERS_UUID = UUID.randomUUID();
     private static final UUID COMPUTATION_GLOBAL_FILTERS_UUID = UUID.randomUUID();
-    private static final UUID COLUMN_UUID = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+    private static final UUID COLUMN_UUID = UUID.randomUUID();
 
     @Autowired
     private MockMvc mockMvc;
@@ -114,6 +115,14 @@ class ComputationResultFiltersTest {
         String json = "{\"globalFilters\":[]}";
         mockMvc.perform(post("/v1/studies/{studyUuid}/computation-result-filters/{id}/global-filters", study.getId(), COMPUTATION_GLOBAL_FILTERS_UUID)
                 .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void updateColumn() throws Exception {
+        StudyEntity study = insertDummyStudy(COLUMN_UUID);
+        String json = "{\"columnsFilters\":[]}";
+        mockMvc.perform(put("/v1/studies/{studyUuid}/computation-result-filters/{id}/columns/{columnUuid}", study.getId(),
+                COMPUTATION_FILTERS_UUID, COLUMN_UUID).contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
     }
 
     private StudyEntity insertDummyStudy(UUID computationResultFiltersUuid) {
