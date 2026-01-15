@@ -864,18 +864,16 @@ public class ConsumerService {
                 }
 
                 boolean exportToExplorer = false;
-
-                String errorMessage = null;
+                String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
 
                 if (nodeExport != null && nodeExport.exportToExplorer()) {
                     //Call case server and create case in directory
                     exportToExplorer = true;
-                    errorMessage = createCase(exportUuid, exportFolder, fileName, nodeExport, userId);
+                    if (StringUtils.isEmpty(errorMessage)) {
+                        errorMessage = createCase(exportUuid, exportFolder, fileName, nodeExport, userId);
+                    }
                 }
 
-                if (errorMessage == null) {
-                    errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
-                }
                 networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
                 notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToExplorer, userId, errorMessage);
             } catch (Exception e) {
