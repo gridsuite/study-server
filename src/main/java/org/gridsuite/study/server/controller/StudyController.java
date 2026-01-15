@@ -992,7 +992,7 @@ public class StudyController {
             @PathVariable("format") String format,
             @RequestParam(value = "formatParameters", required = false) String parametersJson,
             @RequestParam(value = "fileName") String fileName,
-            @RequestParam(value = "exportToExplorer") boolean exportToExplorer,
+            @RequestParam(value = "exportToExplorer", required = false, defaultValue = "false") boolean exportToExplorer,
             @RequestParam(value = "parentDirectoryUuid", required = false) String parentDirectoryUuidStr,
             @RequestParam(value = "description", required = false) String description,
             @RequestHeader(HEADER_USER_ID) String userId) {
