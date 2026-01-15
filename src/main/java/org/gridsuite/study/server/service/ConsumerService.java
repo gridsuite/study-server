@@ -606,7 +606,7 @@ public class ConsumerService {
     }
 
     private void handleUnblockNode(NodeReceiver receiverObj, ComputationType computationType) {
-        if (computationType == ComputationType.LOAD_FLOW && networkModificationTreeService.isSecurityNode(receiverObj.getNodeUuid())) {
+        if (computationType == LOAD_FLOW && networkModificationTreeService.isSecurityNode(receiverObj.getNodeUuid())) {
             networkModificationTreeService.unblockNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
         } else {
             networkModificationTreeService.unblockNode(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
@@ -635,7 +635,7 @@ public class ConsumerService {
                     receiverObj.getNodeUuid());
 
                 // update DB
-                if (computationType == ComputationType.LOAD_FLOW) {
+                if (computationType == LOAD_FLOW) {
                     Boolean withRatioTapChangers = msg.getHeaders().get(HEADER_WITH_RATIO_TAP_CHANGERS, Boolean.class);
                     rootNetworkNodeInfoService.updateLoadflowResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, withRatioTapChangers);
                 } else {
@@ -865,20 +865,35 @@ public class ConsumerService {
 
                 boolean exportToExplorer = false;
 
+                String errorMessage = null;
+
                 if (nodeExport != null && nodeExport.exportToExplorer()) {
                     //Call case server and create case in directory
                     exportToExplorer = true;
-                    UUID caseUuid = caseService.createCase(exportUuid, exportFolder, fileName);
-                    directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, fileName, DirectoryService.CASE, userId);
+                    errorMessage = createCase(exportUuid, exportFolder, fileName, nodeExport, userId);
                 }
 
-                String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
+                if (errorMessage == null) {
+                    errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
+                }
                 networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
                 notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToExplorer, userId, errorMessage);
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
             }
         }
+    }
+
+    private String createCase(UUID exportUuid, String exportFolder, String fileName, NodeExportInfos nodeExport, String userId) {
+        String errorMessage = null;
+
+        try {
+            UUID caseUuid = caseService.createCase(exportUuid, exportFolder, fileName);
+            directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, fileName, DirectoryService.CASE, userId);
+        } catch (Exception e) {
+            errorMessage = e.getMessage();
+        }
+        return errorMessage;
     }
 
     @Bean
