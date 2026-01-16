@@ -617,7 +617,7 @@ public class StudyService {
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid, UUID computationResultFiltersUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -631,7 +631,8 @@ public class StudyService {
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, importParameters, importReportUuid);
+                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
+                importParameters, importReportUuid, computationResultFiltersUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
@@ -1615,7 +1616,7 @@ public class StudyService {
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                     UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid, UUID computationResultFilterUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1633,6 +1634,7 @@ public class StudyService {
                 .pccMinParametersUuid(pccMinParametersUuid)
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
                 .diagramGridLayoutUuid(diagramGridLayoutUuid)
+                .computationResultFiltersUuid(computationResultFilterUuid)
                 .monoRoot(true)
                 .build();
 
