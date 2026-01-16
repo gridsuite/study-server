@@ -75,6 +75,9 @@ public class NotificationService {
     public static final String UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_FAILED = "dynamicSecurityAnalysis_failed";
     public static final String UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_RESULT = "dynamicSecurityAnalysisResult";
     public static final String UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS = "dynamicSecurityAnalysis_status";
+    public static final String UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_FAILED = "dynamicMarginCalculation_failed";
+    public static final String UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_RESULT = "dynamicMarginCalculationResult";
+    public static final String UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS = "dynamicMarginCalculation_status";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_RESULT = "voltageInitResult";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_STATUS = "voltageInit_status";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_FAILED = "voltageInit_failed";
@@ -140,6 +143,20 @@ public class NotificationService {
     private static final String CATEGORY_BROKER_OUTPUT = NotificationService.class.getName() + ".output-broker-messages";
 
     private static final Logger MESSAGE_OUTPUT_LOGGER = LoggerFactory.getLogger(CATEGORY_BROKER_OUTPUT);
+
+    public static final List<String> ALL_COMPUTATION_STATUS = List.of(
+            UPDATE_TYPE_LOADFLOW_STATUS,
+            UPDATE_TYPE_SECURITY_ANALYSIS_STATUS,
+            UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS,
+            UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
+            UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
+            UPDATE_TYPE_VOLTAGE_INIT_STATUS,
+            UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
+            UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS,
+            UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS,
+            UPDATE_TYPE_STATE_ESTIMATION_STATUS,
+            UPDATE_TYPE_PCC_MIN_STATUS
+    );
 
     private final StreamBridge updatePublisher;
 

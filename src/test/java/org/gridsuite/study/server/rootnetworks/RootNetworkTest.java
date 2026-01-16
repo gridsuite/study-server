@@ -30,6 +30,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -94,6 +95,7 @@ class RootNetworkTest {
     private static final String VARIANT_ID = "variantId";
     private static final UUID DYNAMIC_SIMULATION_RESULT_UUID = UUID.randomUUID();
     private static final UUID DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
+    private static final UUID DYNAMIC_MARGIN_CALCULATION_RESULT_UUID = UUID.randomUUID();
     private static final UUID LOADFLOW_RESULT_UUID = UUID.randomUUID();
     private static final UUID SECURITY_ANALYSIS_RESULT_UUID = UUID.randomUUID();
     private static final UUID SHORT_CIRCUIT_ANALYSIS_RESULT_UUID = UUID.randomUUID();
@@ -156,6 +158,8 @@ class RootNetworkTest {
     private DynamicSimulationService dynamicSimulationService;
     @MockitoBean
     private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    @MockitoBean
+    private DynamicMarginCalculationService dynamicMarginCalculationService;
     @MockitoBean
     private SecurityAnalysisService securityAnalysisService;
     @MockitoBean
@@ -506,6 +510,7 @@ class RootNetworkTest {
                 .variantId(VARIANT_ID)
                 .dynamicSimulationResultUuid(DYNAMIC_SIMULATION_RESULT_UUID)
                 .dynamicSecurityAnalysisResultUuid(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID)
+                .dynamicMarginCalculationResultUuid(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID)
                 .loadFlowResultUuid(LOADFLOW_RESULT_UUID)
                 .securityAnalysisResultUuid(SECURITY_ANALYSIS_RESULT_UUID)
                 .shortCircuitAnalysisResultUuid(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)
@@ -543,6 +548,7 @@ class RootNetworkTest {
         verify(caseService, times(1)).deleteCase(CASE_UUID2);
         verify(dynamicSimulationService, times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
         verify(dynamicSecurityAnalysisService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
+        verify(dynamicMarginCalculationService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
         // check LOADFLOW_RESULT_UUID2 is also deleted
         verify(loadFlowService, times(1)).deleteLoadFlowResults(List.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2));
         verify(securityAnalysisService, times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
