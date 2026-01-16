@@ -295,12 +295,13 @@ public class ConsumerService {
         UUID pccMinParametersUuid = createDefaultPccMinParameters();
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
         UUID diagramGridLayoutUuid = studyService.createGridLayoutFromNadDiagram(userId, userProfileInfos);
+        UUID computationResultFiltersUuid = createDefaultComputationResultFilters();
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
             networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
-            importParameters, importReportUuid);
+            importParameters, importReportUuid, computationResultFiltersUuid);
     }
 
     private UUID createDefaultLoadFlowParameters(String userId, UserProfileInfos userProfileInfos) {
@@ -455,6 +456,15 @@ public class ConsumerService {
     private UUID createDefaultPccMinParameters() {
         try {
             return pccMinService.createDefaultPccMinParameters();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating pcc min default parameters", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultComputationResultFilters() {
+        try {
+            return studyConfigService.createDefaultComputationResultFilters();
         } catch (final Exception e) {
             LOGGER.error("Error while creating pcc min default parameters", e);
             return null;

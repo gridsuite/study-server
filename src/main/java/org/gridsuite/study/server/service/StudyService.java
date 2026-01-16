@@ -617,7 +617,7 @@ public class StudyService {
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid, UUID computationResultFiltersUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -631,7 +631,8 @@ public class StudyService {
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, importParameters, importReportUuid);
+                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
+                importParameters, importReportUuid, computationResultFiltersUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
@@ -1615,7 +1616,7 @@ public class StudyService {
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                     UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid, UUID computationResultFilterUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1633,6 +1634,7 @@ public class StudyService {
                 .pccMinParametersUuid(pccMinParametersUuid)
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
                 .diagramGridLayoutUuid(diagramGridLayoutUuid)
+                .computationResultFiltersUuid(computationResultFilterUuid)
                 .monoRoot(true)
                 .build();
 
@@ -2777,6 +2779,12 @@ public class StudyService {
         return studyConfigService.getSpreadsheetConfigCollection(studyConfigService.getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(studyEntity));
     }
 
+    @Transactional
+    public String getComputationResultFilters(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return studyConfigService.getComputationResultFilters(studyConfigService.getComputationResultFiltersUuidOrElseCreateDefaults(studyEntity));
+    }
+
     /**
      * Set spreadsheet config collection on study or reset to default one if empty body.
      * Default is the user profile one, or system default if no profile is available.
@@ -3615,6 +3623,14 @@ public class StudyService {
     public void setGlobalFilters(UUID studyUuid, UUID configUuid, String globalFilters) {
         studyConfigService.setGlobalFilters(configUuid, globalFilters);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    public void setGlobalFiltersForComputationResult(UUID studyUuid, UUID configUuid, String globalFilters) {
+        studyConfigService.setGlobalFiltersForComputationResult(studyUuid, configUuid, globalFilters);
+    }
+
+    public void updateColumns(UUID studyUuid, UUID configUuid, UUID columnUuid, String columnInfos) {
+        studyConfigService.updateColumns(configUuid, columnUuid, columnInfos);
     }
 
     public void renameSpreadsheetConfig(UUID studyUuid, UUID configUuid, String newName) {
