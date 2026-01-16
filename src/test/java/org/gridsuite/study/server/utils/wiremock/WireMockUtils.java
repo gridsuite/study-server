@@ -63,10 +63,12 @@ public final class WireMockUtils {
     }
 
     public static void verifyGetRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams) {
+        verifyGetRequest(wireMockServer, stubId, urlPath, queryParams, 1);
+    }
+
+    public static void verifyGetRequest(WireMockServer wireMockServer, UUID stubId, String urlPath, Map<String, StringValuePattern> queryParams, int nbRequests) {
         RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo(urlPath));
-        queryParams.forEach(requestBuilder::withQueryParam);
-        wireMockServer.verify(1, requestBuilder);
-        removeRequestForStub(wireMockServer, stubId, 1);
+        verifyRequest(wireMockServer, stubId, requestBuilder, queryParams, null, nbRequests);
     }
 
     private static void verifyRequest(WireMockServer wireMockServer, UUID stubId, RequestPatternBuilder requestBuilder, Map<String, StringValuePattern> queryParams, String body, int nbRequests) {
