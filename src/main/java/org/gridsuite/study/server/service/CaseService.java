@@ -90,8 +90,7 @@ public class CaseService {
 
     public UUID createCase(UUID caseUuid, String folderName, String fileName) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/create")
-            .queryParam("caseUuid", caseUuid)
-            .queryParam("folderName", folderName)
+            .queryParam("caseFolderKey", folderName + DELIMITER + caseUuid)
             .queryParam("fileName", fileName)
             .build()
             .toUriString();
