@@ -13,7 +13,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
-import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -1267,9 +1266,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void updateExportNetworkStatus(UUID nodeUuid, UUID exportUuid, ExportNetworkStatus status) {
-        nodesRepository.getReferenceById(nodeUuid).getNodeExportNetwork()
-                .add(NodeExportEmbeddable
-                .toNodeExportEmbeddable(exportUuid, status));
+        nodesRepository.getReferenceById(nodeUuid).getNodeExportNetwork().add(NodeExportEmbeddable.toNodeExportEmbeddable(exportUuid, status));
     }
 
     @Transactional
@@ -1282,11 +1279,5 @@ public class NetworkModificationTreeService {
         return nodesRepository.findExportStatus(exportUuid)
                 .map(ExportNetworkStatus::valueOf)
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "No export found for exportUuid=" + exportUuid));
-    }
-
-    @Transactional
-    public NodeExportInfos getNodeExportInfos(UUID exportUuid) {
-        return nodesRepository.findExportInfos(exportUuid)
-            .orElseThrow(() -> new StudyException(NOT_FOUND, "No export found for exportUuid=" + exportUuid));
     }
 }
