@@ -87,4 +87,14 @@ public class CaseService {
     public void setCaseServerBaseUri(String caseServerBaseUri) {
         this.caseServerBaseUri = caseServerBaseUri;
     }
+
+    public UUID createCase(UUID caseUuid, String folderName, String fileName) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/create")
+            .queryParam("caseFolderKey", folderName + DELIMITER + caseUuid)
+            .queryParam("fileName", fileName)
+            .build()
+            .toUriString();
+
+        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+    }
 }
