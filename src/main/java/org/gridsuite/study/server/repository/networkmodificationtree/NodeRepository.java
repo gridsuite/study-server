@@ -7,7 +7,6 @@
 
 package org.gridsuite.study.server.repository.networkmodificationtree;
 
-import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -32,9 +31,6 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
 
     @NativeQuery("SELECT ne.status FROM node_export ne WHERE ne.export_uuid = :exportUuid")
     Optional<String> findExportStatus(UUID exportUuid);
-
-    @NativeQuery("SELECT ne.export_to_explorer, ne.directory_uuid, ne.filename, ne.description FROM node_export ne WHERE ne.export_uuid = :exportUuid")
-    Optional<NodeExportInfos> findExportInfos(UUID exportUuid);
 
     @Modifying
     @NativeQuery("UPDATE node_export SET status = :status WHERE export_uuid = :exportUuid")

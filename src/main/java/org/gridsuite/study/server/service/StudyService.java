@@ -1072,17 +1072,16 @@ public class StudyService {
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
     }
 
-    public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String fileName, String format, String userId, String parametersJson,
-                              boolean exportToExplorer, UUID parentDirectoryUuid, String description) {
+    public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NodeExportInfos exportInfos, String format, String userId, String parametersJson) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
 
-        if (exportToExplorer && directoryService.elementExists(parentDirectoryUuid, fileName, DirectoryService.CASE)) {
+        if (exportInfos.exportToExplorer() && directoryService.elementExists(exportInfos.directoryUuid(), exportInfos.fileName(), DirectoryService.CASE)) {
             throw new StudyException(ELEMENT_ALREADY_EXISTS);
         }
 
-        UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId, fileName,
-            new NodeExportInfos(exportToExplorer, parentDirectoryUuid, description), format, userId, parametersJson);
+        UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId,
+            new NodeExportInfos(exportInfos.exportToExplorer(), exportInfos.directoryUuid(), exportInfos.fileName(), exportInfos.description()), format, userId, parametersJson);
 
         networkModificationTreeService.updateExportNetworkStatus(nodeUuid, exportUuid, ExportNetworkStatus.RUNNING);
         return exportUuid;

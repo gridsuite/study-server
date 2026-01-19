@@ -847,7 +847,6 @@ public class ConsumerService {
         String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
         String exportFolder = msg.getHeaders().get(HEADER_EXPORT_FOLDER, String.class);
         String exportInfosStr = msg.getHeaders().get(HEADER_EXPORT_INFOS, String.class);
-        String fileName = msg.getHeaders().get(HEADER_FILE_NAME, String.class);
 
         if (receiverString != null) {
             NetworkExportReceiver receiver;
@@ -870,7 +869,7 @@ public class ConsumerService {
                     //Call case server and create case in directory
                     exportToExplorer = true;
                     if (StringUtils.isEmpty(errorMessage)) {
-                        errorMessage = createCase(exportUuid, exportFolder, fileName, nodeExport, userId);
+                        errorMessage = createCase(exportUuid, exportFolder, nodeExport, userId);
                     }
                 }
 
@@ -882,12 +881,12 @@ public class ConsumerService {
         }
     }
 
-    private String createCase(UUID exportUuid, String exportFolder, String fileName, NodeExportInfos nodeExport, String userId) {
+    private String createCase(UUID exportUuid, String exportFolder, NodeExportInfos nodeExport, String userId) {
         String errorMessage = null;
 
         try {
-            UUID caseUuid = caseService.createCase(exportUuid, exportFolder, fileName);
-            directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, fileName, DirectoryService.CASE, userId);
+            UUID caseUuid = caseService.createCase(exportUuid, exportFolder, nodeExport.fileName());
+            directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId);
         } catch (Exception e) {
             errorMessage = e.getMessage();
         }

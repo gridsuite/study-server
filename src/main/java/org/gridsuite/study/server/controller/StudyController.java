@@ -21,6 +21,7 @@ import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
@@ -1002,13 +1003,10 @@ public class StudyController {
         UUID exportUuid = studyService.exportNetwork(studyUuid,
                                                         nodeUuid,
                                                         rootNetworkUuid,
-                                                        fileName,
+                                                        new NodeExportInfos(exportToExplorer, parentDirectoryUuid, fileName, description),
                                                         format,
                                                         userId,
-                                                        parametersJson,
-                                                        exportToExplorer,
-                                                        parentDirectoryUuid,
-                                                        description);
+                                                        parametersJson);
         return ResponseEntity.ok().body(exportUuid);
     }
 

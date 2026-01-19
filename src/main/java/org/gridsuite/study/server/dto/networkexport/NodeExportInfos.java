@@ -14,5 +14,6 @@ import java.util.UUID;
 
 public record NodeExportInfos(boolean exportToExplorer,
                               UUID directoryUuid,
+                              String fileName,
                               String description) {
 }
