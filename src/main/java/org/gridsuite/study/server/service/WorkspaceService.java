@@ -15,7 +15,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,16 +59,6 @@ public class WorkspaceService {
             studyEntity.setWorkspacesConfigUuid(studyConfigService.createDefaultWorkspacesConfig());
         }
         return studyEntity.getWorkspacesConfigUuid();
-    }
-
-    public void removeWorkspacesConfig(@Nullable UUID workspacesConfigUuid) {
-        if (workspacesConfigUuid != null) {
-            try {
-                studyConfigService.deleteWorkspacesConfig(workspacesConfigUuid);
-            } catch (Exception e) {
-                LOGGER.error("Could not remove workspaces config with uuid:" + workspacesConfigUuid, e);
-            }
-        }
     }
 
     public String getWorkspaces(UUID studyUuid) {

@@ -6,10 +6,8 @@
  */
 package org.gridsuite.study.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.web.client.HttpServerErrorException;
 import org.gridsuite.study.server.service.NadConfigService;
 import org.gridsuite.study.server.service.SingleLineDiagramService;
@@ -20,9 +18,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
@@ -34,15 +29,6 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
 class NadConfigTest {
-
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private StudyRepository studyRepository;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @Autowired
     private SingleLineDiagramService singleLineDiagramService;
@@ -64,24 +50,6 @@ class NadConfigTest {
     @AfterEach
     void tearDown() {
         wireMockServer.stop();
-    }
-
-    @Test
-    @Transactional
-    void testSaveNewNadConfig() throws Exception {
-        // Test removed - NAD config management moved to workspace panels
-    }
-
-    @Test
-    @Transactional
-    void testUpdateExistingNadConfig() throws Exception {
-        // Test removed - NAD config management moved to workspace panels
-    }
-
-    @Test
-    @Transactional
-    void testDeleteNadConfig() throws Exception {
-        // Test removed - NAD config management moved to workspace panels
     }
 
     @Test

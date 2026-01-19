@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package org.gridsuite.study.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -203,8 +209,6 @@ class WorkspaceConfigTest {
         WireMockUtils.verifyDeleteRequest(wireMockServer, stubId, configServerUrl, false, Map.of());
     }
 
-    // TODO: Fix test - currently returns 500, likely issue with JSON deserialization or service call
-    /*
     @Test
     void testSaveNadConfig() throws Exception {
         StudyEntity studyEntity = insertStudy();
@@ -212,7 +216,9 @@ class WorkspaceConfigTest {
 
         UUID savedConfigUuid = UUID.randomUUID();
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(configServerUrl))
-                .willReturn(WireMock.created().withBody(objectMapper.writeValueAsString(savedConfigUuid)))).getId();
+                .willReturn(WireMock.status(201)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("\"" + savedConfigUuid + "\""))).getId();
 
         Map<String, Object> nadConfigData = Map.of("key", "value");
         String body = objectMapper.writeValueAsString(nadConfigData);
@@ -227,7 +233,6 @@ class WorkspaceConfigTest {
         checkWorkspaceNadConfigUpdateMessageReceived(studyEntity.getId());
         WireMockUtils.verifyPostRequest(wireMockServer, stubId, configServerUrl, Map.of(), 1);
     }
-    */
 
     @Test
     void testDeleteNadConfig() throws Exception {
