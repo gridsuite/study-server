@@ -225,6 +225,15 @@ public final class TestUtils {
         }
     }
 
+    public static void assertWiremockServerRequestsEmptyThenClear(WireMockServer wireMockServer) throws UncheckedInterruptedException {
+        try {
+            wireMockServer.checkForUnmatchedRequests();
+            assertEquals(0, wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())).size());
+        } finally {
+            wireMockServer.resetAll();
+        }
+    }
+
     public static String resourceToString(String resource) throws IOException {
         String content = new String(ByteStreams.toByteArray(TestUtils.class.getResourceAsStream(resource)), StandardCharsets.UTF_8);
         return StringUtils.replaceWhitespaceCharacters(content, "");
