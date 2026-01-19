@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @DisableElasticsearch
-class NetworkModificationTreeServiceUnitTest {
+class NetworkModificationTreeUnitTest {
 
     @Autowired
     private NodeRepository nodeRepository;

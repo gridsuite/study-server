@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.studycontroller;
 
-import org.gridsuite.study.server.RebuildNodeService;
+import org.gridsuite.study.server.service.RebuildNodeService;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;

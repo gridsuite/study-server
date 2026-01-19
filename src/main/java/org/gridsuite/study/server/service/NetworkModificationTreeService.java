@@ -1274,26 +1274,15 @@ public class NetworkModificationTreeService {
             return List.of(node1Uuid);
         }
 
-        if (isAncestor(node1Uuid, node2Uuid)) {
+        if (nodesRepository.isAncestor(node1Uuid, node2Uuid)) {
             return List.of(node1Uuid);
         }
 
-        if (isAncestor(node2Uuid, node1Uuid)) {
+        if (nodesRepository.isAncestor(node2Uuid, node1Uuid)) {
             return List.of(node2Uuid);
         }
 
         return List.of(node1Uuid, node2Uuid);
-    }
-
-    private boolean isAncestor(UUID ancestorUuid, UUID nodeUuid) {
-        NodeEntity current = getNodeEntity(nodeUuid).getParentNode();
-        while (current != null) {
-            if (current.getIdNode().equals(ancestorUuid)) {
-                return true;
-            }
-            current = current.getParentNode();
-        }
-        return false;
     }
 
     @Transactional
