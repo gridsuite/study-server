@@ -25,9 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *
  * @author Florent MILLOT <florent.millot at rte-france.com>
  */
-public final class WireMockUtilsCriteria extends AbstractWireMockUtils {
+public final class WireMockUtilsCriteria {
     private WireMockUtilsCriteria() {
-        super();
+        throw new IllegalStateException("Utility class");
     }
 
     public static void verifyPostRequest(WireMockServer wireMockServer, String urlPath, Map<String, StringValuePattern> queryParams) {
@@ -102,5 +102,64 @@ public final class WireMockUtilsCriteria extends AbstractWireMockUtils {
         // this assert should not fail
         assertEquals(nbRequests, requests.size(), "Wrong number of requests");
         wireMockServer.removeServeEventsMatching(requestBuilder.build());
+    }
+
+    /**
+     * These utility functions below aim to exclude query params from URL matching if none is provided.
+     * If there are no query params, we match the complete URL, including the query string, which is empty.
+     * Then we are sure to not match other requests than the one we verified.
+     */
+
+    private static RequestPatternBuilder postRequestBuilder(String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams) {
+        if (queryParams.isEmpty()) {
+            return regexMatching
+                ? WireMock.postRequestedFor(WireMock.urlMatching(noQueryUrlRegex(urlPath)))
+                : WireMock.postRequestedFor(WireMock.urlEqualTo(urlPath));
+        }
+        return regexMatching
+            ? WireMock.postRequestedFor(WireMock.urlPathMatching(urlPath))
+            : WireMock.postRequestedFor(WireMock.urlPathEqualTo(urlPath));
+    }
+
+    private static RequestPatternBuilder putRequestBuilder(String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams) {
+        if (queryParams.isEmpty()) {
+            return regexMatching
+                ? WireMock.putRequestedFor(WireMock.urlMatching(noQueryUrlRegex(urlPath)))
+                : WireMock.putRequestedFor(WireMock.urlEqualTo(urlPath));
+        }
+        return regexMatching
+            ? WireMock.putRequestedFor(WireMock.urlPathMatching(urlPath))
+            : WireMock.putRequestedFor(WireMock.urlPathEqualTo(urlPath));
+    }
+
+    private static RequestPatternBuilder deleteRequestBuilder(String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams) {
+        if (queryParams.isEmpty()) {
+            return regexMatching
+                ? WireMock.deleteRequestedFor(WireMock.urlMatching(noQueryUrlRegex(urlPath)))
+                : WireMock.deleteRequestedFor(WireMock.urlEqualTo(urlPath));
+        }
+        return regexMatching
+            ? WireMock.deleteRequestedFor(WireMock.urlPathMatching(urlPath))
+            : WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(urlPath));
+    }
+
+    private static RequestPatternBuilder getRequestBuilder(String urlPathOrPattern, boolean regexMatching, Map<String, StringValuePattern> queryParams) {
+        if (queryParams.isEmpty()) {
+            return regexMatching
+                ? WireMock.getRequestedFor(WireMock.urlMatching(noQueryUrlRegex(urlPathOrPattern)))
+                : WireMock.getRequestedFor(WireMock.urlEqualTo(urlPathOrPattern));
+        }
+        return regexMatching
+            ? WireMock.getRequestedFor(WireMock.urlPathMatching(urlPathOrPattern))
+            : WireMock.getRequestedFor(WireMock.urlPathEqualTo(urlPathOrPattern));
+    }
+
+    /**
+     * Builds a regex that matches the complete URL but forbids any query string.
+     * - (?!.*\\?) : refuses the presence of '?'
+     * - ^(?:pattern)$ : forces complete match
+     */
+    private static String noQueryUrlRegex(String urlPathPattern) {
+        return "^(?!.*\\?)(?:" + urlPathPattern + ")$";
     }
 }
