@@ -115,7 +115,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -262,7 +263,6 @@ class StudyTest {
     private static final String DUPLICATED_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON = "\"" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "\"";
 
     private static final String DEFAULT_PROVIDER = "defaultProvider";
-    private static final UUID EXPORT_UUID = UUID.randomUUID();
 
     @Autowired
     private OutputDestination output;
@@ -604,21 +604,23 @@ class StudyTest {
                 } else if (path.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.equals("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=myFileName&receiver=.*")) {
-                    return new MockResponse.Builder().code(200).body(EXPORT_UUID.toString()).build();
+                    return new MockResponse.Builder().code(200).body(UUID.randomUUID().toString()).build();
                 } else if (path.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(EXPORT_UUID));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.equals("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(EXPORT_UUID));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID + "&fileName=myFileName&receiver=.*")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(EXPORT_UUID));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID + "&fileName=")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(EXPORT_UUID));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.equals("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?variantId=" + VARIANT_ID)) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(EXPORT_UUID));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
                 } else if (path.contains("/export/ERROR")) {
                     return new MockResponse(500);
                 } else if (path.startsWith("/v1/networks/") && path.contains("/export/XIIDM")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(EXPORT_UUID));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
+                } else if (path.contains("/v1/download-file/")) {
+                    return new MockResponse.Builder().code(200).build();
                 }
 
                 switch (path) {
@@ -841,23 +843,30 @@ class StudyTest {
 
         //export a network
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
-                        studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
-
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(request -> request.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=myFileName")));
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM")
-                        .header(HEADER_USER_ID, userId)).andExpect(status().isOk());
-        TestUtils.getRequestsDone(1, server); // just consume it
-
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 3", userId);
         UUID modificationNode1Uuid = modificationNode1.getId();
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, "XIIDM")
-                        .header(HEADER_USER_ID, userId)).andExpect(status().isInternalServerError());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
+                studyNameUserIdUuid,
+                firstRootNetworkUuid,
+                modificationNode1Uuid,
+                "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isInternalServerError());
 
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode1.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid),
-            RootNetworkNodeInfo.builder().nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
+                RootNetworkNodeInfo.builder().nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
+                        studyNameUserIdUuid,
+                firstRootNetworkUuid,
+                modificationNode1Uuid,
+                "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+        TestUtils.getRequestsDone(1, server);
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D",
+                studyNameUserIdUuid,
+                firstRootNetworkUuid,
+                modificationNode1Uuid,
+                "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+        TestUtils.getRequestsDone(1, server); // just consume it
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
                         studyNameUserIdUuid,
@@ -887,22 +896,38 @@ class StudyTest {
     }
 
     @Test
-    void testConsumeNetworkExportFinishedSuccess(final MockWebServer mockWebServer) throws Exception {
+    void testConsumeNetworkExportFinished(final MockWebServer mockWebServer) throws Exception {
         String userId = "userId";
         UUID studyUuid = createStudy(mockWebServer, userId, CASE_UUID);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1", userId);
+        UUID modificationNode1Uuid = modificationNode1.getId();
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode1.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
+                RootNetworkNodeInfo.builder().nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
+                studyUuid,
+                firstRootNetworkUuid,
+                modificationNode1Uuid,
+                "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk()).andReturn();
+        TestUtils.getRequestsDone(1, mockWebServer);
+        UUID exportUuid = mapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
+        mockMvc.perform(get("/v1/download-file/{exportUuid}", exportUuid).header(HEADER_USER_ID, userId)).andExpect(status().isConflict());
         NetworkExportReceiver receiver = new NetworkExportReceiver(studyUuid, userId);
         String receiverJson = mapper.writeValueAsString(receiver);
         String encodedReceiver = URLEncoder.encode(receiverJson, StandardCharsets.UTF_8);
-        String errorMessage = "error";
+        String errorMessage = null;
         Map<String, Object> headers = new HashMap<>();
         headers.put(HEADER_RECEIVER, encodedReceiver);
-        headers.put(HEADER_EXPORT_UUID, EXPORT_UUID.toString());
+        headers.put(HEADER_EXPORT_UUID, exportUuid.toString());
         headers.put(HEADER_ERROR, errorMessage);
         Message<String> message = new GenericMessage<>("", headers);
         consumeService.consumeNetworkExportFinished(message);
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(mess);
-        assertEquals(EXPORT_UUID, mess.getHeaders().get(HEADER_EXPORT_UUID));
+        assertEquals(exportUuid, mess.getHeaders().get(HEADER_EXPORT_UUID));
+        mockMvc.perform(get("/v1/download-file/{exportUuid}", exportUuid).header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+        TestUtils.getRequestsDone(1, mockWebServer);
     }
 
     @Test
