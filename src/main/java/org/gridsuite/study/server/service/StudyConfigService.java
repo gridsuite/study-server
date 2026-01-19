@@ -53,7 +53,6 @@ public class StudyConfigService {
     private static final String WORKSPACE_WITH_ID_URI = WORKSPACES_URI + "/{workspaceId}";
     private static final String WORKSPACE_NAME_URI = "/name";
     private static final String WORKSPACE_PANELS_URI = "/panels";
-    private static final String SAVED_NAD_CONFIG_UUIDS_URI = "/saved-nad-config-uuids";
     private static final String DEFAULT_URI = "/default";
 
     private static final DiagramPosition DEFAULT_DIAGRAM_POSITION = new DiagramPosition(2, 2, 0, 0);
@@ -432,12 +431,12 @@ public class StudyConfigService {
         restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
-    public String getWorkspacePanels(UUID configId, UUID workspaceId, List<String> ids) {
+    public String getWorkspacePanels(UUID configId, UUID workspaceId, List<String> panelIds) {
         Objects.requireNonNull(configId);
         Objects.requireNonNull(workspaceId);
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI);
-        if (ids != null && !ids.isEmpty()) {
-            builder.queryParam("ids", ids.toArray());
+        if (panelIds != null && !panelIds.isEmpty()) {
+            builder.queryParam("panelIds", panelIds.toArray());
         }
         String path = builder.buildAndExpand(configId, workspaceId).toUriString();
         return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);

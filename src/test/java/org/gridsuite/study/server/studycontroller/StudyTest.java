@@ -603,6 +603,12 @@ class StudyTest {
                     return new MockResponse(404); // config duplication request KO
                 } else if (path.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
+                } else if (path.matches("/v1/workspaces-configs/default")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
+                } else if (path.matches("/v1/workspaces-configs\\?duplicateFrom=.*")) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), mapper.writeValueAsString(UUID.randomUUID()));
+                } else if (path.matches("/v1/workspaces-configs/.*") && DELETE.equals(request.getMethod())) {
+                    return new MockResponse(200);
                 } else if (path.equals("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=myFileName&receiver=.*")) {
                     return new MockResponse.Builder().code(200).body(EXPORT_UUID.toString()).build();
                 } else if (path.startsWith("/v1/networks/" + NETWORK_UUID_STRING + "/export/XIIDM?fileName=")) {
@@ -917,6 +923,7 @@ class StudyTest {
         studyEntity.setVoltageInitParametersUuid(UUID.randomUUID()); // does not have default params
         studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
+        studyEntity.setWorkspacesConfigUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
 
         UUID stubUuid = wireMockStubs.stubNetworkModificationDeleteGroup();
@@ -927,7 +934,7 @@ class StudyTest {
 
         wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(11, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(12, server);
         assertEquals(2, requests.stream().filter(r -> r.getPath().matches("/v1/reports")).count());
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + CASE_UUID)));
@@ -939,6 +946,7 @@ class StudyTest {
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/" + studyEntity.getPccMinParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/network-visualizations-params/" + studyEntity.getNetworkVisualizationParametersUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/spreadsheet-config-collections/" + studyEntity.getSpreadsheetConfigCollectionUuid())));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/workspaces-configs/" + studyEntity.getWorkspacesConfigUuid())));
     }
 
     @Test
@@ -953,6 +961,7 @@ class StudyTest {
         studyEntity.setStateEstimationParametersUuid(null);
         studyEntity.setPccMinParametersUuid(null);
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
+        studyEntity.setWorkspacesConfigUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
 
         // We ignore error when remote data async remove
@@ -967,7 +976,8 @@ class StudyTest {
 
         wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(3, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(4, server);
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/workspaces-configs/" + studyEntity.getWorkspacesConfigUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/spreadsheet-config-collections/" + studyEntity.getSpreadsheetConfigCollectionUuid())));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
     }
@@ -993,10 +1003,11 @@ class StudyTest {
 
         wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid);
 
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(9, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(10, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/" + nonExistingCaseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/.*"))); // x 4
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/workspaces-configs/.*")));
     }
 
     @Test
@@ -1228,7 +1239,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        int nbRequest = 14;
+        int nbRequest = 15;
         if (parameterDuplicatedUuid != null && !parameterDuplicationSuccess) {
             nbRequest += 7;
         }
@@ -1242,12 +1253,14 @@ class StudyTest {
         if (!parameterDuplicationSuccess) {
             assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/default")));
             assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/network-visualizations-params/default")));
+            assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/workspaces-configs/default")));
         }
         assertTrue(requests.contains("/v1/cases/%s/disableExpiration".formatted(caseUuid)));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
         if (parameterDuplicatedUuid != null) {
             assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/parameters?duplicateFrom=" + parameterDuplicatedUuid) ||
                                                        r.equals("/v1/spreadsheet-config-collections?duplicateFrom=" + parameterDuplicatedUuid) ||
+                                                       r.equals("/v1/workspaces-configs?duplicateFrom=" + parameterDuplicatedUuid) ||
                                                        r.equals("/v1/network-visualizations-params?duplicateFrom=" + parameterDuplicatedUuid)));
         }
 
@@ -1268,12 +1281,13 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(14, server);
+        Set<RequestWithBody> requests = TestUtils.getRequestsWithBodyDone(15, server);
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/%s/exists".formatted(caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/networks\\?caseUuid=" + caseUuid + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/cases/%s/disableExpiration".formatted(caseUuid))));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/parameters/default")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/spreadsheet-config-collections/default")));
+        assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/workspaces-configs/default")));
         assertTrue(requests.stream().anyMatch(r -> r.getPath().matches("/v1/reports/.*")));
 
         assertEquals(mapper.writeValueAsString(importParameters), requests.stream()
@@ -1298,7 +1312,7 @@ class StudyTest {
         assertStudyCreation(studyUuid, userId);
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(15, server);
+        var requests = TestUtils.getRequestsDone(16, server);
         assertTrue(requests.contains("/v1/cases/%s/exists".formatted(caseUuid)));
         assertTrue(requests.contains("/v1/cases?duplicateFrom=%s&withExpiration=%s".formatted(caseUuid, true)));
         // note : it's a new case UUID
@@ -1306,6 +1320,7 @@ class StudyTest {
         assertTrue(requests.contains("/v1/cases/%s/disableExpiration".formatted(CLONED_CASE_UUID_STRING)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/parameters/default")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/spreadsheet-config-collections/default")));
+        assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/workspaces-configs/default")));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/" + userId + "/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
 
@@ -1518,12 +1533,13 @@ class StudyTest {
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // assert that all http requests have been sent to remote services
-        var requests = TestUtils.getRequestsDone(14, server);
+        var requests = TestUtils.getRequestsDone(15, server);
         assertTrue(requests.contains("/v1/cases/%s/exists".formatted(NEW_STUDY_CASE_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/networks\\?caseUuid=" + NEW_STUDY_CASE_UUID + "&variantId=" + FIRST_VARIANT_ID + "&reportUuid=.*")));
         assertTrue(requests.contains("/v1/cases/%s/disableExpiration".formatted(NEW_STUDY_CASE_UUID)));
         assertTrue(requests.contains("/v1/parameters/default"));
         assertTrue(requests.contains("/v1/spreadsheet-config-collections/default"));
+        assertTrue(requests.contains("/v1/workspaces-configs/default"));
         assertTrue(requests.stream().anyMatch(r -> r.equals("/v1/users/userId/profile")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/reports/.*")));
     }
@@ -1777,6 +1793,7 @@ class StudyTest {
         studyEntity.setPccMinParametersUuid(UUID.randomUUID());
         studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
+        studyEntity.setWorkspacesConfigUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
         testDuplicateStudy(mockWebServer, study1Uuid, firstRootNetworkUuid, "userId");
     }
@@ -1794,6 +1811,7 @@ class StudyTest {
         studyEntity.setPccMinParametersUuid(UUID.randomUUID());
         studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
+        studyEntity.setWorkspacesConfigUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
         testDuplicateStudy(mockWebServer, study1Uuid, firstRootNetworkUuid, NAD_CONFIG_USER_ID);
     }
@@ -1811,6 +1829,7 @@ class StudyTest {
         studyEntity.setPccMinParametersUuid(null);
         studyEntity.setNetworkVisualizationParametersUuid(null);
         studyEntity.setSpreadsheetConfigCollectionUuid(null);
+        studyEntity.setWorkspacesConfigUuid(null);
         studyRepository.save(studyEntity);
         testDuplicateStudy(mockWebServer, study1Uuid, firstRootNetworkUuid, "userId");
     }
@@ -1863,6 +1882,9 @@ class StudyTest {
             numberOfRequests++;
         }
         if (studyEntity.getSpreadsheetConfigCollectionUuid() != null) {
+            numberOfRequests++;
+        }
+        if (studyEntity.getWorkspacesConfigUuid() != null) {
             numberOfRequests++;
         }
         TestUtils.getRequestsWithBodyDone(numberOfRequests, mockWebServer);
@@ -1971,6 +1993,12 @@ class StudyTest {
             assertNotNull(duplicatedStudy.getSpreadsheetConfigCollectionUuid());
             numberOfRequests++;
         }
+        if (sourceStudy.getWorkspacesConfigUuid() == null) {
+            assertNull(duplicatedStudy.getWorkspacesConfigUuid());
+        } else {
+            assertNotNull(duplicatedStudy.getWorkspacesConfigUuid());
+            numberOfRequests++;
+        }
         if (NAD_CONFIG_USER_ID.equals(userId)) {
             numberOfRequests = numberOfRequests + 3;
         }
@@ -2006,6 +2034,9 @@ class StudyTest {
         }
         if (sourceStudy.getSpreadsheetConfigCollectionUuid() != null) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + sourceStudy.getSpreadsheetConfigCollectionUuid())).count());
+        }
+        if (sourceStudy.getWorkspacesConfigUuid() != null) {
+            assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/workspaces-configs\\?duplicateFrom=" + sourceStudy.getWorkspacesConfigUuid())).count());
         }
         if (NAD_CONFIG_USER_ID.equals(userId)) {
             assertEquals(1, requests.stream().filter(r -> r.getPath().matches("/v1/network-area-diagram/config\\?duplicateFrom=" + PROFILE_DIAGRAM_CONFIG_UUID_STRING)).count());

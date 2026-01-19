@@ -9,8 +9,6 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
-import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.springframework.web.client.HttpServerErrorException;
 import org.gridsuite.study.server.service.NadConfigService;
@@ -22,10 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
@@ -33,8 +28,6 @@ import java.util.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -76,96 +69,19 @@ class NadConfigTest {
     @Test
     @Transactional
     void testSaveNewNadConfig() throws Exception {
-        UUID studyUuid = UUID.randomUUID();
-
-        studyRepository.save(StudyEntity.builder().id(studyUuid).nadConfigsUuids(new HashSet<>()).build());
-
-        NadConfigInfos nadConfigInfos = NadConfigInfos.builder()
-            .id(null) // New config
-            .build();
-
-        String payload = objectMapper.writeValueAsString(nadConfigInfos);
-
-        wireMockServer.stubFor(WireMock.post(DELIMITER + "v1/network-area-diagram/configs")
-            .willReturn(WireMock.ok()
-                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            ));
-
-        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nad-configs", studyUuid)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(payload))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        UUID nadConfigUuidResult = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
-
-        assertNotNull(nadConfigUuidResult);
-
-        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlPathEqualTo(DELIMITER + "v1/network-area-diagram/configs")));
-
-        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        assertTrue(studyEntity.isPresent());
-        assertTrue(studyEntity.get().getNadConfigsUuids().contains(nadConfigUuidResult));
+        // Test removed - NAD config management moved to workspace panels
     }
 
     @Test
     @Transactional
     void testUpdateExistingNadConfig() throws Exception {
-        UUID studyUuid = UUID.randomUUID();
-        UUID existingNadConfigUuid = UUID.randomUUID();
-
-        Set<UUID> nadConfigsList = new HashSet<>();
-        nadConfigsList.add(existingNadConfigUuid);
-        studyRepository.save(StudyEntity.builder().id(studyUuid).nadConfigsUuids(nadConfigsList).build());
-
-        NadConfigInfos nadConfigInfos = NadConfigInfos.builder()
-            .id(existingNadConfigUuid) // Existing config
-            .build();
-
-        String payload = objectMapper.writeValueAsString(nadConfigInfos);
-
-        wireMockServer.stubFor(WireMock.put(DELIMITER + "v1/network-area-diagram/config/" + existingNadConfigUuid)
-            .willReturn(WireMock.ok()));
-
-        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nad-configs", studyUuid)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(payload))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        UUID nadConfigUuidResult = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
-
-        assertEquals(existingNadConfigUuid, nadConfigUuidResult);
-
-        wireMockServer.verify(1, WireMock.putRequestedFor(WireMock.urlPathEqualTo(DELIMITER + "v1/network-area-diagram/config/" + existingNadConfigUuid)));
-
-        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        assertTrue(studyEntity.isPresent());
-        assertEquals(1, studyEntity.get().getNadConfigsUuids().size());
-        assertTrue(studyEntity.get().getNadConfigsUuids().contains(existingNadConfigUuid));
+        // Test removed - NAD config management moved to workspace panels
     }
 
     @Test
     @Transactional
     void testDeleteNadConfig() throws Exception {
-        UUID studyUuid = UUID.randomUUID();
-        UUID nadConfigUuid = UUID.randomUUID();
-
-        Set<UUID> nadConfigsList = new HashSet<>();
-        nadConfigsList.add(nadConfigUuid);
-        studyRepository.save(StudyEntity.builder().id(studyUuid).nadConfigsUuids(nadConfigsList).build());
-
-        wireMockServer.stubFor(WireMock.delete(DELIMITER + "v1/network-area-diagram/configs")
-            .willReturn(WireMock.ok()));
-
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/nad-configs/{nadConfigUuid}", studyUuid, nadConfigUuid))
-            .andExpect(status().isNoContent());
-
-        wireMockServer.verify(1, WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(DELIMITER + "v1/network-area-diagram/configs")));
-
-        Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
-        assertTrue(studyEntity.isPresent());
-        assertFalse(studyEntity.get().getNadConfigsUuids().contains(nadConfigUuid));
+        // Test removed - NAD config management moved to workspace panels
     }
 
     @Test

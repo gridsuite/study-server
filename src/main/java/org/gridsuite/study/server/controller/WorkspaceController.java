@@ -55,8 +55,9 @@ public class WorkspaceController {
     public ResponseEntity<Void> renameWorkspace(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable UUID workspaceId,
-            @RequestBody String name) {
-        workspaceService.renameWorkspace(studyUuid, workspaceId, name);
+            @RequestBody String name,
+            @RequestHeader(value = "clientId", required = false) String clientId) {
+        workspaceService.renameWorkspace(studyUuid, workspaceId, name, clientId);
         return ResponseEntity.noContent().build();
     }
 
@@ -67,8 +68,8 @@ public class WorkspaceController {
     public ResponseEntity<String> getPanels(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable UUID workspaceId,
-            @RequestParam(required = false) List<String> ids) {
-        return ResponseEntity.ok(workspaceService.getWorkspacePanels(studyUuid, workspaceId, ids));
+            @RequestParam(required = false) List<String> panelIds) {
+        return ResponseEntity.ok(workspaceService.getWorkspacePanels(studyUuid, workspaceId, panelIds));
     }
 
     @PostMapping("/{workspaceId}/panels")
@@ -78,8 +79,9 @@ public class WorkspaceController {
     public ResponseEntity<Void> createOrUpdatePanels(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable UUID workspaceId,
-            @RequestBody String panelsDto) {
-        workspaceService.createOrUpdateWorkspacePanels(studyUuid, workspaceId, panelsDto);
+            @RequestBody String panelsDto,
+            @RequestHeader(value = "clientId", required = false) String clientId) {
+        workspaceService.createOrUpdateWorkspacePanels(studyUuid, workspaceId, panelsDto, clientId);
         return ResponseEntity.noContent().build();
     }
 
@@ -90,8 +92,9 @@ public class WorkspaceController {
     public ResponseEntity<Void> deletePanels(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable UUID workspaceId,
-            @RequestBody String panelIds) {
-        workspaceService.deleteWorkspacePanels(studyUuid, workspaceId, panelIds);
+            @RequestBody(required = false) String panelIds,
+            @RequestHeader(value = "clientId", required = false) String clientId) {
+        workspaceService.deleteWorkspacePanels(studyUuid, workspaceId, panelIds, clientId);
         return ResponseEntity.noContent().build();
     }
 
@@ -103,8 +106,9 @@ public class WorkspaceController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable UUID workspaceId,
             @PathVariable UUID panelId,
-            @RequestBody Map<String, Object> nadConfigData) {
-        UUID savedNadConfigUuid = workspaceService.saveNadConfig(studyUuid, workspaceId, panelId, nadConfigData);
+            @RequestBody Map<String, Object> nadConfigData,
+            @RequestHeader(value = "clientId", required = false) String clientId) {
+        UUID savedNadConfigUuid = workspaceService.saveNadConfig(studyUuid, workspaceId, panelId, nadConfigData, clientId);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedNadConfigUuid);
     }
 

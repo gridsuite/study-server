@@ -50,6 +50,8 @@ public class NotificationService {
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
     public static final String HEADER_EXPORT_UUID = "exportUuid";
     public static final String HEADER_WORKSPACE_UUID = "workspaceUuid";
+    public static final String HEADER_PANEL_ID = "panelId";
+    public static final String HEADER_CLIENT_ID = "clientId";
     public static final String NETWORK_EXPORT_FINISHED = "networkExportFinished";
 
     public static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
@@ -210,25 +212,43 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitWorkspaceUpdated(UUID studyUuid, UUID workspaceId) {
-        sendStudyUpdateMessage(studyUuid, UPDATE_WORKSPACE_RENAMED, MessageBuilder.withPayload(workspaceId.toString()));
+    public void emitWorkspaceUpdated(UUID studyUuid, UUID workspaceId, String clientId) {
+        MessageBuilder<String> builder = MessageBuilder.withPayload(workspaceId.toString());
+        if (clientId != null) {
+            builder.setHeader(HEADER_CLIENT_ID, clientId);
+        }
+        sendStudyUpdateMessage(studyUuid, UPDATE_WORKSPACE_RENAMED, builder);
     }
 
     @PostCompletion
-    public void emitWorkspacePanelsUpdated(UUID studyUuid, UUID workspaceId, String panelIds) {
-        sendStudyUpdateMessage(studyUuid, UPDATE_WORKSPACE_PANELS, MessageBuilder.withPayload(panelIds)
-                .setHeader(HEADER_WORKSPACE_UUID, workspaceId.toString()));
+    public void emitWorkspacePanelsUpdated(UUID studyUuid, UUID workspaceId, String panelIds, String clientId) {
+        MessageBuilder<String> builder = MessageBuilder.withPayload(panelIds)
+                .setHeader(HEADER_WORKSPACE_UUID, workspaceId.toString());
+        if (clientId != null) {
+            builder.setHeader(HEADER_CLIENT_ID, clientId);
+        }
+        sendStudyUpdateMessage(studyUuid, UPDATE_WORKSPACE_PANELS, builder);
     }
 
     @PostCompletion
-    public void emitWorkspacePanelsDeleted(UUID studyUuid, UUID workspaceId, String panelIds) {
-        sendStudyUpdateMessage(studyUuid, DELETE_WORKSPACE_PANELS, MessageBuilder.withPayload(panelIds)
-                .setHeader(HEADER_WORKSPACE_UUID, workspaceId.toString()));
+    public void emitWorkspacePanelsDeleted(UUID studyUuid, UUID workspaceId, String panelIds, String clientId) {
+        MessageBuilder<String> builder = MessageBuilder.withPayload(panelIds)
+                .setHeader(HEADER_WORKSPACE_UUID, workspaceId.toString());
+        if (clientId != null) {
+            builder.setHeader(HEADER_CLIENT_ID, clientId);
+        }
+        sendStudyUpdateMessage(studyUuid, DELETE_WORKSPACE_PANELS, builder);
     }
 
     @PostCompletion
-    public void emitWorkspaceNadConfigUpdated(UUID studyUuid, UUID workspaceNadConfigUuid) {
-        sendStudyUpdateMessage(studyUuid, UPDATE_WORKSPACE_NAD_CONFIG, MessageBuilder.withPayload(workspaceNadConfigUuid.toString()));
+    public void emitWorkspaceNadConfigUpdated(UUID studyUuid, UUID workspaceId, UUID panelId, UUID workspaceNadConfigUuid, String clientId) {
+        MessageBuilder<String> builder = MessageBuilder.withPayload(workspaceNadConfigUuid.toString())
+                .setHeader(HEADER_WORKSPACE_UUID, workspaceId.toString())
+                .setHeader(HEADER_PANEL_ID, panelId.toString());
+        if (clientId != null) {
+            builder.setHeader(HEADER_CLIENT_ID, clientId);
+        }
+        sendStudyUpdateMessage(studyUuid, UPDATE_WORKSPACE_NAD_CONFIG, builder);
     }
 
     @PostCompletion

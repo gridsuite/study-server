@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -84,38 +84,38 @@ public class WorkspaceService {
     }
 
     @Transactional
-    public void renameWorkspace(UUID studyUuid, UUID workspaceId, String name) {
+    public void renameWorkspace(UUID studyUuid, UUID workspaceId, String name, String clientId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         studyConfigService.renameWorkspace(studyEntity.getWorkspacesConfigUuid(), workspaceId, name);
-        notificationService.emitWorkspaceUpdated(studyUuid, workspaceId);
+        notificationService.emitWorkspaceUpdated(studyUuid, workspaceId, clientId);
     }
 
-    public String getWorkspacePanels(UUID studyUuid, UUID workspaceId, List<String> ids) {
+    public String getWorkspacePanels(UUID studyUuid, UUID workspaceId, List<String> panelIds) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        return studyConfigService.getWorkspacePanels(studyEntity.getWorkspacesConfigUuid(), workspaceId, ids);
+        return studyConfigService.getWorkspacePanels(studyEntity.getWorkspacesConfigUuid(), workspaceId, panelIds);
     }
 
     @Transactional
-    public void createOrUpdateWorkspacePanels(UUID studyUuid, UUID workspaceId, String panelsDto) {
+    public void createOrUpdateWorkspacePanels(UUID studyUuid, UUID workspaceId, String panelsDto, String clientId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         studyConfigService.createOrUpdateWorkspacePanels(studyEntity.getWorkspacesConfigUuid(), workspaceId, panelsDto);
         String panelIds = extractWorkspacePanelIds(panelsDto);
-        notificationService.emitWorkspacePanelsUpdated(studyUuid, workspaceId, panelIds);
+        notificationService.emitWorkspacePanelsUpdated(studyUuid, workspaceId, panelIds, clientId);
     }
 
     @Transactional
-    public void deleteWorkspacePanels(UUID studyUuid, UUID workspaceId, String panelIds) {
+    public void deleteWorkspacePanels(UUID studyUuid, UUID workspaceId, String panelIds, String clientId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         studyConfigService.deleteWorkspacePanels(
             studyEntity.getWorkspacesConfigUuid(),
             workspaceId,
             panelIds
         );
-        notificationService.emitWorkspacePanelsDeleted(studyUuid, workspaceId, panelIds);
+        notificationService.emitWorkspacePanelsDeleted(studyUuid, workspaceId, panelIds, clientId);
     }
 
     @Transactional
-    public UUID saveNadConfig(UUID studyUuid, UUID workspaceId, UUID panelId, Map<String, Object> nadConfigData) {
+    public UUID saveNadConfig(UUID studyUuid, UUID workspaceId, UUID panelId, Map<String, Object> nadConfigData, String clientId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         UUID savedNadConfigUuid = studyConfigService.saveWorkspacePanelNadConfig(
             studyEntity.getWorkspacesConfigUuid(),
@@ -123,7 +123,7 @@ public class WorkspaceService {
             panelId,
             nadConfigData
         );
-        notificationService.emitWorkspaceNadConfigUpdated(studyUuid, savedNadConfigUuid);
+        notificationService.emitWorkspaceNadConfigUpdated(studyUuid, workspaceId, panelId, savedNadConfigUuid, clientId);
         return savedNadConfigUuid;
     }
 
