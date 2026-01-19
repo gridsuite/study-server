@@ -69,7 +69,7 @@ class StudyControllerRebuildNodeTest {
     void testCreateNetworkModification() {
         studyController.createNetworkModification(studyUuid, nodeUuid, "modificationBody", userId);
 
-        verify(rebuildNodeService, times(1)).createNetworkModification(eq(studyUuid), eq(nodeUuid), eq("modificationBody"), eq(userId));
+        verify(rebuildNodeService, times(1)).createNetworkModification(studyUuid, nodeUuid, "modificationBody", userId);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 
@@ -87,16 +87,15 @@ class StudyControllerRebuildNodeTest {
         UUID originNodeUuid = UUID.randomUUID();
         studyController.moveOrCopyModifications(studyUuid, nodeUuid, StudyConstants.ModificationsActionType.MOVE, studyUuid, originNodeUuid, modificationUuids, userId);
 
-        verify(rebuildNodeService, times(1)).moveNetworkModifications(eq(studyUuid), eq(nodeUuid), eq(originNodeUuid), eq(modificationUuids), eq(userId));
+        verify(rebuildNodeService, times(1)).moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationUuids, userId);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 
     @Test
     void updateNetworkModification() {
-        UUID modificationUuid = UUID.randomUUID();
         studyController.updateNetworkModification(studyUuid, nodeUuid, modificationUuid, "modificationAttributes", userId);
 
-        verify(rebuildNodeService, times(1)).updateNetworkModification(eq(studyUuid), eq("modificationAttributes"), eq(nodeUuid), eq(modificationUuid), eq(userId));
+        verify(rebuildNodeService, times(1)).updateNetworkModification(studyUuid, "modificationAttributes", nodeUuid, modificationUuid, userId);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 
@@ -105,7 +104,7 @@ class StudyControllerRebuildNodeTest {
         List<UUID> modificationUuids = List.of(UUID.randomUUID());
         studyController.stashNetworkModifications(studyUuid, nodeUuid, modificationUuids, true, userId);
 
-        verify(rebuildNodeService, times(1)).stashNetworkModifications(eq(studyUuid), eq(nodeUuid), eq(modificationUuids), eq(userId));
+        verify(rebuildNodeService, times(1)).stashNetworkModifications(studyUuid, nodeUuid, modificationUuids, userId);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 
@@ -114,7 +113,7 @@ class StudyControllerRebuildNodeTest {
         List<UUID> modificationUuids = List.of(UUID.randomUUID());
         studyController.stashNetworkModifications(studyUuid, nodeUuid, modificationUuids, false, userId);
 
-        verify(rebuildNodeService, times(1)).restoreNetworkModifications(eq(studyUuid), eq(nodeUuid), eq(modificationUuids), eq(userId));
+        verify(rebuildNodeService, times(1)).restoreNetworkModifications(studyUuid, nodeUuid, modificationUuids, userId);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 
@@ -125,7 +124,7 @@ class StudyControllerRebuildNodeTest {
         NetworkModificationMetadata networkModificationMetadata = new NetworkModificationMetadata(true, "description", "type");
         studyController.updateNetworkModificationsMetadata(studyUuid, nodeUuid, modificationUuids, networkModificationMetadata, userId);
 
-        verify(rebuildNodeService, times(1)).updateNetworkModificationsMetadata(eq(studyUuid), eq(nodeUuid), eq(modificationUuids), eq(userId), eq(networkModificationMetadata));
+        verify(rebuildNodeService, times(1)).updateNetworkModificationsMetadata(studyUuid, nodeUuid, modificationUuids, userId, networkModificationMetadata);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 
@@ -134,7 +133,7 @@ class StudyControllerRebuildNodeTest {
         Set<UUID> modificationUuids = Set.of(UUID.randomUUID());
         studyController.updateNetworkModificationsActivation(studyUuid, rootNetworkUuid, nodeUuid, modificationUuids, true, userId);
 
-        verify(rebuildNodeService, times(1)).updateNetworkModificationsActivation(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), eq(modificationUuids), eq(userId), eq(true));
+        verify(rebuildNodeService, times(1)).updateNetworkModificationsActivation(studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, userId, true);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 }

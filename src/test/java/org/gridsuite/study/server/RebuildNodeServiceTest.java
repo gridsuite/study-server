@@ -14,7 +14,6 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
@@ -95,7 +94,6 @@ class RebuildNodeServiceTest {
 
     @Test
     void testRebuildMultipleRootNetworksAndNodes() {
-        Runnable runnable = Mockito.spy(Runnable.class);
         doReturn(
             Map.of(
                 rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT),
