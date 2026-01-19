@@ -3529,13 +3529,6 @@ public class StudyService {
         networkModificationTreeService.assertCreateNode(nodeId, nodeInfo.getNodeType(), insertMode);
         NetworkModificationNode newNode = networkModificationTreeService.createNode(study, nodeId, nodeInfo, insertMode, userId);
 
-        try {
-            createNodePostAction(studyUuid, nodeId, newNode, userId);
-        } catch (Exception e) {
-            // if post action fails, don't interrupt / rollback current transaction
-            LOGGER.warn(e.getMessage());
-        }
-
         UUID parentUuid = networkModificationTreeService.getParentNodeUuid(newNode.getId()).orElse(null);
         notificationService.emitNodeInserted(study.getId(), parentUuid, newNode.getId(), insertMode, nodeId);
         // userId is null when creating initial nodes, we don't need to send element update notifications in this case
@@ -3545,9 +3538,17 @@ public class StudyService {
         return newNode;
     }
 
-    private void createNodePostAction(UUID studyUuid, UUID parentNodeUuid, NetworkModificationNode newNode, String userId) {
+    @Transactional
+    public void createNodePostAction(UUID studyUuid, UUID parentNodeUuid, NetworkModificationNode newNode, String userId) {
         if (newNode.isSecurityNode() && networkModificationTreeService.isRootOrConstructionNode(parentNodeUuid)) {
             buildNode(studyUuid, newNode.getId(), userId);
+        }
+    }
+
+    @Transactional
+    public void createSequencePostAction(UUID studyUuid, UUID sequenceParentNode, NodeSequenceType nodeSequenceType, String userId) {
+        if (nodeSequenceType == NodeSequenceType.SECURITY_SEQUENCE) {
+            buildNode(studyUuid, sequenceParentNode, userId);
         }
     }
 
@@ -3557,7 +3558,6 @@ public class StudyService {
         networkModificationTreeService.assertIsRootOrConstructionNode(parentNodeUuid);
 
         NetworkModificationNode newParentNode = networkModificationTreeService.createTreeNodeFromNodeSequence(study, parentNodeUuid, nodeSequenceType);
-        createSequencePostAction(studyUuid, newParentNode.getId(), nodeSequenceType, userId);
 
         notificationService.emitSubtreeInserted(study.getId(), newParentNode.getId(), parentNodeUuid);
         // userId is null when creating initial nodes, we don't need to send element update notifications in this case
@@ -3565,12 +3565,6 @@ public class StudyService {
             notificationService.emitElementUpdated(study.getId(), userId);
         }
         return newParentNode;
-    }
-
-    private void createSequencePostAction(UUID studyUuid, UUID sequenceParentNode, NodeSequenceType nodeSequenceType, String userId) {
-        if (nodeSequenceType == NodeSequenceType.SECURITY_SEQUENCE) {
-            buildNode(studyUuid, sequenceParentNode, userId);
-        }
     }
 
     private List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {

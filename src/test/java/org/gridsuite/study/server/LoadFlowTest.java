@@ -1054,11 +1054,8 @@ class LoadFlowTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        if (nodeType == NetworkModificationNodeType.SECURITY) {
-            // with new development, when node is of security type, we build it after creation
-            // to prevent existing tests to fail, we set it to 0 to keep previous behaviour -> we don't build security node after creation
-            doReturn(Optional.of(0)).when(userAdminService).getUserMaxAllowedBuilds("userId");
-        }
+        reset(studyService);
+        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
@@ -1069,6 +1066,8 @@ class LoadFlowTest {
 
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).build());
+
+        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
 
         return modificationNode;
     }

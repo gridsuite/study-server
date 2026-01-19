@@ -641,10 +641,9 @@ public class ConsumerService {
                 // unblock node
                 handleUnblockNode(receiverObj, computationType);
 
-                // build 1st level children if loadflow is converged, and node if of security type
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
                 if (computationType == LOAD_FLOW) {
+                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
                     handleLoadFlowSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, userId);
                 }
 
@@ -655,6 +654,7 @@ public class ConsumerService {
     }
 
     private void handleLoadFlowSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
+        // Build 1st level children if loadflow is converged, and node is a security type
         if (userId != null && networkModificationTreeService.isSecurityNode(nodeUuid)) {
             LoadFlowStatus loadFlowStatus = loadFlowService.getLoadFlowStatus(resultUuid);
             if (loadFlowStatus == LoadFlowStatus.CONVERGED) {

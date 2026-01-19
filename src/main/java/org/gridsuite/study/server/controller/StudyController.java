@@ -1477,7 +1477,11 @@ public class StudyController {
                                                          @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
                                                          @Parameter(description = "node is inserted before the given node ID") @RequestParam(name = "mode", required = false, defaultValue = "CHILD") InsertMode insertMode,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.createNode(studyUuid, referenceId, node, insertMode, userId));
+
+        NetworkModificationNode newNode = studyService.createNode(studyUuid, referenceId, node, insertMode, userId);
+        studyService.createNodePostAction(studyUuid, referenceId, newNode, userId);
+
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(newNode);
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}", params = {"sequenceType"})
@@ -1490,7 +1494,9 @@ public class StudyController {
                                                               @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
                                                               @Parameter(description = "sequence to create") @RequestParam("sequenceType") NodeSequenceType nodeSequenceType,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.createSequence(studyUuid, referenceId, nodeSequenceType, userId));
+        NetworkModificationNode sequenceParentNode = studyService.createSequence(studyUuid, referenceId, nodeSequenceType, userId);
+        studyService.createSequencePostAction(studyUuid, referenceId, nodeSequenceType, userId);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sequenceParentNode);
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/tree/nodes")

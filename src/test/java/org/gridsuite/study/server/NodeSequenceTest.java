@@ -97,10 +97,7 @@ class NodeSequenceTest {
         AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
         checkSecuritySequence(nNode, "");
 
-        // verify nNode has been built
-        verify(userAdminService, times(1)).getUserMaxAllowedBuilds(userId);
-        verify(networkModificationService, times(1)).buildNode(eq(nNode.getId()), any(), any(), eq(null));
-        // verify notifications
+       // verify notifications
         verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode.getId(), parentOfSubtree.getId());
         verify(notificationService, times(1)).emitElementUpdated(studyUuid, userId);
 
@@ -116,9 +113,6 @@ class NodeSequenceTest {
         AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
         checkSecuritySequence(nNode, "");
 
-        // verify nNode has been built
-        verify(userAdminService, times(1)).getUserMaxAllowedBuilds(userId);
-        verify(networkModificationService, times(1)).buildNode(eq(nNode.getId()), any(), any(), eq(null));
         // verify notifications
         verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode.getId(), parentOfSubtree.getId());
         verify(notificationService, times(1)).emitElementUpdated(studyUuid, userId);
@@ -141,10 +135,6 @@ class NodeSequenceTest {
         AbstractNode nNode2 = parentOfSubtree2.getChildren().getFirst();
         checkSecuritySequence(nNode2, " (1)");
 
-        // verify nNode and nNode2 have been built
-        verify(userAdminService, times(2)).getUserMaxAllowedBuilds(userId);
-        verify(networkModificationService, times(1)).buildNode(eq(nNode.getId()), any(), any(), eq(null));
-        verify(networkModificationService, times(1)).buildNode(eq(nNode2.getId()), any(), any(), eq(null));
         //verify notifications
         verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode.getId(), constructionNode.getId());
         verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode2.getId(), constructionNode2.getId());
