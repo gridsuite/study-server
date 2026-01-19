@@ -263,12 +263,12 @@ class PccMinTest {
         wireMockStubs.verifyPccMinRun(stubRun, NETWORK_UUID_STRING, VARIANT_ID);
 
         // verify pcc min status
-        UUID stubStatus = wireMockStubs.stubPccMinStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON);
+        UUID stubStatus = wireMockStubs.stubComputationStatusGet(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON);
         mockMvc.perform(get(PCC_MIN_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk())
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(PCC_MIN_STATUS_JSON));
 
-        wireMockStubs.verifyPccMinStatus(stubStatus, PCC_MIN_RESULT_UUID);
+        wireMockStubs.verifyComputationStatus(stubStatus, PCC_MIN_RESULT_UUID);
     }
 
     @Test
