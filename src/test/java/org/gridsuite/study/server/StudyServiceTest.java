@@ -122,6 +122,7 @@ class StudyServiceTest {
         // quota not reached, all first level children of N1 will be built
         doReturn(Optional.of(10)).when(userAdminService).getUserMaxAllowedBuilds(userId);
         doReturn(0L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
+
         mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
         mockNodeBuild(node3.getIdNode(), rootNetworkUuid);
 
@@ -216,6 +217,7 @@ class StudyServiceTest {
         doReturn(new BuildInfos()).when(networkModificationTreeService).getBuildInfos(nodeUuid, rootNetworkUuid);
         doNothing().when(networkModificationTreeService).setModificationReports(eq(nodeUuid), eq(rootNetworkUuid), any());
         doNothing().when(networkModificationTreeService).updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
+        doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationTreeService).getNodeBuildStatus(nodeUuid, rootNetworkUuid);
     }
 
     private void verifyNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
