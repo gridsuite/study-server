@@ -25,7 +25,6 @@ import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import com.powsybl.network.store.model.VariantInfos;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
-import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
@@ -379,7 +378,7 @@ class StudyTest {
         }
     }
 
-    private CreateStudyStubs stubCreateStudy(String userId, String userProfileJson, String caseUuid) {
+    private CreateStudyStubs setupCreateStudyStubs(String userId, String userProfileJson, String caseUuid) {
         UUID stubUserProfileId = userProfileJson != null
             ? wireMockStubs.stubUserProfile(userId, userProfileJson)
             : wireMockStubs.stubUserProfile(userId);
@@ -388,7 +387,7 @@ class StudyTest {
         return new CreateStudyStubs(stubUserProfileId, stubCaseExistsId, stubSendReportId, userId, caseUuid);
     }
 
-    private void stubCreateParameters() throws Exception {
+    private void setupCreateParametersStubs() throws Exception {
         wireMockStubs.stubParameters(mapper.writeValueAsString(UUID.randomUUID()));
         wireMockStubs.stubParametersDefault(mapper.writeValueAsString(UUID.randomUUID()));
         wireMockStubs.stubSpreadsheetConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
@@ -402,14 +401,14 @@ class StudyTest {
         wireMockStubs.verifyNetworkVisualizationParamsDefault(networkVisualizationParamsDefaultNbRequests);
     }
 
-    private DuplicateParameterStubs stubDuplicateParameters() throws Exception {
+    private DuplicateParameterStubs setupDuplicateParametersStubs() throws Exception {
         UUID stubParametersDuplicateFromId = wireMockStubs.stubParametersDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromAny(DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
         return new DuplicateParameterStubs(stubParametersDuplicateFromId, stubSpreadsheetConfigDuplicateFromId, stubNetworkVisualizationParamsDuplicateFromId);
     }
 
-    private DeleteStudyStubs stubDeleteStudy() {
+    private DeleteStudyStubs setupDeleteStudyStubs() {
         UUID stubDeleteParametersId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/parameters/.*"))
             .willReturn(WireMock.ok())).getId();
         UUID stubDeleteReportsId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
@@ -673,7 +672,7 @@ class StudyTest {
 
         UUID stubUuid = wireMockStubs.stubNetworkModificationDeleteGroup();
         UUID stubDeleteCaseId = wireMockStubs.caseServer.stubDeleteCase(CASE_UUID_STRING);
-        DeleteStudyStubs deleteStudyStubs = stubDeleteStudy();
+        DeleteStudyStubs deleteStudyStubs = setupDeleteStudyStubs();
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
@@ -705,7 +704,7 @@ class StudyTest {
             throw new InterruptedException();
         }).when(caseService).deleteCase(any());
         UUID stubUuid = wireMockStubs.stubNetworkModificationDeleteGroup();
-        DeleteStudyStubs deleteStudyStubs = stubDeleteStudy();
+        DeleteStudyStubs deleteStudyStubs = setupDeleteStudyStubs();
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
                 .andExpectAll(status().isOk());
@@ -730,7 +729,7 @@ class StudyTest {
         rootNetworkRepository.save(rootNetworkEntity);
 
         UUID stubDeleteCaseId = wireMockStubs.caseServer.stubDeleteCase(nonExistingCaseUuid.toString());
-        DeleteStudyStubs deleteStudyStubs = stubDeleteStudy();
+        DeleteStudyStubs deleteStudyStubs = setupDeleteStudyStubs();
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
@@ -975,8 +974,8 @@ class StudyTest {
     }
 
     private UUID createStudyWithStubs(String userId, UUID caseUuid, NetworkInfos networkInfos) throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(userId, null, caseUuid.toString());
-        stubCreateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(userId, null, caseUuid.toString());
+        setupCreateParametersStubs();
 
         UUID studyUuid = createStudy(userId, caseUuid, networkInfos);
 
@@ -1017,8 +1016,8 @@ class StudyTest {
     }
 
     private UUID createStudyWithDuplicateCase(String userId, UUID caseUuid) throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(userId, null, caseUuid.toString());
-        stubCreateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(userId, null, caseUuid.toString());
+        setupCreateParametersStubs();
         UUID stubDisableCaseExpirationClonedId = wireMockStubs.caseServer.stubDisableCaseExpiration(CLONED_CASE_UUID_STRING);
         UUID stubDuplicateCaseId = wireMockStubs.caseServer.stubDuplicateCaseWithBody(CASE_UUID_STRING, mapper.writeValueAsString(CLONED_CASE_UUID));
 
@@ -1183,8 +1182,8 @@ class StudyTest {
         String resultAsString;
         CountDownLatch countDownLatch = new CountDownLatch(1);
 
-        CreateStudyStubs createStudyStubs = stubCreateStudy("userId", USER_DEFAULT_PROFILE_JSON, NEW_STUDY_CASE_UUID);
-        stubCreateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs("userId", USER_DEFAULT_PROFILE_JSON, NEW_STUDY_CASE_UUID);
+        setupCreateParametersStubs();
 
         UUID postNetworkStubId = wireMockStubs.networkConversionServer
             .stubImportNetworkWithPostAction(NEW_STUDY_CASE_UUID, FIRST_VARIANT_ID, NETWORK_INFOS, "UCTE", countDownLatch);
@@ -1359,8 +1358,8 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultLoadflowUserHasNoParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
 
         createStudy(NO_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
@@ -1370,9 +1369,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultLoadflowUserHasInvalidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING);
 
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1386,9 +1385,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultLoadflowUserHasValidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         wireMockStubs.stubParametersDuplicateFrom(PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING, DUPLICATED_LOADFLOW_PARAMS_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1402,9 +1401,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultSecurityAnalysisUserHasInvalidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
 
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1418,9 +1417,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultSecurityAnalysisUserHasValidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         wireMockStubs.stubParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_SECURITY_ANALYSIS_PARAMS_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1434,9 +1433,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultSensitivityAnalysisUserHasInvalidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
 
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1450,9 +1449,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultSensitivityAnalysisUserHasValidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         wireMockStubs.stubParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_SENSITIVITY_ANALYSIS_PARAMS_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1466,9 +1465,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultShortcircuitUserHasInvalidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_SHORTCIRCUIT_INVALID_PARAMETERS_UUID_STRING);
 
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1482,9 +1481,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultShortcircuitUserHasValidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         wireMockStubs.stubParametersDuplicateFrom(PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING, DUPLICATED_SHORTCIRCUIT_PARAMS_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1498,9 +1497,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultSpreadsheetConfigCollectionUserHasInvalidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         UUID stubSpreadsheetConfigDuplicateFromNotFoundId = wireMockStubs.stubSpreadsheetConfigDuplicateFromNotFound(PROFILE_SPREADSHEET_CONFIG_COLLECTION_INVALID_UUID_STRING);
 
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1514,9 +1513,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultSpreadsheetConfigCollectionUserHasValidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         UUID stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFrom(PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING, DUPLICATED_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1530,9 +1529,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultNetworkVisualizationsParametersUserHasInvalidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         UUID stubNetworkVisualizationParamsDuplicateFromNotFoundId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromNotFound(PROFILE_NETWORK_VISUALIZATION_INVALID_PARAMETERS_UUID_STRING);
 
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1546,9 +1545,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultNetworkVisualizationsParametersUserHasValidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFrom(PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING, DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1562,9 +1561,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultVoltageInitUserHasInvalidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         wireMockStubs.stubParametersDuplicateFromNotFound(PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING);
 
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
@@ -1578,9 +1577,9 @@ class StudyTest {
 
     @Test
     void testCreateStudyWithDefaultVoltageInitUserHasValidParamsInProfile() throws Exception {
-        CreateStudyStubs createStudyStubs = stubCreateStudy(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
-        stubCreateParameters();
-        DuplicateParameterStubs duplicateParameterStubs = stubDuplicateParameters();
+        CreateStudyStubs createStudyStubs = setupCreateStudyStubs(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, CASE_UUID_STRING);
+        setupCreateParametersStubs();
+        DuplicateParameterStubs duplicateParameterStubs = setupDuplicateParametersStubs();
         wireMockStubs.stubParametersDuplicateFrom(PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING, DUPLICATED_VOLTAGE_INIT_PARAMS_JSON);
 
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
