@@ -515,7 +515,6 @@ class StudyTest {
         MvcResult result;
         String resultAsString;
         String userId = "userId";
-        UUID stubCaseNotExistsId = wireMockStubs.caseServer.stubCaseExists(NOT_EXISTING_CASE_UUID, false);
 
         //empty list
         mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId")).andExpectAll(status().isOk(),
@@ -539,6 +538,7 @@ class StudyTest {
         assertThat(infos, createMatcherStudyInfos(studyUuid));
 
         //insert a study with a non-existing case and except exception
+        UUID stubCaseNotExistsId = wireMockStubs.caseServer.stubCaseExists(NOT_EXISTING_CASE_UUID, false);
         result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}",
                 NOT_EXISTING_CASE_UUID, "false").header(USER_ID_HEADER, "userId").param(CASE_FORMAT, "XIIDM"))
                      .andExpectAll(status().isNotFound(), content().contentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE)).andReturn();
@@ -595,13 +595,15 @@ class StudyTest {
         wireMockStubs.networkConversionServer.verifyExportFormats(stubExportFormatsId);
 
         //export a network
-        UUID stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", EXPORT_UUID.toString());
+        UUID stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", UUID.randomUUID().toString());
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
                         studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
 
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
             Map.of("fileName", WireMock.equalTo("myFileName")));
+
+        stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", UUID.randomUUID().toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM")
                         .header(HEADER_USER_ID, userId)).andExpect(status().isOk());
@@ -617,6 +619,8 @@ class StudyTest {
 
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode1.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid),
             RootNetworkNodeInfo.builder().nodeBuildStatus(NodeBuildStatus.from(BuildStatus.BUILT)).build());
+
+        stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", UUID.randomUUID().toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
                         studyNameUserIdUuid,
