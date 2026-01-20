@@ -212,7 +212,7 @@ class WorkspaceConfigTest {
     @Test
     void testSaveNadConfig() throws Exception {
         StudyEntity studyEntity = insertStudy();
-        String configServerUrl = "/v1/workspaces-configs/" + WORKSPACES_CONFIG_UUID + "/workspaces/" + WORKSPACE_ID + "/panels/" + PANEL_ID + "/saved-nad-config";
+        String configServerUrl = "/v1/workspaces-configs/" + WORKSPACES_CONFIG_UUID + "/workspaces/" + WORKSPACE_ID + "/panels/" + PANEL_ID + "/current-nad-config";
 
         UUID savedConfigUuid = UUID.randomUUID();
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(configServerUrl))
@@ -223,7 +223,7 @@ class WorkspaceConfigTest {
         Map<String, Object> nadConfigData = Map.of("key", "value");
         String body = objectMapper.writeValueAsString(nadConfigData);
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/workspaces/{workspaceId}/panels/{panelId}/saved-nad-config",
+        mockMvc.perform(post("/v1/studies/{studyUuid}/workspaces/{workspaceId}/panels/{panelId}/current-nad-config",
                         studyEntity.getId(), WORKSPACE_ID, PANEL_ID)
                         .header("content-type", "application/json")
                         .content(body))
@@ -237,12 +237,12 @@ class WorkspaceConfigTest {
     @Test
     void testDeleteNadConfig() throws Exception {
         StudyEntity studyEntity = insertStudy();
-        String configServerUrl = "/v1/workspaces-configs/" + WORKSPACES_CONFIG_UUID + "/workspaces/" + WORKSPACE_ID + "/panels/" + PANEL_ID + "/saved-nad-config";
+        String configServerUrl = "/v1/workspaces-configs/" + WORKSPACES_CONFIG_UUID + "/workspaces/" + WORKSPACE_ID + "/panels/" + PANEL_ID + "/current-nad-config";
 
         UUID stubId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo(configServerUrl))
                 .willReturn(WireMock.noContent())).getId();
 
-        mockMvc.perform(delete("/v1/studies/{studyUuid}/workspaces/{workspaceId}/panels/{panelId}/saved-nad-config",
+        mockMvc.perform(delete("/v1/studies/{studyUuid}/workspaces/{workspaceId}/panels/{panelId}/current-nad-config",
                         studyEntity.getId(), WORKSPACE_ID, PANEL_ID)
                         .header("content-type", "application/json"))
                 .andExpect(status().isNoContent())

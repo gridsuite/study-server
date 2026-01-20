@@ -100,20 +100,21 @@ public class WorkspaceService {
             workspaceId,
             panelIds
         );
-        notificationService.emitWorkspacePanelsDeleted(studyUuid, workspaceId, panelIds, clientId);
+        String notificationPayload = (panelIds != null) ? panelIds : "[]";
+        notificationService.emitWorkspacePanelsDeleted(studyUuid, workspaceId, notificationPayload, clientId);
     }
 
     @Transactional
     public UUID saveNadConfig(UUID studyUuid, UUID workspaceId, UUID panelId, Map<String, Object> nadConfigData, String clientId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        UUID savedNadConfigUuid = studyConfigService.saveWorkspacePanelNadConfig(
+        UUID configUuid = studyConfigService.saveWorkspacePanelNadConfig(
             studyEntity.getWorkspacesConfigUuid(),
             workspaceId,
             panelId,
             nadConfigData
         );
-        notificationService.emitWorkspaceNadConfigUpdated(studyUuid, workspaceId, panelId, savedNadConfigUuid, clientId);
-        return savedNadConfigUuid;
+        notificationService.emitWorkspaceNadConfigUpdated(studyUuid, workspaceId, panelId, configUuid, clientId);
+        return configUuid;
     }
 
     @Transactional

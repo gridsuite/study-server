@@ -475,7 +475,7 @@ public class StudyConfigService {
         Objects.requireNonNull(configId);
         Objects.requireNonNull(workspaceId);
         Objects.requireNonNull(panelId);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI + "/{panelId}/saved-nad-config")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI + "/{panelId}/current-nad-config")
                 .buildAndExpand(configId, workspaceId, panelId).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -487,7 +487,7 @@ public class StudyConfigService {
         Objects.requireNonNull(configId);
         Objects.requireNonNull(workspaceId);
         Objects.requireNonNull(panelId);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI + "/{panelId}/saved-nad-config")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI + "/{panelId}/current-nad-config")
                 .buildAndExpand(configId, workspaceId, panelId).toUriString();
         restTemplate.delete(studyConfigServerBaseUri + path);
     }

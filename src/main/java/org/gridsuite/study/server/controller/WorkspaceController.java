@@ -98,7 +98,7 @@ public class WorkspaceController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{workspaceId}/panels/{panelId}/saved-nad-config")
+    @PostMapping("/{workspaceId}/panels/{panelId}/current-nad-config")
     @Operation(summary = "Save NAD config")
     @ApiResponse(responseCode = "201", description = "NAD config saved")
     @ApiResponse(responseCode = "404", description = "Study not found")
@@ -108,13 +108,13 @@ public class WorkspaceController {
             @PathVariable UUID panelId,
             @RequestBody Map<String, Object> nadConfigData,
             @RequestHeader(value = "clientId", required = false) String clientId) {
-        UUID savedNadConfigUuid = workspaceService.saveNadConfig(studyUuid, workspaceId, panelId, nadConfigData, clientId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedNadConfigUuid);
+        UUID configUuid = workspaceService.saveNadConfig(studyUuid, workspaceId, panelId, nadConfigData, clientId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(configUuid);
     }
 
-    @DeleteMapping("/{workspaceId}/panels/{panelId}/saved-nad-config")
-    @Operation(summary = "Delete saved NAD config")
-    @ApiResponse(responseCode = "204", description = "Saved NAD config deleted")
+    @DeleteMapping("/{workspaceId}/panels/{panelId}/current-nad-config")
+    @Operation(summary = "Delete current NAD config")
+    @ApiResponse(responseCode = "204", description = "Current NAD config deleted")
     @ApiResponse(responseCode = "404", description = "Study not found")
     public ResponseEntity<Void> deleteNadConfig(
             @PathVariable("studyUuid") UUID studyUuid,
