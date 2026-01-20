@@ -65,4 +65,29 @@ public class CaseServerStubs {
         params.put("duplicateFrom", WireMock.equalTo(caseUuid));
         verifyPostRequest(wireMock, stubUuid, CASE_URI, params);
     }
+
+    public UUID stubDuplicateCaseWithBody(String caseUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(CASE_URI))
+            .withQueryParam("withExpiration", WireMock.matching(".*"))
+            .withQueryParam("duplicateFrom", WireMock.equalTo(caseUuid))
+            .willReturn(WireMock.ok()
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .withBody(responseBody))).getId();
+    }
+
+    public void verifyDuplicateCase(UUID stubUuid, String caseUuid, String withExpiration) {
+        HashMap<String, StringValuePattern> params = new HashMap<>();
+        params.put("withExpiration", WireMock.equalTo(withExpiration));
+        params.put("duplicateFrom", WireMock.equalTo(caseUuid));
+        verifyPostRequest(wireMock, stubUuid, CASE_URI, params);
+    }
+
+    public UUID stubDeleteCase(String caseUuid) {
+        return wireMock.stubFor(WireMock.delete(WireMock.urlPathEqualTo(CASE_URI + "/" + caseUuid))
+            .willReturn(WireMock.ok())).getId();
+    }
+
+    public void verifyDeleteCase(UUID stubUuid, String caseUuid) {
+        verifyDeleteRequest(wireMock, stubUuid, CASE_URI + "/" + caseUuid, false, Map.of());
+    }
 }
