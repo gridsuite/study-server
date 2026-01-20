@@ -240,15 +240,15 @@ public class WireMockStubs {
         verifyGetRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + groupUuid + "/network-modifications-count", Map.of(QUERY_PARAM_STASHED, WireMock.equalTo("false")));
     }
 
-    public void verifyNetworkModificationPost(UUID stubId, String requestBody) {
-        verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION, false,
+    public void verifyNetworkModificationPost(String requestBody) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, URI_NETWORK_MODIFICATION, false,
             Map.of("groupUuid", WireMock.matching(".*")),
             requestBody);
     }
 
-    public void verifyNetworkModificationPostWithVariant(UUID stubId, String requestBody) {
-        verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION, false,
-            Map.of(),
+    public void verifyNetworkModificationPostWithVariant(String requestBody) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, URI_NETWORK_MODIFICATION, false,
+            Map.of("groupUuid", WireMock.matching(".*")),
             requestBody);
     }
 
@@ -260,8 +260,8 @@ public class WireMockStubs {
         verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS, Map.of("duplicateFrom", WireMock.matching(".*"), "groupUuid", WireMock.matching(".*")), nbRequests);
     }
 
-    public void verifyNetworkModificationDeleteGroup(UUID stubId) {
-        verifyDeleteRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*", true, Map.of());
+    public void verifyNetworkModificationDeleteGroup(UUID stubId, boolean errorOnGroupNotFound) {
+        verifyDeleteRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*", true, Map.of("errorOnGroupNotFound", WireMock.equalTo(String.valueOf(errorOnGroupNotFound))));
     }
 
     public void verifyNetworkModificationDeleteIndex(UUID stubId) {
@@ -269,7 +269,7 @@ public class WireMockStubs {
     }
 
     public void verifyNetworkModificationDeleteIndex(UUID stubId, int nbRequests) {
-        verifyDeleteRequest(wireMock, stubId, URI_NETWORK_MODIFICATION + DELIMITER + "index.*", true, Map.of(), nbRequests);
+        verifyDeleteRequest(wireMock, stubId, URI_NETWORK_MODIFICATION + DELIMITER + "index.*", true, Map.of("networkUuid", WireMock.matching(".*"), "groupUuids", WireMock.matching(".*")), nbRequests);
     }
 
     public UUID stubBranchOr3WTVoltageLevelIdGet(String networkUuid, String equipmentId, String responseBody) {
@@ -783,5 +783,258 @@ public class WireMockStubs {
 
     public void verifyGetResultStatus(UUID stubId, String resultUuid, int nbRequests) {
         verifyGetRequest(wireMock, stubId, "/v1/results/" + resultUuid + "/status", Map.of(), nbRequests);
+    }
+
+    public void verifyDeleteReports(UUID stubId, int nbRequests) {
+        verifyDeleteRequest(wireMock, stubId, "/v1/reports", false, Map.of(), nbRequests);
+    }
+
+    public void verifyDeleteParameters(UUID stubId, int nbRequests) {
+        verifyDeleteRequest(wireMock, stubId, "/v1/parameters/.*", true, Map.of(), nbRequests);
+    }
+
+    public void verifyDeleteNetworkVisualizationParams(UUID stubId) {
+        verifyDeleteRequest(wireMock, stubId, "/v1/network-visualizations-params/.*", true, Map.of());
+    }
+
+    public void verifyDeleteSpreadsheetConfigCollection(UUID stubId) {
+        verifyDeleteRequest(wireMock, stubId, "/v1/spreadsheet-config-collections/.*", true, Map.of());
+    }
+
+    public UUID stubGetReportsLogs(String body) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/reports/.*/logs.*"))
+            .willReturn(WireMock.ok()
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .withBody(body))).getId();
+    }
+
+    public void verifyGetReport() {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/.*", true,
+            Map.of("severityLevels", WireMock.matching(".*"), "defaultName", WireMock.matching(".*")), 1);
+    }
+
+    public void verifyGetReportLogs(String reportId) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/" + reportId + "/logs", Map.of());
+    }
+
+    public void verifyGetReportLogs(String reportId, String severityLevels, String message) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/" + reportId + "/logs",
+            Map.of("severityLevels", WireMock.equalTo(severityLevels), "message", WireMock.equalTo(message)));
+    }
+
+    public void verifyGetReportLogsPaged(String reportId, int page, int size) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/" + reportId + "/logs",
+            Map.of("paged", WireMock.equalTo("true"), "page", WireMock.equalTo(String.valueOf(page)), "size", WireMock.equalTo(String.valueOf(size))));
+    }
+
+    public void verifyGetReportLogsPaged(String reportId, int page, int size, String severityLevels, String message) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/" + reportId + "/logs",
+            Map.of("paged", WireMock.equalTo("true"), "page", WireMock.equalTo(String.valueOf(page)), "size", WireMock.equalTo(String.valueOf(size)),
+                "severityLevels", WireMock.equalTo(severityLevels), "message", WireMock.equalTo(message)));
+    }
+
+    public void verifyGetReportLogsSearchWithReportId(String reportId, String searchTerm, int pageSize) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/" + reportId + "/logs/search",
+            Map.of("searchTerm", WireMock.equalTo(searchTerm), "pageSize", WireMock.equalTo(String.valueOf(pageSize))));
+    }
+
+    public void verifyGetReportLogsSearchWithReportId(String reportId, String searchTerm, int pageSize, String severityLevels, String message) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/reports/" + reportId + "/logs/search",
+            Map.of("searchTerm", WireMock.equalTo(searchTerm), "pageSize", WireMock.equalTo(String.valueOf(pageSize)),
+                "severityLevels", WireMock.equalTo(severityLevels), "message", WireMock.equalTo(message)));
+    }
+
+    public void verifyGetReportLogsSearch(UUID stubId, List<UUID> reportIds) {
+        StringValuePattern[] reportIdMatchers = reportIds.stream()
+            .map(uuid -> WireMock.equalTo(uuid.toString()))
+            .toArray(StringValuePattern[]::new);
+        verifyGetRequestWithMultiValueParams(wireMock, stubId, "/v1/reports/logs/search",
+            Map.of("reportIds", WireMock.havingExactly(reportIdMatchers)));
+    }
+
+    public void verifyGetReportLogs(UUID stubId, List<UUID> reportIds) {
+        StringValuePattern[] reportIdMatchers = reportIds.stream()
+            .map(uuid -> WireMock.equalTo(uuid.toString()))
+            .toArray(StringValuePattern[]::new);
+        verifyGetRequestWithMultiValueParams(wireMock, stubId, "/v1/reports/logs",
+            Map.of("reportIds", WireMock.havingExactly(reportIdMatchers)));
+    }
+
+    public void verifyReindexAll(UUID stubId, String networkUuid) {
+        verifyPostRequest(wireMock, stubId, "/v1/networks/" + networkUuid + "/reindex-all", Map.of());
+    }
+
+    public void verifyIndexedEquipments(UUID stubId, String networkUuid) {
+        verifyHeadRequest(wireMock, stubId, "/v1/networks/" + networkUuid + "/indexed-equipments", Map.of());
+    }
+
+    public void verifyIndexedEquipments(UUID stubId, String networkUuid, int nbRequests) {
+        verifyHeadRequest(wireMock, stubId, "/v1/networks/" + networkUuid + "/indexed-equipments", Map.of(), nbRequests);
+    }
+
+    public void verifyParametersProvider(UUID stubId, int nbRequests) {
+        verifyPutRequest(wireMock, stubId, "/v1/parameters/.*/provider", true, Map.of(), null, nbRequests);
+    }
+
+    public void verifyDefaultProvider(UUID stubId, int nbRequests) {
+        verifyGetRequest(wireMock, stubId, "/v1/default-provider", Map.of(), nbRequests);
+    }
+
+    public void verifyReportsDuplicate(UUID stubId) {
+        verifyPostRequest(wireMock, stubId, "/v1/reports/.*/duplicate", true, Map.of(), null);
+    }
+
+    public void verifyUserProfile(UUID stubId, String userId) {
+        verifyGetRequest(wireMock, stubId, "/v1/users/" + userId + "/profile", Map.of());
+    }
+
+    public UUID stubUserProfile(String userId) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + userId + "/profile"))
+            .willReturn(WireMock.ok())).getId();
+    }
+
+    public UUID stubUserProfile(String userId, String profileJson) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + userId + "/profile"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(profileJson))).getId();
+    }
+
+    public UUID stubParameters(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters"))
+                .atPriority(10)
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public UUID stubParametersDefault(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters/default"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public UUID stubSpreadsheetConfigDefault(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/spreadsheet-config-collections/default"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public UUID stubNetworkVisualizationParamsDefault(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-visualizations-params/default"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public UUID stubParametersDuplicateFrom(String duplicateFromUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
+            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public UUID stubParametersDuplicateFromNotFound(String duplicateFromUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
+            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+            .willReturn(WireMock.notFound())).getId();
+    }
+
+    public UUID stubSpreadsheetConfigDuplicateFrom(String duplicateFromUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/spreadsheet-config-collections"))
+            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public UUID stubSpreadsheetConfigDuplicateFromNotFound(String duplicateFromUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/spreadsheet-config-collections"))
+            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+            .willReturn(WireMock.notFound())).getId();
+    }
+
+    public UUID stubNetworkVisualizationParamsDuplicateFrom(String duplicateFromUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-visualizations-params"))
+            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public UUID stubNetworkVisualizationParamsDuplicateFromNotFound(String duplicateFromUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-visualizations-params"))
+            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+            .willReturn(WireMock.notFound())).getId();
+    }
+
+    public UUID stubParametersDuplicateFromAny(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
+            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+            .atPriority(10)
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public UUID stubSpreadsheetConfigDuplicateFromAny(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/spreadsheet-config-collections"))
+            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public UUID stubNetworkVisualizationParamsDuplicateFromAny(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-visualizations-params"))
+            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public void verifyParameters(int nbRequests) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of(), nbRequests);
+    }
+
+    public void verifyParametersDefault(int nbRequests) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters/default", Map.of(), nbRequests);
+    }
+
+    public void verifyParametersDuplicateFrom(String duplicateFromUuid) {
+        verifyParametersDuplicateFrom(duplicateFromUuid, 1);
+    }
+
+    public void verifyParametersDuplicateFrom(String duplicateFromUuid, int nbRequests) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
+    }
+
+    public void verifySpreadsheetConfigDefault(int nbRequests) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/spreadsheet-config-collections/default", Map.of(), nbRequests);
+    }
+
+    public void verifySpreadsheetConfigDuplicateFrom(UUID stubId, String duplicateFromUuid) {
+        verifySpreadsheetConfigDuplicateFrom(stubId, duplicateFromUuid, 1);
+    }
+
+    public void verifySpreadsheetConfigDuplicateFrom(UUID stubId, String duplicateFromUuid, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, "/v1/spreadsheet-config-collections", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
+    }
+
+    public void verifyNetworkVisualizationParamsDefault(int nbRequests) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/network-visualizations-params/default", Map.of(), nbRequests);
+    }
+
+    public void verifyNetworkVisualizationParamsDuplicateFrom(UUID stubId, String duplicateFromUuid) {
+        verifyNetworkVisualizationParamsDuplicateFrom(stubId, duplicateFromUuid, 1);
+    }
+
+    public void verifyNetworkVisualizationParamsDuplicateFrom(UUID stubId, String duplicateFromUuid, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, "/v1/network-visualizations-params", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
+    }
+
+    public void verifyParametersDuplicateFromAny(UUID stubId, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, "/v1/parameters", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
+    }
+
+    public void verifySpreadsheetConfigDuplicateFromAny(UUID stubId, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, "/v1/spreadsheet-config-collections", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
+    }
+
+    public void verifyNetworkVisualizationParamsDuplicateFromAny(UUID stubId, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, "/v1/network-visualizations-params", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
+    }
+
+    public void verifyNetworkAreaDiagramConfig(UUID stubId) {
+        verifyPostRequest(wireMock, stubId, "/v1/network-area-diagram/config", Map.of("duplicateFrom", WireMock.matching(".*")));
+    }
+
+    public void verifyDiagramGridLayout(UUID stubId) {
+        verifyPostRequest(wireMock, stubId, "/v1/diagram-grid-layout", Map.of());
+    }
+
+    public void verifyElementNameGet(UUID stubId, String elementUuid) {
+        verifyGetRequest(wireMock, stubId, "/v1/elements/" + elementUuid + "/name", Map.of());
     }
 }
