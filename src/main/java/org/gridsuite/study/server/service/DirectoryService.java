@@ -47,7 +47,7 @@ public class DirectoryService {
     public String getElementName(UUID elementUuid) {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements/{elementUuid}/name");
         String path = pathBuilder.buildAndExpand(elementUuid).toUriString();
-        return restTemplate.getForObject(directoryServerServerBaseUri + path, String.class);
+        return restTemplate.getForObject(getDirectoryServerServerBaseUri() + path, String.class);
     }
 
     public boolean elementExists(UUID directoryUuid, String elementName, String type) {
@@ -57,7 +57,7 @@ public class DirectoryService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Void> request = new HttpEntity<>(headers);
-        ResponseEntity<Void> response = restTemplate.exchange(directoryServerServerBaseUri + path, HttpMethod.HEAD, request, Void.class);
+        ResponseEntity<Void> response = restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.HEAD, request, Void.class);
         return response.getStatusCode() == HttpStatus.OK;
     }
 
@@ -71,6 +71,6 @@ public class DirectoryService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<ElementAttributes> requestEntity = new HttpEntity<>(elementAttributes, headers);
-        restTemplate.exchange(directoryServerServerBaseUri + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
+        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
     }
 }
