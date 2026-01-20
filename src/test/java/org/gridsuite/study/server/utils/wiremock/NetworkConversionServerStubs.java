@@ -158,14 +158,14 @@ public class NetworkConversionServerStubs {
     }
 
     public UUID stubNetworkExport(String networkUuid, String format, String exportUuid) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/networks/" + networkUuid + "/export/" + format))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/networks/" + networkUuid + "/export/" + format + ".*"))
             .willReturn(WireMock.ok()
                 .withHeader("Content-Type", "application/json")
                 .withBody("\"" + exportUuid + "\""))).getId();
     }
 
     public UUID stubNetworkExportError(String networkUuid, String format) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/networks/" + networkUuid + "/export/" + format))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/export/" + format))
             .willReturn(WireMock.serverError())).getId();
     }
 

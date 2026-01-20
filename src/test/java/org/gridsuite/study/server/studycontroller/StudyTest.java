@@ -154,9 +154,6 @@ class StudyTest {
     private static final List<ReportLog> REPORT_LOGS = List.of(new ReportLog("test", StudyConstants.Severity.WARN, 0, REPORT_LOG_PARENT_UUID));
     private static final ReportPage REPORT_PAGE = new ReportPage(0, REPORT_LOGS, 1, 1);
     private static final String VARIANT_ID = "variant_1";
-    private static final String POST = "POST";
-    private static final String GET = "GET";
-    private static final String DELETE = "DELETE";
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
@@ -338,9 +335,6 @@ class StudyTest {
     @Autowired
     private StudyCreationRequestRepository studyCreationRequestRepository;
 
-    //used by testGetStudyCreationRequests to control asynchronous case import
-    private CountDownLatch countDownLatch;
-
     @MockitoBean
     private NetworkStoreService networkStoreService;
 
@@ -348,7 +342,6 @@ class StudyTest {
     private final String studyUpdateDestination = "study.update";
     private final String elementUpdateDestination = "element.update";
 
-    private boolean indexed = false;
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
 
@@ -363,13 +356,7 @@ class StudyTest {
     @MockitoSpyBean
     ConsumerService consumeService;
 
-    private static class CreateStudyStubs {
-        UUID stubUserProfileId;
-        UUID stubCaseExistsId;
-        UUID stubSendReportId;
-        String userId;
-        String caseUuid;
-
+    private record CreateStudyStubs(UUID stubUserProfileId, UUID stubCaseExistsId, UUID stubSendReportId, String userId, String caseUuid) {
         public void verify(WireMockStubs wireMockStubs) {
             if (stubCaseExistsId != null) {
                 wireMockStubs.caseServer.verifyCaseExists(stubCaseExistsId, caseUuid);
@@ -383,12 +370,7 @@ class StudyTest {
         }
     }
 
-
-    private static class DuplicateParameterStubs {
-        UUID stubParametersDuplicateFromId;
-        UUID stubSpreadsheetConfigDuplicateFromId;
-        UUID stubNetworkVisualizationParamsDuplicateFromId;
-
+    private record DuplicateParameterStubs(UUID stubParametersDuplicateFromId, UUID stubSpreadsheetConfigDuplicateFromId, UUID stubNetworkVisualizationParamsDuplicateFromId) {
         public void verify(WireMockStubs wireMockStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests, int networkVisualizationParamsDuplicateFromNbRequests) {
             if (stubParametersDuplicateFromId != null) {
                 wireMockStubs.verifyParametersDuplicateFromAny(stubParametersDuplicateFromId, parametersDuplicateFromNbRequests);
@@ -402,12 +384,7 @@ class StudyTest {
         }
     }
 
-    private static class DeleteStudyStubs {
-        UUID stubDeleteParametersId;
-        UUID stubDeleteReportsId;
-        UUID stubDeleteNetworkVisualizationParamsId;
-        UUID stubDeleteSpreadsheetConfigCollectionId;
-
+    private record DeleteStudyStubs(UUID stubDeleteParametersId, UUID stubDeleteReportsId, UUID stubDeleteNetworkVisualizationParamsId, UUID stubDeleteSpreadsheetConfigCollectionId) {
         public void verify(WireMockStubs wireMockStubs, int deleteParametersNbRequests) {
             wireMockStubs.verifyDeleteReports(stubDeleteReportsId, 2);
             wireMockStubs.verifyDeleteParameters(stubDeleteParametersId, deleteParametersNbRequests);
@@ -416,18 +393,13 @@ class StudyTest {
         }
     }
 
-    private CreateStudyStubs stubCreateStudy(String userId, String userProfileJson, String caseUuid) throws Exception {
-        CreateStudyStubs stubs = new CreateStudyStubs();
-        stubs.userId = userId;
-        stubs.caseUuid = caseUuid;
-        if (userProfileJson != null) {
-            stubs.stubUserProfileId = wireMockStubs.stubUserProfile(userId, userProfileJson);
-        } else {
-            stubs.stubUserProfileId = wireMockStubs.stubUserProfile(userId);
-        }
-        stubs.stubCaseExistsId = wireMockStubs.caseServer.stubCaseExists(caseUuid, true);
-        stubs.stubSendReportId = wireMockStubs.stubSendReport();
-        return stubs;
+    private CreateStudyStubs stubCreateStudy(String userId, String userProfileJson, String caseUuid) {
+        UUID stubUserProfileId = userProfileJson != null
+            ? wireMockStubs.stubUserProfile(userId, userProfileJson)
+            : wireMockStubs.stubUserProfile(userId);
+        UUID stubCaseExistsId = wireMockStubs.caseServer.stubCaseExists(caseUuid, true);
+        UUID stubSendReportId = wireMockStubs.stubSendReport();
+        return new CreateStudyStubs(stubUserProfileId, stubCaseExistsId, stubSendReportId, userId, caseUuid);
     }
 
     private void stubCreateParameters() throws Exception {
@@ -445,24 +417,22 @@ class StudyTest {
     }
 
     private DuplicateParameterStubs stubDuplicateParameters() throws Exception {
-        DuplicateParameterStubs stubs = new DuplicateParameterStubs();
-        stubs.stubParametersDuplicateFromId = wireMockStubs.stubParametersDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
-        stubs.stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
-        stubs.stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromAny(DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
-        return stubs;
+        UUID stubParametersDuplicateFromId = wireMockStubs.stubParametersDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
+        UUID stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
+        UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromAny(DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
+        return new DuplicateParameterStubs(stubParametersDuplicateFromId, stubSpreadsheetConfigDuplicateFromId, stubNetworkVisualizationParamsDuplicateFromId);
     }
 
     private DeleteStudyStubs stubDeleteStudy() {
-        DeleteStudyStubs stubs = new DeleteStudyStubs();
-        stubs.stubDeleteParametersId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/parameters/.*"))
+        UUID stubDeleteParametersId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/parameters/.*"))
             .willReturn(WireMock.ok())).getId();
-        stubs.stubDeleteReportsId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
+        UUID stubDeleteReportsId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
             .willReturn(WireMock.ok())).getId();
-        stubs.stubDeleteNetworkVisualizationParamsId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/network-visualizations-params/.*"))
+        UUID stubDeleteNetworkVisualizationParamsId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/network-visualizations-params/.*"))
             .willReturn(WireMock.ok())).getId();
-        stubs.stubDeleteSpreadsheetConfigCollectionId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/spreadsheet-config-collections/.*"))
+        UUID stubDeleteSpreadsheetConfigCollectionId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/spreadsheet-config-collections/.*"))
             .willReturn(WireMock.ok())).getId();
-        return stubs;
+        return new DeleteStudyStubs(stubDeleteParametersId, stubDeleteReportsId, stubDeleteNetworkVisualizationParamsId, stubDeleteSpreadsheetConfigCollectionId);
     }
 
     private void initMockBeans(Network network) {
@@ -1796,7 +1766,6 @@ class StudyTest {
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
-        ObjectMapper mapper = new ObjectMapper();
         String duplicatedStudyUuid = mapper.readValue(response, String.class);
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
 
@@ -1841,7 +1810,6 @@ class StudyTest {
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        ObjectMapper mapper = new ObjectMapper();
         String newUuid = mapper.readValue(response, String.class);
         StudyEntity sourceStudy = studyRepository.findById(studyUuid).orElseThrow();
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
