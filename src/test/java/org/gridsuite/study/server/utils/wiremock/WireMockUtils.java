@@ -114,7 +114,7 @@ public final class WireMockUtils {
         removeRequestForStub(wireMockServer, stubId, nbRequests);
     }
 
-    private static void removeRequestForStub(WireMockServer wireMockServer, UUID stubId, int nbRequests) {
+    public static void removeRequestForStub(WireMockServer wireMockServer, UUID stubId, int nbRequests) {
         List<ServeEvent> matchedServeEvents = wireMockServer.getServeEvents(ServeEventQuery.forStubMapping(stubId)).getServeEvents();
         List<ServeEvent> otherServeEvents = wireMockServer.getAllServeEvents().stream()
             .filter(event -> event.getStubMapping().getId() != null && !event.getStubMapping().getId().equals(stubId))
