@@ -124,16 +124,11 @@ class StudyTest {
     private static final String FIRST_VARIANT_ID = "first_variant_id";
     private static final long TIMEOUT = 1000;
     private static final String STUDIES_URL = "/v1/studies";
-    private static final String TEST_FILE_UCTE = "testCase.ucte";
     private static final String TEST_FILE = "testCase.xiidm";
-    private static final String TEST_FILE_IMPORT_ERRORS = "testCase_import_errors.xiidm";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00e";
     private static final String CLONED_NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
-    private static final String IMPORTED_CASE_UUID_STRING = "11111111-0000-0000-0000-000000000000";
     private static final String CLONED_CASE_UUID_STRING = "22222222-1111-0000-0000-000000000000";
-    private static final String IMPORTED_BLOCKING_CASE_UUID_STRING = "22111111-0000-0000-0000-000000000000";
-    private static final String IMPORTED_CASE_WITH_ERRORS_UUID_STRING = "88888888-0000-0000-0000-000000000000";
     private static final String NEW_STUDY_CASE_UUID = "11888888-0000-0000-0000-000000000000";
     private static final String NOT_EXISTING_CASE_UUID = "00000000-0000-0000-0000-000000000000";
     private static final String NOT_EXISTING_NETWORK_CASE_UUID_STRING = "00000000-0000-0000-0000-000000000001";
@@ -156,17 +151,11 @@ class StudyTest {
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
-    private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
-    private static final String CASE_2_UUID_STRING = "656719f3-aaaa-48be-be46-ef7b93331e32";
-    private static final String CASE_3_UUID_STRING = "790769f9-bd31-43be-be46-e50296951e32";
     private static final String CASE_UUID_CAUSING_IMPORT_ERROR = "178719f5-cccc-48be-be46-e92345951e32";
     private static final String CASE_UUID_CAUSING_STUDY_CREATION_ERROR = "278719f5-cccc-48be-be46-e92345951e32";
     private static final String CASE_UUID_CAUSING_CONVERSION_ERROR = "278719f5-cccc-48be-be46-e92345951e33";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
     private static final String NETWORK_UUID_3_STRING = "22222222-bd31-43be-be46-e50296951e32";
-    private static final NetworkInfos NETWORK_INFOS_2 = new NetworkInfos(UUID.fromString(NETWORK_UUID_2_STRING), "file_2.xiidm");
-    private static final NetworkInfos NETWORK_INFOS_3 = new NetworkInfos(UUID.fromString(NETWORK_UUID_3_STRING), "file_3.xiidm");
-    private static final String CASE_NAME = "DefaultCaseName";
     private static final UUID EMPTY_MODIFICATION_GROUP_UUID = UUID.randomUUID();
     private static final String STUDY_CREATION_ERROR_MESSAGE = "Une erreur est survenue lors de la création de l'étude";
     private static final String URI_NETWORK_MODIF = "/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications?rootNetworkUuid={rootNetworkUuid}";
@@ -312,9 +301,6 @@ class StudyTest {
 
     @MockitoBean
     private StudyInfosService studyInfosService;
-
-    @Autowired
-    private RestClient restClient;
 
     @Autowired
     private ObjectMapper mapper;
