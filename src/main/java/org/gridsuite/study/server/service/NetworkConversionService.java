@@ -87,7 +87,7 @@ public class NetworkConversionService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
 
-        restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.POST, httpEntity,
+        restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
                 Void.class);
     }
 
@@ -98,7 +98,7 @@ public class NetworkConversionService {
         ParameterizedTypeReference<String> typeRef = new ParameterizedTypeReference<>() {
         };
 
-        return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.GET, null, typeRef).getBody();
+        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
     public UUID exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, NodeExportInfos exportInfos, String format, String userId, String parametersJson) {
@@ -127,7 +127,7 @@ public class NetworkConversionService {
             HttpEntity<String> requestEntity = new HttpEntity<>(parametersJson, headers);
 
             return restTemplate.exchange(
-                getNetworkConversionServerBaseUri() + path,
+                    networkConversionServerBaseUri + path,
                     HttpMethod.POST,
                     requestEntity,
                     UUID.class
@@ -147,7 +147,7 @@ public class NetworkConversionService {
         HttpEntity<Void> entity = new HttpEntity<>(headers);
 
         return restTemplate.exchange(
-                getNetworkConversionServerBaseUri() + path,
+                networkConversionServerBaseUri + path,
                 HttpMethod.GET,
                 entity,
                 Resource.class
@@ -162,7 +162,7 @@ public class NetworkConversionService {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/reindex-all")
             .buildAndExpand(networkUuid)
             .toUriString();
-        restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.POST, null, Void.class);
+        restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null, Void.class);
     }
 
     public boolean checkStudyIndexationStatus(UUID networkUuid) {
@@ -172,6 +172,6 @@ public class NetworkConversionService {
 
         ParameterizedTypeReference<String> typeRef = new ParameterizedTypeReference<>() {
         };
-        return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
+        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
     }
 }

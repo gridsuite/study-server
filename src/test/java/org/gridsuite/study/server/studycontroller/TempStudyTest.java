@@ -40,7 +40,7 @@ class TempStudyTest {
     private DirectoryService directoryService;
 
     @MockitoSpyBean
-    NetworkConversionService conversionService;
+    private NetworkConversionService conversionService;
 
     @Autowired
     private StudyRepository studyRepository;
