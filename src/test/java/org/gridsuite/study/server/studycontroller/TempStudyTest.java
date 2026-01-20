@@ -198,8 +198,6 @@ class TempStudyTest {
 
         stubForElementExistInDirectory(directoryUuid, fileName, DirectoryService.CASE, HttpStatus.NO_CONTENT.value());
         stubForCreateElementDirectory(CASE_UUID, fileName, DirectoryService.CASE, directoryUuid, userId, description);
-        /*String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NetworkExportReceiver(studyUuid, userId)), StandardCharsets.UTF_8);
-        String exportInfosStr = URLEncoder.encode(objectMapper.writeValueAsString(new NodeExportInfos(true, directoryUuid, fileName, description)), StandardCharsets.UTF_8);*/
         stubForExportNetworkConversionService(NETWORK_UUID, fileName, exportUuid, HttpStatus.OK.value());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
@@ -209,5 +207,31 @@ class TempStudyTest {
             .param("parentDirectoryUuid", directoryUuid.toString())
             .param("description", description)
             .header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+    }
+
+    @Test
+    void testExportNetworkFailCaseExists() throws Exception {
+
+        String userId = "userId";
+        String description = "description";
+        String fileName = "myFileName";
+
+        UUID directoryUuid = UUID.randomUUID();
+        UUID exportUuid = UUID.randomUUID();
+
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        UUID studyUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyEntity.getRootNetworks().getFirst().getId();
+        UUID nodeUuid = getRootNodeUuid(studyUuid);
+
+        stubForElementExistInDirectory(directoryUuid, fileName, DirectoryService.CASE, HttpStatus.OK.value());
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
+            studyUuid, firstRootNetworkUuid, nodeUuid, "XIIDM")
+            .param("fileName", fileName)
+            .param("exportToExplorer", Boolean.TRUE.toString())
+            .param("parentDirectoryUuid", directoryUuid.toString())
+            .param("description", description)
+            .header(HEADER_USER_ID, userId)).andExpect(status().isInternalServerError());
     }
 }
