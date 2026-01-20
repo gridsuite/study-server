@@ -114,28 +114,27 @@ public final class WireMockUtils {
         removeRequestForStub(wireMockServer, stubId, nbRequests);
     }
 
-    public static void removeRequestForStub(WireMockServer wireMockServer, UUID stubId, int nbRequests) {
+    private static void removeRequestForStub(WireMockServer wireMockServer, UUID stubId, int nbRequests) {
         List<ServeEvent> matchedServeEvents = wireMockServer.getServeEvents(ServeEventQuery.forStubMapping(stubId)).getServeEvents();
         List<ServeEvent> otherServeEvents = wireMockServer.getAllServeEvents().stream()
             .filter(event -> event.getStubMapping().getId() != null && !event.getStubMapping().getId().equals(stubId))
             .toList();
-        StringBuilder requestsInfo = new StringBuilder();
-        matchedServeEvents.forEach(event -> requestsInfo
-            .append("\nStub ID ").append(event.getStubMapping().getId())
-            .append("\nURL: ").append(event.getRequest().getUrl())
-            .append("\nMethod: ").append(event.getRequest().getMethod())
-            .append("\nQuery params: ").append(event.getRequest().getQueryParams())
-            .append("\nBody: ").append(event.getRequest().getBodyAsString()));
-        StringBuilder otherRequestsInfo = new StringBuilder();
-        otherServeEvents.forEach(event -> otherRequestsInfo
-            .append("\nStub ID ").append(event.getStubMapping().getId())
-            .append("\nURL: ").append(event.getRequest().getUrl())
-            .append("\nMethod: ").append(event.getRequest().getMethod())
-            .append("\nQuery params: ").append(event.getRequest().getQueryParams())
-            .append("\nBody: ").append(event.getRequest().getBodyAsString()));
+        String requestsInfo = formatServeEvents(matchedServeEvents);
+        String otherRequestsInfo = formatServeEvents(otherServeEvents);
         assertEquals(nbRequests, matchedServeEvents.size(), "Wrong number of requests for stub " + stubId + " \n Matched requests : " + requestsInfo + "\n Remaining requests : " + otherRequestsInfo);
         for (ServeEvent serveEvent : matchedServeEvents) {
             wireMockServer.removeServeEvent(serveEvent.getId());
         }
+    }
+
+    private static String formatServeEvents(List<ServeEvent> serveEvents) {
+        StringBuilder info = new StringBuilder();
+        serveEvents.forEach(event -> info
+            .append("\nStub ID ").append(event.getStubMapping().getId())
+            .append("\nURL: ").append(event.getRequest().getUrl())
+            .append("\nMethod: ").append(event.getRequest().getMethod())
+            .append("\nQuery params: ").append(event.getRequest().getQueryParams())
+            .append("\nBody: ").append(event.getRequest().getBodyAsString()));
+        return info.toString();
     }
 }
