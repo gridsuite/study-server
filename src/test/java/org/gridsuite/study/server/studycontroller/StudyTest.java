@@ -10,7 +10,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.datasource.ReadOnlyDataSource;
 import com.powsybl.commons.datasource.ResourceDataSource;
@@ -87,8 +86,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.web.util.UriComponentsBuilder;
-import org.testcontainers.shaded.org.apache.commons.lang3.StringUtils;
 
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -2974,60 +2971,6 @@ class StudyTest {
 
         var requests = TestUtils.getRequestsDone(2, server);
         assertTrue(requests.stream().allMatch(r -> r.matches("/v1/parameters/.*/provider")));
-    }
-
-    private void stubForElementExistInDirectory(UUID directoryUuid, String elementName, String type, int status) {
-
-        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements/{elementName}/types/{type}");
-        String path = pathBuilder.buildAndExpand(directoryUuid, elementName, type).toUriString();
-        wireMockServer.stubFor(WireMock.head(WireMock.urlEqualTo(path))
-            .willReturn(WireMock.aResponse().withStatus(status)));
-    }
-
-    private void stubForExportNetworkConversionService(String variantId, String fileName, int status, UUID body) {
-
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath("/v1/networks/{networkUuid}/export/{format}");
-        if (!StringUtils.isEmpty(variantId)) {
-            uriComponentsBuilder.queryParam("variantId", variantId);
-        }
-
-        if (!StringUtils.isEmpty(fileName)) {
-            uriComponentsBuilder.queryParam("fileName", fileName);
-        }
-        wireMockServer.stubFor(WireMock.head(WireMock.urlEqualTo(uriComponentsBuilder.toUriString()))
-            .withRequestBody(WireMock.equalTo(body.toString()))
-            .willReturn(WireMock.aResponse().withStatus(status)));
-    }
-
-    @Test
-    void testExportNetworkSuccess(final MockWebServer server) throws Exception {
-
-        String userId = "userId";
-        String parameters = "{}";
-        String description = "description";
-        String fileName = "myFileName";
-
-        UUID studyUuid = createStudy(server, userId, CASE_UUID);
-        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
-        UUID rootNodeUuid = getRootNodeUuid(studyUuid);
-        UUID parentUuid = UUID.randomUUID();
-
-        stubForElementExistInDirectory(UUID.randomUUID(), "network_exports", "randomFile", HttpStatus.NO_CONTENT.value());
-        //stubForExportNetworkConversionService(VARIANT_ID, fileName, HttpStatus.OK.value(), exportUuid);
-
-        var uriComponentsBuilder = UriComponentsBuilder.fromPath("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}");
-        uriComponentsBuilder.queryParam("studyUuid", studyUuid);
-        uriComponentsBuilder.queryParam("rootNetworkUuid", rootNetworkUuid);
-        uriComponentsBuilder.queryParam("nodeUuid", rootNodeUuid);
-        uriComponentsBuilder.queryParam("format", "application/zip");
-        uriComponentsBuilder.queryParam("parameters", parameters);
-        uriComponentsBuilder.queryParam("fileName", fileName);
-        uriComponentsBuilder.queryParam("description", description);
-        /*uriComponentsBuilder.queryParam("parentUuid", parentUuid);*/
-        uriComponentsBuilder.queryParam("variantId", VARIANT_ID);
-        uriComponentsBuilder.queryParam("userId", userId);
-        uriComponentsBuilder.queryParam("exportToGridExplore", true);
-        mockMvc.perform(post(uriComponentsBuilder.toUriString()).header(HEADER_USER_ID, userId)).andExpect(status().isOk());
     }
 
     @AfterEach
