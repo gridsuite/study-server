@@ -34,7 +34,7 @@ public class WorkspaceController {
     @ApiResponse(responseCode = "200", description = "Workspaces metadata retrieved")
     @ApiResponse(responseCode = "404", description = "Study not found")
     public ResponseEntity<String> getWorkspaces(
-            @PathVariable("studyUuid") UUID studyUuid) {
+            @PathVariable UUID studyUuid) {
         return ResponseEntity.ok(workspaceService.getWorkspaces(studyUuid));
     }
 
@@ -43,7 +43,7 @@ public class WorkspaceController {
     @ApiResponse(responseCode = "200", description = "Workspace retrieved")
     @ApiResponse(responseCode = "404", description = "Study or workspace not found")
     public ResponseEntity<String> getWorkspace(
-            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId) {
         return ResponseEntity.ok(workspaceService.getWorkspace(studyUuid, workspaceId));
     }
@@ -53,7 +53,7 @@ public class WorkspaceController {
     @ApiResponse(responseCode = "204", description = "Workspace renamed")
     @ApiResponse(responseCode = "404", description = "Study or workspace not found")
     public ResponseEntity<Void> renameWorkspace(
-            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId,
             @RequestBody String name,
             @RequestHeader(value = "clientId", required = false) String clientId) {
@@ -66,7 +66,7 @@ public class WorkspaceController {
     @ApiResponse(responseCode = "200", description = "Panels retrieved")
     @ApiResponse(responseCode = "404", description = "Study or workspace not found")
     public ResponseEntity<String> getPanels(
-            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId,
             @RequestParam(required = false) List<String> panelIds) {
         return ResponseEntity.ok(workspaceService.getWorkspacePanels(studyUuid, workspaceId, panelIds));
@@ -77,7 +77,7 @@ public class WorkspaceController {
     @ApiResponse(responseCode = "204", description = "Panels created or updated")
     @ApiResponse(responseCode = "404", description = "Study or workspace not found")
     public ResponseEntity<Void> createOrUpdatePanels(
-            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId,
             @RequestBody String panelsDto,
             @RequestHeader(value = "clientId", required = false) String clientId) {
@@ -90,7 +90,7 @@ public class WorkspaceController {
     @ApiResponse(responseCode = "204", description = "Panels deleted")
     @ApiResponse(responseCode = "404", description = "Study or workspace not found")
     public ResponseEntity<Void> deletePanels(
-            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId,
             @RequestBody(required = false) String panelIds,
             @RequestHeader(value = "clientId", required = false) String clientId) {
@@ -103,7 +103,7 @@ public class WorkspaceController {
     @ApiResponse(responseCode = "201", description = "NAD config saved")
     @ApiResponse(responseCode = "404", description = "Study not found")
     public ResponseEntity<UUID> saveNadConfig(
-            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId,
             @PathVariable UUID panelId,
             @RequestBody Map<String, Object> nadConfigData,
@@ -117,7 +117,7 @@ public class WorkspaceController {
     @ApiResponse(responseCode = "204", description = "Current NAD config deleted")
     @ApiResponse(responseCode = "404", description = "Study not found")
     public ResponseEntity<Void> deleteNadConfig(
-            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable UUID studyUuid,
             @PathVariable UUID workspaceId,
             @PathVariable UUID panelId) {
         workspaceService.deleteNadConfig(studyUuid, workspaceId, panelId);

@@ -1516,12 +1516,10 @@ public class StudyService {
     }
 
     private void removeNadConfigs(List<UUID> nadConfigUuids) {
-        if (nadConfigUuids != null && !nadConfigUuids.isEmpty()) {
-            try {
-                nadConfigService.deleteNadConfigs(nadConfigUuids);
-            } catch (Exception e) {
-                LOGGER.error("Could not remove NAD configs with uuids:" + nadConfigUuids, e);
-            }
+        try {
+            nadConfigService.deleteNadConfigs(nadConfigUuids);
+        } catch (Exception e) {
+            LOGGER.error("Could not remove NAD configs with uuids:" + nadConfigUuids, e);
         }
     }
 
