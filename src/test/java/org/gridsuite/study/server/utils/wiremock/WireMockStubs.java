@@ -750,4 +750,38 @@ public class WireMockStubs {
     public void verifyPccMinParametersGet(UUID stubUuid, String paramUuid) {
         verifyGetRequest(wireMock, stubUuid, "/v1/parameters/" + paramUuid, Map.of());
     }
+
+    public UUID stubDeleteReports() {
+        return wireMock.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
+            .willReturn(WireMock.ok())).getId();
+    }
+
+    public void verifyDeleteReports(UUID stubId) {
+        verifyDeleteRequest(wireMock, stubId, "/v1/reports", false, Map.of());
+    }
+
+    public UUID stubDeleteResult(String resultUuid) {
+        return wireMock.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/results"))
+            .withQueryParam("resultsUuids", WireMock.equalTo(resultUuid))
+            .willReturn(WireMock.ok())).getId();
+    }
+
+    public void verifyDeleteResult(UUID stubId, String resultUuid) {
+        verifyDeleteRequest(wireMock, stubId, "/v1/results", false, Map.of("resultsUuids", WireMock.equalTo(resultUuid)));
+    }
+
+    public UUID stubGetResultStatus(String resultUuid, String statusJson) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/status"))
+            .willReturn(WireMock.ok()
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .withBody(statusJson))).getId();
+    }
+
+    public void verifyGetResultStatus(UUID stubId, String resultUuid) {
+        verifyGetResultStatus(stubId, resultUuid, 1);
+    }
+
+    public void verifyGetResultStatus(UUID stubId, String resultUuid, int nbRequests) {
+        verifyGetRequest(wireMock, stubId, "/v1/results/" + resultUuid + "/status", Map.of(), nbRequests);
+    }
 }
