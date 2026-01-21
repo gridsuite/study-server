@@ -317,7 +317,7 @@ class SecurityAnalysisTest {
                 .withBody(SECURITY_ANALYSIS_N_RESULT_CSV_ZIPPED) // byte[]
             ));
 
-        MvcResult mvcResult = mockMvc.perform(
+        mockMvc.perform(
             post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result/csv",
                 studyUuid, firstRootNetworkUuid, nodeUuid)
                 .queryParam("resultType", SecurityAnalysisResultType.N.name())
@@ -339,7 +339,8 @@ class SecurityAnalysisTest {
                     .withBody(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_CSV_ZIPPED)
                 )
         );
-        mvcResult = mockMvc.perform(
+
+        MvcResult mvcResult = mockMvc.perform(
                 post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}",
                     studyUuid, firstRootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_CONTINGENCIES)
                     .content(CSV_TRANSLATION_DTO_STRING)
@@ -796,7 +797,7 @@ class SecurityAnalysisTest {
     void testResetSecurityAnalysisParametersUserHasNoProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        UUID stubUser = userAdminServerStubs.stubUserProfile(NO_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
+        userAdminServerStubs.stubUserProfile(NO_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
         computationServerStubs.stubParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
         computationServerStubs.verifyParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
