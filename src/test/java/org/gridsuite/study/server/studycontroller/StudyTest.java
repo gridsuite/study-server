@@ -1042,7 +1042,7 @@ class StudyTest extends StudyTestBase {
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                         .param(CASE_FORMAT, "XIIDM")
                         .header(USER_ID_HEADER, "userId"))
-              .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
         String duplicatedStudyUuid = mapper.readValue(response, String.class);
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -1086,8 +1086,8 @@ class StudyTest extends StudyTestBase {
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(NAD_ELEMENT_NAME)))).getId();
 
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
-                .header(USER_ID_HEADER, userId))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         String newUuid = mapper.readValue(response, String.class);
         StudyEntity sourceStudy = studyRepository.findById(studyUuid).orElseThrow();
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
