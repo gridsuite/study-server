@@ -61,6 +61,7 @@ public class WorkspaceService {
         return studyEntity.getWorkspacesConfigUuid();
     }
 
+    @Transactional
     public String getWorkspaces(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         UUID workspacesConfigUuid = getWorkspacesConfigUuidOrElseCreateDefaults(studyEntity);
