@@ -201,7 +201,7 @@ public class NodeControllerTest extends StudyTestBase {
         aliases = mapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", duplicatedStudy.getId())).andExpect(status().isOk()).andReturn()
             .getResponse()
             .getContentAsString(), new TypeReference<>() {
-        });
+            });
         assertEquals(3, aliases.size());
         assertEquals("alias1", aliases.get(0).alias());
         assertNull(aliases.get(0).id());
