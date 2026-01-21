@@ -3629,8 +3629,8 @@ public class StudyService {
         studyConfigService.setGlobalFiltersForComputationResult(id, computationType, globalFilters);
     }
 
-    public void updateColumns(UUID id, ComputationType computationType, String computationSubType, String columnInfos) {
-        studyConfigService.updateColumns(id, computationType, computationSubType, columnInfos);
+    public void updateColumns(UUID id, String computationSubType, String columnInfos) {
+        studyConfigService.updateColumns(id, computationSubType, columnInfos);
     }
 
     public void renameSpreadsheetConfig(UUID studyUuid, UUID configUuid, String newName) {

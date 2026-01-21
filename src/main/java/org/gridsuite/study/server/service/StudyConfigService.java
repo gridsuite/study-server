@@ -402,9 +402,9 @@ public class StudyConfigService {
         restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
     }
 
-    public void updateColumns(UUID id, ComputationType computationType, String computationSubType, String columnInfos) {
-        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_WITH_ID_URI + "/columns/{colId}");
-        String path = uriBuilder.buildAndExpand(id, computationType, computationSubType).toUriString();
+    public void updateColumns(UUID id, String computationSubType, String columnInfos) {
+        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_WITH_ID_URI + "/columns");
+        String path = uriBuilder.buildAndExpand(id, computationSubType).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(columnInfos, headers);
