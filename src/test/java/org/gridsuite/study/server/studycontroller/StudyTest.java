@@ -894,7 +894,7 @@ class StudyTest extends StudyTestBase {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
                 .header(USER_ID_HEADER, userId))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
@@ -907,9 +907,9 @@ class StudyTest extends StudyTestBase {
 
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), rootNetworkUuid)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(createLoadAttributes)
-                .header(USER_ID_HEADER, userId))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(createLoadAttributes)
+            .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
@@ -968,7 +968,7 @@ class StudyTest extends StudyTestBase {
         //Test duplication from a non-existing source study
         mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID())
                 .header(USER_ID_HEADER, userId))
-            .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -1040,9 +1040,9 @@ class StudyTest extends StudyTestBase {
             .willReturn(WireMock.notFound())).getId();
 
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
-                .param(CASE_FORMAT, "XIIDM")
-                .header(USER_ID_HEADER, "userId"))
-            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+                        .param(CASE_FORMAT, "XIIDM")
+                        .header(USER_ID_HEADER, "userId"))
+              .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
         String duplicatedStudyUuid = mapper.readValue(response, String.class);
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
