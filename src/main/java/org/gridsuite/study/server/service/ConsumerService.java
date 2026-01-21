@@ -59,6 +59,8 @@ public class ConsumerService {
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
     private static final String HEADER_EXPORT_UUID = "exportUuid";
+
+    private static final String ZIP_EXTENSION = ".zip";
     private final ObjectMapper objectMapper;
 
     private final NotificationService notificationService;
@@ -885,7 +887,7 @@ public class ConsumerService {
         String errorMessage = null;
 
         try {
-            UUID caseUuid = caseService.createCase(exportUuid, exportFolder, nodeExport.fileName());
+            UUID caseUuid = caseService.createCase(exportFolder + DELIMITER + exportUuid + DELIMITER + nodeExport.fileName() + ZIP_EXTENSION, "application/zip");
             directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId);
         } catch (Exception e) {
             errorMessage = e.getMessage();

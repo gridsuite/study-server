@@ -11,6 +11,7 @@ package org.gridsuite.study.server.service;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 
+import lombok.Setter;
 import org.gridsuite.study.server.error.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 @Service
 public class CaseService {
 
+    @Setter
     private String caseServerBaseUri;
 
     private RestTemplate restTemplate;
@@ -84,14 +86,10 @@ public class CaseService {
         }
     }
 
-    public void setCaseServerBaseUri(String caseServerBaseUri) {
-        this.caseServerBaseUri = caseServerBaseUri;
-    }
-
-    public UUID createCase(UUID caseUuid, String folderName, String fileName) {
+    public UUID createCase(String caseKey, String contentType) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/create")
-            .queryParam("caseFolderKey", folderName + DELIMITER + caseUuid)
-            .queryParam("fileName", fileName)
+            .queryParam("caseKey", caseKey)
+            .queryParam("contentType", contentType)
             .build()
             .toUriString();
 
