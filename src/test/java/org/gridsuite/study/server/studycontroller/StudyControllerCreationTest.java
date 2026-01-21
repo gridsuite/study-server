@@ -81,6 +81,8 @@ class StudyControllerCreationTest {
     private NetworkConversionService networkConversionService;
 
     @MockitoSpyBean
+    private DirectoryService directoryService;
+    @MockitoSpyBean
     private StudyService studyService;
     @MockitoBean
     private ReportService reportService;
@@ -133,6 +135,7 @@ class StudyControllerCreationTest {
         wireMockServer.start();
 
         caseService.setCaseServerBaseUri(wireMockServer.baseUrl());
+        directoryService.setDirectoryServerServerBaseUri(wireMockServer.baseUrl());
         networkConversionService.setNetworkConversionServerBaseUri(wireMockServer.baseUrl());
     }
 
@@ -220,32 +223,21 @@ class StudyControllerCreationTest {
         UUID directoryUuid = UUID.randomUUID();
         String fileName = "myFileName";
         String description = "myDescription";
+        String exportFolder = "myFolder";
         NodeExportInfos nodeExport = new NodeExportInfos(true, directoryUuid, fileName, description);
+        UUID exportUuid = UUID.randomUUID();
 
-        // Import parameters to pass and check
         Map<String, Object> importParameters = prepareImportParameters();
+        MessageHeaders messageHeaders = prepareMessageHeaders(studyUuid, userId, caseUuid, importParameters, nodeExport, exportUuid);
 
-        MessageHeaders messageHeaders = prepareMessageHeaders(studyUuid, userId, caseUuid, importParameters, mapper.writeValueAsString(nodeExport));
+        String exportInfosStr = messageHeaders.get(HEADER_EXPORT_INFOS, String.class);
+        NodeExportInfos exportInfos = mapper.readValue(exportInfosStr, NodeExportInfos.class);
+        assertEquals(exportInfos, nodeExport);
 
-        // Need to insert studyCreationRequestEntity, otherwise study is deleted after being inserted
-        studyCreationRequestRepository.save(new StudyCreationRequestEntity(studyUuid, "firstRootNetworkName"));
-
-        UUID disableCaseExpirationStub = wireMockStubs.caseServer.stubDisableCaseExpiration(caseUuid.toString());
-        // run consume case import succeeded
-        consumerService.consumeCaseImportSucceeded().accept(MessageBuilder.createMessage("", messageHeaders));
-        wireMockStubs.caseServer.verifyDisableCaseExpiration(disableCaseExpirationStub, caseUuid.toString());
-        verifyMockCallsAfterStudyCreation();
-
-        // check import parameters are saved
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
-        UUID rootNetworkUUID = testUtils.getOneRootNetworkUuid(studyEntity.getId());
-
-        Map<String, String> expectedImportParameters = new HashMap<>();
-        importParameters.forEach((key, value) -> expectedImportParameters.put(key, value.toString()));
-        assertThat(rootNetworkService.getImportParameters(rootNetworkUUID)).usingRecursiveComparison().isEqualTo(expectedImportParameters);
-
-        assertStudyUpdateMessageReceived(studyUuid, userId);
-        assertTrue(studyRepository.findById(studyUuid).isPresent());
+        wireMockStubs.directoryServer.stubForCreateElement(caseUuid, nodeExport.fileName(), DirectoryService.CASE, directoryUuid, userId, description);
+        wireMockStubs.caseServer.stubCreateCase(caseUuid.toString(), exportFolder + DELIMITER + exportUuid + DELIMITER + fileName + ".zip", "application/zip");
+        consumerService.createCase(exportUuid, exportFolder, nodeExport, userId);
+        wireMockStubs.caseServer.verifyCreateCase(exportFolder + DELIMITER + exportUuid + DELIMITER + fileName + ".zip", "application/zip");
     }
 
     private void verifyMockCallsAfterStudyCreation() {
@@ -282,18 +274,20 @@ class StudyControllerCreationTest {
             HEADER_RECEIVER, mapper.writeValueAsString(receiver)));
     }
 
-    private MessageHeaders prepareMessageHeaders(UUID studyUuid, String userId, UUID caseUuid, Map<String, Object> importParameters, String exportInfos) throws JsonProcessingException {
+    private MessageHeaders prepareMessageHeaders(UUID studyUuid, String userId, UUID caseUuid, Map<String, Object> importParameters,
+                                                 NodeExportInfos exportInfos, UUID exportUuid) throws JsonProcessingException {
         CaseImportReceiver receiver = new CaseImportReceiver(studyUuid, null, caseUuid, UUID.randomUUID(), UUID.randomUUID(), userId, System.nanoTime(), CaseImportAction.STUDY_CREATION);
 
         return new MessageHeaders(Map.of(
             HEADER_USER_ID, userId,
             QUERY_PARAM_NETWORK_UUID, UUID.randomUUID().toString(),
             "networkId", "networkId",
-            CASE_FORMAT, "UCTE",
-            "caseName", "nameOfCase",
+            CASE_FORMAT, "XXIDM",
+            "caseName", exportInfos.fileName(),
             HEADER_IMPORT_PARAMETERS, importParameters,
             HEADER_RECEIVER, mapper.writeValueAsString(receiver),
-            HEADER_EXPORT_INFOS, exportInfos));
+            HEADER_EXPORT_INFOS, mapper.writeValueAsString(exportInfos),
+            "exportUuid", exportUuid.toString()));
     }
 
     private Map<String, Object> prepareImportParameters() {

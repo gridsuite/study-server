@@ -883,7 +883,7 @@ public class ConsumerService {
         }
     }
 
-    private String createCase(UUID exportUuid, String exportFolder, NodeExportInfos nodeExport, String userId) {
+    public String createCase(UUID exportUuid, String exportFolder, NodeExportInfos nodeExport, String userId) {
         String errorMessage = null;
 
         try {
