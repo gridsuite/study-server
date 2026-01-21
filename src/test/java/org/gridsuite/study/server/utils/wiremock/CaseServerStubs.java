@@ -92,11 +92,14 @@ public class CaseServerStubs {
         verifyDeleteRequest(wireMock, stubUuid, CASE_URI + "/" + caseUuid, false, Map.of());
     }
 
-    public void stubCreateCase(String caseUuid, String caseKey, String contentType) {
+    public void stubCreateCase(String caseKey, String contentType, UUID expectedCaseUuid) {
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(CASE_URI + "/create"))
+            .withHeader("Content-Type", equalTo("application/x-www-form-urlencoded"))
             .withQueryParam("caseKey", equalTo(caseKey))
             .withQueryParam("contentType", equalTo(contentType))
-            .willReturn(WireMock.ok().withBody(caseUuid)));
+            .willReturn(WireMock.ok()
+                .withHeader("Content-Type", "application/json")
+                .withBody("\"" + expectedCaseUuid.toString() + "\"")));
     }
 
     public void verifyCreateCase(String caseKey, String contentType) {

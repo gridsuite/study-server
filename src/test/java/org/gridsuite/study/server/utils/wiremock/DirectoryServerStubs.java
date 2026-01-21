@@ -3,6 +3,7 @@ package org.gridsuite.study.server.utils.wiremock;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.dto.ElementAttributes;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -34,15 +35,14 @@ public class DirectoryServerStubs {
         WireMockUtilsCriteria.verifyHeadRequest(wireMock, path, Map.of(), 1);
     }
 
-    public void stubForCreateElement(UUID elementUuid, String elementName, String type, UUID directoryUuid, String userId, String description) {
+    public void stubForCreateElement(NodeExportInfos nodeExport, String elementAttributes, String userId) {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DIRECTORY_URI + "/{directoryUuid}/elements");
-        ElementAttributes elementAttributes = new ElementAttributes(elementUuid, elementName, type, userId, 0, description);
-        String path = pathBuilder.buildAndExpand(directoryUuid).toUriString();
+        String path = pathBuilder.buildAndExpand(nodeExport.directoryUuid()).toUriString();
 
         wireMock.stubFor(WireMock.post(WireMock.urlEqualTo(path))
             .withHeader("userId", equalTo(userId))
             .withHeader("content-type", equalTo("application/json"))
-            .withRequestBody(equalTo(String.valueOf(elementAttributes)))
+            .withRequestBody(equalTo(elementAttributes))
             .willReturn(WireMock.aResponse().withStatus(HttpStatus.OK.value())));
     }
 

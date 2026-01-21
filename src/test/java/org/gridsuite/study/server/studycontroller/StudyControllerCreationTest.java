@@ -13,6 +13,7 @@ import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.commons.report.ReportNode;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
+import org.gridsuite.study.server.dto.ElementAttributes;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
@@ -46,10 +47,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.service.NetworkModificationTreeService.FIRST_VARIANT_ID;
@@ -234,10 +238,18 @@ class StudyControllerCreationTest {
         NodeExportInfos exportInfos = mapper.readValue(exportInfosStr, NodeExportInfos.class);
         assertEquals(exportInfos, nodeExport);
 
-        wireMockStubs.directoryServer.stubForCreateElement(caseUuid, nodeExport.fileName(), DirectoryService.CASE, directoryUuid, userId, description);
-        wireMockStubs.caseServer.stubCreateCase(caseUuid.toString(), exportFolder + DELIMITER + exportUuid + DELIMITER + fileName + ".zip", "application/zip");
-        consumerService.createCase(exportUuid, exportFolder, nodeExport, userId);
+        UUID newCaseUuid = UUID.randomUUID();
+        ElementAttributes elementAttributes = new ElementAttributes(newCaseUuid, nodeExport.fileName(), DirectoryService.CASE, userId, 0, nodeExport.description());
+        wireMockStubs.caseServer.stubCreateCase(exportFolder + DELIMITER + exportUuid + DELIMITER + fileName + ".zip", "application/zip", newCaseUuid);
+        wireMockStubs.directoryServer.stubForCreateElement(
+            nodeExport,
+            mapper.writeValueAsString(elementAttributes),
+            userId);
+
+        String error = consumerService.createCase(exportUuid, exportFolder, nodeExport, userId);
         wireMockStubs.caseServer.verifyCreateCase(exportFolder + DELIMITER + exportUuid + DELIMITER + fileName + ".zip", "application/zip");
+        wireMockStubs.directoryServer.verifyCreateElement(mapper.writeValueAsString(elementAttributes), nodeExport.directoryUuid());
+        assertThat(error).isNull();
     }
 
     private void verifyMockCallsAfterStudyCreation() {
