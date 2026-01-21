@@ -464,7 +464,7 @@ public class ConsumerService {
 
     private UUID createDefaultComputationResultFilters() {
         try {
-            return studyConfigService.createDefaultComputationResultFilters();
+            return studyConfigService.createComputationResultFilters();
         } catch (final Exception e) {
             LOGGER.error("Error while creating pcc min default parameters", e);
             return null;

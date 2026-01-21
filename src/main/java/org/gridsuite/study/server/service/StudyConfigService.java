@@ -8,6 +8,7 @@ package org.gridsuite.study.server.service;
 
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.DiagramPosition;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
@@ -373,38 +374,37 @@ public class StudyConfigService {
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public UUID createDefaultComputationResultFilters() {
+    public UUID createComputationResultFilters() {
         var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI + "/default")
                 .buildAndExpand().toUriString();
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 
-    public UUID getComputationResultFiltersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
+    public UUID getOrElseCreateComputationResultFiltersUuid(StudyEntity studyEntity) {
         if (studyEntity.getComputationResultFiltersUuid() == null) {
-            studyEntity.setComputationResultFiltersUuid(createDefaultComputationResultFilters());
+            studyEntity.setComputationResultFiltersUuid(createComputationResultFilters());
         }
         return studyEntity.getComputationResultFiltersUuid();
     }
 
     public String getComputationResultFilters(UUID uuid) {
         Objects.requireNonNull(uuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_WITH_ID_URI)
-                .buildAndExpand(uuid).toUriString();
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_WITH_ID_URI).buildAndExpand(uuid).toUriString();
         return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
     }
 
-    public void setGlobalFiltersForComputationResult(UUID studyUuid, UUID configUuid, String globalFilters) {
+    public void setGlobalFiltersForComputationResult(UUID id, ComputationType computationType, String globalFilters) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_WITH_ID_URI + "/global-filters");
-        String path = uriBuilder.buildAndExpand(configUuid).toUriString();
+        String path = uriBuilder.buildAndExpand(id, computationType).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(globalFilters, headers);
         restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
     }
 
-    public void updateColumns(UUID configUuid, UUID columnUuid, String columnInfos) {
+    public void updateColumns(UUID id, ComputationType computationType, String computationSubType, String columnInfos) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_WITH_ID_URI + "/columns/{colId}");
-        String path = uriBuilder.buildAndExpand(configUuid, columnUuid).toUriString();
+        String path = uriBuilder.buildAndExpand(id, computationType, computationSubType).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(columnInfos, headers);

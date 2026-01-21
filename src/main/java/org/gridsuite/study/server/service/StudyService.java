@@ -2782,7 +2782,7 @@ public class StudyService {
     @Transactional
     public String getComputationResultFilters(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        return studyConfigService.getComputationResultFilters(studyConfigService.getComputationResultFiltersUuidOrElseCreateDefaults(studyEntity));
+        return studyConfigService.getComputationResultFilters(studyConfigService.getOrElseCreateComputationResultFiltersUuid(studyEntity));
     }
 
     /**
@@ -3625,12 +3625,12 @@ public class StudyService {
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
-    public void setGlobalFiltersForComputationResult(UUID studyUuid, UUID configUuid, String globalFilters) {
-        studyConfigService.setGlobalFiltersForComputationResult(studyUuid, configUuid, globalFilters);
+    public void setGlobalFiltersForComputationResult(UUID id, ComputationType computationType, String globalFilters) {
+        studyConfigService.setGlobalFiltersForComputationResult(id, computationType, globalFilters);
     }
 
-    public void updateColumns(UUID studyUuid, UUID configUuid, UUID columnUuid, String columnInfos) {
-        studyConfigService.updateColumns(configUuid, columnUuid, columnInfos);
+    public void updateColumns(UUID id, ComputationType computationType, String computationSubType, String columnInfos) {
+        studyConfigService.updateColumns(id, computationType, computationSubType, columnInfos);
     }
 
     public void renameSpreadsheetConfig(UUID studyUuid, UUID configUuid, String newName) {

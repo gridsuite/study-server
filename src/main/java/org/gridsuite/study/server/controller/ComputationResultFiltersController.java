@@ -7,12 +7,12 @@
 package org.gridsuite.study.server.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.service.StudyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,28 +40,30 @@ public class ComputationResultFiltersController {
         return ResponseEntity.ok().body(studyService.getComputationResultFilters(studyUuid));
     }
 
-    @PostMapping("/{id}/global-filters")
+    @PostMapping("/{id}/{computationType}/global-filters")
     @Operation(summary = "Set global filters",
             description = "Replaces all existing global filters with the provided list for a computation result")
     @ApiResponse(responseCode = "204", description = "Global filters set successfully")
     @ApiResponse(responseCode = "404", description = "computation result global filters not found")
     public ResponseEntity<Void> setGlobalFiltersForComputationResult(
             @PathVariable("studyUuid") UUID studyUuid,
-            @Parameter(description = "ID of the global filters") @PathVariable UUID id,
-            @RequestBody String filters) {
-        studyService.setGlobalFiltersForComputationResult(studyUuid, id, filters);
+            @PathVariable UUID id,
+            @PathVariable ComputationType computationType,
+            @RequestBody String globalFilters) {
+        studyService.setGlobalFiltersForComputationResult(id, computationType, globalFilters);
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/{id}/columns/{columnUuid}")
+    @PutMapping("/{id}/{computationType}/{computationSubType}/columns")
     @Operation(summary = "Update a column", description = "Updates an existing column")
     @ApiResponse(responseCode = "204", description = "Column updated")
     public ResponseEntity<Void> updateColumns(
             @PathVariable("studyUuid") UUID studyUuid,
-            @Parameter(description = "ID of the spreadsheet config") @PathVariable UUID id,
-            @Parameter(description = "ID of the column to update") @PathVariable UUID columnUuid,
+            @PathVariable UUID id,
+            @PathVariable ComputationType computationType,
+            @PathVariable String computationSubType,
             @Valid @RequestBody String columnInfos) {
-        studyService.updateColumns(studyUuid, id, columnUuid, columnInfos);
+        studyService.updateColumns(id, computationType, computationSubType, columnInfos);
         return ResponseEntity.noContent().build();
     }
 }
