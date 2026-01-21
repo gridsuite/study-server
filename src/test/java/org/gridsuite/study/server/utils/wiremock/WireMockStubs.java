@@ -42,12 +42,18 @@ public class WireMockStubs {
 
     private final WireMockServer wireMock;
     public final CaseServerStubs caseServer;
+    public final LoadflowServerStubs loadflowServer;
     public final NetworkConversionServerStubs networkConversionServer;
+    public final ReportServerStubs reportServer;
+    public final UserAdminServerStubs userAdminServer;
 
     public WireMockStubs(WireMockServer wireMock) {
         this.wireMock = wireMock;
         this.caseServer = new CaseServerStubs(wireMock);
+        this.loadflowServer = new LoadflowServerStubs(wireMock);
         this.networkConversionServer = new NetworkConversionServerStubs(wireMock);
+        this.userAdminServer = new UserAdminServerStubs(wireMock);
+        this.reportServer = new ReportServerStubs(wireMock);
     }
 
     public UUID stubNetworkElementInfosGet(String networkUuid, String elementType, String infoType, String elementId, String responseBody) {
