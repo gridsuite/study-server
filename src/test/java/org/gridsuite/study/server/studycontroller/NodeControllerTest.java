@@ -41,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * @author Florent MILLOT {@literal <florent.millot_externe at rte-france.com>}
  */
-public class NodeControllerTest extends StudyTestBase {
+class NodeControllerTest extends StudyTestBase {
 
     @Test
     void testCutAndPasteNode() throws Exception {

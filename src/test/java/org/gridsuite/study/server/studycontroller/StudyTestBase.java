@@ -85,7 +85,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-public class StudyTestBase {
+class StudyTestBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyTestBase.class);
 
