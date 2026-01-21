@@ -2,7 +2,6 @@ package org.gridsuite.study.server.utils.wiremock;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import org.gridsuite.study.server.dto.ElementAttributes;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.util.UriComponentsBuilder;
