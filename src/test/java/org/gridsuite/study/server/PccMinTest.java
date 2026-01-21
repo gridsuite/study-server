@@ -26,6 +26,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
@@ -116,12 +117,14 @@ class PccMinTest {
 
     private WireMockServer wireMockServer;
     private WireMockStubs wireMockStubs;
+    private ComputationServerStubs computationServerStubs;
 
     @BeforeEach
     void setup() {
         wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
         wireMockServer.start();
         wireMockStubs = new WireMockStubs(wireMockServer);
+        computationServerStubs = new ComputationServerStubs(wireMockServer);
         configureFor("localhost", wireMockServer.port());
         String baseUrl = wireMockServer.baseUrl();
 
@@ -263,12 +266,12 @@ class PccMinTest {
         wireMockStubs.verifyPccMinRun(stubRun, NETWORK_UUID_STRING, VARIANT_ID);
 
         // verify pcc min status
-        UUID stubStatus = wireMockStubs.stubComputationStatusGet(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON);
+        UUID stubStatus = computationServerStubs.stubGetResultStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON);
         mockMvc.perform(get(PCC_MIN_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk())
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(PCC_MIN_STATUS_JSON));
 
-        wireMockStubs.verifyComputationStatus(stubStatus, PCC_MIN_RESULT_UUID);
+        computationServerStubs.verifyGetResultStatus(stubStatus, PCC_MIN_RESULT_UUID);
     }
 
     @Test
@@ -292,7 +295,7 @@ class PccMinTest {
             .build();
         consumerService.consumePccMinStopped().accept(stoppedMessage);
         checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
-        wireMockStubs.verifyPccMinStop(stubId, PCC_MIN_RESULT_UUID);
+        computationServerStubs.verifyComputationStop(stubId, PCC_MIN_RESULT_UUID);
     }
 
     @Test
@@ -430,7 +433,7 @@ class PccMinTest {
     @Test
     void testGetPccMinParameters() throws Exception {
         String parametersToCreate = buildFilter();
-        UUID stubId = wireMockStubs.stubPccMinParametersGet(
+        UUID stubId = computationServerStubs.stubParametersGet(
             String.valueOf(PCCMIN_PARAMETERS_UUID),
             parametersToCreate
         );
@@ -441,7 +444,7 @@ class PccMinTest {
             .andExpect(status().isOk())
             .andExpect(content().string(parametersToCreate));
 
-        wireMockStubs.verifyPccMinParametersGet(stubId, String.valueOf(PCCMIN_PARAMETERS_UUID));
+        computationServerStubs.verifyParametersGet(stubId, String.valueOf(PCCMIN_PARAMETERS_UUID));
 
         // Not found case
         UUID wrongParamUuid = UUID.randomUUID();
@@ -505,7 +508,7 @@ class PccMinTest {
         wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters/default"))
             .willReturn(okJson(objectMapper.writeValueAsString(PCCMIN_PARAMETERS_UUID))));
 
-        UUID stubId = wireMockStubs.stubPccMinParametersGet(
+        UUID stubId = computationServerStubs.stubParametersGet(
             String.valueOf(PCCMIN_PARAMETERS_UUID),
             params
         );
@@ -517,7 +520,7 @@ class PccMinTest {
             .andExpect(content().string(params));
 
         wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters/default")));
-        wireMockStubs.verifyPccMinParametersGet(stubId, String.valueOf(PCCMIN_PARAMETERS_UUID));
+        computationServerStubs.verifyParametersGet(stubId, String.valueOf(PCCMIN_PARAMETERS_UUID));
 
         assertNotNull(studyUuid);
         assertEquals(PCCMIN_PARAMETERS_UUID,

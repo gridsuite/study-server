@@ -51,6 +51,7 @@ import org.gridsuite.study.server.utils.MatcherReportLog;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.UserAdminServerStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
@@ -310,6 +311,7 @@ class StudyTest {
     private WireMockServer wireMockServer;
 
     private WireMockStubs wireMockStubs;
+    private UserAdminServerStubs userAdminServerStubs;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -342,12 +344,12 @@ class StudyTest {
     ConsumerService consumeService;
 
     private record CreateStudyStubs(UUID stubUserProfileId, UUID stubCaseExistsId, UUID stubSendReportId, String userId, String caseUuid) {
-        public void verify(WireMockStubs wireMockStubs) {
+        public void verify(WireMockStubs wireMockStubs, UserAdminServerStubs userAdminServerStubs) {
             if (stubCaseExistsId != null) {
                 wireMockStubs.caseServer.verifyCaseExists(stubCaseExistsId, caseUuid);
             }
             if (stubUserProfileId != null) {
-                wireMockStubs.verifyUserProfile(stubUserProfileId, userId);
+                userAdminServerStubs.verifyUserProfile(stubUserProfileId, userId);
             }
             if (stubSendReportId != null) {
                 wireMockStubs.verifySendReport(stubSendReportId);
@@ -380,8 +382,8 @@ class StudyTest {
 
     private CreateStudyStubs setupCreateStudyStubs(String userId, String userProfileJson, String caseUuid) {
         UUID stubUserProfileId = userProfileJson != null
-            ? wireMockStubs.stubUserProfile(userId, userProfileJson)
-            : wireMockStubs.stubUserProfile(userId);
+            ? userAdminServerStubs.stubUserProfile(userId, userProfileJson)
+            : userAdminServerStubs.stubUserProfile(userId);
         UUID stubCaseExistsId = wireMockStubs.caseServer.stubCaseExists(caseUuid, true);
         UUID stubSendReportId = wireMockStubs.stubSendReport();
         return new CreateStudyStubs(stubUserProfileId, stubCaseExistsId, stubSendReportId, userId, caseUuid);
@@ -465,6 +467,7 @@ class StudyTest {
 
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
         wireMockStubs = new WireMockStubs(wireMockServer);
+        userAdminServerStubs = new UserAdminServerStubs(wireMockServer);
 
         objectWriter = mapper.writer().withDefaultPrettyPrinter();
 
@@ -979,7 +982,7 @@ class StudyTest {
 
         UUID studyUuid = createStudy(userId, caseUuid, networkInfos);
 
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(1, 7, 1, 1);
 
         return studyUuid;
@@ -1043,7 +1046,7 @@ class StudyTest {
         // Verify HTTP requests
         // note: it's a new case UUID
         wireMockStubs.networkConversionServer.verifyImportNetwork(postNetworkStubId, CLONED_CASE_UUID_STRING, FIRST_VARIANT_ID);
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(1, 7, 1, 1);
         wireMockStubs.caseServer.verifyDuplicateCase(stubDuplicateCaseId, caseUuid.toString());
         wireMockStubs.caseServer.verifyDisableCaseExpiration(stubDisableCaseExpirationClonedId, CLONED_CASE_UUID_STRING);
@@ -1280,7 +1283,7 @@ class StudyTest {
         csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
 
         // Verify HTTP requests were sent to remote services
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(1, 7, 1, 1);
         wireMockStubs.caseServer.verifyDisableCaseExpiration(stubDisableCaseExpirationId, NEW_STUDY_CASE_UUID);
         wireMockStubs.networkConversionServer.verifyImportNetwork(postNetworkStubId, NEW_STUDY_CASE_UUID, FIRST_VARIANT_ID);
@@ -1363,7 +1366,7 @@ class StudyTest {
 
         createStudy(NO_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(1, 7, 1, 1);
     }
 
@@ -1377,7 +1380,7 @@ class StudyTest {
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 4, 0, 0);
         wireMockStubs.verifyParametersDuplicateFrom(PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
@@ -1393,7 +1396,7 @@ class StudyTest {
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 3, 0, 0);
         wireMockStubs.verifyParametersDuplicateFrom(PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
@@ -1409,7 +1412,7 @@ class StudyTest {
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 4, 0, 0);
         wireMockStubs.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
@@ -1425,7 +1428,7 @@ class StudyTest {
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 3, 0, 0);
         wireMockStubs.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
@@ -1441,7 +1444,7 @@ class StudyTest {
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 4, 0, 0);
         wireMockStubs.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
@@ -1457,7 +1460,7 @@ class StudyTest {
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 3, 0, 0);
         wireMockStubs.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
@@ -1473,7 +1476,7 @@ class StudyTest {
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 4, 0, 0);
         wireMockStubs.verifyParametersDuplicateFrom(PROFILE_SHORTCIRCUIT_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
@@ -1489,7 +1492,7 @@ class StudyTest {
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 3, 0, 0);
         wireMockStubs.verifyParametersDuplicateFrom(PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
@@ -1505,7 +1508,7 @@ class StudyTest {
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 3, 1, 0);
         wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromNotFoundId, PROFILE_SPREADSHEET_CONFIG_COLLECTION_INVALID_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 5, 0, 1);
@@ -1521,7 +1524,7 @@ class StudyTest {
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 3, 0, 0);
         wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromId, PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 5, 0, 1);
@@ -1537,7 +1540,7 @@ class StudyTest {
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 3, 0, 1);
         wireMockStubs.verifyNetworkVisualizationParamsDuplicateFrom(stubNetworkVisualizationParamsDuplicateFromNotFoundId, PROFILE_NETWORK_VISUALIZATION_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 5, 1, 0);
@@ -1553,7 +1556,7 @@ class StudyTest {
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 3, 0, 0);
         wireMockStubs.verifyNetworkVisualizationParamsDuplicateFrom(stubNetworkVisualizationParamsDuplicateFromId, PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 5, 1, 0);
@@ -1569,7 +1572,7 @@ class StudyTest {
         createStudy(INVALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(1, 3, 0, 0);
         wireMockStubs.verifyParametersDuplicateFrom(PROFILE_VOLTAGE_INIT_INVALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
@@ -1585,7 +1588,7 @@ class StudyTest {
         createStudy(VALID_PARAMS_IN_PROFILE_USER_ID, CASE_UUID);
 
         // order is important
-        createStudyStubs.verify(wireMockStubs);
+        createStudyStubs.verify(wireMockStubs, userAdminServerStubs);
         verifyCreateParameters(0, 3, 0, 0);
         wireMockStubs.verifyParametersDuplicateFrom(PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING);
         duplicateParameterStubs.verify(wireMockStubs, 4, 1, 1);
@@ -1764,7 +1767,7 @@ class StudyTest {
         wireMockStubs.verifyParametersDuplicateFromAny(stubParametersDuplicateFromId, 7);
         wireMockStubs.verifyNetworkVisualizationParamsDuplicateFrom(stubNetworkVisualizationParamsDuplicateFromId, studyEntity.getNetworkVisualizationParametersUuid().toString());
         wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromId, studyEntity.getSpreadsheetConfigCollectionUuid().toString());
-        wireMockStubs.verifyUserProfile(stubUserProfileNotFoundId, "userId");
+        userAdminServerStubs.verifyUserProfile(stubUserProfileNotFoundId, "userId");
     }
 
     private StudyEntity duplicateStudy(UUID studyUuid, String userId) throws Exception {
@@ -1775,7 +1778,7 @@ class StudyTest {
             .willSetStateTo("indexed")
             .willReturn(WireMock.ok())).getId();
         UUID stubUuid = wireMockStubs.stubDuplicateModificationGroup(mapper.writeValueAsString(Map.of()));
-        UUID stubUserProfileId = wireMockStubs.stubUserProfile(userId);
+        UUID stubUserProfileId = userAdminServerStubs.stubUserProfile(userId);
         UUID stubUserProfileNadConfigId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + NAD_CONFIG_USER_ID + "/profile"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(USER_PROFILE_WITH_DIAGRAM_CONFIG_PARAMS_JSON))).getId();
         UUID stubDuplicateCaseId = wireMockStubs.caseServer.stubDuplicateCaseWithBody(CASE_UUID_STRING, mapper.writeValueAsString(CLONED_CASE_UUID));
@@ -1915,12 +1918,12 @@ class StudyTest {
             wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromId, sourceStudy.getSpreadsheetConfigCollectionUuid().toString());
         }
         if (NAD_CONFIG_USER_ID.equals(userId)) {
-            wireMockStubs.verifyUserProfile(stubUserProfileNadConfigId, userId);
+            userAdminServerStubs.verifyUserProfile(stubUserProfileNadConfigId, userId);
             wireMockStubs.verifyNetworkAreaDiagramConfig(stubNetworkAreaDiagramConfigId);
             wireMockStubs.verifyElementNameGet(stubElementNameId, PROFILE_DIAGRAM_CONFIG_UUID_STRING);
             wireMockStubs.verifyDiagramGridLayout(stubDiagramGridLayoutId);
         } else {
-            wireMockStubs.verifyUserProfile(stubUserProfileId, userId);
+            userAdminServerStubs.verifyUserProfile(stubUserProfileId, userId);
         }
         wireMockStubs.verifyReportsDuplicate(stubReportsDuplicateId);
 
