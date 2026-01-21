@@ -712,12 +712,7 @@ class SecurityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), null);
         UUID studyUuid = studyEntity.getId();
         assertNotNull(studyUuid);
-
-        wireMockServer.stubFor(
-            get(urlEqualTo("/v1/parameters/default"))
-                .willReturn(okJson(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON))
-        );
-
+        computationServerStubs.stubParametersDefault(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
         wireMockServer.stubFor(
             post(urlEqualTo("/v1/parameters/default"))
                 .willReturn(
@@ -728,18 +723,8 @@ class SecurityAnalysisTest {
                 )
         );
 
-        // Stub GET existing parameters
         computationServerStubs.stubParametersGet(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
-        // Stub GET default parameters
-        wireMockServer.stubFor(
-            WireMock.get(urlPathEqualTo("/v1/parameters/default"))
-                .willReturn(
-                    WireMock.ok()
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody(objectMapper.writeValueAsString(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON))
-                )
-        );
-
+        computationServerStubs.stubParametersDefault(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid))
             .andExpect(status().isOk())
             .andExpect(content().string(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
@@ -750,17 +735,7 @@ class SecurityAnalysisTest {
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyUuid).orElseThrow().getSecurityAnalysisParametersUuid());
 
         String mnBodyJson = objectWriter.writeValueAsString(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
-        wireMockServer.stubFor(
-            put(urlEqualTo("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING))
-                .withRequestBody(equalTo(mnBodyJson))
-                .willReturn(
-                    aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("\"" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING + "\"")
-                )
-        );
-
+        computationServerStubs.stubParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, mnBodyJson);
         mockMvc.perform(
             post("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
                 .header("userId", "userId")
@@ -768,8 +743,7 @@ class SecurityAnalysisTest {
                 .content(mnBodyJson)
         ).andExpect(status().isOk());
 
-        wireMockServer.verify(putRequestedFor(urlEqualTo("/v1/parameters/" + SECURITY_ANALYSIS_PARAMETERS_UUID_STRING)));
-
+        computationServerStubs.verifyParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
@@ -805,14 +779,14 @@ class SecurityAnalysisTest {
         assertNull(studyEntity.getSecurityAnalysisParametersUuid());
 
         String bodyJson = objectWriter.writeValueAsString(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
-        UUID stubCreation = computationServerStubs.stubCreateComputationParameter(SECURITY_ANALYSIS_PARAMETERS_UUID);
+        UUID stubCreation = computationServerStubs.stubCreateParameter(SECURITY_ANALYSIS_PARAMETERS_UUID);
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
                 .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(bodyJson))
             .andExpect(status().isOk());
 
-        computationServerStubs.verifyComputationParameterPost(stubCreation, bodyJson);
+        computationServerStubs.verifyParameterPost(stubCreation, bodyJson);
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyUuid).orElseThrow().getSecurityAnalysisParametersUuid());
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -913,18 +887,13 @@ class SecurityAnalysisTest {
 
         UUID stubUser = userAdminServerStubs.stubUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
         computationServerStubs.stubParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
-        wireMockServer.stubFor(
-            post(urlPathEqualTo("/v1/parameters"))
-                .withQueryParam("duplicateFrom", equalTo(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING))
-                .willReturn(aResponse().withStatus(404))
-        );
-
+        computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
         createOrUpdateParametersAndDoChecks(studyUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
 
         // --- Verify WireMock requests ---
         userAdminServerStubs.verifyUserProfile(stubUser, INVALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
-        computationServerStubs.verifyDuplicateParameters(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
     }
 
     @Test
@@ -938,12 +907,7 @@ class SecurityAnalysisTest {
             .willReturn(ok()));
         UUID stubUser = userAdminServerStubs.stubUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
         computationServerStubs.stubParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, objectWriter.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS));
-        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters"))
-            .withQueryParam("duplicateFrom", equalTo(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))
-            .willReturn(ok()
-                .withBody(DUPLICATED_PARAMS_JSON)
-                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
-
+        computationServerStubs.stubParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_PARAMS_JSON);
         wireMockServer.stubFor(post(urlPathMatching("/v1/results/invalidate-status.*"))
             .withQueryParam("resultUuid", matching(".*"))
             .willReturn(ok()));
@@ -969,7 +933,7 @@ class SecurityAnalysisTest {
         // duplicate parameters ---
         wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters"))
             .withQueryParam("duplicateFrom", equalTo(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING)));
-        computationServerStubs.verifyDuplicateParameters(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
         // verify if any result was invalidated
         List<ServeEvent> invalidateCalls = wireMockServer.getAllServeEvents().stream()
             .filter(e -> e.getRequest().getUrl().startsWith("/v1/results/invalidate-status"))

@@ -72,11 +72,24 @@ public class ComputationServerStubs {
      * Computation parameter
      */
 
-    public void verifyDuplicateParameters(String paramUUID) {
-        wireMock.verify(
-            postRequestedFor(urlPathEqualTo("/v1/parameters"))
-                .withQueryParam("duplicateFrom", equalTo(paramUUID))
-        );
+    public UUID stubParametersDuplicateFrom(String duplicateFromUuid, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
+            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public UUID stubParametersDuplicateFromNotFound(String duplicateFromUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
+            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+            .willReturn(WireMock.notFound())).getId();
+    }
+
+    public void verifyParametersDuplicateFrom(String duplicateFromUuid) {
+        verifyParametersDuplicateFrom(duplicateFromUuid, 1);
+    }
+
+    public void verifyParametersDuplicateFrom(String duplicateFromUuid, int nbRequests) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
     }
 
     public void stubParameterPut(WireMockServer wireMockServer, String paramUuid, String responseJson) {
@@ -101,7 +114,7 @@ public class ComputationServerStubs {
         verifyGetRequest(wireMock, stubUuid, "/v1/parameters/" + paramUuid, Map.of());
     }
 
-    public UUID stubCreateComputationParameter(UUID paramUuid) {
+    public UUID stubCreateParameter(UUID paramUuid) {
         return
             wireMock.stubFor(
                 post(urlPathEqualTo("/v1/parameters"))
@@ -109,8 +122,23 @@ public class ComputationServerStubs {
             ).getId();
     }
 
-    public void verifyComputationParameterPost(UUID stubUuid, String bodyJson) {
+    public void verifyParameterPost(UUID stubUuid, String bodyJson) {
         verifyPostRequest(wireMock, stubUuid, "/v1/parameters", false, Map.of(), bodyJson);
+    }
+
+    public void verifyParameters(int nbRequests) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of(), nbRequests);
+    }
+
+    public UUID stubParametersDefault(String statusJson) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/default"))
+            .willReturn(WireMock.ok()
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .withBody(statusJson))).getId();
+    }
+
+    public void verifyParametersDefault(int nbRequests) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters/default", Map.of(), nbRequests);
     }
 
     /*    Results     */

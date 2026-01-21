@@ -757,18 +757,6 @@ public class WireMockStubs {
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
     }
 
-    public UUID stubParametersDuplicateFrom(String duplicateFromUuid, String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
-            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
-    }
-
-    public UUID stubParametersDuplicateFromNotFound(String duplicateFromUuid) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
-            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
-            .willReturn(WireMock.notFound())).getId();
-    }
-
     public UUID stubSpreadsheetConfigDuplicateFrom(String duplicateFromUuid, String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/spreadsheet-config-collections"))
             .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
@@ -810,22 +798,6 @@ public class WireMockStubs {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-visualizations-params"))
             .withQueryParam("duplicateFrom", WireMock.matching(".*"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
-    }
-
-    public void verifyParameters(int nbRequests) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of(), nbRequests);
-    }
-
-    public void verifyParametersDefault(int nbRequests) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters/default", Map.of(), nbRequests);
-    }
-
-    public void verifyParametersDuplicateFrom(String duplicateFromUuid) {
-        verifyParametersDuplicateFrom(duplicateFromUuid, 1);
-    }
-
-    public void verifyParametersDuplicateFrom(String duplicateFromUuid, int nbRequests) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
     }
 
     public void verifySpreadsheetConfigDefault(int nbRequests) {
