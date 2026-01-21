@@ -15,6 +15,7 @@ import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
@@ -210,6 +211,43 @@ class StudyControllerCreationTest {
         assertTrue(studyRepository.findById(studyUuid).isPresent());
     }
 
+    @Test
+    void testConsumeCaseImportSucceededToGridExplore() throws JsonProcessingException {
+        UUID studyUuid = UUID.randomUUID();
+        UUID caseUuid = UUID.randomUUID();
+        String userId = "userId";
+
+        UUID directoryUuid = UUID.randomUUID();
+        String fileName = "myFileName";
+        String description = "myDescription";
+        NodeExportInfos nodeExport = new NodeExportInfos(true, directoryUuid, fileName, description);
+
+        // Import parameters to pass and check
+        Map<String, Object> importParameters = prepareImportParameters();
+
+        MessageHeaders messageHeaders = prepareMessageHeaders(studyUuid, userId, caseUuid, importParameters, mapper.writeValueAsString(nodeExport));
+
+        // Need to insert studyCreationRequestEntity, otherwise study is deleted after being inserted
+        studyCreationRequestRepository.save(new StudyCreationRequestEntity(studyUuid, "firstRootNetworkName"));
+
+        UUID disableCaseExpirationStub = wireMockStubs.caseServer.stubDisableCaseExpiration(caseUuid.toString());
+        // run consume case import succeeded
+        consumerService.consumeCaseImportSucceeded().accept(MessageBuilder.createMessage("", messageHeaders));
+        wireMockStubs.caseServer.verifyDisableCaseExpiration(disableCaseExpirationStub, caseUuid.toString());
+        verifyMockCallsAfterStudyCreation();
+
+        // check import parameters are saved
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
+        UUID rootNetworkUUID = testUtils.getOneRootNetworkUuid(studyEntity.getId());
+
+        Map<String, String> expectedImportParameters = new HashMap<>();
+        importParameters.forEach((key, value) -> expectedImportParameters.put(key, value.toString()));
+        assertThat(rootNetworkService.getImportParameters(rootNetworkUUID)).usingRecursiveComparison().isEqualTo(expectedImportParameters);
+
+        assertStudyUpdateMessageReceived(studyUuid, userId);
+        assertTrue(studyRepository.findById(studyUuid).isPresent());
+    }
+
     private void verifyMockCallsAfterStudyCreation() {
         verify(reportService, Mockito.times(1)).sendReport(any(UUID.class), any(ReportNode.class));
         verify(loadFlowService, Mockito.times(1)).createDefaultLoadFlowParameters();
@@ -242,6 +280,20 @@ class StudyControllerCreationTest {
             "caseName", "nameOfCase",
             HEADER_IMPORT_PARAMETERS, importParameters,
             HEADER_RECEIVER, mapper.writeValueAsString(receiver)));
+    }
+
+    private MessageHeaders prepareMessageHeaders(UUID studyUuid, String userId, UUID caseUuid, Map<String, Object> importParameters, String exportInfos) throws JsonProcessingException {
+        CaseImportReceiver receiver = new CaseImportReceiver(studyUuid, null, caseUuid, UUID.randomUUID(), UUID.randomUUID(), userId, System.nanoTime(), CaseImportAction.STUDY_CREATION);
+
+        return new MessageHeaders(Map.of(
+            HEADER_USER_ID, userId,
+            QUERY_PARAM_NETWORK_UUID, UUID.randomUUID().toString(),
+            "networkId", "networkId",
+            CASE_FORMAT, "UCTE",
+            "caseName", "nameOfCase",
+            HEADER_IMPORT_PARAMETERS, importParameters,
+            HEADER_RECEIVER, mapper.writeValueAsString(receiver),
+            HEADER_EXPORT_INFOS, exportInfos));
     }
 
     private Map<String, Object> prepareImportParameters() {
