@@ -890,7 +890,11 @@ class StudyTest extends StudyTestBase {
         String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
 
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
-        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), rootNetworkUuid).contentType(MediaType.APPLICATION_JSON).content(createTwoWindingsTransformerAttributes).header(USER_ID_HEADER, userId)).andExpect(status().isOk());
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), rootNetworkUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createTwoWindingsTransformerAttributes)
+                .header(USER_ID_HEADER, userId))
+            .andExpect(status().isOk());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
@@ -902,7 +906,11 @@ class StudyTest extends StudyTestBase {
         String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
 
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
-        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), rootNetworkUuid).contentType(MediaType.APPLICATION_JSON).content(createLoadAttributes).header(USER_ID_HEADER, userId)).andExpect(status().isOk());
+        mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), rootNetworkUuid)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createLoadAttributes)
+                .header(USER_ID_HEADER, userId))
+            .andExpect(status().isOk());
         checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
@@ -910,11 +918,29 @@ class StudyTest extends StudyTestBase {
         modificationBody = Pair.of(createLoadAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkUuid, node2.getId(), NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getOneRootNetworkUuid(study1Uuid), RootNetworkNodeInfo.builder().securityAnalysisResultUuid(UUID.randomUUID()).sensitivityAnalysisResultUuid(UUID.randomUUID()).shortCircuitAnalysisResultUuid(UUID.randomUUID()).oneBusShortCircuitAnalysisResultUuid(UUID.randomUUID()).dynamicSimulationResultUuid(UUID.randomUUID()).dynamicSecurityAnalysisResultUuid(UUID.randomUUID()).voltageInitResultUuid(UUID.randomUUID()).stateEstimationResultUuid(UUID.randomUUID()).pccMinResultUuid(UUID.randomUUID()).pccMinResultUuid(UUID.randomUUID()).build());
+        rootNetworkNodeInfoService.updateRootNetworkNode(node2.getId(), studyTestUtils.getOneRootNetworkUuid(study1Uuid),
+            RootNetworkNodeInfo.builder()
+                .securityAnalysisResultUuid(UUID.randomUUID())
+                .sensitivityAnalysisResultUuid(UUID.randomUUID())
+                .shortCircuitAnalysisResultUuid(UUID.randomUUID())
+                .oneBusShortCircuitAnalysisResultUuid(UUID.randomUUID())
+                .dynamicSimulationResultUuid(UUID.randomUUID())
+                .dynamicSecurityAnalysisResultUuid(UUID.randomUUID())
+                .voltageInitResultUuid(UUID.randomUUID())
+                .stateEstimationResultUuid(UUID.randomUUID())
+                .pccMinResultUuid(UUID.randomUUID())
+                .pccMinResultUuid(UUID.randomUUID())
+                .build()
+        );
 
         // add node aliases to study
-        List<NodeAlias> aliases = List.of(new NodeAlias(null, "alias1", null), new NodeAlias(node1.getId(), "alias2", "node1"), new NodeAlias(node2.getId(), "alias3", "node2"));
-        mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", study1Uuid).contentType(MediaType.APPLICATION_JSON).content(objectWriter.writeValueAsString(aliases))).andExpect(status().isOk());
+        List<NodeAlias> aliases = List.of(new NodeAlias(null, "alias1", null),
+            new NodeAlias(node1.getId(), "alias2", "node1"),
+            new NodeAlias(node2.getId(), "alias3", "node2"));
+        mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", study1Uuid)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectWriter.writeValueAsString(aliases))
+        ).andExpect(status().isOk());
         checkNodeAliasUpdateMessageReceived(study1Uuid);
 
         // duplicate the study
@@ -922,8 +948,10 @@ class StudyTest extends StudyTestBase {
         assertNotEquals(study1Uuid, duplicatedStudy.getId());
 
         // Verify node aliases on the duplicated study
-        aliases = mapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", duplicatedStudy.getId())).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), new TypeReference<>() {
-        });
+        aliases = mapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", duplicatedStudy.getId())).andExpect(status().isOk()).andReturn()
+            .getResponse()
+            .getContentAsString(), new TypeReference<>() {
+            });
         assertEquals(3, aliases.size());
         assertEquals("alias1", aliases.get(0).alias());
         assertNull(aliases.get(0).id());
@@ -938,7 +966,9 @@ class StudyTest extends StudyTestBase {
         assertEquals(1, networkVariants.size(), "Network should be cloned with only one variant");
 
         //Test duplication from a non-existing source study
-        mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID()).header(USER_ID_HEADER, userId)).andExpect(status().isNotFound());
+        mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID())
+                .header(USER_ID_HEADER, userId))
+            .andExpect(status().isNotFound());
     }
 
     @Test
@@ -1006,9 +1036,13 @@ class StudyTest extends StudyTestBase {
             throw new RuntimeException();
         }).when(caseService).duplicateCase(any(), any());
 
-        UUID stubUserProfileNotFoundId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/userId/profile")).willReturn(WireMock.notFound())).getId();
+        UUID stubUserProfileNotFoundId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/userId/profile"))
+            .willReturn(WireMock.notFound())).getId();
 
-        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid).param(CASE_FORMAT, "XIIDM").header(USER_ID_HEADER, "userId")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
+                .param(CASE_FORMAT, "XIIDM")
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
         String duplicatedStudyUuid = mapper.readValue(response, String.class);
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -1024,23 +1058,36 @@ class StudyTest extends StudyTestBase {
 
     private StudyEntity duplicateStudy(UUID studyUuid, String userId) throws Exception {
         // Network reindex stubs - using scenarios for stateful behavior
-        UUID stubReindexAllId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/networks/.*/reindex-all")).inScenario("reindex").whenScenarioStateIs(Scenario.STARTED).willSetStateTo("indexed").willReturn(WireMock.ok())).getId();
+        UUID stubReindexAllId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/networks/.*/reindex-all"))
+            .inScenario("reindex")
+            .whenScenarioStateIs(Scenario.STARTED)
+            .willSetStateTo("indexed")
+            .willReturn(WireMock.ok())).getId();
         UUID stubUuid = wireMockStubs.stubDuplicateModificationGroup(mapper.writeValueAsString(Map.of()));
         UUID stubUserProfileId = wireMockStubs.stubUserProfile(userId);
-        UUID stubUserProfileNadConfigId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + NAD_CONFIG_USER_ID + "/profile")).willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(USER_PROFILE_WITH_DIAGRAM_CONFIG_PARAMS_JSON))).getId();
+        UUID stubUserProfileNadConfigId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + NAD_CONFIG_USER_ID + "/profile"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(USER_PROFILE_WITH_DIAGRAM_CONFIG_PARAMS_JSON))).getId();
         UUID stubDuplicateCaseId = wireMockStubs.caseServer.stubDuplicateCaseWithBody(CASE_UUID_STRING, mapper.writeValueAsString(CLONED_CASE_UUID));
-        UUID stubReportsDuplicateId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/reports/.*/duplicate")).willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
+        UUID stubReportsDuplicateId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/reports/.*/duplicate"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
 
         wireMockStubs.stubParametersDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromAny(DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
 
         // NAD specific mocks
-        UUID stubDiagramGridLayoutId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/diagram-grid-layout")).willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
-        UUID stubNetworkAreaDiagramConfigId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-area-diagram/config")).withQueryParam("duplicateFrom", WireMock.matching(".*")).willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
-        UUID stubElementNameId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/elements/" + PROFILE_DIAGRAM_CONFIG_UUID_STRING + "/name")).willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(NAD_ELEMENT_NAME)))).getId();
+        UUID stubDiagramGridLayoutId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/diagram-grid-layout"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
+        UUID stubNetworkAreaDiagramConfigId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-area-diagram/config"))
+            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
+        UUID stubElementNameId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/elements/" + PROFILE_DIAGRAM_CONFIG_UUID_STRING + "/name"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(NAD_ELEMENT_NAME)))).getId();
 
-        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid).header(USER_ID_HEADER, userId)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
+                .header(USER_ID_HEADER, userId))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         String newUuid = mapper.readValue(response, String.class);
         StudyEntity sourceStudy = studyRepository.findById(studyUuid).orElseThrow();
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
