@@ -43,11 +43,13 @@ public class WireMockStubs {
     private final WireMockServer wireMock;
     public final CaseServerStubs caseServer;
     public final NetworkConversionServerStubs networkConversionServer;
+    public final DirectoryServerStubs directoryServer;
 
     public WireMockStubs(WireMockServer wireMock) {
         this.wireMock = wireMock;
         this.caseServer = new CaseServerStubs(wireMock);
         this.networkConversionServer = new NetworkConversionServerStubs(wireMock);
+        this.directoryServer = new DirectoryServerStubs(wireMock);
     }
 
     public UUID stubNetworkElementInfosGet(String networkUuid, String elementType, String infoType, String elementId, String responseBody) {
