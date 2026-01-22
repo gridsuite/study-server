@@ -999,7 +999,6 @@ public class StudyController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertRootNodeOrBuiltNode(studyUuid, nodeUuid, rootNetworkUuid);
         UUID parentDirectoryUuid = parentDirectoryUuidStr != null ? UUID.fromString(parentDirectoryUuidStr) : null;
-
         UUID exportUuid = studyService.exportNetwork(studyUuid,
                                                         nodeUuid,
                                                         rootNetworkUuid,

@@ -42,7 +42,4 @@ public class ElementAttributes {
     public ElementAttributes(UUID elementUuid, String elementName, String type, String owner, long subdirectoriesCount, String description) {
         this(elementUuid, elementName, type, owner, subdirectoriesCount, description, null, null);
     }
-
-    // DTO in directory-server has others properties : creationDate, lastModificationDate
-    // TODO clean this DTO duplication problem
 }
