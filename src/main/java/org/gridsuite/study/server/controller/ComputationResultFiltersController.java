@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.service.StudyConfigService;
 import org.gridsuite.study.server.service.StudyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,9 +27,11 @@ import java.util.UUID;
 @Tag(name = "Study server - Computation result filters")
 public class ComputationResultFiltersController {
     private final StudyService studyService;
+    private final StudyConfigService studyConfigService;
 
-    public ComputationResultFiltersController(StudyService studyService) {
+    public ComputationResultFiltersController(StudyService studyService, StudyConfigService studyConfigService) {
         this.studyService = studyService;
+        this.studyConfigService = studyConfigService;
     }
 
     @GetMapping()
@@ -40,29 +42,30 @@ public class ComputationResultFiltersController {
         return ResponseEntity.ok().body(studyService.getComputationResultFilters(studyUuid));
     }
 
-    @PostMapping("/{id}/{computationType}/global-filters")
+    @PostMapping("/{computationType}/global-filters")
     @Operation(summary = "Set global filters",
             description = "Replaces all existing global filters with the provided list for a computation result")
     @ApiResponse(responseCode = "204", description = "Global filters set successfully")
     @ApiResponse(responseCode = "404", description = "computation result global filters not found")
     public ResponseEntity<Void> setGlobalFiltersForComputationResult(
             @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable UUID id,
-            @PathVariable ComputationType computationType,
+            @PathVariable String computationType,
             @RequestBody String globalFilters) {
-        studyService.setGlobalFiltersForComputationResult(id, computationType, globalFilters);
+        UUID computationResultFiltersId = studyService.getComputationResultFiltersId(studyUuid);
+        studyService.setGlobalFiltersForComputationResult(computationResultFiltersId, computationType, globalFilters);
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/{id}/{computationSubType}/columns")
+    @PutMapping("/{computationType}/{computationSubType}/columns")
     @Operation(summary = "Update a column", description = "Updates an existing column")
     @ApiResponse(responseCode = "204", description = "Column updated")
     public ResponseEntity<Void> updateColumns(
             @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable UUID id,
+            @PathVariable String computationType,
             @PathVariable String computationSubType,
             @Valid @RequestBody String columnInfos) {
-        studyService.updateColumns(id, computationSubType, columnInfos);
+        UUID computationResultFiltersId = studyService.getComputationResultFiltersId(studyUuid);
+        studyService.updateColumns(computationResultFiltersId, computationType, computationSubType, columnInfos);
         return ResponseEntity.noContent().build();
     }
 }

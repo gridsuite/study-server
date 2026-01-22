@@ -8,7 +8,6 @@ package org.gridsuite.study.server.service;
 
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.DiagramPosition;
 import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
@@ -393,18 +392,20 @@ public class StudyConfigService {
         return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
     }
 
-    public void setGlobalFiltersForComputationResult(UUID id, ComputationType computationType, String globalFilters) {
-        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_WITH_ID_URI + "/global-filters");
-        String path = uriBuilder.buildAndExpand(id, computationType).toUriString();
+    public void setGlobalFiltersForComputationResult(UUID id, String computationType, String globalFilters) {
+        Map<String, Object> uriVariables = Map.of("id", id, "computationType", computationType);
+        String path = UriComponentsBuilder.fromPath("/v1/computation-result-filters/{id}/{computationType}/global-filters")
+                .buildAndExpand(uriVariables).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(globalFilters, headers);
         restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
     }
 
-    public void updateColumns(UUID id, String computationSubType, String columnInfos) {
-        var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_WITH_ID_URI + "/columns");
-        String path = uriBuilder.buildAndExpand(id, computationSubType).toUriString();
+    public void updateColumns(UUID id, String computationType, String computationSubType, String columnInfos) {
+        Map<String, Object> uriVariables = Map.of("id", id, "computationType", computationType, "computationSubType", computationSubType);
+        String path = UriComponentsBuilder.fromPath("/v1/computation-result-filters/{id}/{computationType}/{computationSubType}/columns")
+                .buildAndExpand(uriVariables).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(columnInfos, headers);
