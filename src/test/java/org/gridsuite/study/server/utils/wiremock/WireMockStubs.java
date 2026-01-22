@@ -49,12 +49,16 @@ public class WireMockStubs {
 
     private final WireMockServer wireMock;
     public final CaseServerStubs caseServer;
+    public final ComputationServerStubs computationServerStubs;
+    public final UserAdminServerStubs userAdminServerStubs;
     public final NetworkConversionServerStubs networkConversionServer;
 
     public WireMockStubs(WireMockServer wireMock) {
         this.wireMock = wireMock;
         this.caseServer = new CaseServerStubs(wireMock);
         this.networkConversionServer = new NetworkConversionServerStubs(wireMock);
+        this.computationServerStubs = new ComputationServerStubs(wireMock);
+        this.userAdminServerStubs = new UserAdminServerStubs(wireMock);
     }
 
     public UUID stubNetworkElementInfosGet(String networkUuid, String elementType, String infoType, String elementId, String responseBody) {
@@ -540,17 +544,6 @@ public class WireMockStubs {
             .willReturn(WireMock.okJson("\"" + resultUuid + "\""))
 
         ).getId();
-    }
-
-    public UUID stubResultsCount(int count) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo(
-                "/v1/supervision/results-count"))
-            .willReturn(WireMock.okJson(String.valueOf(count)))
-        ).getId();
-    }
-
-    public void verifyResultsCountGet(UUID stubId) {
-        verifyGetRequest(wireMock, stubId, "/v1/supervision/results-count", Map.of());
     }
 
     public void verifyPccMinRun(UUID stubUuid, String networkUuid, String variantId) {

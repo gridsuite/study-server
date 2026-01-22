@@ -135,7 +135,6 @@ class SecurityAnalysisTest {
     private static final long TIMEOUT = 1000;
 
     private static WireMockServer wireMockServer;
-    private WireMockStubs wireMockStubs;
     private ComputationServerStubs computationServerStubs;
     private ReportServerStubs reportServerStubs;
     private UserAdminServerStubs userAdminServerStubs;
@@ -209,7 +208,6 @@ class SecurityAnalysisTest {
 
     @BeforeEach
     void setup() throws JsonProcessingException {
-        wireMockStubs = new WireMockStubs(wireMockServer);
         computationServerStubs = new ComputationServerStubs(wireMockServer);
         reportServerStubs = new ReportServerStubs(wireMockServer);
         userAdminServerStubs = new UserAdminServerStubs(wireMockServer);
@@ -496,25 +494,24 @@ class SecurityAnalysisTest {
         consumeSAResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, SECURITY_ANALYSIS_RESULT_UUID);
 
         //Test delete all results
-        UUID stubCountId = wireMockStubs.stubResultsCount(1);
+        UUID stubCountId = computationServerStubs.stubResultsCount(1);
         computationServerStubs.stubDeleteResults("/v1/supervision/results");
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", SECURITY_ANALYSIS.toString())
                 .queryParam("dryRun", "true"))
             .andExpect(status().isOk());
-        wireMockStubs.verifyResultsCountGet(stubCountId);
+        computationServerStubs.verifyResultsCountGet(stubCountId);
 
         //Delete Security analysis results
         assertEquals(1, rootNetworkNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
-        UUID stubDeleteResults = computationServerStubs.stubDeleteResults("/v1/results");
+        computationServerStubs.stubDeleteResults("/v1/results");
         UUID stubDeleteReport = reportServerStubs.stubDeleteReport();
 
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", SECURITY_ANALYSIS.toString())
                 .queryParam("dryRun", "false"))
             .andExpect(status().isOk());
-
-        WireMockUtils.verifyDeleteRequest(wireMockServer, stubDeleteResults, "/v1/results", false, Map.of("resultsUuids", matching(".*")));
+        WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, "/v1/results", Map.of("resultsUuids", matching(".*")));
         reportServerStubs.verifyDeleteReport(stubDeleteReport);
         assertEquals(0, rootNetworkNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
     }
@@ -816,7 +813,7 @@ class SecurityAnalysisTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         //run failing security analysis (because in network 2)
-        UUID stubRun = computationServerStubs.stubComputationRun(NETWORK_UUID_2_STRING, null, SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID);
+        computationServerStubs.stubComputationRun(NETWORK_UUID_2_STRING, null, SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
                 studyUuid, firstRootNetworkUuid, nodeUuid, CONTINGENCY_LIST_NAME)
                 .header(HEADER_USER_ID, "testUserId"))
@@ -828,7 +825,7 @@ class SecurityAnalysisTest {
             .setHeader(HEADER_RECEIVER, resultUuidJson)
             .setHeader("resultUuid", SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID)
             .build();
-        computationServerStubs.verifyComputationRun(stubRun, NETWORK_UUID_2_STRING, Map.of());
+        computationServerStubs.verifyComputationRun(NETWORK_UUID_2_STRING, Map.of("variantId", matching(".*")));
 
         consumerService.consumeSaFailed().accept(failedMessage);
 
@@ -865,7 +862,7 @@ class SecurityAnalysisTest {
         consumerService.consumeSaFailed().accept(failedMessage);
         // message sent by run and save controller to notify frontend security analysis is running and should update SA status
         checkMessagesReceived(studyUuid2, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        computationServerStubs.verifyComputationRun(stubRun3, NETWORK_UUID_3_STRING, Map.of("contingencyListName", WireMock.equalTo(CONTINGENCY_LIST_NAME)));
+        computationServerStubs.verifyComputationRun(NETWORK_UUID_3_STRING, Map.of("contingencyListName", WireMock.equalTo(CONTINGENCY_LIST_NAME)));
     }
 
     @Test
