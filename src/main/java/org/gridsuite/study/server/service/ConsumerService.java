@@ -292,7 +292,7 @@ public class ConsumerService {
         UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
-        UUID pccMinParametersUuid = createDefaultPccMinParameters();
+        UUID pccMinParametersUuid = createDefaultPccMinParameters(userId, userProfileInfos);
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
         UUID diagramGridLayoutUuid = studyService.createGridLayoutFromNadDiagram(userId, userProfileInfos);
 
@@ -452,7 +452,18 @@ public class ConsumerService {
         }
     }
 
-    private UUID createDefaultPccMinParameters() {
+    private UUID createDefaultPccMinParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getPccminParameterId() != null) {
+            // try to access/duplicate the user profile pccmin parameters
+            try {
+                return pccMinService.duplicatePccMinParameters(userProfileInfos.getPccminParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate pccmin parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getPccminParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad shortcircuit parameters in profile => use default values
         try {
             return pccMinService.createDefaultPccMinParameters();
         } catch (final Exception e) {
