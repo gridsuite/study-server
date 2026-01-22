@@ -28,6 +28,13 @@ import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.*;
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
+
+/**
+ * /!\ STOP ADDING new methods in this file
+ *  @Deprecated Do a local method on a test or create a dedicated file (for stub and verify)
+ */
+
+@Deprecated
 public class WireMockStubs {
     private static final String DELIMITER = "/";
 

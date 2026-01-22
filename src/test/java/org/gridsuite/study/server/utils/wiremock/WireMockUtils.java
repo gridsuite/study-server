@@ -23,6 +23,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
  */
+
+/**
+ * /!\ STOP USING these methods (deprecated)
+ *   @deprecated  Use WireMockUtilsCriteria methods instead
+ */
+
+@Deprecated
 public final class WireMockUtils {
     private WireMockUtils() {
         throw new IllegalStateException("Utility class");
