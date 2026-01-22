@@ -929,7 +929,6 @@ class StudyTest extends StudyTestBase {
                 .voltageInitResultUuid(UUID.randomUUID())
                 .stateEstimationResultUuid(UUID.randomUUID())
                 .pccMinResultUuid(UUID.randomUUID())
-                .pccMinResultUuid(UUID.randomUUID())
                 .build()
         );
 

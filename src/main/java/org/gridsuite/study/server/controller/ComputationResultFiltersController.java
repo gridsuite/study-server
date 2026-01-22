@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.service.StudyConfigService;
 import org.gridsuite.study.server.service.StudyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,11 +26,9 @@ import java.util.UUID;
 @Tag(name = "Study server - Computation result filters")
 public class ComputationResultFiltersController {
     private final StudyService studyService;
-    private final StudyConfigService studyConfigService;
 
-    public ComputationResultFiltersController(StudyService studyService, StudyConfigService studyConfigService) {
+    public ComputationResultFiltersController(StudyService studyService) {
         this.studyService = studyService;
-        this.studyConfigService = studyConfigService;
     }
 
     @GetMapping()
@@ -57,7 +54,7 @@ public class ComputationResultFiltersController {
     }
 
     @PutMapping("/{computationType}/{computationSubType}/columns")
-    @Operation(summary = "Update a column", description = "Updates an existing column")
+    @Operation(summary = "Update a column", description = "Updates a column")
     @ApiResponse(responseCode = "204", description = "Column updated")
     public ResponseEntity<Void> updateColumns(
             @PathVariable("studyUuid") UUID studyUuid,

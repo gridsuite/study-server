@@ -394,8 +394,8 @@ public class StudyConfigService {
 
     public void setGlobalFiltersForComputationResult(UUID id, String computationType, String globalFilters) {
         Map<String, Object> uriVariables = Map.of("id", id, "computationType", computationType);
-        String path = UriComponentsBuilder.fromPath("/v1/computation-result-filters/{id}/{computationType}/global-filters")
-                .buildAndExpand(uriVariables).toUriString();
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
+                        "/{id}/{computationType}/global-filters").buildAndExpand(uriVariables).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(globalFilters, headers);
@@ -404,8 +404,8 @@ public class StudyConfigService {
 
     public void updateColumns(UUID id, String computationType, String computationSubType, String columnInfos) {
         Map<String, Object> uriVariables = Map.of("id", id, "computationType", computationType, "computationSubType", computationSubType);
-        String path = UriComponentsBuilder.fromPath("/v1/computation-result-filters/{id}/{computationType}/{computationSubType}/columns")
-                .buildAndExpand(uriVariables).toUriString();
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
+                        "/{id}/{computationType}/{computationSubType}/columns").buildAndExpand(uriVariables).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(columnInfos, headers);
