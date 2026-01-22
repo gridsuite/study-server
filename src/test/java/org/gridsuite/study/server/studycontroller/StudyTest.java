@@ -2917,7 +2917,7 @@ class StudyTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID nodeUuid = getRootNodeUuid(studyUuid);
 
-        wireMockStubs.directoryServer.stubForElementExists(directoryUuid, fileName, DirectoryService.CASE, HttpStatus.NO_CONTENT.value());
+        wireMockStubs.directoryServer.stubElementExists(directoryUuid, fileName, DirectoryService.CASE, HttpStatus.NO_CONTENT.value());
         wireMockStubs.networkConversionServer.stubExportNetwork(NETWORK_UUID, fileName, mapper.writeValueAsString(exportUuid), HttpStatus.OK.value());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
@@ -2944,7 +2944,7 @@ class StudyTest {
 
         UUID nodeUuid = getRootNodeUuid(studyUuid);
 
-        wireMockStubs.directoryServer.stubForElementExists(directoryUuid, fileName, DirectoryService.CASE, HttpStatus.OK.value());
+        wireMockStubs.directoryServer.stubElementExists(directoryUuid, fileName, DirectoryService.CASE, HttpStatus.OK.value());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
             studyUuid, firstRootNetworkUuid, nodeUuid, "XIIDM")

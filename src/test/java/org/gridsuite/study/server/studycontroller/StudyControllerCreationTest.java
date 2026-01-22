@@ -238,7 +238,7 @@ class StudyControllerCreationTest {
         UUID newCaseUuid = UUID.randomUUID();
         ElementAttributes elementAttributes = new ElementAttributes(newCaseUuid, nodeExport.fileName(), DirectoryService.CASE, userId, 0, nodeExport.description());
         wireMockStubs.caseServer.stubCreateCase(exportFolder + DELIMITER + exportUuid + DELIMITER + fileName + ".zip", "application/zip", newCaseUuid);
-        wireMockStubs.directoryServer.stubForCreateElement(
+        wireMockStubs.directoryServer.stubCreateElement(
             nodeExport,
             mapper.writeValueAsString(elementAttributes),
             userId);

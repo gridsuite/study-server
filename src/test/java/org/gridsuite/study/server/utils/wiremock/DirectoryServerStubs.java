@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 package org.gridsuite.study.server.utils.wiremock;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -11,6 +18,10 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 
+/**
+ * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
+ */
+
 public class DirectoryServerStubs {
     private final WireMockServer wireMock;
     private static final String DIRECTORY_URI = "/v1/directories";
@@ -19,7 +30,7 @@ public class DirectoryServerStubs {
         this.wireMock = wireMock;
     }
 
-    public void stubForElementExists(UUID directoryUuid, String elementName, String type, int status) {
+    public void stubElementExists(UUID directoryUuid, String elementName, String type, int status) {
 
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DIRECTORY_URI + "/{directoryUuid}/elements/{elementName}/types/{type}");
         String path = pathBuilder.buildAndExpand(directoryUuid, elementName, type).toUriString();
@@ -34,7 +45,7 @@ public class DirectoryServerStubs {
         WireMockUtilsCriteria.verifyHeadRequest(wireMock, path, Map.of(), 1);
     }
 
-    public void stubForCreateElement(NodeExportInfos nodeExport, String elementAttributes, String userId) {
+    public void stubCreateElement(NodeExportInfos nodeExport, String elementAttributes, String userId) {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DIRECTORY_URI + "/{directoryUuid}/elements");
         String path = pathBuilder.buildAndExpand(nodeExport.directoryUuid()).toUriString();
 
