@@ -237,13 +237,14 @@ class StudyControllerCreationTest {
 
         UUID newCaseUuid = UUID.randomUUID();
         ElementAttributes elementAttributes = new ElementAttributes(newCaseUuid, nodeExport.fileName(), DirectoryService.CASE, userId, 0, nodeExport.description());
-        wireMockStubs.caseServer.stubCreateCase(exportFolder + DELIMITER + exportUuid + DELIMITER + fileName + ".zip", "application/zip", newCaseUuid);
+        String s3Key = exportFolder + DELIMITER + exportUuid + DELIMITER + fileName + ".zip";
+        wireMockStubs.caseServer.stubCreateCase(s3Key, "application/zip", newCaseUuid);
         wireMockStubs.directoryServer.stubCreateElement(
             nodeExport,
             mapper.writeValueAsString(elementAttributes),
             userId);
 
-        String error = consumerService.createCase(exportUuid, exportFolder, nodeExport, userId);
+        String error = consumerService.createCase(s3Key, nodeExport, userId);
         wireMockStubs.caseServer.verifyCreateCase(exportFolder + DELIMITER + exportUuid + DELIMITER + fileName + ".zip", "application/zip");
         wireMockStubs.directoryServer.verifyCreateElement(mapper.writeValueAsString(elementAttributes), nodeExport.directoryUuid());
         assertThat(error).isNull();

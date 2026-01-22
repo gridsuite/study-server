@@ -847,7 +847,7 @@ public class ConsumerService {
 
     public void consumeNetworkExportFinished(Message<String> msg) {
         String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
-        String exportFolder = msg.getHeaders().get(HEADER_EXPORT_FOLDER, String.class);
+        String s3Key = msg.getHeaders().get(HEADER_S3_KEY, String.class);
         String exportInfosStr = msg.getHeaders().get(HEADER_EXPORT_INFOS, String.class);
 
         if (receiverString != null) {
@@ -871,7 +871,7 @@ public class ConsumerService {
                     //Call case server and create case in directory
                     exportToExplorer = true;
                     if (StringUtils.isEmpty(errorMessage)) {
-                        errorMessage = createCase(exportUuid, exportFolder, nodeExport, userId);
+                        errorMessage = createCase(s3Key, nodeExport, userId);
                     }
                 }
 
@@ -883,11 +883,11 @@ public class ConsumerService {
         }
     }
 
-    public String createCase(UUID exportUuid, String exportFolder, NodeExportInfos nodeExport, String userId) {
+    public String createCase(String s3Key, NodeExportInfos nodeExport, String userId) {
         String errorMessage = null;
 
         try {
-            UUID caseUuid = caseService.createCase(exportFolder + DELIMITER + exportUuid + DELIMITER + nodeExport.fileName() + ZIP_EXTENSION, "application/zip");
+            UUID caseUuid = caseService.createCase(s3Key, "application/zip");
             directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId);
         } catch (Exception e) {
             errorMessage = e.getMessage();
