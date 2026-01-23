@@ -857,7 +857,6 @@ public class ConsumerService {
                 String userId = receiver.getUserId();
                 UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
 
-                // With export uuid get
                 NodeExportInfos nodeExport = null;
                 if (exportInfosStr != null) {
                     nodeExport = objectMapper.readValue(URLDecoder.decode(exportInfosStr, StandardCharsets.UTF_8), NodeExportInfos.class);
@@ -867,7 +866,7 @@ public class ConsumerService {
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
 
                 if (nodeExport != null && nodeExport.exportToGridExplore()) {
-                    //Create case in  gridexplore (case server and in directory-server)
+                    //Create case in directory-server and case-server
                     exportToGridExplore = true;
                     if (StringUtils.isEmpty(errorMessage)) {
                         errorMessage = createCase(s3Key, nodeExport, userId);
