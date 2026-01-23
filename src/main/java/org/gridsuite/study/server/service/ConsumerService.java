@@ -863,19 +863,19 @@ public class ConsumerService {
                     nodeExport = objectMapper.readValue(URLDecoder.decode(exportInfosStr, StandardCharsets.UTF_8), NodeExportInfos.class);
                 }
 
-                boolean exportToExplorer = false;
+                boolean exportToGridExplore = false;
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
 
-                if (nodeExport != null && nodeExport.exportToExplorer()) {
+                if (nodeExport != null && nodeExport.exportToGridExplore()) {
                     //Call case server and create case in directory
-                    exportToExplorer = true;
+                    exportToGridExplore = true;
                     if (StringUtils.isEmpty(errorMessage)) {
                         errorMessage = createCase(s3Key, nodeExport, userId);
                     }
                 }
 
                 networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
-                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToExplorer, userId, errorMessage);
+                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToGridExplore, userId, errorMessage);
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
             }

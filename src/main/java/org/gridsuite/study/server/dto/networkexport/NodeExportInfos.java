@@ -12,7 +12,7 @@ import java.util.UUID;
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
  */
 
-public record NodeExportInfos(boolean exportToExplorer,
+public record NodeExportInfos(boolean exportToGridExplore,
                               UUID directoryUuid,
                               String fileName,
                               String description) {

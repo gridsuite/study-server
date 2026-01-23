@@ -993,7 +993,7 @@ public class StudyController {
             @PathVariable("format") String format,
             @RequestParam(value = "formatParameters", required = false) String parametersJson,
             @RequestParam(value = "fileName") String fileName,
-            @RequestParam(value = "exportToExplorer", required = false, defaultValue = "false") boolean exportToExplorer,
+            @RequestParam(value = "exportToGridExplore", required = false, defaultValue = "false") boolean exportToGridExplore,
             @RequestParam(value = "parentDirectoryUuid", required = false) String parentDirectoryUuidStr,
             @RequestParam(value = "description", required = false) String description,
             @RequestHeader(HEADER_USER_ID) String userId) {
@@ -1002,7 +1002,7 @@ public class StudyController {
         UUID exportUuid = studyService.exportNetwork(studyUuid,
                                                         nodeUuid,
                                                         rootNetworkUuid,
-                                                        new NodeExportInfos(exportToExplorer, parentDirectoryUuid, fileName, description),
+                                                        new NodeExportInfos(exportToGridExplore, parentDirectoryUuid, fileName, description),
                                                         format,
                                                         userId,
                                                         parametersJson);

@@ -1384,7 +1384,7 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
             studyUuid, firstRootNetworkUuid, nodeUuid, "XIIDM")
             .param("fileName", fileName)
-            .param("exportToExplorer", Boolean.TRUE.toString())
+            .param("exportToGridExplore", Boolean.TRUE.toString())
             .param("parentDirectoryUuid", directoryUuid.toString())
             .param("description", description)
             .header(USER_ID_HEADER, userId)).andExpect(status().isOk());
@@ -1410,7 +1410,7 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
             studyUuid, firstRootNetworkUuid, nodeUuid, "XIIDM")
             .param("fileName", fileName)
-            .param("exportToExplorer", Boolean.TRUE.toString())
+            .param("exportToGridExplore", Boolean.TRUE.toString())
             .param("parentDirectoryUuid", directoryUuid.toString())
             .param("description", description)
             .header(USER_ID_HEADER, "userId")).andExpect(status().isInternalServerError());
