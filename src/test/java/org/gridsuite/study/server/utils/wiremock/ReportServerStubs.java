@@ -10,7 +10,6 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * @author Maissa Souissi <maissa.souissi@rte-france.com>
@@ -22,12 +21,12 @@ public class ReportServerStubs {
         this.wireMock = wireMock;
     }
 
-    public UUID stubSendReport() {
-        return wireMock.stubFor(WireMock.put(WireMock.urlPathMatching("/v1/reports/.*"))
-            .willReturn(WireMock.ok())).getId();
+    public void stubSendReport() {
+        wireMock.stubFor(WireMock.put(WireMock.urlPathMatching("/v1/reports/.*"))
+            .willReturn(WireMock.ok()));
     }
 
-    public void verifySendReport(UUID stubUuid) {
+    public void verifySendReport() {
         WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/reports/.*", true, Map.of(), null);
     }
 

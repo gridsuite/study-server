@@ -553,7 +553,7 @@ class SecurityAnalysisTest {
             .andExpect(status().isNotFound());
 
         // --- 2. Run security analysis ---
-        UUID stubId = computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, resultUuid);
+        computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, resultUuid);
 
         MockHttpServletRequestBuilder requestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
             studyUuid, rootNetworkUuid, nodeUuid, CONTINGENCY_LIST_NAME);

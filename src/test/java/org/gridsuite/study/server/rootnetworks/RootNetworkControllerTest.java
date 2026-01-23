@@ -285,7 +285,7 @@ class RootNetworkControllerTest {
         CountDownLatch countDownLatch = new CountDownLatch(1);
         UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(RootNetworkControllerTest.CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", WireMockStubs.FIRST_VARIANT_ID, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockStubs.caseServer.stubDisableCaseExpiration(RootNetworkControllerTest.CASE_UUID.toString());
-        UUID sendReportStubId = reportServerStubs.stubSendReport();
+        reportServerStubs.stubSendReport();
         when(loadFlowService.createDefaultLoadFlowParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
         when(studyConfigService.createDefaultSpreadsheetConfigCollection()).thenReturn(SPREADSHEET_CONFIG_COLLECTION_UUID);
@@ -307,7 +307,7 @@ class RootNetworkControllerTest {
         wireMockStubs.caseServer.verifyCaseExists(caseExistsStubId, RootNetworkControllerTest.CASE_UUID.toString());
         wireMockStubs.networkConversionServer.verifyImportNetwork(postNetworkStubId, RootNetworkControllerTest.CASE_UUID.toString(), WireMockStubs.FIRST_VARIANT_ID);
         wireMockStubs.caseServer.verifyDisableCaseExpiration(disableCaseExpirationStubId, RootNetworkControllerTest.CASE_UUID.toString());
-        reportServerStubs.verifySendReport(sendReportStubId);
+        reportServerStubs.verifySendReport();
 
         return studyUuid;
     }

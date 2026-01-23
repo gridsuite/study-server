@@ -279,10 +279,8 @@ class PccMinTest {
         StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 2", PCCMIN_PARAMETERS_UUID);
         runPccMin(ids);
 
-        UUID stubId = wireMockServer.stubFor(
-            put(urlPathMatching("/v1/results/" + PCC_MIN_RESULT_UUID + "/stop.*"))
-                .willReturn(ok())
-        ).getId();
+        wireMockServer.stubFor(put(urlPathMatching("/v1/results/" + PCC_MIN_RESULT_UUID + "/stop.*"))
+                .willReturn(ok()));
 
         // stop pcc min
         mockMvc.perform(put(PCC_MIN_URL_BASE + "stop", ids.studyId, ids.rootNetworkUuid, ids.nodeId))

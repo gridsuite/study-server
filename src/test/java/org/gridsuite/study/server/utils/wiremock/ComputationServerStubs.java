@@ -28,16 +28,16 @@ public class ComputationServerStubs {
         this.wireMock = wireMock;
     }
 
-    public UUID stubComputationRun(String networkUuid, String variantId, String resultUuid) {
+    public void stubComputationRun(String networkUuid, String variantId, String resultUuid) {
         MappingBuilder builder = WireMock.post(
             WireMock.urlPathMatching("/v1/networks/" + networkUuid + "/run-and-save.*")
         );
         if (variantId != null) {
             builder = builder.withQueryParam("variantId", WireMock.equalTo(variantId));
         }
-        return wireMock.stubFor(
+        wireMock.stubFor(
             builder.willReturn(WireMock.okJson("\"" + resultUuid + "\""))
-        ).getId();
+        );
     }
 
     public void verifyComputationRun(String networkUuid, Map<String, StringValuePattern> queryParams) {
