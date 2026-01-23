@@ -175,7 +175,9 @@ class WorkspaceConfigTest {
         String configServerUrl = "/v1/workspaces-configs/" + WORKSPACES_CONFIG_UUID + "/workspaces/" + WORKSPACE_ID + "/panels";
 
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(configServerUrl))
-                .willReturn(WireMock.noContent()));
+                .willReturn(WireMock.ok()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("[]")));
 
         String body = "body";
 

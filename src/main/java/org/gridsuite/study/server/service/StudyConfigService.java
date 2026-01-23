@@ -443,7 +443,7 @@ public class StudyConfigService {
         return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
     }
 
-    public void createOrUpdateWorkspacePanels(UUID configId, UUID workspaceId, String panelsDto) {
+    public String createOrUpdateWorkspacePanels(UUID configId, UUID workspaceId, String panelsDto) {
         Objects.requireNonNull(configId);
         Objects.requireNonNull(workspaceId);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI)
@@ -451,7 +451,7 @@ public class StudyConfigService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(panelsDto, headers);
-        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
+        return restTemplate.postForObject(studyConfigServerBaseUri + path, httpEntity, String.class);
     }
 
     public List<UUID> deleteWorkspacePanels(UUID configId, UUID workspaceId, String panelIds) {

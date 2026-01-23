@@ -6,21 +6,15 @@
  */
 package org.gridsuite.study.server.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
@@ -30,23 +24,18 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
  */
 @Service
 public class WorkspaceService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(WorkspaceService.class);
     private static final String STUDY_NOT_FOUND_MESSAGE = "Study %s not found";
-    private static final String PANEL_ID_KEY = "id";
 
     private final StudyRepository studyRepository;
     private final StudyConfigService studyConfigService;
     private final NotificationService notificationService;
-    private final ObjectMapper objectMapper;
 
     public WorkspaceService(StudyRepository studyRepository,
                            StudyConfigService studyConfigService,
-                           NotificationService notificationService,
-                           ObjectMapper objectMapper) {
+                           NotificationService notificationService) {
         this.studyRepository = studyRepository;
         this.studyConfigService = studyConfigService;
         this.notificationService = notificationService;
-        this.objectMapper = objectMapper;
     }
 
     private StudyEntity getStudy(UUID studyUuid) {
@@ -88,8 +77,7 @@ public class WorkspaceService {
     @Transactional
     public void createOrUpdateWorkspacePanels(UUID studyUuid, UUID workspaceId, String panelsDto, String clientId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        studyConfigService.createOrUpdateWorkspacePanels(studyEntity.getWorkspacesConfigUuid(), workspaceId, panelsDto);
-        String panelIds = extractWorkspacePanelIds(panelsDto);
+        String panelIds = studyConfigService.createOrUpdateWorkspacePanels(studyEntity.getWorkspacesConfigUuid(), workspaceId, panelsDto);
         notificationService.emitWorkspacePanelsUpdated(studyUuid, workspaceId, panelIds, clientId);
     }
 
@@ -126,20 +114,5 @@ public class WorkspaceService {
             workspaceId,
             panelId
         );
-    }
-
-    private String extractWorkspacePanelIds(String panelsDto) {
-        try {
-            List<Map<String, Object>> panels = objectMapper.readValue(panelsDto, new TypeReference<>() { });
-            List<String> panelIds = panels.stream()
-                .map(panel -> panel.get(PANEL_ID_KEY))
-                .filter(Objects::nonNull)
-                .map(Object::toString)
-                .toList();
-            return objectMapper.writeValueAsString(panelIds);
-        } catch (JsonProcessingException e) {
-            LOGGER.error("Failed to extract panel IDs from DTO", e);
-            return "[]";
-        }
     }
 }
