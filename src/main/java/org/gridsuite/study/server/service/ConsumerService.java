@@ -867,7 +867,7 @@ public class ConsumerService {
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
 
                 if (nodeExport != null && nodeExport.exportToGridExplore()) {
-                    //Call case server and create case in directory
+                    //Create case in  gridexplore (case server and in directory-server)
                     exportToGridExplore = true;
                     if (StringUtils.isEmpty(errorMessage)) {
                         errorMessage = createCase(s3Key, nodeExport, userId);
