@@ -16,7 +16,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.StudyConfigService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
+import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -80,15 +80,15 @@ class WorkspaceConfigTest {
 
         String responseBody = "response";
 
-        UUID stubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(configServerUrl))
-                .willReturn(WireMock.ok(responseBody))).getId();
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.ok(responseBody)));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/workspaces", studyEntity.getId())
                         .header("content-type", "application/json"))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        WireMockUtils.verifyGetRequest(wireMockServer, stubId, configServerUrl, Map.of());
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, configServerUrl, Map.of());
     }
 
     @Test
@@ -98,15 +98,15 @@ class WorkspaceConfigTest {
 
         String responseBody = "response";
 
-        UUID stubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(configServerUrl))
-                .willReturn(WireMock.ok(responseBody))).getId();
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.ok(responseBody)));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/workspaces/{workspaceId}", studyEntity.getId(), WORKSPACE_ID)
                         .header("content-type", "application/json"))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        WireMockUtils.verifyGetRequest(wireMockServer, stubId, configServerUrl, Map.of());
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, configServerUrl, Map.of());
     }
 
     @Test
@@ -114,8 +114,8 @@ class WorkspaceConfigTest {
         StudyEntity studyEntity = insertStudy();
         String configServerUrl = "/v1/workspaces-configs/" + WORKSPACES_CONFIG_UUID + "/workspaces/" + WORKSPACE_ID + "/name";
 
-        UUID stubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(configServerUrl))
-                .willReturn(WireMock.noContent())).getId();
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.noContent()));
 
         String body = objectMapper.writeValueAsString("new name");
         mockMvc.perform(put("/v1/studies/{studyUuid}/workspaces/{workspaceId}/name", studyEntity.getId(), WORKSPACE_ID)
@@ -125,7 +125,7 @@ class WorkspaceConfigTest {
                 .andReturn();
 
         checkWorkspaceUpdateMessageReceived(studyEntity.getId());
-        WireMockUtils.verifyPutRequest(wireMockServer, stubId, configServerUrl, false, Map.of(), body);
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, configServerUrl, false, Map.of(), body);
     }
 
     @Test
@@ -135,15 +135,15 @@ class WorkspaceConfigTest {
 
         String responseBody = "response";
 
-        UUID stubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(configServerUrl))
-                .willReturn(WireMock.ok(responseBody))).getId();
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.ok(responseBody)));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/workspaces/{workspaceId}/panels", studyEntity.getId(), WORKSPACE_ID)
                         .header("content-type", "application/json"))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        WireMockUtils.verifyGetRequest(wireMockServer, stubId, configServerUrl, Map.of());
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, configServerUrl, Map.of());
     }
 
     @Test
@@ -174,8 +174,8 @@ class WorkspaceConfigTest {
         StudyEntity studyEntity = insertStudy();
         String configServerUrl = "/v1/workspaces-configs/" + WORKSPACES_CONFIG_UUID + "/workspaces/" + WORKSPACE_ID + "/panels";
 
-        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(configServerUrl))
-                .willReturn(WireMock.noContent())).getId();
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.noContent()));
 
         String body = "body";
 
@@ -186,7 +186,7 @@ class WorkspaceConfigTest {
                 .andReturn();
 
         checkWorkspacePanelsUpdateMessageReceived(studyEntity.getId());
-        WireMockUtils.verifyPostRequest(wireMockServer, stubId, configServerUrl, Map.of(), 1);
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, configServerUrl, Map.of(), 1);
     }
 
     @Test
@@ -194,8 +194,8 @@ class WorkspaceConfigTest {
         StudyEntity studyEntity = insertStudy();
         String configServerUrl = "/v1/workspaces-configs/" + WORKSPACES_CONFIG_UUID + "/workspaces/" + WORKSPACE_ID + "/panels";
 
-        UUID stubId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo(configServerUrl))
-                .willReturn(WireMock.noContent())).getId();
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.noContent()));
 
         String body = "body";
 
@@ -206,7 +206,7 @@ class WorkspaceConfigTest {
                 .andReturn();
 
         checkWorkspacePanelsDeletedMessageReceived(studyEntity.getId());
-        WireMockUtils.verifyDeleteRequest(wireMockServer, stubId, configServerUrl, false, Map.of());
+        WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, configServerUrl, false, Map.of());
     }
 
     @Test
@@ -215,10 +215,10 @@ class WorkspaceConfigTest {
         String configServerUrl = "/v1/workspaces-configs/" + WORKSPACES_CONFIG_UUID + "/workspaces/" + WORKSPACE_ID + "/panels/" + PANEL_ID + "/current-nad-config";
 
         UUID savedConfigUuid = UUID.randomUUID();
-        UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(configServerUrl))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(configServerUrl))
                 .willReturn(WireMock.status(201)
                         .withHeader("Content-Type", "application/json")
-                        .withBody("\"" + savedConfigUuid + "\""))).getId();
+                        .withBody("\"" + savedConfigUuid + "\"")));
 
         Map<String, Object> nadConfigData = Map.of("key", "value");
         String body = objectMapper.writeValueAsString(nadConfigData);
@@ -231,7 +231,7 @@ class WorkspaceConfigTest {
                 .andReturn();
 
         checkWorkspaceNadConfigUpdateMessageReceived(studyEntity.getId());
-        WireMockUtils.verifyPostRequest(wireMockServer, stubId, configServerUrl, Map.of(), 1);
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, configServerUrl, Map.of(), 1);
     }
 
     @Test
@@ -239,8 +239,8 @@ class WorkspaceConfigTest {
         StudyEntity studyEntity = insertStudy();
         String configServerUrl = "/v1/workspaces-configs/" + WORKSPACES_CONFIG_UUID + "/workspaces/" + WORKSPACE_ID + "/panels/" + PANEL_ID + "/current-nad-config";
 
-        UUID stubId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo(configServerUrl))
-                .willReturn(WireMock.noContent())).getId();
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo(configServerUrl))
+                .willReturn(WireMock.noContent()));
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}/workspaces/{workspaceId}/panels/{panelId}/current-nad-config",
                         studyEntity.getId(), WORKSPACE_ID, PANEL_ID)
@@ -248,7 +248,7 @@ class WorkspaceConfigTest {
                 .andExpect(status().isNoContent())
                 .andReturn();
 
-        WireMockUtils.verifyDeleteRequest(wireMockServer, stubId, configServerUrl, false, Map.of());
+        WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, configServerUrl, false, Map.of());
     }
 
     private StudyEntity insertStudy() {
