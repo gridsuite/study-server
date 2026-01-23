@@ -478,7 +478,6 @@ class SecurityAnalysisTest {
         testSecurityAnalysisWithRootNetworkUuidAndNodeUuid(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid, SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID, null);
 
         // run additional security analysis for deletion test
-        computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, SECURITY_ANALYSIS_RESULT_UUID);
         MockHttpServletRequestBuilder requestBuilder = post(
             "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
             studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, CONTINGENCY_LIST_NAME
@@ -494,35 +493,32 @@ class SecurityAnalysisTest {
         consumeSAResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, SECURITY_ANALYSIS_RESULT_UUID);
 
         //Test delete all results
-        UUID stubCountId = computationServerStubs.stubResultsCount(1);
+        computationServerStubs.stubResultsCount(1);
         computationServerStubs.stubDeleteResults("/v1/supervision/results");
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", SECURITY_ANALYSIS.toString())
                 .queryParam("dryRun", "true"))
             .andExpect(status().isOk());
-        computationServerStubs.verifyResultsCountGet(stubCountId);
+        computationServerStubs.verifyResultsCountGet();
 
         //Delete Security analysis results
         assertEquals(1, rootNetworkNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
         computationServerStubs.stubDeleteResults("/v1/results");
-        UUID stubDeleteReport = reportServerStubs.stubDeleteReport();
+        reportServerStubs.stubDeleteReport();
 
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", SECURITY_ANALYSIS.toString())
                 .queryParam("dryRun", "false"))
             .andExpect(status().isOk());
         WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, "/v1/results", Map.of("resultsUuids", matching(".*")));
-        reportServerStubs.verifyDeleteReport(stubDeleteReport);
+        reportServerStubs.verifyDeleteReport();
         assertEquals(0, rootNetworkNodeInfoRepository.findAllBySecurityAnalysisResultUuidNotNull().size());
     }
 
     private void consumeSAResult(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, String resultUuid) throws JsonProcessingException {
         // Verify that WireMock received exactly 1 POST request to run security analysis
-        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlMatching("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
-            .withQueryParam("contingencyListName", equalTo(CONTINGENCY_LIST_NAME))
-            .withQueryParam("receiver", matching(".*" + nodeUuid + ".*"))
-        );
 
+        computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("contingencyListName", WireMock.equalTo(CONTINGENCY_LIST_NAME), "receiver", WireMock.matching(".*" + nodeUuid + ".*")));
         // consume SA result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
         MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", resultUuid, HEADER_RECEIVER, resultUuidJson));
@@ -551,13 +547,14 @@ class SecurityAnalysisTest {
         MvcResult mvcResult;
         String resultAsString;
 
-        // security analysis not found
+        // --- 1. Security analysis not found ---
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}",
                 studyUuid, rootNetworkUuid, NOT_FOUND_NODE_UUID, SecurityAnalysisResultType.N))
             .andExpect(status().isNotFound());
 
-        // run security analysis
+        // --- 2. Run security analysis ---
         UUID stubId = computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, resultUuid);
+
         MockHttpServletRequestBuilder requestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
             studyUuid, rootNetworkUuid, nodeUuid, CONTINGENCY_LIST_NAME);
         if (securityAnalysisParameters != null) {
@@ -565,16 +562,17 @@ class SecurityAnalysisTest {
                 .content(objectWriter.writeValueAsString(securityAnalysisParameters));
         }
         requestBuilder.header(HEADER_USER_ID, "testUserId");
+
         mockMvc.perform(requestBuilder).andExpect(status().isOk());
         consumeSAResult(studyUuid, rootNetworkUuid, nodeUuid, resultUuid);
 
-        // get limit types empty list
+        // --- 3. GET limit-types empty list
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computation/result/enum-values?computingType={computingType}&enumName={enumName}",
                 studyUuid, rootNetworkUuid, nodeUuid, LOAD_FLOW, "limit-types"))
             .andExpectAll(status().isOk(),
                 content().string("[]"));
 
-        // get limit types
+        // --- 4. GET limit-types for security analysis ---
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + resultUuid + "/limit-types"))
             .willReturn(WireMock.okJson(limitTypeJson)));
 
@@ -586,7 +584,7 @@ class SecurityAnalysisTest {
         wireMockServer.verify(1, WireMock.getRequestedFor(WireMock.urlMatching("/v1/results/" + resultUuid + "/limit-types"))
         );
 
-        // get N security analysis result
+        // --- 5. GET N result ---
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + resultUuid + "/n-result.*"))
             .willReturn(WireMock.aResponse()
                 .withStatus(200)
@@ -596,10 +594,11 @@ class SecurityAnalysisTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&globalFilters=random_globalfilters&sort=random_sort", studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.N)).andExpectAll(
             status().isOk(),
             content().string(SECURITY_ANALYSIS_N_RESULT_JSON));
+
         wireMockServer.verify(1, WireMock.getRequestedFor(WireMock.urlMatching("/v1/results/" + resultUuid + "/n-result.*"))
         );
 
-        // get NMK_CONTINGENCIES security analysis result
+        // --- 6. GET NMK_CONTINGENCIES result ---
         wireMockServer.stubFor(
             WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/nmk-contingencies-result/paged"))
                 .withQueryParam("page", WireMock.matching(".*"))
@@ -616,40 +615,28 @@ class SecurityAnalysisTest {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&globalFilters=random_globalfilters&sort=random_sort", studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_CONTINGENCIES)).andExpectAll(
             status().isOk(),
             content().string(SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON));
+
         wireMockServer.verify(1,
             WireMock.getRequestedFor(
                 WireMock.urlMatching("/v1/results/" + resultUuid + "/nmk-contingencies-result/paged.*")
             )
         );
 
-        // get NMK_CONSTRAINTS security analysis result
-        wireMockServer.stubFor(
-            WireMock.get(
-                    WireMock.urlPathMatching("/v1/results/" + resultUuid + "/nmk-constraints-result/paged")
-                )
-                .willReturn(
-                    WireMock.okJson(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON)
-                )
-        );
+        // --- 7. GET NMK_CONSTRAINTS (NMK_LIMIT_VIOLATIONS) ---
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + resultUuid + "/nmk-constraints-result/paged"))
+            .willReturn(WireMock.okJson(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON)));
 
-        mockMvc.perform(
-                get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&globalFilters=random_globalfilters&sort=random_sort",
-                    studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_LIMIT_VIOLATIONS)
-            )
-            .andExpectAll(
-                status().isOk(),
-                content().string(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON)
-            );
-        wireMockServer.verify(1,
-            WireMock.getRequestedFor(
-                WireMock.urlMatching("/v1/results/" + resultUuid + "/nmk-constraints-result/paged.*")
-            )
-        );
-        // get security analysis status
-        UUID stubStatus = computationServerStubs.stubGetResultStatus(resultUuid, SECURITY_ANALYSIS_STATUS_JSON);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&globalFilters=random_globalfilters&sort=random_sort",
+                studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_LIMIT_VIOLATIONS))
+            .andExpectAll(status().isOk(), content().string(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON));
+
+        wireMockServer.verify(1, WireMock.getRequestedFor(WireMock.urlPathMatching("/v1/results/" + resultUuid + "/nmk-constraints-result/paged")));
+
+        // --- 8. GET security analysis status ---
+        computationServerStubs.stubGetResultStatus(resultUuid, SECURITY_ANALYSIS_STATUS_JSON);
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/status", studyUuid, rootNetworkUuid, nodeUuid)).andExpectAll(
             status().isOk()).andReturn();
-        computationServerStubs.verifyGetResultStatus(stubStatus, resultUuid);
+        computationServerStubs.verifyGetResultStatus(resultUuid);
 
         // stop security analysis
         wireMockServer.stubFor(
@@ -666,7 +653,7 @@ class SecurityAnalysisTest {
             .build();
         consumerService.consumeSaStopped().accept(stoppedMessage);
         checkMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        computationServerStubs.verifyComputationStop(stubId, resultUuid);
+        computationServerStubs.verifyComputationStop(resultUuid, Map.of("receiver", WireMock.matching(".*")));
 
         // get contingency count
         wireMockServer.stubFor(get(urlPathEqualTo("/v1/contingency-lists/count"))
@@ -777,14 +764,14 @@ class SecurityAnalysisTest {
         assertNull(studyEntity.getSecurityAnalysisParametersUuid());
 
         String bodyJson = objectWriter.writeValueAsString(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
-        UUID stubCreation = computationServerStubs.stubCreateParameter(SECURITY_ANALYSIS_PARAMETERS_UUID);
+        computationServerStubs.stubCreateParameter(SECURITY_ANALYSIS_PARAMETERS_UUID);
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
                 .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(bodyJson))
             .andExpect(status().isOk());
 
-        computationServerStubs.verifyParameterPost(stubCreation, bodyJson);
+        computationServerStubs.verifyParameterPost(bodyJson);
         assertEquals(SECURITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyUuid).orElseThrow().getSecurityAnalysisParametersUuid());
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -847,7 +834,7 @@ class SecurityAnalysisTest {
         NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyUuid2, rootNodeUuid2, UUID.randomUUID(), VARIANT_ID, "node 2");
         UUID modificationNode1Uuid2 = modificationNode2.getId();
         UUID firstRootNetworkUuid2 = studyTestUtils.getOneRootNetworkUuid(studyUuid2);
-        UUID stubRun3 = computationServerStubs.stubComputationRun(NETWORK_UUID_3_STRING, null, SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID);
+        computationServerStubs.stubComputationRun(NETWORK_UUID_3_STRING, null, SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
                 studyUuid2, firstRootNetworkUuid2, modificationNode1Uuid2, CONTINGENCY_LIST_NAME)
@@ -870,11 +857,11 @@ class SecurityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
 
-        UUID stubUser = userAdminServerStubs.stubUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
+        userAdminServerStubs.stubUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
         computationServerStubs.stubParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
         createOrUpdateParametersAndDoChecks(studyUuid, "", NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        userAdminServerStubs.verifyUserProfile(stubUser, NO_PARAMS_IN_PROFILE_USER_ID);
+        userAdminServerStubs.verifyUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
@@ -883,13 +870,13 @@ class SecurityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
 
-        UUID stubUser = userAdminServerStubs.stubUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
+        userAdminServerStubs.stubUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
         computationServerStubs.stubParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
         computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
         createOrUpdateParametersAndDoChecks(studyUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
 
         // --- Verify WireMock requests ---
-        userAdminServerStubs.verifyUserProfile(stubUser, INVALID_PARAMS_IN_PROFILE_USER_ID);
+        userAdminServerStubs.verifyUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
     }
@@ -903,7 +890,7 @@ class SecurityAnalysisTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         wireMockServer.stubFor(post(urlPathMatching("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
             .willReturn(ok()));
-        UUID stubUser = userAdminServerStubs.stubUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
+        userAdminServerStubs.stubUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
         computationServerStubs.stubParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, objectWriter.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS));
         computationServerStubs.stubParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_PARAMS_JSON);
         wireMockServer.stubFor(post(urlPathMatching("/v1/results/invalidate-status.*"))
@@ -926,7 +913,7 @@ class SecurityAnalysisTest {
             .withQueryParam("contingencyListName", equalTo(CONTINGENCY_LIST_NAME))
             .withQueryParam("receiver", matching(".*")));
 
-        userAdminServerStubs.verifyUserProfile(stubUser, VALID_PARAMS_IN_PROFILE_USER_ID);
+        userAdminServerStubs.verifyUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
 
         // duplicate parameters ---
         wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters"))
@@ -944,7 +931,7 @@ class SecurityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
         UUID studyUuid = studyEntity.getId();
 
-        UUID stubUser = userAdminServerStubs.stubUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
+        userAdminServerStubs.stubUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
         wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters"))
             .withQueryParam("duplicateFrom", equalTo(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))
             .willReturn(WireMock.ok()
@@ -955,7 +942,7 @@ class SecurityAnalysisTest {
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         // --- Verify requests ---
-        userAdminServerStubs.verifyUserProfile(stubUser, VALID_PARAMS_IN_PROFILE_USER_ID);
+        userAdminServerStubs.verifyUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters"))
             .withQueryParam("duplicateFrom", equalTo(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))
         );

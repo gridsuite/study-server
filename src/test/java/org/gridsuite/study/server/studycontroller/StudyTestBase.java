@@ -576,7 +576,7 @@ class StudyTestBase {
                 wireMockStubs.caseServer.verifyCaseExists(stubCaseExistsId, caseUuid);
             }
             if (stubUserProfileId != null) {
-                wireMockStubs.userAdminServerStubs.verifyUserProfile(stubUserProfileId, userId);
+                wireMockStubs.userAdminServerStubs.verifyUserProfile(userId);
             }
             if (stubSendReportId != null) {
                 wireMockStubs.verifySendReport(stubSendReportId);

@@ -266,12 +266,12 @@ class PccMinTest {
         wireMockStubs.verifyPccMinRun(stubRun, NETWORK_UUID_STRING, VARIANT_ID);
 
         // verify pcc min status
-        UUID stubStatus = computationServerStubs.stubGetResultStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON);
+        computationServerStubs.stubGetResultStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON);
         mockMvc.perform(get(PCC_MIN_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk())
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(PCC_MIN_STATUS_JSON));
 
-        computationServerStubs.verifyGetResultStatus(stubStatus, PCC_MIN_RESULT_UUID);
+        computationServerStubs.verifyGetResultStatus(PCC_MIN_RESULT_UUID);
     }
 
     @Test
@@ -295,7 +295,7 @@ class PccMinTest {
             .build();
         consumerService.consumePccMinStopped().accept(stoppedMessage);
         checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
-        computationServerStubs.verifyComputationStop(stubId, PCC_MIN_RESULT_UUID);
+        computationServerStubs.verifyComputationStop(PCC_MIN_RESULT_UUID, Map.of("receiver", WireMock.matching(".*")));
     }
 
     @Test
@@ -433,7 +433,7 @@ class PccMinTest {
     @Test
     void testGetPccMinParameters() throws Exception {
         String parametersToCreate = buildFilter();
-        UUID stubId = computationServerStubs.stubParametersGet(
+        computationServerStubs.stubParametersGet(
             String.valueOf(PCCMIN_PARAMETERS_UUID),
             parametersToCreate
         );
@@ -444,7 +444,7 @@ class PccMinTest {
             .andExpect(status().isOk())
             .andExpect(content().string(parametersToCreate));
 
-        computationServerStubs.verifyParametersGet(stubId, String.valueOf(PCCMIN_PARAMETERS_UUID));
+        computationServerStubs.verifyParametersGet(String.valueOf(PCCMIN_PARAMETERS_UUID));
 
         // Not found case
         UUID wrongParamUuid = UUID.randomUUID();
@@ -508,7 +508,7 @@ class PccMinTest {
         wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters/default"))
             .willReturn(okJson(objectMapper.writeValueAsString(PCCMIN_PARAMETERS_UUID))));
 
-        UUID stubId = computationServerStubs.stubParametersGet(
+        computationServerStubs.stubParametersGet(
             String.valueOf(PCCMIN_PARAMETERS_UUID),
             params
         );
@@ -520,7 +520,7 @@ class PccMinTest {
             .andExpect(content().string(params));
 
         wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters/default")));
-        computationServerStubs.verifyParametersGet(stubId, String.valueOf(PCCMIN_PARAMETERS_UUID));
+        computationServerStubs.verifyParametersGet(String.valueOf(PCCMIN_PARAMETERS_UUID));
 
         assertNotNull(studyUuid);
         assertEquals(PCCMIN_PARAMETERS_UUID,

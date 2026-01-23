@@ -14,11 +14,10 @@ import org.springframework.http.MediaType;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyGetRequest;
-
 /**
  * @author Maissa Souissi <maissa.souissi@rte-france.com>
  */
+
 public class UserAdminServerStubs {
     private final WireMockServer wireMock;
 
@@ -26,8 +25,8 @@ public class UserAdminServerStubs {
         this.wireMock = wireMock;
     }
 
-    public void verifyUserProfile(UUID stubId, String userId) {
-        verifyGetRequest(wireMock, stubId, "/v1/users/" + userId + "/profile", Map.of());
+    public void verifyUserProfile(String userId) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/users/" + userId + "/profile", Map.of());
     }
 
     public UUID stubUserProfile(String userId) {

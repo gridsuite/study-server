@@ -12,9 +12,6 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyDeleteRequest;
-import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPutRequest;
-
 /**
  * @author Maissa Souissi <maissa.souissi@rte-france.com>
  */
@@ -31,15 +28,15 @@ public class ReportServerStubs {
     }
 
     public void verifySendReport(UUID stubUuid) {
-        verifyPutRequest(wireMock, stubUuid, "/v1/reports/.*", true, Map.of(), null);
+        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/reports/.*", true, Map.of(), null);
     }
 
-    public UUID stubDeleteReport() {
-        return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/reports"))
-            .willReturn(WireMock.ok())).getId();
+    public void stubDeleteReport() {
+        wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/reports"))
+            .willReturn(WireMock.ok()));
     }
 
-    public void verifyDeleteReport(UUID stubUuid) {
-        verifyDeleteRequest(wireMock, stubUuid, "/v1/reports", false, Map.of());
+    public void verifyDeleteReport() {
+        WireMockUtilsCriteria.verifyDeleteRequest(wireMock, "/v1/reports", false, Map.of());
     }
 }

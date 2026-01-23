@@ -1053,7 +1053,7 @@ class StudyTest extends StudyTestBase {
         wireMockStubs.verifyParametersDuplicateFromAny(stubParametersDuplicateFromId, 7);
         wireMockStubs.verifyNetworkVisualizationParamsDuplicateFrom(stubNetworkVisualizationParamsDuplicateFromId, studyEntity.getNetworkVisualizationParametersUuid().toString());
         wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromId, studyEntity.getSpreadsheetConfigCollectionUuid().toString());
-        wireMockStubs.userAdminServerStubs.verifyUserProfile(stubUserProfileNotFoundId, "userId");
+        wireMockStubs.userAdminServerStubs.verifyUserProfile("userId");
     }
 
     private StudyEntity duplicateStudy(UUID studyUuid, String userId) throws Exception {
@@ -1204,12 +1204,12 @@ class StudyTest extends StudyTestBase {
             wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromId, sourceStudy.getSpreadsheetConfigCollectionUuid().toString());
         }
         if (NAD_CONFIG_USER_ID.equals(userId)) {
-            wireMockStubs.userAdminServerStubs.verifyUserProfile(stubUserProfileNadConfigId, userId);
+            wireMockStubs.userAdminServerStubs.verifyUserProfile(userId);
             wireMockStubs.verifyNetworkAreaDiagramConfig(stubNetworkAreaDiagramConfigId);
             wireMockStubs.verifyElementNameGet(stubElementNameId, PROFILE_DIAGRAM_CONFIG_UUID_STRING);
             wireMockStubs.verifyDiagramGridLayout(stubDiagramGridLayoutId);
         } else {
-            wireMockStubs.userAdminServerStubs.verifyUserProfile(stubUserProfileId, userId);
+            wireMockStubs.userAdminServerStubs.verifyUserProfile(userId);
         }
         wireMockStubs.verifyReportsDuplicate(stubReportsDuplicateId);
 

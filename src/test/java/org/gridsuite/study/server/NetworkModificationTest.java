@@ -248,8 +248,6 @@ class NetworkModificationTest {
     private UUID userProfileQuotaStubId;
     private UUID userProfileQuotaExceededStubId;
     private UUID userProfileNoQuotaStubId;
-    private UUID userNoProfileStubId;
-
     private static final String ERROR_MESSAGE = "nullPointerException: unexpected null somewhere";
 
     @Autowired
@@ -314,7 +312,7 @@ class NetworkModificationTest {
                 .willReturn(WireMock.ok()
                 .withBody((String) null)
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
-        userNoProfileStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID_NO_PROFILE + "/profile/max-builds"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID_NO_PROFILE + "/profile/max-builds"))
                 .willReturn(WireMock.notFound())).getId();
     }
 
@@ -552,7 +550,7 @@ class NetworkModificationTest {
 
     @Test
     void testNetworkModificationSwitch() throws Exception {
-        UUID deleteReportsStubId = reportServerStubs.stubDeleteReport();
+        reportServerStubs.stubDeleteReport();
 
         MvcResult mvcResult;
         String resultAsString;
@@ -646,7 +644,7 @@ class NetworkModificationTest {
         modificationBody = Pair.of(bodyJson, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNode1Uuid, NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
-        reportServerStubs.verifyDeleteReport(deleteReportsStubId);
+        reportServerStubs.verifyDeleteReport();
 
         // modificationNode2 is still built
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode1Uuid, firstRootNetworkUuid).getGlobalBuildStatus());
@@ -2297,7 +2295,7 @@ class NetworkModificationTest {
 
     @Test
     void testNodesInvalidation() throws Exception {
-        UUID deleteReportsStubId = reportServerStubs.stubDeleteReport();
+        reportServerStubs.stubDeleteReport();
         ComputationResultStubIds stubIds = stubAllComputationResults();
 
         String userId = "userId";
@@ -2345,7 +2343,7 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
         wireMockStubs.verifyNetworkModificationPut(stubUuid, MODIFICATION_UUID, generatorAttributesUpdated);
-        reportServerStubs.verifyDeleteReport(deleteReportsStubId);
+        reportServerStubs.verifyDeleteReport();
         List.of(
             SECURITY_ANALYSIS_RESULT_UUID,
             SENSITIVITY_ANALYSIS_RESULT_UUID,
@@ -2355,8 +2353,8 @@ class NetworkModificationTest {
             PCC_MIN_RESULT_UUID,
             STATE_ESTIMATION_RESULT_UUID
         ).forEach(resultUuid -> {
-            computationServerStubs.verifyDeleteResult(stubIds.deleteResultStubIds().get(resultUuid), resultUuid);
-            computationServerStubs.verifyGetResultStatus(stubIds.getStatusStubIds().get(resultUuid), resultUuid);
+            computationServerStubs.verifyDeleteResult(resultUuid);
+            computationServerStubs.verifyGetResultStatus(resultUuid);
         });
 
         // Mark nodes 2 and 3 status as built
@@ -2389,7 +2387,7 @@ class NetworkModificationTest {
 
     @Test
     void testRemoveLoadFlowComputationReport() throws Exception {
-        UUID deleteReportsStubId = reportServerStubs.stubDeleteReport();
+        reportServerStubs.stubDeleteReport();
         ComputationResultStubIds stubIds = stubAllComputationResults();
 
         String userId = "userId";
@@ -2450,8 +2448,8 @@ class NetworkModificationTest {
         wireMockStubs.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
 
         // 1 status LF + 2 x 9 computations + 1 report
-        computationServerStubs.verifyDeleteResult(stubIds.deleteResultStubIds().get(LOADFLOW_RESULT_UUID), LOADFLOW_RESULT_UUID);
-        computationServerStubs.verifyGetResultStatus(stubIds.getStatusStubIds().get(LOADFLOW_RESULT_UUID), LOADFLOW_RESULT_UUID, 2);
+œ        computationServerStubs.verifyDeleteResult(LOADFLOW_RESULT_UUID);
+        computationServerStubs.verifyGetResultStatus(LOADFLOW_RESULT_UUID, 2);
         List.of(
                 SECURITY_ANALYSIS_RESULT_UUID,
                 DYNAMIC_SIMULATION_RESULT_UUID,
@@ -2462,11 +2460,11 @@ class NetworkModificationTest {
                 VOLTAGE_INIT_RESULT_UUID,
                 STATE_ESTIMATION_RESULT_UUID
         ).forEach(resultUuid -> {
-            computationServerStubs.verifyDeleteResult(stubIds.deleteResultStubIds().get(resultUuid), resultUuid);
-            computationServerStubs.verifyGetResultStatus(stubIds.getStatusStubIds().get(resultUuid), resultUuid);
+            computationServerStubs.verifyDeleteResult(resultUuid);
+            computationServerStubs.verifyGetResultStatus(resultUuid);
         });
         // requests for computation sub-report deletion
-        reportServerStubs.verifyDeleteReport(deleteReportsStubId);
+        reportServerStubs.verifyDeleteReport();
     }
 
     @Test
