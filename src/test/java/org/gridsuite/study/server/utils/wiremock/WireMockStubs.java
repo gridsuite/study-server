@@ -28,6 +28,13 @@ import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.*;
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
+
+/**
+ * /!\ STOP ADDING new methods in this file
+ *  @Deprecated Do a local method on a test or create a dedicated file (for stub and verify)
+ */
+
+@Deprecated
 public class WireMockStubs {
     private static final String DELIMITER = "/";
 
@@ -42,6 +49,8 @@ public class WireMockStubs {
 
     private final WireMockServer wireMock;
     public final CaseServerStubs caseServer;
+    public final ComputationServerStubs computationServerStubs;
+    public final UserAdminServerStubs userAdminServerStubs;
     public final NetworkConversionServerStubs networkConversionServer;
     public final DirectoryServerStubs directoryServer;
 
@@ -50,6 +59,8 @@ public class WireMockStubs {
         this.caseServer = new CaseServerStubs(wireMock);
         this.networkConversionServer = new NetworkConversionServerStubs(wireMock);
         this.directoryServer = new DirectoryServerStubs(wireMock);
+        this.computationServerStubs = new ComputationServerStubs(wireMock);
+        this.userAdminServerStubs = new UserAdminServerStubs(wireMock);
     }
 
     public UUID stubNetworkElementInfosGet(String networkUuid, String elementType, String infoType, String elementId, String responseBody) {
@@ -537,19 +548,9 @@ public class WireMockStubs {
         ).getId();
     }
 
-    public UUID stubPccMinStatus(String resultUuid, String statusJson) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + resultUuid + "/status"))
-            .willReturn(WireMock.okJson(statusJson))
-        ).getId();
-    }
-
     public void verifyPccMinRun(UUID stubUuid, String networkUuid, String variantId) {
         verifyPostRequest(wireMock, stubUuid, "/v1/networks/" + networkUuid + "/run-and-save",
             Map.of("variantId", WireMock.equalTo(variantId)));
-    }
-
-    public void verifyPccMinStop(UUID stubUuid, String resultUuid) {
-        verifyPutRequest(wireMock, stubUuid, "/v1/results/" + resultUuid + "/stop", true, Map.of(), null);
     }
 
     public UUID stubPccMinFailed(String networkUuid, String variantId, String resultUuid) {
@@ -569,10 +570,6 @@ public class WireMockStubs {
             null,
             1
         );
-    }
-
-    public void verifyPccMinStatus(UUID stubUuid, String resultUuid) {
-        verifyGetRequest(wireMock, stubUuid, "/v1/results/" + resultUuid + "/status", Map.of());
     }
 
     public UUID stubPagedPccMinResult(String resultUuid, String responseBody) {
@@ -640,50 +637,6 @@ public class WireMockStubs {
             ),
             1
         );
-    }
-
-    public UUID stubPccMinParametersGet(String paramUuid, String responseBody) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid))
-            .willReturn(WireMock.ok().withBody(responseBody))
-        ).getId();
-    }
-
-    public void verifyPccMinParametersGet(UUID stubUuid, String paramUuid) {
-        verifyGetRequest(wireMock, stubUuid, "/v1/parameters/" + paramUuid, Map.of());
-    }
-
-    public UUID stubDeleteReports() {
-        return wireMock.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
-            .willReturn(WireMock.ok())).getId();
-    }
-
-    public void verifyDeleteReports(UUID stubId) {
-        verifyDeleteRequest(wireMock, stubId, "/v1/reports", false, Map.of());
-    }
-
-    public UUID stubDeleteResult(String resultUuid) {
-        return wireMock.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/results"))
-            .withQueryParam("resultsUuids", WireMock.equalTo(resultUuid))
-            .willReturn(WireMock.ok())).getId();
-    }
-
-    public void verifyDeleteResult(UUID stubId, String resultUuid) {
-        verifyDeleteRequest(wireMock, stubId, "/v1/results", false, Map.of("resultsUuids", WireMock.equalTo(resultUuid)));
-    }
-
-    public UUID stubGetResultStatus(String resultUuid, String statusJson) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/status"))
-            .willReturn(WireMock.ok()
-                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .withBody(statusJson))).getId();
-    }
-
-    public void verifyGetResultStatus(UUID stubId, String resultUuid) {
-        verifyGetResultStatus(stubId, resultUuid, 1);
-    }
-
-    public void verifyGetResultStatus(UUID stubId, String resultUuid, int nbRequests) {
-        verifyGetRequest(wireMock, stubId, "/v1/results/" + resultUuid + "/status", Map.of(), nbRequests);
     }
 
     public void verifyDeleteReports(UUID stubId, int nbRequests) {
@@ -785,20 +738,6 @@ public class WireMockStubs {
         verifyPostRequest(wireMock, stubId, "/v1/reports/.*/duplicate", true, Map.of(), null);
     }
 
-    public void verifyUserProfile(UUID stubId, String userId) {
-        verifyGetRequest(wireMock, stubId, "/v1/users/" + userId + "/profile", Map.of());
-    }
-
-    public UUID stubUserProfile(String userId) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + userId + "/profile"))
-            .willReturn(WireMock.ok())).getId();
-    }
-
-    public UUID stubUserProfile(String userId, String profileJson) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + userId + "/profile"))
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(profileJson))).getId();
-    }
-
     public UUID stubParameters(String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters"))
                 .atPriority(10)
@@ -818,18 +757,6 @@ public class WireMockStubs {
     public UUID stubNetworkVisualizationParamsDefault(String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-visualizations-params/default"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
-    }
-
-    public UUID stubParametersDuplicateFrom(String duplicateFromUuid, String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
-            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
-    }
-
-    public UUID stubParametersDuplicateFromNotFound(String duplicateFromUuid) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
-            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
-            .willReturn(WireMock.notFound())).getId();
     }
 
     public UUID stubSpreadsheetConfigDuplicateFrom(String duplicateFromUuid, String responseBody) {
@@ -873,22 +800,6 @@ public class WireMockStubs {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-visualizations-params"))
             .withQueryParam("duplicateFrom", WireMock.matching(".*"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
-    }
-
-    public void verifyParameters(int nbRequests) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of(), nbRequests);
-    }
-
-    public void verifyParametersDefault(int nbRequests) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters/default", Map.of(), nbRequests);
-    }
-
-    public void verifyParametersDuplicateFrom(String duplicateFromUuid) {
-        verifyParametersDuplicateFrom(duplicateFromUuid, 1);
-    }
-
-    public void verifyParametersDuplicateFrom(String duplicateFromUuid, int nbRequests) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
     }
 
     public void verifySpreadsheetConfigDefault(int nbRequests) {
