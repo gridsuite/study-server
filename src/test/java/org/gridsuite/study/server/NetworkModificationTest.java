@@ -2448,7 +2448,7 @@ class NetworkModificationTest {
         wireMockStubs.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
 
         // 1 status LF + 2 x 9 computations + 1 report
-œ        computationServerStubs.verifyDeleteResult(LOADFLOW_RESULT_UUID);
+        computationServerStubs.verifyDeleteResult(LOADFLOW_RESULT_UUID);
         computationServerStubs.verifyGetResultStatus(LOADFLOW_RESULT_UUID, 2);
         List.of(
                 SECURITY_ANALYSIS_RESULT_UUID,
