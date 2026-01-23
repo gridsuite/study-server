@@ -2296,7 +2296,7 @@ class NetworkModificationTest {
     @Test
     void testNodesInvalidation() throws Exception {
         reportServerStubs.stubDeleteReport();
-        ComputationResultStubIds stubIds = stubAllComputationResults();
+        stubAllComputationResults();
 
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
@@ -2388,7 +2388,7 @@ class NetworkModificationTest {
     @Test
     void testRemoveLoadFlowComputationReport() throws Exception {
         reportServerStubs.stubDeleteReport();
-        ComputationResultStubIds stubIds = stubAllComputationResults();
+        stubAllComputationResults();
 
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");

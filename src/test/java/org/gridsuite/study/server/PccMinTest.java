@@ -29,7 +29,7 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
+import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.json.JSONObject;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -231,25 +231,15 @@ class PccMinTest {
     }
 
     private void runPccMin(StudyNodeIds ids) throws Exception {
-        UUID stubId = wireMockServer.stubFor(post(urlPathMatching("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
-                .willReturn(okJson(objectMapper.writeValueAsString(PCC_MIN_RESULT_UUID))))
-            .getId();
+        computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, PCC_MIN_RESULT_UUID);
 
         mockMvc.perform(post(PCC_MIN_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
                 .header("userId", "userId"))
             .andExpect(status().isOk());
 
         consumePccMinResult(ids, PCC_MIN_RESULT_UUID);
-
-        WireMockUtils.verifyPostRequest(
-            wireMockServer,
-            stubId,
-            "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save",
-            true,
-            Map.of("variantId", WireMock.equalTo(VARIANT_ID)),
-            null,
-            1
-        );
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save",
+            true, Map.of("variantId", WireMock.equalTo(VARIANT_ID)), null, 1);
     }
 
     @Test
