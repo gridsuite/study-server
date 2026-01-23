@@ -21,6 +21,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.service.DirectoryService;
 import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.utils.MatcherReport;
 import org.junit.jupiter.api.Test;
