@@ -60,7 +60,6 @@ public class ConsumerService {
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
     private static final String HEADER_EXPORT_UUID = "exportUuid";
 
-    private static final String ZIP_EXTENSION = ".zip";
     private final ObjectMapper objectMapper;
 
     private final NotificationService notificationService;
