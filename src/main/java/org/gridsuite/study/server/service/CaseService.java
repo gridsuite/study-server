@@ -87,7 +87,7 @@ public class CaseService {
     }
 
     public UUID createCase(String caseKey, String contentType) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/create")
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases")
             .queryParam("caseKey", caseKey)
             .queryParam("contentType", contentType)
             .build()

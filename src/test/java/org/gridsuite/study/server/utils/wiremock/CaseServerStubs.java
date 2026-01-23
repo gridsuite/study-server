@@ -93,7 +93,7 @@ public class CaseServerStubs {
     }
 
     public void stubCreateCase(String caseKey, String contentType, UUID expectedCaseUuid) {
-        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(CASE_URI + "/create"))
+        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(CASE_URI))
             .withHeader("Content-Type", equalTo("application/x-www-form-urlencoded"))
             .withQueryParam("caseKey", equalTo(caseKey))
             .withQueryParam("contentType", equalTo(contentType))
@@ -106,6 +106,6 @@ public class CaseServerStubs {
         HashMap<String, StringValuePattern> params = new HashMap<>();
         params.put("caseKey", equalTo(caseKey));
         params.put("contentType", equalTo(contentType));
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, CASE_URI + "/create", params, 1);
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, CASE_URI, params, 1);
     }
 }
