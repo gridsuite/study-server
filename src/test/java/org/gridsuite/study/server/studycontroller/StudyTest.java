@@ -21,6 +21,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.gridsuite.study.server.service.DirectoryService;
 import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.utils.MatcherReport;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
@@ -1378,4 +1380,57 @@ class StudyTest extends StudyTestBase {
         wireMockStubs.verifyParametersProvider(stubParametersProviderId, 2);
     }
 
+    @Test
+    void testExportNetworkSuccess() throws Exception {
+
+        String userId = "userId";
+        String description = "description";
+        String fileName = "myFileName";
+
+        UUID directoryUuid = UUID.randomUUID();
+        UUID exportUuid = UUID.randomUUID();
+
+        UUID studyUuid = createStudyWithStubs(USER_ID_HEADER, CASE_UUID);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        UUID nodeUuid = getRootNodeUuid(studyUuid);
+
+        wireMockStubs.directoryServer.stubElementExists(directoryUuid, fileName, DirectoryService.CASE, HttpStatus.NO_CONTENT.value());
+        wireMockStubs.networkConversionServer.stubExportNetwork(NETWORK_UUID, fileName, mapper.writeValueAsString(exportUuid), HttpStatus.OK.value());
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
+            studyUuid, firstRootNetworkUuid, nodeUuid, "XIIDM")
+            .param("fileName", fileName)
+            .param("exportToGridExplore", Boolean.TRUE.toString())
+            .param("parentDirectoryUuid", directoryUuid.toString())
+            .param("description", description)
+            .header(USER_ID_HEADER, userId)).andExpect(status().isOk());
+
+        wireMockStubs.directoryServer.verifyElementExists(directoryUuid, fileName, DirectoryService.CASE);
+        wireMockStubs.networkConversionServer.verifyExportNetwork(NETWORK_UUID, fileName);
+    }
+
+    @Test
+    void testExportNetworkFailCaseExists() throws Exception {
+
+        String description = "description";
+        String fileName = "myFileName";
+        UUID directoryUuid = UUID.randomUUID();
+
+        UUID studyUuid = createStudyWithStubs(USER_ID_HEADER, CASE_UUID);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+
+        UUID nodeUuid = getRootNodeUuid(studyUuid);
+
+        wireMockStubs.directoryServer.stubElementExists(directoryUuid, fileName, DirectoryService.CASE, HttpStatus.OK.value());
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
+            studyUuid, firstRootNetworkUuid, nodeUuid, "XIIDM")
+            .param("fileName", fileName)
+            .param("exportToGridExplore", Boolean.TRUE.toString())
+            .param("parentDirectoryUuid", directoryUuid.toString())
+            .param("description", description)
+            .header(USER_ID_HEADER, "userId")).andExpect(status().isInternalServerError());
+
+        wireMockStubs.directoryServer.verifyElementExists(directoryUuid, fileName, DirectoryService.CASE);
+    }
 }
