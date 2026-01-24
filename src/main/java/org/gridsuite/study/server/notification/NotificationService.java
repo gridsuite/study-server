@@ -49,6 +49,7 @@ public class NotificationService {
     public static final String HEADER_MODIFICATION_DATE = "modificationDate";
     public static final String HEADER_ELEMENT_UUID = "elementUuid";
     public static final String HEADER_EXPORT_UUID = "exportUuid";
+    public static final String HEADER_EXPORT_TO_GRID_EXPLORE = "exportToGridExplore";
     public static final String NETWORK_EXPORT_FINISHED = "networkExportFinished";
 
     public static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
@@ -500,10 +501,11 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitNetworkExportFinished(UUID studyUuid, UUID exportUuid, String userId, @Nullable String error) {
+    public void emitNetworkExportFinished(UUID studyUuid, UUID exportUuid, @NonNull Boolean exportoGridExplore, String userId, @Nullable String error) {
         sendStudyUpdateMessage(studyUuid, NETWORK_EXPORT_FINISHED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_EXPORT_UUID, exportUuid)
+                .setHeader(HEADER_EXPORT_TO_GRID_EXPLORE, exportoGridExplore)
                 .setHeader(HEADER_ERROR, error)
         );
     }
