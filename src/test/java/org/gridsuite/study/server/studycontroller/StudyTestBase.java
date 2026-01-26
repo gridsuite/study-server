@@ -401,7 +401,7 @@ class StudyTestBase {
         UUID studyUuid = createStudy(userId, caseUuid, networkInfos);
 
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(1, 7, 1, 1);
+        verifyCreateParameters(1, 7, 1, 1, 1);
 
         return studyUuid;
     }
@@ -586,8 +586,9 @@ class StudyTestBase {
 
     protected record DuplicateParameterStubs(UUID stubParametersDuplicateFromId,
                                              UUID stubSpreadsheetConfigDuplicateFromId,
-                                             UUID stubNetworkVisualizationParamsDuplicateFromId) {
-        public void verify(WireMockStubs wireMockStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests, int networkVisualizationParamsDuplicateFromNbRequests) {
+                                             UUID stubNetworkVisualizationParamsDuplicateFromId,
+                                             UUID stubWorkspacesConfigDuplicateFromId) {
+        public void verify(WireMockStubs wireMockStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests, int networkVisualizationParamsDuplicateFromNbRequests, int workspacesConfigDuplicateFromNbRequests) {
             if (stubParametersDuplicateFromId != null) {
                 wireMockStubs.verifyParametersDuplicateFromAny(stubParametersDuplicateFromId, parametersDuplicateFromNbRequests);
             }
@@ -597,17 +598,22 @@ class StudyTestBase {
             if (stubNetworkVisualizationParamsDuplicateFromId != null) {
                 wireMockStubs.verifyNetworkVisualizationParamsDuplicateFromAny(stubNetworkVisualizationParamsDuplicateFromId, networkVisualizationParamsDuplicateFromNbRequests);
             }
+            if (stubWorkspacesConfigDuplicateFromId != null) {
+                wireMockStubs.verifyWorkspacesConfigDuplicateFromAny(stubWorkspacesConfigDuplicateFromId, workspacesConfigDuplicateFromNbRequests);
+            }
         }
     }
 
     protected record DeleteStudyStubs(UUID stubDeleteParametersId, UUID stubDeleteReportsId,
                                       UUID stubDeleteNetworkVisualizationParamsId,
-                                      UUID stubDeleteSpreadsheetConfigCollectionId) {
+                                      UUID stubDeleteSpreadsheetConfigCollectionId,
+                                      UUID stubDeleteWorkspacesConfigId) {
         public void verify(WireMockStubs wireMockStubs, int deleteParametersNbRequests) {
             wireMockStubs.verifyDeleteReports(stubDeleteReportsId, 2);
             wireMockStubs.verifyDeleteParameters(stubDeleteParametersId, deleteParametersNbRequests);
             wireMockStubs.verifyDeleteNetworkVisualizationParams(stubDeleteNetworkVisualizationParamsId);
             wireMockStubs.verifyDeleteSpreadsheetConfigCollection(stubDeleteSpreadsheetConfigCollectionId);
+            wireMockStubs.verifyDeleteWorkspacesConfig(stubDeleteWorkspacesConfigId);
         }
     }
 
@@ -625,20 +631,23 @@ class StudyTestBase {
         wireMockStubs.stubParametersDefault(mapper.writeValueAsString(UUID.randomUUID()));
         wireMockStubs.stubSpreadsheetConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
         wireMockStubs.stubNetworkVisualizationParamsDefault(StudyTest.DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
+        wireMockStubs.stubWorkspacesConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
     }
 
-    protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests) {
+    protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests, int workspacesConfigDefaultNbRequests) {
         wireMockStubs.computationServerStubs.verifyParameters(createParametersNbRequests);
         wireMockStubs.computationServerStubs.verifyParametersDefault(parametersDefaultNbRequests);
         wireMockStubs.verifySpreadsheetConfigDefault(spreadsheetConfigDefaultNbRequests);
         wireMockStubs.verifyNetworkVisualizationParamsDefault(networkVisualizationParamsDefaultNbRequests);
+        wireMockStubs.verifyWorkspacesConfigDefault(workspacesConfigDefaultNbRequests);
     }
 
     protected DuplicateParameterStubs setupDuplicateParametersStubs() throws Exception {
         UUID stubParametersDuplicateFromId = wireMockStubs.stubParametersDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromAny(StudyTest.DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
-        return new DuplicateParameterStubs(stubParametersDuplicateFromId, stubSpreadsheetConfigDuplicateFromId, stubNetworkVisualizationParamsDuplicateFromId);
+        UUID stubWorkspacesConfigDuplicateFromId = wireMockStubs.stubWorkspacesConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
+        return new DuplicateParameterStubs(stubParametersDuplicateFromId, stubSpreadsheetConfigDuplicateFromId, stubNetworkVisualizationParamsDuplicateFromId, stubWorkspacesConfigDuplicateFromId);
     }
 
     protected DeleteStudyStubs setupDeleteStudyStubs() {
@@ -650,6 +659,7 @@ class StudyTestBase {
             .willReturn(WireMock.ok())).getId();
         UUID stubDeleteSpreadsheetConfigCollectionId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/spreadsheet-config-collections/.*"))
             .willReturn(WireMock.ok())).getId();
-        return new DeleteStudyStubs(stubDeleteParametersId, stubDeleteReportsId, stubDeleteNetworkVisualizationParamsId, stubDeleteSpreadsheetConfigCollectionId);
+        UUID stubDeleteWorkspacesConfigId = wireMockStubs.stubDeleteWorkspacesConfig();
+        return new DeleteStudyStubs(stubDeleteParametersId, stubDeleteReportsId, stubDeleteNetworkVisualizationParamsId, stubDeleteSpreadsheetConfigCollectionId, stubDeleteWorkspacesConfigId);
     }
 }

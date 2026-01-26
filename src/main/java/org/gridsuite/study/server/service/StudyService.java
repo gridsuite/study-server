@@ -21,7 +21,6 @@ import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsI
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
-import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -550,6 +549,7 @@ public class StudyService {
                 removePccMinParameters(s.getPccMinParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
                 removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
+                removeWorkspacesConfig(s.getWorkspacesConfigUuid());
                 removeNadConfigs(s.getNadConfigsUuids().stream().toList());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
@@ -618,7 +618,7 @@ public class StudyService {
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -632,7 +632,7 @@ public class StudyService {
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, importParameters, importReportUuid);
+                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, workspacesConfigUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
@@ -757,6 +757,11 @@ public class StudyService {
             copiedSpreadsheetConfigCollectionUuid = studyConfigService.duplicateSpreadsheetConfigCollection(sourceStudyEntity.getSpreadsheetConfigCollectionUuid());
         }
 
+        UUID copiedWorkspacesConfigUuid = null;
+        if (sourceStudyEntity.getWorkspacesConfigUuid() != null) {
+            copiedWorkspacesConfigUuid = studyConfigService.duplicateWorkspacesConfig(sourceStudyEntity.getWorkspacesConfigUuid());
+        }
+
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
         UUID copiedStateEstimationParametersUuid = null;
@@ -786,6 +791,7 @@ public class StudyService {
             .stateEstimationParametersUuid(copiedStateEstimationParametersUuid)
             .pccMinParametersUuid(copiedPccMinParametersUuid)
             .diagramGridLayoutUuid(diagramGridLayoutId)
+            .workspacesConfigUuid(copiedWorkspacesConfigUuid)
             .build());
     }
 
@@ -1517,33 +1523,11 @@ public class StudyService {
         }
     }
 
-    @Transactional
-    public UUID saveNadConfig(UUID studyUuid, NadConfigInfos nadConfig) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-
-        UUID nadConfigUuid = nadConfigService.saveNadConfig(nadConfig);
-
-        studyEntity.getNadConfigsUuids().add(nadConfigUuid);
-
-        return nadConfigUuid;
-    }
-
-    @Transactional
-    public void deleteNadConfig(UUID studyUuid, UUID nadConfigUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-
-        nadConfigService.deleteNadConfigs(List.of(nadConfigUuid));
-
-        studyEntity.getNadConfigsUuids().remove(nadConfigUuid);
-    }
-
     private void removeNadConfigs(List<UUID> nadConfigUuids) {
-        if (nadConfigUuids != null && !nadConfigUuids.isEmpty()) {
-            try {
-                nadConfigService.deleteNadConfigs(nadConfigUuids);
-            } catch (Exception e) {
-                LOGGER.error("Could not remove NAD configs with uuids:" + nadConfigUuids, e);
-            }
+        try {
+            nadConfigService.deleteNadConfigs(nadConfigUuids);
+        } catch (Exception e) {
+            LOGGER.error("Could not remove NAD configs with uuids:" + nadConfigUuids, e);
         }
     }
 
@@ -1623,7 +1607,7 @@ public class StudyService {
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                     UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1641,6 +1625,7 @@ public class StudyService {
                 .pccMinParametersUuid(pccMinParametersUuid)
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
                 .diagramGridLayoutUuid(diagramGridLayoutUuid)
+                .workspacesConfigUuid(workspacesConfigUuid)
                 .monoRoot(true)
                 .build();
 
@@ -3692,6 +3677,16 @@ public class StudyService {
 
     private void removeDiagramGridLayout(@Nullable UUID diagramGridLayoutUuid) {
         diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
+    }
+
+    private void removeWorkspacesConfig(@Nullable UUID workspacesConfigUuid) {
+        if (workspacesConfigUuid != null) {
+            try {
+                studyConfigService.deleteWorkspacesConfig(workspacesConfigUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove workspaces config with uuid:" + workspacesConfigUuid, e);
+            }
+        }
     }
 
     public Optional<SpreadsheetParameters> getSpreadsheetParameters(@NonNull final UUID studyUuid) {

@@ -6,11 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,22 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class NadConfigService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(NadConfigService.class);
-
     private final SingleLineDiagramService singleLineDiagramService;
-
-    public UUID saveNadConfig(@NonNull NadConfigInfos nadConfigInfos) {
-        UUID configUuid = nadConfigInfos.getId();
-
-        if (configUuid == null) {
-            nadConfigInfos.setId(UUID.randomUUID());
-            singleLineDiagramService.createDiagramConfigs(List.of(nadConfigInfos));
-        } else {
-            singleLineDiagramService.updateNadConfig(nadConfigInfos);
-        }
-
-        return nadConfigInfos.getId();
-    }
 
     public void deleteNadConfigs(List<UUID> nadConfigUuids) {
         if (nadConfigUuids == null || nadConfigUuids.isEmpty()) {

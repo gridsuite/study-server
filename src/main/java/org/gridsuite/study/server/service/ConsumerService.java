@@ -300,11 +300,12 @@ public class ConsumerService {
         UUID pccMinParametersUuid = createDefaultPccMinParameters();
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
         UUID diagramGridLayoutUuid = studyService.createGridLayoutFromNadDiagram(userId, userProfileInfos);
+        UUID workspacesConfigUuid = createDefaultWorkspacesConfig();
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, workspacesConfigUuid,
             importParameters, importReportUuid);
     }
 
@@ -482,6 +483,15 @@ public class ConsumerService {
             return studyConfigService.createDefaultSpreadsheetConfigCollection();
         } catch (final Exception e) {
             LOGGER.error("Error while creating default spreadsheet config collection", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultWorkspacesConfig() {
+        try {
+            return studyConfigService.createDefaultWorkspacesConfig();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default workspace collection", e);
             return null;
         }
     }
