@@ -13,11 +13,14 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -42,6 +45,8 @@ public class NetworkConversionService {
 
     private final RestTemplate restTemplate;
 
+    @Setter
+    @Getter
     private String networkConversionServerBaseUri;
 
     private final ObjectMapper objectMapper;
@@ -84,7 +89,7 @@ public class NetworkConversionService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
 
-        restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, httpEntity,
+        restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.POST, httpEntity,
                 Void.class);
     }
 
@@ -95,10 +100,10 @@ public class NetworkConversionService {
         ParameterizedTypeReference<String> typeRef = new ParameterizedTypeReference<>() {
         };
 
-        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.GET, null, typeRef).getBody();
+        return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public UUID exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, String fileName, String format, String userId, String parametersJson) {
+    public UUID exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, NodeExportInfos exportInfos, String format, String userId, String parametersJson) {
 
         try {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
@@ -107,11 +112,15 @@ public class NetworkConversionService {
                 uriComponentsBuilder.queryParam("variantId", variantId);
             }
 
-            if (!StringUtils.isEmpty(fileName)) {
-                uriComponentsBuilder.queryParam("fileName", fileName);
+            if (!StringUtils.isEmpty(exportInfos.fileName())) {
+                uriComponentsBuilder.queryParam("fileName", exportInfos.fileName());
             }
             String receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NetworkExportReceiver(studyUuid, userId)), StandardCharsets.UTF_8);
             uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver);
+
+            String exportInfosStr = URLEncoder.encode(objectMapper.writeValueAsString(exportInfos), StandardCharsets.UTF_8);
+            uriComponentsBuilder.queryParam(QUERY_PARAM_EXPORT_INFOS, exportInfosStr);
+
             String path = uriComponentsBuilder.buildAndExpand(networkUuid, format).toUriString();
 
             HttpHeaders headers = new HttpHeaders();
@@ -120,7 +129,7 @@ public class NetworkConversionService {
             HttpEntity<String> requestEntity = new HttpEntity<>(parametersJson, headers);
 
             return restTemplate.exchange(
-                    networkConversionServerBaseUri + path,
+                getNetworkConversionServerBaseUri() + path,
                     HttpMethod.POST,
                     requestEntity,
                     UUID.class
@@ -140,22 +149,18 @@ public class NetworkConversionService {
         HttpEntity<Void> entity = new HttpEntity<>(headers);
 
         return restTemplate.exchange(
-                networkConversionServerBaseUri + path,
+            getNetworkConversionServerBaseUri() + path,
                 HttpMethod.GET,
                 entity,
                 Resource.class
         );
     }
 
-    public void setNetworkConversionServerBaseUri(String networkConversionServerBaseUri) {
-        this.networkConversionServerBaseUri = networkConversionServerBaseUri;
-    }
-
     public void reindexStudyNetworkEquipments(UUID networkUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks/{networkUuid}/reindex-all")
             .buildAndExpand(networkUuid)
             .toUriString();
-        restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.POST, null, Void.class);
+        restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.POST, null, Void.class);
     }
 
     public boolean checkStudyIndexationStatus(UUID networkUuid) {
@@ -165,6 +170,6 @@ public class NetworkConversionService {
 
         ParameterizedTypeReference<String> typeRef = new ParameterizedTypeReference<>() {
         };
-        return restTemplate.exchange(networkConversionServerBaseUri + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
+        return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
     }
 }
