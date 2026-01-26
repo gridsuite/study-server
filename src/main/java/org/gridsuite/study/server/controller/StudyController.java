@@ -27,7 +27,6 @@ import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
-import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -2517,33 +2516,5 @@ public class StudyController {
         @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId);
         return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/nad-configs", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Save NAD config")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "NAD config is saved"),
-        @ApiResponse(responseCode = "404", description = "Study does not exist")
-    })
-        public ResponseEntity<UUID> saveNadConfig(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody NadConfigInfos nadConfigData) {
-        studyService.assertIsStudyExist(studyUuid);
-        UUID savedUuid = studyService.saveNadConfig(studyUuid, nadConfigData);
-        return ResponseEntity.ok().body(savedUuid);
-    }
-
-    @DeleteMapping(value = "/studies/{studyUuid}/nad-configs/{nadConfigUuid}")
-    @Operation(summary = "Delete NAD config")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "NAD config is deleted"),
-        @ApiResponse(responseCode = "404", description = "Study does not exist")
-    })
-    public ResponseEntity<Void> deleteNadConfig(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("nadConfigUuid") UUID nadConfigUuid) {
-        studyService.assertIsStudyExist(studyUuid);
-        studyService.deleteNadConfig(studyUuid, nadConfigUuid);
-        return ResponseEntity.noContent().build();
     }
 }
