@@ -85,6 +85,7 @@ public final class StudyConstants {
     public static final String QUERY_WITH_TAP_CHANGER = "withRatioTapChangers";
     public static final String HEADER_RECEIVER = "receiver";
     public static final String HEADER_S3_KEY = "s3Key";
+    public static final String HEADER_EXPORT_CONTENT_TYPE = "exportContentType";
     public static final String HEADER_EXPORT_INFOS = "exportInfos";
     public static final String HEADER_WORKFLOW_TYPE = "workflowType";
     public static final String HEADER_WORKFLOW_INFOS = "workflowInfos";

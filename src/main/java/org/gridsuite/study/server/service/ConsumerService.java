@@ -848,6 +848,7 @@ public class ConsumerService {
         String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
         String s3Key = msg.getHeaders().get(HEADER_S3_KEY, String.class);
         String exportInfosStr = msg.getHeaders().get(HEADER_EXPORT_INFOS, String.class);
+        String exportContentType = msg.getHeaders().get(HEADER_EXPORT_CONTENT_TYPE, String.class);
 
         if (receiverString != null) {
             NetworkExportReceiver receiver;
@@ -870,7 +871,7 @@ public class ConsumerService {
                     //Create case in directory-server and case-server
                     exportToGridExplore = true;
                     if (StringUtils.isEmpty(errorMessage)) {
-                        errorMessage = createCase(s3Key, nodeExport, userId);
+                        errorMessage = createCase(s3Key, nodeExport, userId, exportContentType);
                     }
                 }
 
@@ -882,11 +883,11 @@ public class ConsumerService {
         }
     }
 
-    public String createCase(String s3Key, NodeExportInfos nodeExport, String userId) {
+    public String createCase(String s3Key, NodeExportInfos nodeExport, String userId, String exportContentType) {
         String errorMessage = null;
 
         try {
-            UUID caseUuid = caseService.createCase(s3Key, "application/zip");
+            UUID caseUuid = caseService.createCase(s3Key, exportContentType);
             directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId);
         } catch (Exception e) {
             errorMessage = e.getMessage();

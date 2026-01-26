@@ -1077,7 +1077,7 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
 
         if (exportInfos.exportToGridExplore() && directoryService.elementExists(exportInfos.directoryUuid(), exportInfos.fileName(), DirectoryService.CASE)) {
-            throw new StudyException(ELEMENT_ALREADY_EXISTS);
+            throw new StudyException(ELEMENT_ALREADY_EXISTS, exportInfos.fileName());
         }
 
         UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId,
