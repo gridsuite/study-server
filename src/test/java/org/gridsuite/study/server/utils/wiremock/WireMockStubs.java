@@ -51,8 +51,8 @@ public class WireMockStubs {
     public final CaseServerStubs caseServer;
     public final ReportServerStubs reportServer;
     public final LoadflowServerStubs loadflowServer;
-    public final ComputationServerStubs computationServerStubs;
-    public final UserAdminServerStubs userAdminServerStubs;
+    public final ComputationServerStubs computationServer;
+    public final UserAdminServerStubs userAdminServer;
     public final NetworkConversionServerStubs networkConversionServer;
     public final DirectoryServerStubs directoryServer;
 
@@ -63,8 +63,8 @@ public class WireMockStubs {
         this.networkConversionServer = new NetworkConversionServerStubs(wireMock);
         this.reportServer = new ReportServerStubs(wireMock);
         this.directoryServer = new DirectoryServerStubs(wireMock);
-        this.computationServerStubs = new ComputationServerStubs(wireMock);
-        this.userAdminServerStubs = new UserAdminServerStubs(wireMock);
+        this.computationServer = new ComputationServerStubs(wireMock);
+        this.userAdminServer = new UserAdminServerStubs(wireMock);
     }
 
     public UUID stubNetworkElementInfosGet(String networkUuid, String elementType, String infoType, String elementId, String responseBody) {

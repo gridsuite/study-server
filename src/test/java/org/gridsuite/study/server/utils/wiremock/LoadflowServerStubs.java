@@ -11,7 +11,7 @@ import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.EqualToPattern;
-import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
+import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
-import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.*;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili@rte-france.com>
@@ -31,27 +30,25 @@ public class LoadflowServerStubs {
         this.wireMock = wireMock;
     }
 
-    public UUID stubGetLoadflowProvider(String parametersUuid, String providerName) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid + "/provider"))
+    public void stubGetLoadflowProvider(String parametersUuid, String providerName) {
+        wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid + "/provider"))
                 .willReturn(WireMock.ok().withBody(providerName)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyGetLoadflowProvider(UUID stubUuid, String parametersUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid + "/provider"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyGetLoadflowProvider(String parametersUuid) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + parametersUuid + "/provider", false, Map.of(), 1);
     }
 
-    public UUID stubRunLoadflow(UUID networkUuid, String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlMatching("/v1/networks/" + networkUuid + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=.*"))
+    public void stubRunLoadflow(UUID networkUuid, String responseBody) {
+        wireMock.stubFor(WireMock.post(WireMock.urlMatching("/v1/networks/" + networkUuid + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=.*"))
                 .willReturn(WireMock.ok().withBody(responseBody)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public UUID stubRunLoadflowFailed(UUID networkUuid, UUID nodeUuid, String responseBody) {
+    public void stubRunLoadflowFailed(UUID networkUuid, UUID nodeUuid, String responseBody) {
         MappingBuilder mappingBuilder = WireMock.post(WireMock.urlMatching("/v1/networks/" + networkUuid + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=.*"));
 
         mappingBuilder = mappingBuilder.withPostServeAction(POST_ACTION_SEND_INPUT,
@@ -64,44 +61,38 @@ public class LoadflowServerStubs {
                         )
                 )
         );
-        return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withBody(responseBody)
+        wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withBody(responseBody)
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyRunLoadflow(UUID stubUuid, UUID networkUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.postRequestedFor(WireMock.urlMatching("/v1/networks/" + networkUuid + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=.*"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyRunLoadflow(UUID networkUuid) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/networks/" + networkUuid + "/run-and-save", Map.of("withRatioTapChangers", new RegexPattern(".*"), "receiver", new RegexPattern(".*"), "reportUuid", new RegexPattern(".*"), "reporterId", new RegexPattern(".*"), "variantId", new RegexPattern(".*")));
     }
 
-    public UUID stubGetLoadflowResult(UUID resultUuid, String responseBody) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/results/" + resultUuid))
+    public void stubGetLoadflowResult(UUID resultUuid, String responseBody) {
+        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/results/" + resultUuid))
                 .willReturn(WireMock.ok().withBody(responseBody)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyGetLoadflowResult(UUID stubUuid, UUID resultUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlEqualTo("/v1/results/" + resultUuid));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyGetLoadflowResult(UUID resultUuid) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid, Map.of());
     }
 
-    public UUID stubGetLoadflowStatus(UUID resultUuid, String responseBody, boolean isNotFound) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/status"))
+    public void stubGetLoadflowStatus(UUID resultUuid, String responseBody, boolean isNotFound) {
+        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/status"))
                 .willReturn(isNotFound ? WireMock.notFound() : WireMock.ok().withBody(responseBody)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyGetLoadflowStatus(UUID stubUuid, UUID resultUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/status"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyGetLoadflowStatus(UUID resultUuid) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/status", Map.of());
     }
 
-    public UUID stubStopLoadflow(UUID resultUuid, UUID nodeUuid, UUID networkUuid, String responseBody) {
+    public void stubStopLoadflow(UUID resultUuid, UUID nodeUuid, UUID networkUuid, String responseBody) {
         MappingBuilder mappingBuilder = WireMock.put(WireMock.urlMatching("/v1/results/" + resultUuid + "/stop\\?receiver=.*"));
         mappingBuilder = mappingBuilder.withPostServeAction(POST_ACTION_SEND_INPUT,
                 Parameters.from(
@@ -113,211 +104,184 @@ public class LoadflowServerStubs {
                         )
                 )
         );
-        return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withBody(responseBody)
+        wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withBody(responseBody)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyStopLoadflow(UUID stubUuid, UUID resultUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.putRequestedFor(WireMock.urlMatching("/v1/results/" + resultUuid + "/stop\\?receiver=.*"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyStopLoadflow(UUID resultUuid) {
+        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/results/" + resultUuid + "/stop", Map.of("receiver", new RegexPattern(".*")), null);
     }
 
-    public UUID stubGetLoadflowModifications(UUID resultUuid, String responseBody, boolean isNotFound) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/modifications"))
+    public void stubGetLoadflowModifications(UUID resultUuid, String responseBody, boolean isNotFound) {
+        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/modifications"))
                 .willReturn(isNotFound ? WireMock.notFound() : WireMock.ok().withBody(responseBody)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyGetLoadflowModifications(UUID stubUuid, UUID resultUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/modifications"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyGetLoadflowModifications(UUID resultUuid) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/modifications", Map.of());
     }
 
-    public UUID stubCreateLoadflowDefaultParameters(String createdParametersUuid) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters/default"))
+    public void stubCreateLoadflowDefaultParameters(String createdParametersUuid) {
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters/default"))
                 .willReturn(WireMock.ok().withBody(createdParametersUuid)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyCreateLoadflowDefaultParameters(UUID stubUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.postRequestedFor(WireMock.urlEqualTo("/v1/parameters/default"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyCreateLoadflowDefaultParameters() {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters/default", Map.of());
     }
 
-    public UUID stubGetLoadflowParameters(String parametersUuid, String parameters, boolean isNotFound) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid))
+    public void stubGetLoadflowParameters(String parametersUuid, String parameters, boolean isNotFound) {
+        wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid))
                 .willReturn(isNotFound ? WireMock.notFound() : WireMock.ok().withBody(parameters)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyGetLoadflowParameters(UUID stubUuid, String parametersUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyGetLoadflowParameters(String parametersUuid) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + parametersUuid, Map.of());
     }
 
-    public UUID stubPutLoadflowParameters(String parametersUuid, String parameters) {
+    public void stubPutLoadflowParameters(String parametersUuid, String parameters) {
         if (parameters == null || parameters.isEmpty()) {
-            return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid))
+            wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid))
                     .willReturn(WireMock.ok())
-            ).getId();
+            );
+        } else {
+            wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid)).withRequestBody(new EqualToPattern(parameters))
+                    .willReturn(WireMock.ok())
+            );
         }
-        return wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid)).withRequestBody(new EqualToPattern(parameters))
-                .willReturn(WireMock.ok())
-        ).getId();
     }
 
-    public void verifyPutLoadflowParameters(UUID stubUuid, String parametersUuid, String parameters) {
-        RequestPatternBuilder requestBuilder = WireMock.putRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid));
+    public void verifyPutLoadflowParameters(String parametersUuid, String parameters) {
         if (parameters != null && !parameters.isEmpty()) {
-            requestBuilder.withRequestBody(new EqualToPattern(parameters));
+            WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/parameters/" + parametersUuid, Map.of(), parameters);
+        } else {
+            WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/parameters/" + parametersUuid, Map.of(), null);
         }
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
     }
 
-    public UUID stubCreateLoadflowParameters(String parametersUuid) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters"))
+    public void stubCreateLoadflowParameters(String parametersUuid) {
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters"))
                 .willReturn(WireMock.ok().withBody(parametersUuid)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyCreateLoadflowParameters(UUID stubUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/parameters"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyCreateLoadflowParameters() {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of());
     }
 
-    public UUID stubGetDefaultProvider(String responseBody) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/default-provider"))
+    public void stubGetDefaultProvider(String responseBody) {
+        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/default-provider"))
                 .willReturn(WireMock.ok().withBody(responseBody)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyGetDefaultProvider(UUID stubUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/default-provider"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyGetDefaultProvider() {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/default-provider", Map.of());
     }
 
-    public UUID stubGetResultsCount(String responseBody) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/supervision/results-count"))
+    public void stubGetResultsCount(String responseBody) {
+        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/supervision/results-count"))
                 .willReturn(WireMock.ok().withBody(responseBody)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyGetResultsCount(UUID stubUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/supervision/results-count"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyGetResultsCount() {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/supervision/results-count", Map.of());
     }
 
-    public UUID stubDeleteLoadflowResults(String resultUuid) {
-        return wireMock.stubFor(WireMock.delete(WireMock.urlMatching("/v1/results\\?resultsUuids=" + resultUuid))
-                .willReturn(WireMock.ok())).getId();
+    public void stubDeleteLoadflowResults(String resultUuid) {
+        wireMock.stubFor(WireMock.delete(WireMock.urlMatching("/v1/results\\?resultsUuids=" + resultUuid))
+                .willReturn(WireMock.ok()));
     }
 
-    public void verifyDeleteLoadflowResults(UUID stubUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.deleteRequestedFor(WireMock.urlMatching("/v1/results\\?resultsUuids=.*"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyDeleteLoadflowResults() {
+        WireMockUtilsCriteria.verifyDeleteRequest(wireMock, "/v1/results", Map.of("resultsUuids", new RegexPattern(".*")));
     }
 
-    public UUID stubDuplicateLoadflowParameters(String loadflowParametersToDuplicateUuid, String createdLoadflowParametersUuidJson, boolean isNotFound) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters?duplicateFrom=" + loadflowParametersToDuplicateUuid))
-                .willReturn(isNotFound ? WireMock.notFound() : WireMock.ok().withBody(createdLoadflowParametersUuidJson).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
+    public void stubDuplicateLoadflowParameters(String loadflowParametersToDuplicateUuid, String createdLoadflowParametersUuidJson, boolean isNotFound) {
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters?duplicateFrom=" + loadflowParametersToDuplicateUuid))
+                .willReturn(isNotFound ? WireMock.notFound() : WireMock.ok().withBody(createdLoadflowParametersUuidJson).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
     }
 
-    public void verifyDuplicateLoadflowParameters(UUID stubUuid, String loadflowParametersToDuplicateUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.postRequestedFor(WireMock.urlEqualTo("/v1/parameters?duplicateFrom=" + loadflowParametersToDuplicateUuid));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyDuplicateLoadflowParameters(String loadflowParametersToDuplicateUuid) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of("duplicateFrom", WireMock.equalTo(loadflowParametersToDuplicateUuid)));
     }
 
-    public UUID stubPutLoadflowProvider(String parametersUuid, String providerName) {
-        return wireMock.stubFor(WireMock.put(WireMock.urlEqualTo("/v1/parameters/" + parametersUuid + "/provider"))
+    public void stubPutLoadflowProvider(String parametersUuid, String providerName) {
+        wireMock.stubFor(WireMock.put(WireMock.urlEqualTo("/v1/parameters/" + parametersUuid + "/provider"))
                 .withRequestBody(new EqualToPattern(providerName))
                 .willReturn(WireMock.ok())
-        ).getId();
+        );
     }
 
-    public void verifyPutLoadflowProvider(UUID stubUuid, String parametersUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.putRequestedFor(WireMock.urlEqualTo("/v1/parameters/" + parametersUuid + "/provider"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyPutLoadflowProvider(String parametersUuid) {
+        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/parameters/" + parametersUuid + "/provider", Map.of(), null);
     }
 
-    public UUID stubDeleteLoadFlowParameters(String parametersUuid) {
-        return wireMock.stubFor(WireMock.delete(WireMock.urlEqualTo("/v1/parameters/" + parametersUuid))
-                .willReturn(WireMock.ok())).getId();
+    public void stubDeleteLoadFlowParameters(String parametersUuid) {
+        wireMock.stubFor(WireMock.delete(WireMock.urlEqualTo("/v1/parameters/" + parametersUuid))
+                .willReturn(WireMock.ok()));
     }
 
-    public void verifyDeleteLoadFlowParameters(UUID stubUuid, String parametersUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.deleteRequestedFor(WireMock.urlEqualTo("/v1/parameters/" + parametersUuid));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyDeleteLoadFlowParameters(String parametersUuid) {
+        WireMockUtilsCriteria.verifyDeleteRequest(wireMock, "/v1/parameters/" + parametersUuid, Map.of());
     }
 
-    public UUID stubGetComputationStatus(String resultUuid, String computingStatusResponse) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/computation-status"))
+    public void stubGetComputationStatus(String resultUuid, String computingStatusResponse) {
+        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/computation-status"))
                 .willReturn(WireMock.ok()
                         .withBody(computingStatusResponse)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyGetComputationStatus(UUID stubUuid, String resultUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/computation-status"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyGetComputationStatus(String resultUuid) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/computation-status", Map.of());
     }
 
-    public UUID stubGetComputation(String resultUuid) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/computation"))
+    public void stubGetComputation(String resultUuid) {
+        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/computation"))
                 .willReturn(WireMock.notFound())
-        ).getId();
+        );
     }
 
-    public void verifyGetComputation(UUID stubUuid, String resultUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/computation"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyGetComputation(String resultUuid) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/computation", Map.of());
     }
 
-    public UUID stubGetLimitViolation(String resultUuid, String limitViolationResponse, boolean withRequestParam) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlMatching("/v1/results/" + resultUuid + "/limit-violations" + (withRequestParam ? "\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*" : "")))
+    public void stubGetLimitViolation(String resultUuid, String limitViolationResponse, boolean withRequestParam) {
+        wireMock.stubFor(WireMock.get(WireMock.urlMatching("/v1/results/" + resultUuid + "/limit-violations" + (withRequestParam ? "\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*" : "")))
                 .willReturn(WireMock.ok()
                         .withBody(limitViolationResponse)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+        );
     }
 
-    public void verifyGetLimitViolation(UUID stubUuid, String resultUuid, boolean withRequestParam) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlMatching("/v1/results/" + resultUuid + "/limit-violations" + (withRequestParam ? "\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*" : "")));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyGetLimitViolation(String resultUuid, boolean withRequestParam) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/limit-violations",
+                withRequestParam ?
+                        Map.of("filters", new RegexPattern(".*"), "globalFilters", new RegexPattern(".*"), "networkUuid", new RegexPattern(".*"), "variantId", new RegexPattern(".*"), "sort", new RegexPattern(".*"))
+                        : Map.of());
     }
 
-    public UUID stubPutInvalidateStatus() {
-        return wireMock.stubFor(WireMock.put(WireMock.urlMatching("/v1/results/invalidate-status\\?resultUuid=.*"))
+    public void stubPutInvalidateStatus() {
+        wireMock.stubFor(WireMock.put(WireMock.urlMatching("/v1/results/invalidate-status\\?resultUuid=.*"))
                 .willReturn(WireMock.ok())
-        ).getId();
+        );
     }
 
-    public void verifyPutInvalidateStatus(UUID stubUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.putRequestedFor(WireMock.urlMatching("/v1/results/invalidate-status\\?resultUuid=.*"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifyPutInvalidateStatus() {
+        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/results/invalidate-status", Map.of("resultUuid", new RegexPattern(".*")), null);
     }
 
 }

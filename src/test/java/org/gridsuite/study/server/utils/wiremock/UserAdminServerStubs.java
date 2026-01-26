@@ -25,16 +25,16 @@ public class UserAdminServerStubs {
         this.wireMock = wireMock;
     }
 
-    public void verifyUserProfile(String userId) {
+    public void verifyGetUserProfile(String userId) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/users/" + userId + "/profile", Map.of());
     }
 
-    public UUID stubUserProfile(String userId) {
+    public UUID stubGetUserProfile(String userId) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + userId + "/profile"))
             .willReturn(WireMock.ok())).getId();
     }
 
-    public UUID stubUserProfile(String userId, String profileJson) {
+    public UUID stubGetUserProfile(String userId, String profileJson) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + userId + "/profile"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(profileJson))).getId();
     }
