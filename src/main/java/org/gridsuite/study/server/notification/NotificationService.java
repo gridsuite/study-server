@@ -484,11 +484,11 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitNetworkExportFinished(UUID studyUuid, UUID exportUuid, @NonNull Boolean exporToGridExplore, String userId, @Nullable String error) {
+    public void emitNetworkExportFinished(UUID studyUuid, UUID exportUuid, @NonNull Boolean exportToGridExplore, String userId, @Nullable String error) {
         sendStudyUpdateMessage(studyUuid, NETWORK_EXPORT_FINISHED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 .setHeader(HEADER_EXPORT_UUID, exportUuid)
-                .setHeader(HEADER_EXPORT_TO_GRID_EXPLORE, exporToGridExplore)
+                .setHeader(HEADER_EXPORT_TO_GRID_EXPLORE, exportToGridExplore)
                 .setHeader(HEADER_ERROR, error)
         );
     }
