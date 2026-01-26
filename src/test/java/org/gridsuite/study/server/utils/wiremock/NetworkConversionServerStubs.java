@@ -11,6 +11,10 @@ import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
+import org.gridsuite.study.server.dto.NetworkInfos;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,6 +32,10 @@ import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPost
 public class NetworkConversionServerStubs {
 
     public static final String URI_NETWORK = "/v1/networks";
+    public static final Map<String, Object> IMPORT_PARAMETERS = Map.of(
+        "param1", "changedValue1, changedValue2",
+        "param2", "changedValue"
+    );
     WireMockServer wireMock;
 
     public NetworkConversionServerStubs(WireMockServer wireMock) {
@@ -91,5 +99,101 @@ public class NetworkConversionServerStubs {
         }
 
         return wireMock.stubFor(mappingBuilder).getId();
+    }
+
+    public UUID stubImportNetworkWithPostAction(String caseUuid, String variantId, NetworkInfos networkInfos, String caseFormat, CountDownLatch latch) {
+        return stubImportNetworkWithPostAction(caseUuid,
+            IMPORT_PARAMETERS,
+            networkInfos.getNetworkUuid().toString(),
+            networkInfos.getNetworkId(),
+            variantId,
+            caseFormat,
+            "caseName",
+            latch);
+    }
+
+    public UUID stubImportNetworkWithError(String caseUuid, String variantId, String errorMessage, CountDownLatch latch) {
+        Map<String, Object> postActionParams = new HashMap<>();
+        postActionParams.put("payload", "");
+        postActionParams.put("destination", "case.import.start.dlx");
+        if (errorMessage != null) {
+            postActionParams.put("x-exception-message", errorMessage);
+        }
+        postActionParams.put("latch", latch);
+
+        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK))
+            .withQueryParam("caseUuid", equalTo(caseUuid))
+            .withQueryParam("variantId", equalTo(variantId))
+            .withQueryParam("reportUuid", WireMock.matching(".*"))
+            .withQueryParam("receiver", WireMock.matching(".*"))
+            .withPostServeAction(POST_ACTION_SEND_INPUT, Parameters.from(postActionParams))
+            .willReturn(WireMock.ok());
+
+        return wireMock.stubFor(mappingBuilder).getId();
+    }
+
+    public UUID stubImportNetworkWithServerError(String caseUuid, String variantId, CountDownLatch latch) {
+        Map<String, Object> postActionParams = new HashMap<>();
+        postActionParams.put("payload", "");
+        postActionParams.put("destination", "case.import.start.dlx");
+        postActionParams.put("latch", latch);
+
+        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK))
+            .withQueryParam("caseUuid", equalTo(caseUuid))
+            .withQueryParam("variantId", equalTo(variantId))
+            .withQueryParam("reportUuid", WireMock.matching(".*"))
+            .withQueryParam("receiver", WireMock.matching(".*"))
+            .withPostServeAction(POST_ACTION_SEND_INPUT, Parameters.from(postActionParams))
+            .willReturn(WireMock.serverError());
+
+        return wireMock.stubFor(mappingBuilder).getId();
+    }
+
+    public UUID stubExportFormats(String formatsJson) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/export/formats"))
+            .willReturn(WireMock.ok()
+                .withHeader("Content-Type", "application/json")
+                .withBody(formatsJson))).getId();
+    }
+
+    public void verifyExportFormats(UUID stubUuid) {
+        WireMockUtils.verifyGetRequest(wireMock, stubUuid, "/v1/export/formats", Map.of());
+    }
+
+    public UUID stubNetworkExport(String networkUuid, String format, String exportUuid) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/export/" + format))
+            .willReturn(WireMock.ok()
+                .withHeader("Content-Type", "application/json")
+                .withBody("\"" + exportUuid + "\""))).getId();
+    }
+
+    public UUID stubNetworkExportError(String networkUuid, String format) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + networkUuid + "/export/" + format))
+            .willReturn(WireMock.serverError())).getId();
+    }
+
+    public void verifyNetworkExport(UUID stubUuid, String networkUuid, String format, Map<String, StringValuePattern> queryParams) {
+        WireMockUtils.verifyPostRequest(wireMock, stubUuid, "/v1/networks/" + networkUuid + "/export/" + format, true, queryParams, null);
+    }
+
+    public void stubExportNetwork(UUID networkUuid, String fileName, String exportUuid, int status) {
+
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath("/v1/networks/{networkUuid}/export/{format}");
+        // Adding query parameters if present
+        String path = uriComponentsBuilder.buildAndExpand(networkUuid, "XIIDM").toUriString();
+
+        // Stubbing POST request instead of HEAD
+        wireMock.stubFor(WireMock.post(WireMock.urlPathTemplate(path))
+            .withQueryParam("fileName", equalTo(fileName))
+            .withHeader("content-type", equalTo("application/json"))
+            .willReturn(WireMock.aResponse().withStatus(status).withBody(exportUuid)
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
+    }
+
+    public void verifyExportNetwork(UUID networkUuid, String fileName) {
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath("/v1/networks/{networkUuid}/export/{format}");
+        String path = uriComponentsBuilder.buildAndExpand(networkUuid, "XIIDM").toUriString();
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, path, Map.of("fileName", equalTo(fileName)), 1);
     }
 }
