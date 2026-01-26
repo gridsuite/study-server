@@ -931,7 +931,6 @@ class StudyTest extends StudyTestBase {
                 .voltageInitResultUuid(UUID.randomUUID())
                 .stateEstimationResultUuid(UUID.randomUUID())
                 .pccMinResultUuid(UUID.randomUUID())
-                .pccMinResultUuid(UUID.randomUUID())
                 .build()
         );
 
@@ -1003,6 +1002,7 @@ class StudyTest extends StudyTestBase {
         studyEntity.setPccMinParametersUuid(UUID.randomUUID());
         studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
         studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
+        studyEntity.setComputationResultFiltersUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
         testDuplicateStudy(study1Uuid, firstRootNetworkUuid, NAD_CONFIG_USER_ID);
     }
@@ -1020,6 +1020,7 @@ class StudyTest extends StudyTestBase {
         studyEntity.setPccMinParametersUuid(null);
         studyEntity.setNetworkVisualizationParametersUuid(null);
         studyEntity.setSpreadsheetConfigCollectionUuid(null);
+        studyEntity.setComputationResultFiltersUuid(UUID.randomUUID());
         studyRepository.save(studyEntity);
         testDuplicateStudy(study1Uuid, firstRootNetworkUuid, "userId");
     }
