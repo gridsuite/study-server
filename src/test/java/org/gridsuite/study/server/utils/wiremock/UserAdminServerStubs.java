@@ -8,17 +8,16 @@ package org.gridsuite.study.server.utils.wiremock;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+import java.util.Map;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.removeRequestForStub;
-
 /**
- * @author Abdelsalem Hedhili <abdelsalem.hedhili@rte-france.com>
+ * @author Maissa Souissi <maissa.souissi@rte-france.com>
  */
+
 public class UserAdminServerStubs {
     private final WireMockServer wireMock;
 
@@ -26,17 +25,17 @@ public class UserAdminServerStubs {
         this.wireMock = wireMock;
     }
 
-    public UUID stubGetUserProfile(String sub, String responseBody) {
-        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + sub + "/profile"))
-                .willReturn(WireMock.ok().withBody(responseBody)
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        ).getId();
+    public void verifyUserProfile(String userId) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/users/" + userId + "/profile", Map.of());
     }
 
-    public void verifyGetUserProfile(UUID stubUuid, String sub) {
-        RequestPatternBuilder requestBuilder = WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/users/" + sub + "/profile"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public UUID stubUserProfile(String userId) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + userId + "/profile"))
+            .willReturn(WireMock.ok())).getId();
     }
 
+    public UUID stubUserProfile(String userId, String profileJson) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + userId + "/profile"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(profileJson))).getId();
+    }
 }

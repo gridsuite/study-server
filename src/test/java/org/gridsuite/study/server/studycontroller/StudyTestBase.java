@@ -576,7 +576,7 @@ class StudyTestBase {
                 wireMockStubs.caseServer.verifyCaseExists(stubCaseExistsId, caseUuid);
             }
             if (stubUserProfileId != null) {
-                wireMockStubs.verifyUserProfile(stubUserProfileId, userId);
+                wireMockStubs.userAdminServerStubs.verifyUserProfile(userId);
             }
             if (stubSendReportId != null) {
                 wireMockStubs.verifySendReport(stubSendReportId);
@@ -613,8 +613,8 @@ class StudyTestBase {
 
     protected CreateStudyStubs setupCreateStudyStubs(String userId, String userProfileJson, String caseUuid) {
         UUID stubUserProfileId = userProfileJson != null
-            ? wireMockStubs.stubUserProfile(userId, userProfileJson)
-            : wireMockStubs.stubUserProfile(userId);
+            ? wireMockStubs.userAdminServerStubs.stubUserProfile(userId, userProfileJson)
+            : wireMockStubs.userAdminServerStubs.stubUserProfile(userId);
         UUID stubCaseExistsId = wireMockStubs.caseServer.stubCaseExists(caseUuid, true);
         UUID stubSendReportId = wireMockStubs.stubSendReport();
         return new CreateStudyStubs(stubUserProfileId, stubCaseExistsId, stubSendReportId, userId, caseUuid);
@@ -628,8 +628,8 @@ class StudyTestBase {
     }
 
     protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests) {
-        wireMockStubs.verifyParameters(createParametersNbRequests);
-        wireMockStubs.verifyParametersDefault(parametersDefaultNbRequests);
+        wireMockStubs.computationServerStubs.verifyParameters(createParametersNbRequests);
+        wireMockStubs.computationServerStubs.verifyParametersDefault(parametersDefaultNbRequests);
         wireMockStubs.verifySpreadsheetConfigDefault(spreadsheetConfigDefaultNbRequests);
         wireMockStubs.verifyNetworkVisualizationParamsDefault(networkVisualizationParamsDefaultNbRequests);
     }

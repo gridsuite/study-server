@@ -8,14 +8,11 @@ package org.gridsuite.study.server.utils.wiremock;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 
-import java.util.UUID;
-
-import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.removeRequestForStub;
+import java.util.Map;
 
 /**
- * @author Abdelsalem Hedhili <abdelsalem.hedhili@rte-france.com>
+ * @author Maissa Souissi <maissa.souissi@rte-france.com>
  */
 public class ReportServerStubs {
     private final WireMockServer wireMock;
@@ -24,16 +21,21 @@ public class ReportServerStubs {
         this.wireMock = wireMock;
     }
 
-    public UUID stubDeleteReports() {
-        return wireMock.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
-                .willReturn(WireMock.ok())
-        ).getId();
+    public void stubSendReport() {
+        wireMock.stubFor(WireMock.put(WireMock.urlPathMatching("/v1/reports/.*"))
+            .willReturn(WireMock.ok()));
     }
 
-    public void verifyDeleteReports(UUID stubUuid) {
-        RequestPatternBuilder requestBuilder = WireMock.deleteRequestedFor(WireMock.urlPathEqualTo("/v1/reports"));
-        wireMock.verify(1, requestBuilder);
-        removeRequestForStub(wireMock, stubUuid, 1);
+    public void verifySendReport() {
+        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/reports/.*", true, Map.of(), null);
     }
 
+    public void stubDeleteReport() {
+        wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/reports"))
+            .willReturn(WireMock.ok()));
+    }
+
+    public void verifyDeleteReport() {
+        WireMockUtilsCriteria.verifyDeleteRequest(wireMock, "/v1/reports", false, Map.of());
+    }
 }
