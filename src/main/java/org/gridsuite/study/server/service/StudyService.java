@@ -31,6 +31,7 @@ import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
@@ -1071,10 +1072,17 @@ public class StudyService {
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
     }
 
-    public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String fileName, String format, String userId, String parametersJson) {
+    public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NodeExportInfos exportInfos, String format, String userId, String parametersJson) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId, fileName, format, userId, parametersJson);
+
+        if (exportInfos.exportToGridExplore() && directoryService.elementExists(exportInfos.directoryUuid(), exportInfos.fileName(), DirectoryService.CASE)) {
+            throw new StudyException(ELEMENT_ALREADY_EXISTS);
+        }
+
+        UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId,
+            new NodeExportInfos(exportInfos.exportToGridExplore(), exportInfos.directoryUuid(), exportInfos.fileName(), exportInfos.description()), format, userId, parametersJson);
+
         networkModificationTreeService.updateExportNetworkStatus(nodeUuid, exportUuid, ExportNetworkStatus.RUNNING);
         return exportUuid;
     }

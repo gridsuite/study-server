@@ -52,11 +52,13 @@ public class WireMockStubs {
     public final ComputationServerStubs computationServerStubs;
     public final UserAdminServerStubs userAdminServerStubs;
     public final NetworkConversionServerStubs networkConversionServer;
+    public final DirectoryServerStubs directoryServer;
 
     public WireMockStubs(WireMockServer wireMock) {
         this.wireMock = wireMock;
         this.caseServer = new CaseServerStubs(wireMock);
         this.networkConversionServer = new NetworkConversionServerStubs(wireMock);
+        this.directoryServer = new DirectoryServerStubs(wireMock);
         this.computationServerStubs = new ComputationServerStubs(wireMock);
         this.userAdminServerStubs = new UserAdminServerStubs(wireMock);
     }
