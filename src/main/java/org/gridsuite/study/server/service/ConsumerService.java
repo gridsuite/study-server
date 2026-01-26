@@ -863,6 +863,7 @@ public class ConsumerService {
                 }
 
                 boolean exportToGridExplore = false;
+                String fileName = nodeExport != null ? nodeExport.fileName() : "";
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
 
                 if (nodeExport != null && nodeExport.exportToGridExplore()) {
@@ -874,7 +875,7 @@ public class ConsumerService {
                 }
 
                 networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
-                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToGridExplore, userId, errorMessage);
+                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, fileName, exportToGridExplore, userId, errorMessage);
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
             }
