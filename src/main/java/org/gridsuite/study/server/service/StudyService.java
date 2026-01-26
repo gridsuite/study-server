@@ -41,10 +41,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -1888,7 +1885,14 @@ public class StudyService {
         buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, null);
     }
 
+    private void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userId) {
+        getStudyRootNetworks(studyUuid).forEach(rn -> buildNode(studyUuid, nodeUuid, rn.getId(), userId, null));
+    }
+
     private void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId, AbstractWorkflowInfos workflowInfos) {
+        if (networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()) {
+            return;
+        }
         assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
 
@@ -1903,6 +1907,26 @@ public class StudyService {
         }
     }
 
+    @Transactional
+    public void buildFirstLevelChildren(@NonNull UUID studyUuid, @NonNull UUID parentNodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+        List<NodeEntity> firstLevelChildren = networkModificationTreeService.getChildren(parentNodeUuid);
+        long allowedBuildNodesUpToQuota = getAllowedBuildNodesUpToQuota(studyUuid, rootNetworkUuid, userId);
+        for (NodeEntity child : firstLevelChildren) {
+            if (allowedBuildNodesUpToQuota <= 0) {
+                return;
+            }
+
+            buildNode(
+                studyUuid,
+                child.getIdNode(),
+                rootNetworkUuid,
+                userId,
+                null
+            );
+            allowedBuildNodesUpToQuota--;
+        }
+    }
+
     public void handleBuildSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NetworkModificationResult networkModificationResult) {
         LOGGER.info("Build completed for node '{}'", nodeUuid);
 
@@ -1910,6 +1934,13 @@ public class StudyService {
             NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
 
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
+    }
+
+    private long getAllowedBuildNodesUpToQuota(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+        return userAdminService.getUserMaxAllowedBuilds(userId).map(maxBuilds -> {
+            long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
+            return maxBuilds - nbBuiltNodes;
+        }).orElse(Long.MAX_VALUE);
     }
 
     public void assertCanBuildNode(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
@@ -2391,6 +2422,14 @@ public class StudyService {
 
     private StudyEntity getStudy(UUID studyUuid) {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
+    }
+
+    @Transactional
+    public Map<UUID, NodeBuildStatus> getNodeBuildStatusByRootNetwork(UUID studyUuid, UUID nodeUuid) {
+        return getStudyRootNetworks(studyUuid).stream().collect(Collectors.toMap(
+            RootNetworkEntity::getId,
+            rn -> rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rn.getId()).map(rni -> rni.getNodeBuildStatus().toDto()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"))
+        ));
     }
 
     @Transactional
@@ -3490,6 +3529,20 @@ public class StudyService {
             notificationService.emitElementUpdated(study.getId(), userId);
         }
         return newNode;
+    }
+
+    @Transactional
+    public void createNodePostAction(UUID studyUuid, UUID parentNodeUuid, NetworkModificationNode newNode, String userId) {
+        if (newNode.isSecurityNode() && networkModificationTreeService.isRootOrConstructionNode(parentNodeUuid)) {
+            buildNode(studyUuid, newNode.getId(), userId);
+        }
+    }
+
+    @Transactional
+    public void createSequencePostAction(UUID studyUuid, UUID sequenceParentNode, NodeSequenceType nodeSequenceType, String userId) {
+        if (nodeSequenceType == NodeSequenceType.SECURITY_SEQUENCE) {
+            buildNode(studyUuid, sequenceParentNode, userId);
+        }
     }
 
     @Transactional

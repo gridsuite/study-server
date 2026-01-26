@@ -62,6 +62,25 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
             "WHERE n.id_node IN (SELECT nh.id_node FROM NodeHierarchy nh) AND n.id_node != :nodeUuid")
     List<NodeEntity> findAllChildren(UUID nodeUuid);
 
+    @NativeQuery("WITH RECURSIVE ancestors (id_node, parent_node) AS ( " +
+        "    SELECT n.id_node, n.parent_node " +
+        "    FROM NODE n " +
+        "    WHERE n.id_node = :childNodeUuid " +
+
+        "    UNION ALL " +
+
+        "    SELECT p.id_node, p.parent_node " +
+        "    FROM NODE p " +
+        "    INNER JOIN ancestors a ON p.id_node = a.parent_node " +
+        ") " +
+        "SELECT EXISTS ( " +
+        "    SELECT 1 " +
+        "    FROM ancestors " +
+        "    WHERE id_node = :ancestorNodeUuid " +
+        ")"
+    )
+    boolean isAncestor(UUID ancestorNodeUuid, UUID childNodeUuid);
+
     List<NodeEntity> findAllByStudyIdAndStashedAndParentNodeIdNodeOrderByStashDateDesc(UUID id, boolean stashed, UUID parentNode);
 
     Optional<NodeEntity> findByStudyIdAndType(UUID id, NodeType type);
