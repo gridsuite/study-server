@@ -131,6 +131,7 @@ class SupervisionControllerTest {
         network.getIdentifiables().forEach(idable -> equipmentInfosService.addEquipmentInfos(toEquipmentInfos(idable)));
 
         when(networkConversionService.checkStudyIndexationStatus(NETWORK_UUID)).thenReturn(true);
+        studyRepository.deleteAll();
     }
 
     @AfterEach

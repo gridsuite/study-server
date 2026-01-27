@@ -87,6 +87,17 @@ public final class WireMockUtilsCriteria {
         verifyRequest(wireMockServer, requestBuilder, queryParams, null, nbRequests);
     }
 
+    public static void verifyHeadRequest(WireMockServer wireMockServer, String urlPath,
+                                        Map<String, StringValuePattern> queryParams, int nbRequests) {
+        verifyHeadRequest(wireMockServer, urlPath, false, queryParams, nbRequests);
+    }
+
+    public static void verifyHeadRequest(WireMockServer wireMockServer, String urlPath, boolean regexMatching,
+                                         Map<String, StringValuePattern> queryParams, int nbRequests) {
+        RequestPatternBuilder requestBuilder = headRequestBuilder(urlPath, regexMatching, queryParams);
+        verifyRequest(wireMockServer, requestBuilder, queryParams, null, nbRequests);
+    }
+
     private static void verifyRequest(WireMockServer wireMockServer, RequestPatternBuilder requestBuilder, Map<String, StringValuePattern> queryParams, String body, int nbRequests) {
         queryParams.forEach(requestBuilder::withQueryParam);
         if (body != null) {
@@ -141,6 +152,17 @@ public final class WireMockUtilsCriteria {
         return regexMatching
             ? WireMock.deleteRequestedFor(WireMock.urlPathMatching(urlPath))
             : WireMock.deleteRequestedFor(WireMock.urlPathEqualTo(urlPath));
+    }
+
+    private static RequestPatternBuilder headRequestBuilder(String urlPath, boolean regexMatching, Map<String, StringValuePattern> queryParams) {
+        if (queryParams.isEmpty()) {
+            return regexMatching
+                ? WireMock.headRequestedFor(WireMock.urlMatching(noQueryUrlRegex(urlPath)))
+                : WireMock.headRequestedFor(WireMock.urlEqualTo(urlPath));
+        }
+        return regexMatching
+            ? WireMock.headRequestedFor(WireMock.urlPathMatching(urlPath))
+            : WireMock.headRequestedFor(WireMock.urlPathEqualTo(urlPath));
     }
 
     private static RequestPatternBuilder getRequestBuilder(String urlPathOrPattern, boolean regexMatching, Map<String, StringValuePattern> queryParams) {

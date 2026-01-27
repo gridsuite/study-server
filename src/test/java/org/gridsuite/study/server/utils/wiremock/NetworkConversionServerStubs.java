@@ -12,6 +12,9 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import org.gridsuite.study.server.dto.NetworkInfos;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -171,5 +174,26 @@ public class NetworkConversionServerStubs {
 
     public void verifyNetworkExport(UUID stubUuid, String networkUuid, String format, Map<String, StringValuePattern> queryParams) {
         WireMockUtils.verifyPostRequest(wireMock, stubUuid, "/v1/networks/" + networkUuid + "/export/" + format, true, queryParams, null);
+    }
+
+    public void stubExportNetwork(UUID networkUuid, String fileName, String exportUuid, int status) {
+
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath("/v1/networks/{networkUuid}/export/{format}");
+        // Adding query parameters if present
+        String path = uriComponentsBuilder.buildAndExpand(networkUuid, "XIIDM").toUriString();
+
+        // Stubbing POST request instead of HEAD
+        wireMock.stubFor(WireMock.post(WireMock.urlPathTemplate(path))
+            .withQueryParam("fileName", equalTo(fileName))
+            .withHeader("content-type", equalTo("application/json"))
+            .willReturn(WireMock.aResponse().withStatus(status).withBody(exportUuid)
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
+    }
+
+    public void verifyExportNetwork(UUID networkUuid, String fileName) {
+        var uriComponentsBuilder = UriComponentsBuilder.fromPath("/v1/networks/{networkUuid}/export/{format}");
+        String path = uriComponentsBuilder.buildAndExpand(networkUuid, "XIIDM").toUriString();
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, path, Map.of("fileName", equalTo(fileName)), 1);
     }
 }

@@ -13,8 +13,10 @@ import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.commons.report.ReportNode;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
+import org.gridsuite.study.server.dto.ElementAttributes;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
 import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
@@ -80,6 +82,8 @@ class StudyControllerCreationTest {
     private NetworkConversionService networkConversionService;
 
     @MockitoSpyBean
+    private DirectoryService directoryService;
+    @MockitoSpyBean
     private StudyService studyService;
     @MockitoBean
     private ReportService reportService;
@@ -132,6 +136,7 @@ class StudyControllerCreationTest {
         wireMockServer.start();
 
         caseService.setCaseServerBaseUri(wireMockServer.baseUrl());
+        directoryService.setDirectoryServerServerBaseUri(wireMockServer.baseUrl());
         networkConversionService.setNetworkConversionServerBaseUri(wireMockServer.baseUrl());
     }
 
@@ -210,6 +215,41 @@ class StudyControllerCreationTest {
         assertTrue(studyRepository.findById(studyUuid).isPresent());
     }
 
+    @Test
+    void testConsumeCaseImportSucceededToGridExplore() throws JsonProcessingException {
+        UUID studyUuid = UUID.randomUUID();
+        UUID caseUuid = UUID.randomUUID();
+        String userId = "userId";
+
+        UUID directoryUuid = UUID.randomUUID();
+        String fileName = "myFileName";
+        String description = "myDescription";
+        String exportFolder = "myFolder";
+        NodeExportInfos nodeExport = new NodeExportInfos(true, directoryUuid, fileName, description);
+        UUID exportUuid = UUID.randomUUID();
+
+        Map<String, Object> importParameters = prepareImportParameters();
+        MessageHeaders messageHeaders = prepareMessageHeaders(studyUuid, userId, caseUuid, importParameters, nodeExport, exportUuid);
+
+        String exportInfosStr = messageHeaders.get(HEADER_EXPORT_INFOS, String.class);
+        NodeExportInfos exportInfos = mapper.readValue(exportInfosStr, NodeExportInfos.class);
+        assertEquals(exportInfos, nodeExport);
+
+        UUID newCaseUuid = UUID.randomUUID();
+        ElementAttributes elementAttributes = new ElementAttributes(newCaseUuid, nodeExport.fileName(), DirectoryService.CASE, userId, 0, nodeExport.description());
+        String s3Key = exportFolder + DELIMITER + exportUuid + DELIMITER + fileName + ".zip";
+        wireMockStubs.caseServer.stubCreateCase(s3Key, "application/zip", newCaseUuid);
+        wireMockStubs.directoryServer.stubCreateElement(
+            nodeExport,
+            mapper.writeValueAsString(elementAttributes),
+            userId);
+
+        String error = consumerService.createCase(s3Key, nodeExport, userId);
+        wireMockStubs.caseServer.verifyCreateCase(exportFolder + DELIMITER + exportUuid + DELIMITER + fileName + ".zip", "application/zip");
+        wireMockStubs.directoryServer.verifyCreateElement(mapper.writeValueAsString(elementAttributes), nodeExport.directoryUuid());
+        assertThat(error).isNull();
+    }
+
     private void verifyMockCallsAfterStudyCreation() {
         verify(reportService, Mockito.times(1)).sendReport(any(UUID.class), any(ReportNode.class));
         verify(loadFlowService, Mockito.times(1)).createDefaultLoadFlowParameters();
@@ -242,6 +282,22 @@ class StudyControllerCreationTest {
             "caseName", "nameOfCase",
             HEADER_IMPORT_PARAMETERS, importParameters,
             HEADER_RECEIVER, mapper.writeValueAsString(receiver)));
+    }
+
+    private MessageHeaders prepareMessageHeaders(UUID studyUuid, String userId, UUID caseUuid, Map<String, Object> importParameters,
+                                                 NodeExportInfos exportInfos, UUID exportUuid) throws JsonProcessingException {
+        CaseImportReceiver receiver = new CaseImportReceiver(studyUuid, null, caseUuid, UUID.randomUUID(), UUID.randomUUID(), userId, System.nanoTime(), CaseImportAction.STUDY_CREATION);
+
+        return new MessageHeaders(Map.of(
+            HEADER_USER_ID, userId,
+            QUERY_PARAM_NETWORK_UUID, UUID.randomUUID().toString(),
+            "networkId", "networkId",
+            CASE_FORMAT, "XXIDM",
+            "caseName", exportInfos.fileName(),
+            HEADER_IMPORT_PARAMETERS, importParameters,
+            HEADER_RECEIVER, mapper.writeValueAsString(receiver),
+            HEADER_EXPORT_INFOS, mapper.writeValueAsString(exportInfos),
+            "exportUuid", exportUuid.toString()));
     }
 
     private Map<String, Object> prepareImportParameters() {

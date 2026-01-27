@@ -23,6 +23,7 @@ import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -58,6 +59,7 @@ public class ConsumerService {
     private static final String HEADER_WITH_RATIO_TAP_CHANGERS = "withRatioTapChangers";
     private static final String HEADER_ERROR_MESSAGE = "errorMessage";
     private static final String HEADER_EXPORT_UUID = "exportUuid";
+
     private final ObjectMapper objectMapper;
 
     private final NotificationService notificationService;
@@ -74,6 +76,7 @@ public class ConsumerService {
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final StateEstimationService stateEstimationService;
     private final PccMinService pccMinService;
+    private final DirectoryService directoryService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -88,7 +91,8 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService, PccMinService pccMinService) {
+                           StateEstimationService stateEstimationService, PccMinService pccMinService,
+                           DirectoryService directoryService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -104,6 +108,7 @@ public class ConsumerService {
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
+        this.directoryService = directoryService;
     }
 
     @Bean
@@ -295,11 +300,12 @@ public class ConsumerService {
         UUID pccMinParametersUuid = createDefaultPccMinParameters();
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
         UUID diagramGridLayoutUuid = studyService.createGridLayoutFromNadDiagram(userId, userProfileInfos);
+        UUID workspacesConfigUuid = createDefaultWorkspacesConfig();
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, workspacesConfigUuid,
             importParameters, importReportUuid);
     }
 
@@ -481,6 +487,15 @@ public class ConsumerService {
         }
     }
 
+    private UUID createDefaultWorkspacesConfig() {
+        try {
+            return studyConfigService.createDefaultWorkspacesConfig();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default workspace collection", e);
+            return null;
+        }
+    }
+
     @Bean
     public Consumer<Message<String>> consumeCaseImportFailed() {
         return message -> {
@@ -602,7 +617,7 @@ public class ConsumerService {
     }
 
     private void handleUnblockNode(NodeReceiver receiverObj, ComputationType computationType) {
-        if (computationType == ComputationType.LOAD_FLOW && networkModificationTreeService.isSecurityNode(receiverObj.getNodeUuid())) {
+        if (computationType == LOAD_FLOW && networkModificationTreeService.isSecurityNode(receiverObj.getNodeUuid())) {
             networkModificationTreeService.unblockNodeTree(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
         } else {
             networkModificationTreeService.unblockNode(receiverObj.getRootNetworkUuid(), receiverObj.getNodeUuid());
@@ -631,7 +646,7 @@ public class ConsumerService {
                     receiverObj.getNodeUuid());
 
                 // update DB
-                if (computationType == ComputationType.LOAD_FLOW) {
+                if (computationType == LOAD_FLOW) {
                     Boolean withRatioTapChangers = msg.getHeaders().get(HEADER_WITH_RATIO_TAP_CHANGERS, Boolean.class);
                     rootNetworkNodeInfoService.updateLoadflowResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, withRatioTapChangers);
                 } else {
@@ -641,11 +656,26 @@ public class ConsumerService {
                 // unblock node
                 handleUnblockNode(receiverObj, computationType);
 
-                // send notifications
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                if (computationType == LOAD_FLOW) {
+                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
+                    handleLoadFlowSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, userId);
+                }
+
+                // send notifications
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateResultType());
             }));
+    }
+
+    private void handleLoadFlowSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
+        // Build 1st level children if loadflow is converged, and node is a security type
+        if (userId != null && networkModificationTreeService.isSecurityNode(nodeUuid)) {
+            LoadFlowStatus loadFlowStatus = loadFlowService.getLoadFlowStatus(resultUuid);
+            if (loadFlowStatus == LoadFlowStatus.CONVERGED) {
+                studyService.buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, userId);
+            }
+        }
     }
 
     Optional<NodeReceiver> getNodeReceiver(Message<String> msg) {
@@ -841,6 +871,9 @@ public class ConsumerService {
 
     public void consumeNetworkExportFinished(Message<String> msg) {
         String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
+        String s3Key = msg.getHeaders().get(HEADER_S3_KEY, String.class);
+        String exportInfosStr = msg.getHeaders().get(HEADER_EXPORT_INFOS, String.class);
+
         if (receiverString != null) {
             NetworkExportReceiver receiver;
             try {
@@ -848,13 +881,41 @@ public class ConsumerService {
                 UUID studyUuid = receiver.getStudyUuid();
                 String userId = receiver.getUserId();
                 UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
+
+                NodeExportInfos nodeExport = null;
+                if (exportInfosStr != null) {
+                    nodeExport = objectMapper.readValue(URLDecoder.decode(exportInfosStr, StandardCharsets.UTF_8), NodeExportInfos.class);
+                }
+
+                boolean exportToGridExplore = false;
                 String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
+
+                if (nodeExport != null && nodeExport.exportToGridExplore()) {
+                    //Create case in directory-server and case-server
+                    exportToGridExplore = true;
+                    if (StringUtils.isEmpty(errorMessage)) {
+                        errorMessage = createCase(s3Key, nodeExport, userId);
+                    }
+                }
+
                 networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
-                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, userId, errorMessage);
+                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToGridExplore, userId, errorMessage);
             } catch (Exception e) {
                 LOGGER.error(e.toString(), e);
             }
         }
+    }
+
+    public String createCase(String s3Key, NodeExportInfos nodeExport, String userId) {
+        String errorMessage = null;
+
+        try {
+            UUID caseUuid = caseService.createCase(s3Key, "application/zip");
+            directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId);
+        } catch (Exception e) {
+            errorMessage = e.getMessage();
+        }
+        return errorMessage;
     }
 
     @Bean
