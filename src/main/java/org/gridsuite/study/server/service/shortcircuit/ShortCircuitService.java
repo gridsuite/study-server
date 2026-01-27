@@ -42,7 +42,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
-import static org.gridsuite.study.server.utils.StudyUtils.addPageableToQueryParams;
+import static org.gridsuite.study.server.utils.StudyUtils.*;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -160,17 +160,9 @@ public class ShortCircuitService extends AbstractComputationService {
                 .queryParam(QUERY_PARAM_NETWORK_UUID, networkUuid)
                 .queryParam(QUERY_PARAM_VARIANT_ID, variantId);
 
-        if (filters != null && !filters.isEmpty()) {
-            builder.queryParam(QUERY_PARAM_FILTERS, filters);
-        }
+        addFiltersToQueryParams(builder, filters, globalFilters);
+        addSortToQueryParams(builder, sort);
 
-        if (globalFilters != null && !globalFilters.isEmpty()) {
-            builder.queryParam(QUERY_PARAM_GLOBAL_FILTERS, globalFilters);
-        }
-
-        for (Sort.Order order : sort) {
-            builder.queryParam(QUERY_PARAM_SORT, order.getProperty() + "," + order.getDirection());
-        }
         return getShortCircuitAnalysisCsvResultResource(builder.build().encode().toUri(), headersCsv); // need to encode because of filter JSON array
     }
 
@@ -190,20 +182,12 @@ public class ShortCircuitService extends AbstractComputationService {
         if (resultsPath == null) {
             return null;
         }
-
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultsPath)
                 .queryParam(QUERY_PARAM_NETWORK_UUID, resultParameters.getNetworkUuid())
                 .queryParam(QUERY_PARAM_VARIANT_ID, resultParameters.getVariantId())
                 .queryParam(QUERY_PARAM_MODE, mode);
 
-        if (filters != null && !filters.isEmpty()) {
-            builder.queryParam(QUERY_PARAM_FILTERS, filters);
-        }
-
-        if (globalFilters != null && !globalFilters.isEmpty()) {
-            builder.queryParam(QUERY_PARAM_GLOBAL_FILTERS, globalFilters);
-        }
-
+        addFiltersToQueryParams(builder, filters, globalFilters);
         addPageableToQueryParams(builder, pageable);
 
         return getShortCircuitAnalysisResource(builder.build().encode().toUri()); // need to encode because of filter JSON array
