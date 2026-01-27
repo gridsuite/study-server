@@ -11,8 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_FILTERS;
-import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_GLOBAL_FILTERS;
+import static org.gridsuite.study.server.StudyConstants.*;
 
 /**
  * @author Slimane amar <slimane.amar at rte-france.com
@@ -24,14 +23,14 @@ public final class StudyUtils {
     }
 
     public static void addPageableToQueryParams(UriComponentsBuilder builder, Pageable pageable) {
-        builder.queryParam("page", pageable.getPageNumber()).queryParam("size", pageable.getPageSize());
+        builder.queryParam(QUERY_PARAM_PAGE, pageable.getPageNumber()).queryParam(QUERY_PARAM_SIZE, pageable.getPageSize());
         addSortToQueryParams(builder, pageable.getSort());
     }
 
     public static void addSortToQueryParams(UriComponentsBuilder builder, Sort sort) {
         if (sort != null) {
             for (Sort.Order order : sort) {
-                builder.queryParam("sort", order.getProperty() + "," + order.getDirection());
+                builder.queryParam(QUERY_PARAM_SORT, order.getProperty() + "," + order.getDirection());
             }
         }
     }
