@@ -853,4 +853,32 @@ public class WireMockStubs {
     public void verifyElementNameGet(UUID stubId, String elementUuid) {
         verifyGetRequest(wireMock, stubId, "/v1/elements/" + elementUuid + "/name", Map.of());
     }
+
+    public UUID stubWorkspacesConfigDefault(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/workspaces-configs/default"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public void verifyWorkspacesConfigDefault(int nbRequests) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/workspaces-configs/default", Map.of(), nbRequests);
+    }
+
+    public UUID stubWorkspacesConfigDuplicateFromAny(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/workspaces-configs"))
+            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public void verifyWorkspacesConfigDuplicateFromAny(UUID stubId, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, "/v1/workspaces-configs", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
+    }
+
+    public UUID stubDeleteWorkspacesConfig() {
+        return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/workspaces-configs/.*"))
+            .willReturn(WireMock.ok())).getId();
+    }
+
+    public void verifyDeleteWorkspacesConfig(UUID stubId) {
+        verifyDeleteRequest(wireMock, stubId, "/v1/workspaces-configs/.*", true, Map.of());
+    }
 }

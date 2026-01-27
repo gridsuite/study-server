@@ -75,7 +75,7 @@ import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JS
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria.removeRequestMatching;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -161,7 +161,7 @@ class LoadFlowTest {
     private LoadFlowService loadFlowService;
     @Autowired
     private StudyRepository studyRepository;
-    @Autowired
+    @MockitoSpyBean
     private UserAdminService userAdminService;
     @Autowired
     private ReportService reportService;
@@ -260,15 +260,29 @@ class LoadFlowTest {
         UUID nodeUuid = modificationNode.getId();
 
         assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
+        doNothing().when(studyService).buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, "userId");
 
         // consume loadflow result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
-        MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", LOADFLOW_RESULT_UUID, "withRatioTapChangers", false, HEADER_RECEIVER, resultUuidJson));
+        if (modificationNode.isSecurityNode()) {
+            wireMockStubs.loadflowServer.stubGetLoadflowStatus(UUID.fromString(LOADFLOW_RESULT_UUID), objectMapper.writeValueAsString(LoadFlowStatus.CONVERGED), false);
+        }
+        MessageHeaders messageHeaders = new MessageHeaders(
+            Map.of(
+                "resultUuid", LOADFLOW_RESULT_UUID,
+                "withRatioTapChangers", false,
+                HEADER_RECEIVER, resultUuidJson,
+                USER_ID_HEADER, "userId"));
         consumerService.consumeLoadFlowResult().accept(MessageBuilder.createMessage("", messageHeaders));
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
 
         assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
+        if (modificationNode.isSecurityNode()) {
+            // if running successful loadflow on security node -> first children are built
+            wireMockStubs.loadflowServer.verifyGetLoadflowStatus(UUID.fromString(LOADFLOW_RESULT_UUID));
+            verify(studyService, times(1)).buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, "userId");
+        }
     }
 
     @Test
@@ -1004,6 +1018,9 @@ class LoadFlowTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
+        reset(studyService);
+        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
@@ -1013,6 +1030,8 @@ class LoadFlowTest {
 
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).build());
+
+        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
 
         return modificationNode;
     }

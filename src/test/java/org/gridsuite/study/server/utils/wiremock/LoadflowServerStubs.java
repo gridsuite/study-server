@@ -12,6 +12,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.extension.Parameters;
 import com.github.tomakehurst.wiremock.matching.EqualToPattern;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
@@ -147,7 +148,7 @@ public class LoadflowServerStubs {
     }
 
     public void stubPutLoadflowParameters(String parametersUuid, String parameters) {
-        if (parameters == null || parameters.isEmpty()) {
+        if (StringUtils.isEmpty(parameters)) {
             wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid))
                     .willReturn(WireMock.ok())
             );
