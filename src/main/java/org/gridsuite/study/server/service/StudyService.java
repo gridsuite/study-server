@@ -1080,7 +1080,7 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
 
         if (exportInfos.exportToGridExplore() && directoryService.elementExists(exportInfos.directoryUuid(), exportInfos.fileName(), DirectoryService.CASE)) {
-            throw new StudyException(ELEMENT_ALREADY_EXISTS, "export file name " + exportInfos.fileName() +  " already exists in directory", Map.of("fileName", exportInfos.fileName()));
+            throw new StudyException(ELEMENT_ALREADY_EXISTS, "export file name " + exportInfos.fileName() + " already exists in directory", Map.of("fileName", exportInfos.fileName()));
         }
 
         UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId,
