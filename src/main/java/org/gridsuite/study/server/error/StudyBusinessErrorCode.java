@@ -29,7 +29,8 @@ public enum StudyBusinessErrorCode implements BusinessErrorCode {
     MAXIMUM_TAG_LENGTH_EXCEEDED("study.maximumTagLengthExceeded"),
     NETWORK_EXPORT_FAILED("study.networkExportFailed"),
     TOO_MANY_NAD_CONFIGS("study.tooManyNadConfigs"),
-    TOO_MANY_MAP_CARDS("study.tooManyMapCards");
+    TOO_MANY_MAP_CARDS("study.tooManyMapCards"),
+    ELEMENT_ALREADY_EXISTS("study.elementAlreadyExists");
 
     private final String value;
 

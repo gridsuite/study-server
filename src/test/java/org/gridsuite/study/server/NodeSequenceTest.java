@@ -21,8 +21,10 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
+import org.gridsuite.study.server.service.NetworkModificationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -32,12 +34,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.le-saulnier at rte-france.com
@@ -70,12 +72,18 @@ class NodeSequenceTest {
     private StudyService studyService;
     @MockitoBean
     private NotificationService notificationService;
+    @MockitoBean
+    private UserAdminService userAdminService;
+    @MockitoBean
+    private NetworkModificationService networkModificationService;
 
     @BeforeEach
     void setUp() {
         StudyEntity study = TestUtils.createDummyStudy(networkUuid, caseUuid, caseName, caseFormat, reportUuid);
         studyEntity = studyRepository.save(study);
         studyUuid = studyEntity.getId();
+
+        doReturn(Optional.of(10)).when(userAdminService).getUserMaxAllowedBuilds(userId);
     }
 
     @Test
@@ -89,8 +97,10 @@ class NodeSequenceTest {
         AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
         checkSecuritySequence(nNode, "");
 
+       // verify notifications
         verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode.getId(), parentOfSubtree.getId());
         verify(notificationService, times(1)).emitElementUpdated(studyUuid, userId);
+
     }
 
     @Test
@@ -103,6 +113,7 @@ class NodeSequenceTest {
         AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
         checkSecuritySequence(nNode, "");
 
+        // verify notifications
         verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode.getId(), parentOfSubtree.getId());
         verify(notificationService, times(1)).emitElementUpdated(studyUuid, userId);
     }
@@ -116,12 +127,17 @@ class NodeSequenceTest {
         studyService.createSequence(studyUuid, constructionNode.getId(), NodeSequenceType.SECURITY_SEQUENCE, userId);
         studyService.createSequence(studyUuid, constructionNode2.getId(), NodeSequenceType.SECURITY_SEQUENCE, userId);
 
-        AbstractNode parentOfSubtree = networkModificationTreeService.getStudySubtree(studyUuid, constructionNode2.getId(), null);
+        AbstractNode parentOfSubtree = networkModificationTreeService.getStudySubtree(studyUuid, constructionNode.getId(), null);
         AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
-        checkSecuritySequence(nNode, " (1)");
+        checkSecuritySequence(nNode, "");
 
-        verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, networkModificationTreeService.getChildren(constructionNode.getId()).getFirst().getIdNode(), constructionNode.getId());
-        verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode.getId(), parentOfSubtree.getId());
+        AbstractNode parentOfSubtree2 = networkModificationTreeService.getStudySubtree(studyUuid, constructionNode2.getId(), null);
+        AbstractNode nNode2 = parentOfSubtree2.getChildren().getFirst();
+        checkSecuritySequence(nNode2, " (1)");
+
+        //verify notifications
+        verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode.getId(), constructionNode.getId());
+        verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode2.getId(), constructionNode2.getId());
         verify(notificationService, times(2)).emitElementUpdated(studyUuid, userId);
     }
 

@@ -8,6 +8,12 @@ package org.gridsuite.study.server;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.powsybl.commons.exceptions.UncheckedInterruptedException;
+import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -22,13 +28,16 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
+import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @AutoConfigureMockMvc
@@ -47,6 +56,16 @@ class StudyServiceTest {
 
     @Autowired
     private SingleLineDiagramService singleLineDiagramService;
+    @Autowired
+    private NodeRepository nodeRepository;
+    @Autowired
+    private StudyService studyService;
+    @MockitoBean
+    private UserAdminService userAdminService;
+    @MockitoSpyBean
+    private NetworkModificationTreeService networkModificationTreeService;
+    @MockitoBean
+    private NetworkModificationService networkModificationService;
 
     @BeforeEach
     void setup() {
@@ -76,6 +95,134 @@ class StudyServiceTest {
 
         // assert API calls have been made
         wireMockStubs.verifyStubCreatePositionsFromCsv(positionsFromCsvUuid);
+    }
+
+    @Test
+    void testBuildFirstLevelChildren() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID rootNetworkUuid = UUID.randomUUID();
+        String userId = "userId";
+
+        NodeEntity rootNode = nodeRepository.save(new NodeEntity(null, null, NodeType.ROOT, null, false, null, List.of()));
+        NodeEntity node1 = nodeRepository.save(new NodeEntity(null, rootNode, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()));
+        NodeEntity node2 = nodeRepository.save(new NodeEntity(null, node1, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()));
+        NodeEntity node3 = nodeRepository.save(new NodeEntity(null, node1, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()));
+        NodeEntity node4 = nodeRepository.save(new NodeEntity(null, node3, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()));
+        /*
+                    root
+                     |
+                     N1
+                   ------
+                   |    |
+                   N2   N3
+                        |
+                        N4
+         */
+
+        // quota not reached, all first level children of N1 will be built
+        doReturn(Optional.of(10)).when(userAdminService).getUserMaxAllowedBuilds(userId);
+        doReturn(0L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
+
+        mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
+        mockNodeBuild(node3.getIdNode(), rootNetworkUuid);
+
+        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+
+        verifyNodeBuild(node2.getIdNode(), rootNetworkUuid);
+        verifyNodeBuild(node3.getIdNode(), rootNetworkUuid);
+        // check n4 has actually not been built
+        verify(networkModificationService, times(0)).buildNode(eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+
+        // 1 to check how many children will be built, then 1 for each built children
+        verify(userAdminService, times(3)).getUserMaxAllowedBuilds(userId);
+        verify(networkModificationTreeService, times(3)).countBuiltNodes(studyUuid, rootNetworkUuid);
+    }
+
+    @Test
+    void testBuildFirstLevelChildrenWithQuotaAlreadyReached() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID rootNetworkUuid = UUID.randomUUID();
+        String userId = "userId";
+
+        NodeEntity rootNode = nodeRepository.save(new NodeEntity(null, null, NodeType.ROOT, null, false, null, List.of()));
+        NodeEntity node1 = nodeRepository.save(new NodeEntity(null, rootNode, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()));
+        NodeEntity node2 = nodeRepository.save(new NodeEntity(null, node1, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()));
+        NodeEntity node3 = nodeRepository.save(new NodeEntity(null, node1, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()));
+        NodeEntity node4 = nodeRepository.save(new NodeEntity(null, node3, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()));
+        /*
+                    root
+                     |
+                     N1
+                   ------
+                   |    |
+                   N2   N3
+                        |
+                        N4
+         */
+
+        // quota already reached, nothing will be built
+        doReturn(Optional.of(10)).when(userAdminService).getUserMaxAllowedBuilds(userId);
+        doReturn(10L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
+
+        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+
+        verify(networkModificationService, times(0)).buildNode(eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationService, times(0)).buildNode(eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationService, times(0)).buildNode(eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+
+        verify(userAdminService, times(1)).getUserMaxAllowedBuilds(userId);
+        verify(networkModificationTreeService, times(1)).countBuiltNodes(studyUuid, rootNetworkUuid);
+    }
+
+    @Test
+    void testBuildFirstLevelChildrenWithQuotaReached() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID rootNetworkUuid = UUID.randomUUID();
+        String userId = "userId";
+
+        NodeEntity rootNode = nodeRepository.save(new NodeEntity(null, null, NodeType.ROOT, null, false, null, List.of()));
+        NodeEntity node1 = nodeRepository.save(new NodeEntity(null, rootNode, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()));
+        NodeEntity node2 = nodeRepository.save(new NodeEntity(null, node1, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()));
+        NodeEntity node3 = nodeRepository.save(new NodeEntity(null, node1, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()));
+        NodeEntity node4 = nodeRepository.save(new NodeEntity(null, node3, NodeType.NETWORK_MODIFICATION, null, false, null, List.of()));
+        /*
+                    root
+                     |
+                     N1
+                   ------
+                   |    |
+                   N2   N3
+                        |
+                        N4
+         */
+
+        // quota will be reached, only one child will be built
+        doReturn(Optional.of(10)).when(userAdminService).getUserMaxAllowedBuilds(userId);
+        doReturn(9L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
+
+        mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
+
+        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+
+        verifyNodeBuild(node2.getIdNode(), rootNetworkUuid);
+        verify(networkModificationService, times(0)).buildNode(eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+        verify(networkModificationService, times(0)).buildNode(eq(node4.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
+
+        // 1 to check how many children will be built, then 1 for each built children
+        verify(userAdminService, times(2)).getUserMaxAllowedBuilds(userId);
+        verify(networkModificationTreeService, times(2)).countBuiltNodes(studyUuid, rootNetworkUuid);
+    }
+
+    private void mockNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
+        doReturn(new BuildInfos()).when(networkModificationTreeService).getBuildInfos(nodeUuid, rootNetworkUuid);
+        doNothing().when(networkModificationTreeService).setModificationReports(eq(nodeUuid), eq(rootNetworkUuid), any());
+        doNothing().when(networkModificationTreeService).updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
+        doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationTreeService).getNodeBuildStatus(nodeUuid, rootNetworkUuid);
+    }
+
+    private void verifyNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
+        verify(networkModificationTreeService, times(1)).updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
+        verify(networkModificationService, times(1)).buildNode(eq(nodeUuid), eq(rootNetworkUuid), any(), eq(null));
     }
 
     @AfterEach
