@@ -69,38 +69,23 @@ public class SecurityAnalysisService extends AbstractComputationService {
         }
 
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getPagedPathFromResultType(resultType))
-            .queryParam("page", pageable.getPageNumber())
-            .queryParam("size", pageable.getPageSize());
+            .queryParam(QUERY_PARAM_PAGE, pageable.getPageNumber())
+            .queryParam(QUERY_PARAM_SIZE, pageable.getPageSize());
 
-        if (filters != null && !filters.isEmpty()) {
-            pathBuilder.queryParam("filters", URLEncoder.encode(filters, StandardCharsets.UTF_8));
-        }
-
-        if (!StringUtils.isEmpty(globalFilters)) {
-            pathBuilder.queryParam("globalFilters", URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
-            pathBuilder.queryParam("networkUuid", networkUuid);
-            if (!StringUtils.isBlank(variantId)) {
-                pathBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-            }
-        }
-
-        for (Sort.Order order : pageable.getSort()) {
-            pathBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection());
-        }
-
+        addFiltersAndSortToQueryParams(pathBuilder, networkUuid, variantId, filters, globalFilters, pageable.getSort());
         String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
         return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
     }
 
-    public byte[] getSecurityAnalysisResultCsv(UUID resultUuid, SecurityAnalysisResultType resultType, String csvTranslations) {
-
+    public byte[] getSecurityAnalysisResultCsv(UUID resultUuid, UUID networkUuid, String variantId, SecurityAnalysisResultType resultType, String globalFilters, String filters, Sort sort, String csvTranslations) {
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result for security analysis not found");
         }
 
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getExportPathFromResultType(resultType));
 
+        addFiltersAndSortToQueryParams(pathBuilder, networkUuid, variantId, filters, globalFilters, sort);
         String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
@@ -123,6 +108,22 @@ public class SecurityAnalysisService extends AbstractComputationService {
             case NMK_LIMIT_VIOLATIONS -> "nmk-constraints-result/csv";
             case N -> "n-result/csv";
         };
+    }
+
+    private void addFiltersAndSortToQueryParams(UriComponentsBuilder pathBuilder, UUID networkUuid, String variantId, String filters, String globalFilters, Sort sort) {
+        if (filters != null && !filters.isEmpty()) {
+            pathBuilder.queryParam(QUERY_PARAM_FILTERS, URLEncoder.encode(filters, StandardCharsets.UTF_8));
+        }
+        if (!StringUtils.isEmpty(globalFilters)) {
+            pathBuilder.queryParam(QUERY_PARAM_GLOBAL_FILTERS, URLEncoder.encode(globalFilters, StandardCharsets.UTF_8));
+            pathBuilder.queryParam(QUERY_PARAM_NETWORK_UUID, networkUuid);
+            if (!StringUtils.isBlank(variantId)) {
+                pathBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+            }
+        }
+        for (Sort.Order order : sort) {
+            pathBuilder.queryParam(QUERY_PARAM_SORT, order.getProperty() + "," + order.getDirection());
+        }
     }
 
     public UUID runSecurityAnalysis(UUID networkUuid, String variantId, RunSecurityAnalysisParametersInfos parametersInfos, ReportInfos reportInfos, String receiver, String userId) {
