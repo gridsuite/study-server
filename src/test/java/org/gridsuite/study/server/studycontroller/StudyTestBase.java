@@ -576,7 +576,7 @@ class StudyTestBase {
                 wireMockStubs.caseServer.verifyCaseExists(stubCaseExistsId, caseUuid);
             }
             if (stubUserProfileId != null) {
-                wireMockStubs.userAdminServerStubs.verifyUserProfile(userId);
+                wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
             }
             if (stubSendReportId != null) {
                 wireMockStubs.verifySendReport(stubSendReportId);
@@ -619,8 +619,8 @@ class StudyTestBase {
 
     protected CreateStudyStubs setupCreateStudyStubs(String userId, String userProfileJson, String caseUuid) {
         UUID stubUserProfileId = userProfileJson != null
-            ? wireMockStubs.userAdminServerStubs.stubUserProfile(userId, userProfileJson)
-            : wireMockStubs.userAdminServerStubs.stubUserProfile(userId);
+            ? wireMockStubs.userAdminServer.stubGetUserProfile(userId, userProfileJson)
+            : wireMockStubs.userAdminServer.stubGetUserProfile(userId);
         UUID stubCaseExistsId = wireMockStubs.caseServer.stubCaseExists(caseUuid, true);
         UUID stubSendReportId = wireMockStubs.stubSendReport();
         return new CreateStudyStubs(stubUserProfileId, stubCaseExistsId, stubSendReportId, userId, caseUuid);
@@ -635,8 +635,8 @@ class StudyTestBase {
     }
 
     protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests, int workspacesConfigDefaultNbRequests) {
-        wireMockStubs.computationServerStubs.verifyParameters(createParametersNbRequests);
-        wireMockStubs.computationServerStubs.verifyParametersDefault(parametersDefaultNbRequests);
+        wireMockStubs.computationServer.verifyParameters(createParametersNbRequests);
+        wireMockStubs.computationServer.verifyParametersDefault(parametersDefaultNbRequests);
         wireMockStubs.verifySpreadsheetConfigDefault(spreadsheetConfigDefaultNbRequests);
         wireMockStubs.verifyNetworkVisualizationParamsDefault(networkVisualizationParamsDefaultNbRequests);
         wireMockStubs.verifyWorkspacesConfigDefault(workspacesConfigDefaultNbRequests);
