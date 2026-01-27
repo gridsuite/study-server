@@ -877,47 +877,45 @@ public class ConsumerService {
 
         if (receiverString != null) {
             NetworkExportReceiver receiver;
+            UUID studyUuid = null;
+            String userId = "";
+            UUID exportUuid = null;
+            String errorMessage = "";
+            String fileName = "";
+            boolean exportToGridExplore = false;
             try {
                 receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8), NetworkExportReceiver.class);
-                UUID studyUuid = receiver.getStudyUuid();
-                String userId = receiver.getUserId();
-                UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
+                studyUuid = receiver.getStudyUuid();
+                userId = receiver.getUserId();
+                exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
 
                 NodeExportInfos nodeExport = null;
                 if (exportInfosStr != null) {
                     nodeExport = objectMapper.readValue(URLDecoder.decode(exportInfosStr, StandardCharsets.UTF_8), NodeExportInfos.class);
                 }
-
-                boolean exportToGridExplore = false;
-                String fileName = nodeExport != null ? nodeExport.fileName() : "";
-                String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
+                fileName = nodeExport != null ? nodeExport.fileName() : "";
+                errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
 
                 if (nodeExport != null && nodeExport.exportToGridExplore()) {
                     //Create case in directory-server and case-server
                     exportToGridExplore = true;
                     if (StringUtils.isEmpty(errorMessage)) {
-                        errorMessage = createCase(s3Key, nodeExport, userId, exportContentType);
+                        createCase(s3Key, nodeExport, userId, exportContentType);
                     }
                 }
-
                 networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
-                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, fileName, exportToGridExplore, userId, errorMessage);
             } catch (Exception e) {
+                errorMessage = e.getMessage();
                 LOGGER.error(e.toString(), e);
+            } finally {
+                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, fileName, exportToGridExplore, userId, errorMessage);
             }
         }
     }
 
-    public String createCase(String s3Key, NodeExportInfos nodeExport, String userId, String exportContentType) {
-        String errorMessage = null;
-
-        try {
-            UUID caseUuid = caseService.createCase(s3Key, exportContentType);
-            directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId);
-        } catch (Exception e) {
-            errorMessage = e.getMessage();
-        }
-        return errorMessage;
+    public void createCase(String s3Key, NodeExportInfos nodeExport, String userId, String exportContentType) {
+        UUID caseUuid = caseService.createCase(s3Key, exportContentType);
+        directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId);
     }
 
     @Bean
