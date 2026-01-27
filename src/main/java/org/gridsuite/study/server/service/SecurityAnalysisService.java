@@ -72,7 +72,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
             .queryParam(QUERY_PARAM_PAGE, pageable.getPageNumber())
             .queryParam(QUERY_PARAM_SIZE, pageable.getPageSize());
 
-        buildPathWithQueryParamUnpaged(pathBuilder, networkUuid, variantId, filters, globalFilters, pageable.getSort());
+        addFiltersAndSortToQueryParams(pathBuilder, networkUuid, variantId, filters, globalFilters, pageable.getSort());
         String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
         return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
@@ -85,7 +85,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/" + getExportPathFromResultType(resultType));
 
-        buildPathWithQueryParamUnpaged(pathBuilder, networkUuid, variantId, filters, globalFilters, sort);
+        addFiltersAndSortToQueryParams(pathBuilder, networkUuid, variantId, filters, globalFilters, sort);
         String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
@@ -110,7 +110,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         };
     }
 
-    private void buildPathWithQueryParamUnpaged(UriComponentsBuilder pathBuilder, UUID networkUuid, String variantId, String filters, String globalFilters, Sort sort) {
+    private void addFiltersAndSortToQueryParams(UriComponentsBuilder pathBuilder, UUID networkUuid, String variantId, String filters, String globalFilters, Sort sort) {
         if (filters != null && !filters.isEmpty()) {
             pathBuilder.queryParam(QUERY_PARAM_FILTERS, URLEncoder.encode(filters, StandardCharsets.UTF_8));
         }
