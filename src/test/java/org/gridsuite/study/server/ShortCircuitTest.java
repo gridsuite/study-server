@@ -217,9 +217,9 @@ class ShortCircuitTest implements WithAssertions {
                     return new MockResponse(200);
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/fault_results/paged" + "\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID_2 + "&mode=FULL&page=0&size=20&sort=id,DESC")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORT_CIRCUIT_ANALYSIS_RESULT_JSON);
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv(\\?networkUuid=" + NETWORK_UUID_STRING+ "&variantId=" + VARIANT_ID_2 + ")?")) {
+                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv(\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID_2 + ")?")) {
                     return new MockResponse.Builder().code(200).body(getBinaryAsBuffer(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT)).addHeader("Content-Type", "application/json; charset=utf-8").build();
-                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv(\\?networkUuid=" + NETWORK_UUID_STRING_NOT_FOUND+ "&variantId=" + VARIANT_ID_4 + ")?")) {
+                } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv(\\?networkUuid=" + NETWORK_UUID_STRING_NOT_FOUND + "&variantId=" + VARIANT_ID_4 + ")?")) {
                         return new MockResponse(404);
                 } else if (path.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/feeder_results/paged" + "\\?networkUuid=" + NETWORK_UUID_STRING + "&variantId=" + VARIANT_ID_2 + "&mode=FULL&filters=fakeFilters&page=0&size=20&sort=id,DESC")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), SHORT_CIRCUIT_ANALYSIS_RESULT_JSON);
@@ -450,7 +450,7 @@ class ShortCircuitTest implements WithAssertions {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode4Uuid)
                 .param("type", "ALL_BUSES")
                 .content(CSV_HEADERS)).andExpectAll(status().isNotFound());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv\\?networkUuid=" + NETWORK_UUID_STRING_NOT_FOUND+ "&variantId=" + VARIANT_ID_4)));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv\\?networkUuid=" + NETWORK_UUID_STRING_NOT_FOUND + "&variantId=" + VARIANT_ID_4)));
     }
 
     private void consumeShortCircuitAnalysisResult(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, String resultUuid, boolean debug) throws JsonProcessingException {
