@@ -46,6 +46,8 @@ import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
+import org.gridsuite.study.server.utils.wiremock.ReportServerStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.json.JSONObject;
@@ -166,6 +168,8 @@ class NetworkModificationTest {
     private WireMockServer wireMockServer;
 
     private WireMockStubs wireMockStubs;
+    private ComputationServerStubs computationServerStubs;
+    private ReportServerStubs reportServerStubs;
 
     @Autowired
     private OutputDestination output;
@@ -176,7 +180,7 @@ class NetworkModificationTest {
     @Autowired
     private ObjectMapper mapper;
 
-    @Autowired
+    @MockitoSpyBean
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
@@ -203,7 +207,7 @@ class NetworkModificationTest {
     @Autowired
     private StateEstimationService stateEstimationService;
 
-    @Autowired
+    @MockitoSpyBean
     private UserAdminService userAdminService;
 
     @MockitoBean
@@ -244,12 +248,12 @@ class NetworkModificationTest {
     private UUID userProfileQuotaStubId;
     private UUID userProfileQuotaExceededStubId;
     private UUID userProfileNoQuotaStubId;
-    private UUID userNoProfileStubId;
-
     private static final String ERROR_MESSAGE = "nullPointerException: unexpected null somewhere";
 
     @Autowired
     private PccMinService pccMinService;
+    @MockitoSpyBean
+    private StudyService studyService;
 
     @BeforeEach
     void setup() {
@@ -260,10 +264,14 @@ class NetworkModificationTest {
 
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
 
+        doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
+
         synchronizeStudyServerExecutionService(studyServerExecutionService);
 
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
         wireMockStubs = new WireMockStubs(wireMockServer);
+        computationServerStubs = new ComputationServerStubs(wireMockServer);
+        reportServerStubs = new ReportServerStubs(wireMockServer);
 
         // Start the mock servers
         wireMockServer.start();
@@ -308,7 +316,7 @@ class NetworkModificationTest {
                 .willReturn(WireMock.ok()
                 .withBody((String) null)
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
-        userNoProfileStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID_NO_PROFILE + "/profile/max-builds"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/users/" + USER_ID_NO_PROFILE + "/profile/max-builds"))
                 .willReturn(WireMock.notFound())).getId();
     }
 
@@ -459,9 +467,9 @@ class NetworkModificationTest {
         assertEquals(BuildStatus.NOT_BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode4.getId(), rootNetworkUuid).getGlobalBuildStatus());
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode5.getId(), rootNetworkUuid).getGlobalBuildStatus());
 
-        // Mark the node 3 status as built
+        // Mark the node 3 status as not built
         rootNetworkNodeInfo3Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode3.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        rootNetworkNodeInfo3Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
+        rootNetworkNodeInfo3Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo3Entity);
 
         // build modificationNode3 and stop build
@@ -546,7 +554,7 @@ class NetworkModificationTest {
 
     @Test
     void testNetworkModificationSwitch() throws Exception {
-        UUID deleteReportsStubId = wireMockStubs.stubDeleteReports();
+        reportServerStubs.stubDeleteReport();
 
         MvcResult mvcResult;
         String resultAsString;
@@ -640,7 +648,7 @@ class NetworkModificationTest {
         modificationBody = Pair.of(bodyJson, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNode1Uuid, NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
-        wireMockStubs.verifyDeleteReports(deleteReportsStubId);
+        reportServerStubs.verifyDeleteReport();
 
         // modificationNode2 is still built
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(modificationNode1Uuid, firstRootNetworkUuid).getGlobalBuildStatus());
@@ -2291,8 +2299,8 @@ class NetworkModificationTest {
 
     @Test
     void testNodesInvalidation() throws Exception {
-        UUID deleteReportsStubId = wireMockStubs.stubDeleteReports();
-        ComputationResultStubIds stubIds = stubAllComputationResults();
+        reportServerStubs.stubDeleteReport();
+        stubAllComputationResults();
 
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
@@ -2339,7 +2347,7 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyNameUserIdUuid, userId);
 
         wireMockStubs.verifyNetworkModificationPut(stubUuid, MODIFICATION_UUID, generatorAttributesUpdated);
-        wireMockStubs.verifyDeleteReports(deleteReportsStubId);
+        reportServerStubs.verifyDeleteReport();
         List.of(
             SECURITY_ANALYSIS_RESULT_UUID,
             SENSITIVITY_ANALYSIS_RESULT_UUID,
@@ -2349,8 +2357,8 @@ class NetworkModificationTest {
             PCC_MIN_RESULT_UUID,
             STATE_ESTIMATION_RESULT_UUID
         ).forEach(resultUuid -> {
-            wireMockStubs.verifyDeleteResult(stubIds.deleteResultStubIds().get(resultUuid), resultUuid);
-            wireMockStubs.verifyGetResultStatus(stubIds.getStatusStubIds().get(resultUuid), resultUuid);
+            computationServerStubs.verifyDeleteResult(resultUuid);
+            computationServerStubs.verifyGetResultStatus(resultUuid);
         });
 
         // Mark nodes 2 and 3 status as built
@@ -2383,8 +2391,8 @@ class NetworkModificationTest {
 
     @Test
     void testRemoveLoadFlowComputationReport() throws Exception {
-        UUID deleteReportsStubId = wireMockStubs.stubDeleteReports();
-        ComputationResultStubIds stubIds = stubAllComputationResults();
+        reportServerStubs.stubDeleteReport();
+        stubAllComputationResults();
 
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
@@ -2444,8 +2452,8 @@ class NetworkModificationTest {
         wireMockStubs.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
 
         // 1 status LF + 2 x 9 computations + 1 report
-        wireMockStubs.verifyDeleteResult(stubIds.deleteResultStubIds().get(LOADFLOW_RESULT_UUID), LOADFLOW_RESULT_UUID);
-        wireMockStubs.verifyGetResultStatus(stubIds.getStatusStubIds().get(LOADFLOW_RESULT_UUID), LOADFLOW_RESULT_UUID, 2);
+        computationServerStubs.verifyDeleteResult(LOADFLOW_RESULT_UUID);
+        computationServerStubs.verifyGetResultStatus(LOADFLOW_RESULT_UUID, 2);
         List.of(
                 SECURITY_ANALYSIS_RESULT_UUID,
                 DYNAMIC_SIMULATION_RESULT_UUID,
@@ -2456,11 +2464,11 @@ class NetworkModificationTest {
                 VOLTAGE_INIT_RESULT_UUID,
                 STATE_ESTIMATION_RESULT_UUID
         ).forEach(resultUuid -> {
-            wireMockStubs.verifyDeleteResult(stubIds.deleteResultStubIds().get(resultUuid), resultUuid);
-            wireMockStubs.verifyGetResultStatus(stubIds.getStatusStubIds().get(resultUuid), resultUuid);
+            computationServerStubs.verifyDeleteResult(resultUuid);
+            computationServerStubs.verifyGetResultStatus(resultUuid);
         });
         // requests for computation sub-report deletion
-        wireMockStubs.verifyDeleteReports(deleteReportsStubId);
+        reportServerStubs.verifyDeleteReport();
     }
 
     @Test
@@ -2694,18 +2702,18 @@ class NetworkModificationTest {
             STATE_ESTIMATION_RESULT_UUID,
             PCC_MIN_RESULT_UUID
         ).forEach(resultUuid -> {
-            deleteResultStubIds.put(resultUuid, wireMockStubs.stubDeleteResult(resultUuid));
+            deleteResultStubIds.put(resultUuid, computationServerStubs.stubDeleteResult(resultUuid));
         });
-        getStatusStubIds.put(LOADFLOW_RESULT_UUID, wireMockStubs.stubGetResultStatus(LOADFLOW_RESULT_UUID, mapper.writeValueAsString(LoadFlowStatus.CONVERGED)));
-        getStatusStubIds.put(SECURITY_ANALYSIS_RESULT_UUID, wireMockStubs.stubGetResultStatus(SECURITY_ANALYSIS_RESULT_UUID, SECURITY_ANALYSIS_STATUS_JSON));
-        getStatusStubIds.put(DYNAMIC_SIMULATION_RESULT_UUID, wireMockStubs.stubGetResultStatus(DYNAMIC_SIMULATION_RESULT_UUID, objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED)));
-        getStatusStubIds.put(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID, wireMockStubs.stubGetResultStatus(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID, objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED)));
-        getStatusStubIds.put(SENSITIVITY_ANALYSIS_RESULT_UUID, wireMockStubs.stubGetResultStatus(SENSITIVITY_ANALYSIS_RESULT_UUID, SENSITIVITY_ANALYSIS_STATUS_JSON));
-        getStatusStubIds.put(SHORTCIRCUIT_ANALYSIS_RESULT_UUID, wireMockStubs.stubGetResultStatus(SHORTCIRCUIT_ANALYSIS_RESULT_UUID, SHORTCIRCUIT_ANALYSIS_STATUS_JSON));
-        getStatusStubIds.put(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, wireMockStubs.stubGetResultStatus(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON));
-        getStatusStubIds.put(VOLTAGE_INIT_RESULT_UUID, wireMockStubs.stubGetResultStatus(VOLTAGE_INIT_RESULT_UUID, VOLTAGE_INIT_STATUS_JSON));
-        getStatusStubIds.put(STATE_ESTIMATION_RESULT_UUID, wireMockStubs.stubGetResultStatus(STATE_ESTIMATION_RESULT_UUID, STATE_ESTIMATION_STATUS_JSON));
-        getStatusStubIds.put(PCC_MIN_RESULT_UUID, wireMockStubs.stubGetResultStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON));
+        getStatusStubIds.put(LOADFLOW_RESULT_UUID, computationServerStubs.stubGetResultStatus(LOADFLOW_RESULT_UUID, mapper.writeValueAsString(LoadFlowStatus.CONVERGED)));
+        getStatusStubIds.put(SECURITY_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatus(SECURITY_ANALYSIS_RESULT_UUID, SECURITY_ANALYSIS_STATUS_JSON));
+        getStatusStubIds.put(DYNAMIC_SIMULATION_RESULT_UUID, computationServerStubs.stubGetResultStatus(DYNAMIC_SIMULATION_RESULT_UUID, objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED)));
+        getStatusStubIds.put(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatus(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID, objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED)));
+        getStatusStubIds.put(SENSITIVITY_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatus(SENSITIVITY_ANALYSIS_RESULT_UUID, SENSITIVITY_ANALYSIS_STATUS_JSON));
+        getStatusStubIds.put(SHORTCIRCUIT_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatus(SHORTCIRCUIT_ANALYSIS_RESULT_UUID, SHORTCIRCUIT_ANALYSIS_STATUS_JSON));
+        getStatusStubIds.put(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatus(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON));
+        getStatusStubIds.put(VOLTAGE_INIT_RESULT_UUID, computationServerStubs.stubGetResultStatus(VOLTAGE_INIT_RESULT_UUID, VOLTAGE_INIT_STATUS_JSON));
+        getStatusStubIds.put(STATE_ESTIMATION_RESULT_UUID, computationServerStubs.stubGetResultStatus(STATE_ESTIMATION_RESULT_UUID, STATE_ESTIMATION_STATUS_JSON));
+        getStatusStubIds.put(PCC_MIN_RESULT_UUID, computationServerStubs.stubGetResultStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON));
         return new ComputationResultStubIds(deleteResultStubIds, getStatusStubIds);
     }
 
@@ -2852,13 +2860,13 @@ class NetworkModificationTest {
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid, String variantId, String nodeName, String userId) throws Exception {
-        return createNetworkModificationNode(studyUuid, parentNodeUuid, UUID.randomUUID(), variantId, nodeName, NetworkModificationNodeType.SECURITY, userId);
+        return createNetworkModificationNode(studyUuid, parentNodeUuid, UUID.randomUUID(), variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION, userId);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName, String userId) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid,
-            modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY, BuildStatus.NOT_BUILT, userId);
+            modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION, BuildStatus.NOT_BUILT, userId);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
@@ -2882,6 +2890,9 @@ class NetworkModificationTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
+        reset(studyService);
+        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq(userId));
+
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).header(USER_ID_HEADER, userId).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
         checkElementUpdatedMessageSent(studyUuid, userId);
@@ -2892,6 +2903,8 @@ class NetworkModificationTest {
 
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(NodeBuildStatus.from(buildStatus)).build());
+
+        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq(userId));
 
         return modificationNode;
     }
