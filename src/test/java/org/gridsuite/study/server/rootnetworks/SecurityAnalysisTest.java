@@ -781,7 +781,7 @@ class SecurityAnalysisTest {
     void testResetSecurityAnalysisParametersUserHasNoProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        userAdminServerStubs.stubUserProfile(NO_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
+        userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
         computationServerStubs.stubParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
         computationServerStubs.verifyParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
@@ -857,11 +857,11 @@ class SecurityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
 
-        userAdminServerStubs.stubUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
+        userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
         computationServerStubs.stubParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
         createOrUpdateParametersAndDoChecks(studyUuid, "", NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        userAdminServerStubs.verifyUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
+        userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
@@ -870,13 +870,13 @@ class SecurityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SECURITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyUuid = studyEntity.getId();
 
-        userAdminServerStubs.stubUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
+        userAdminServerStubs.stubGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
         computationServerStubs.stubParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
         computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
         createOrUpdateParametersAndDoChecks(studyUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
 
         // --- Verify WireMock requests ---
-        userAdminServerStubs.verifyUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
+        userAdminServerStubs.verifyGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
     }
@@ -890,7 +890,7 @@ class SecurityAnalysisTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         wireMockServer.stubFor(post(urlPathMatching("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
             .willReturn(ok()));
-        userAdminServerStubs.stubUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
+        userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
         computationServerStubs.stubParameterPut(wireMockServer, SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, objectWriter.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS));
         computationServerStubs.stubParametersDuplicateFrom(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_PARAMS_JSON);
         wireMockServer.stubFor(post(urlPathMatching("/v1/results/invalidate-status.*"))
@@ -913,7 +913,7 @@ class SecurityAnalysisTest {
             .withQueryParam("contingencyListName", equalTo(CONTINGENCY_LIST_NAME))
             .withQueryParam("receiver", matching(".*")));
 
-        userAdminServerStubs.verifyUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
+        userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
 
         // duplicate parameters ---
         wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters"))
@@ -931,7 +931,7 @@ class SecurityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
         UUID studyUuid = studyEntity.getId();
 
-        userAdminServerStubs.stubUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
+        userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
         wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters"))
             .withQueryParam("duplicateFrom", equalTo(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))
             .willReturn(WireMock.ok()
@@ -942,7 +942,7 @@ class SecurityAnalysisTest {
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         // --- Verify requests ---
-        userAdminServerStubs.verifyUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
+        userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters"))
             .withQueryParam("duplicateFrom", equalTo(PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))
         );
