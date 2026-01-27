@@ -300,11 +300,12 @@ public class ConsumerService {
         UUID pccMinParametersUuid = createDefaultPccMinParameters();
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
         UUID diagramGridLayoutUuid = studyService.createGridLayoutFromNadDiagram(userId, userProfileInfos);
+        UUID workspacesConfigUuid = createDefaultWorkspacesConfig();
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, workspacesConfigUuid,
             importParameters, importReportUuid);
     }
 
@@ -486,6 +487,15 @@ public class ConsumerService {
         }
     }
 
+    private UUID createDefaultWorkspacesConfig() {
+        try {
+            return studyConfigService.createDefaultWorkspacesConfig();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default workspace collection", e);
+            return null;
+        }
+    }
+
     @Bean
     public Consumer<Message<String>> consumeCaseImportFailed() {
         return message -> {
@@ -646,11 +656,26 @@ public class ConsumerService {
                 // unblock node
                 handleUnblockNode(receiverObj, computationType);
 
-                // send notifications
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                if (computationType == LOAD_FLOW) {
+                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
+                    handleLoadFlowSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, userId);
+                }
+
+                // send notifications
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateResultType());
             }));
+    }
+
+    private void handleLoadFlowSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
+        // Build 1st level children if loadflow is converged, and node is a security type
+        if (userId != null && networkModificationTreeService.isSecurityNode(nodeUuid)) {
+            LoadFlowStatus loadFlowStatus = loadFlowService.getLoadFlowStatus(resultUuid);
+            if (loadFlowStatus == LoadFlowStatus.CONVERGED) {
+                studyService.buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, userId);
+            }
+        }
     }
 
     Optional<NodeReceiver> getNodeReceiver(Message<String> msg) {
