@@ -903,11 +903,11 @@ public class ConsumerService {
                         createCase(s3Key, nodeExport, userId, exportContentType);
                     }
                 }
-                networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
             } catch (Exception e) {
                 errorMessage = e.getMessage();
                 LOGGER.error(e.toString(), e);
             } finally {
+                networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
                 notificationService.emitNetworkExportFinished(studyUuid, exportUuid, fileName, exportToGridExplore, userId, errorMessage);
             }
         }
