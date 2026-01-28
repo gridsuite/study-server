@@ -60,7 +60,7 @@ public class DirectoryServerStubs {
     }
 
     public void verifyCreateElement(String elementAttributes, UUID directoryUuid) {
-        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath("/{directoryUuid}/elements");
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DIRECTORY_URI + "/{directoryUuid}/elements");
         String path = pathBuilder.buildAndExpand(directoryUuid).toUriString();
         WireMockUtilsCriteria.verifyPostRequest(wireMock, path, true, Map.of(), elementAttributes);
     }
