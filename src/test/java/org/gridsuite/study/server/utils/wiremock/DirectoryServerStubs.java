@@ -10,13 +10,16 @@ package org.gridsuite.study.server.utils.wiremock;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
+import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static org.gridsuite.study.server.service.DirectoryService.*;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -57,8 +60,29 @@ public class DirectoryServerStubs {
     }
 
     public void verifyCreateElement(String elementAttributes, UUID directoryUuid) {
-        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DIRECTORY_URI + "/{directoryUuid}/elements");
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath("/{directoryUuid}/elements");
         String path = pathBuilder.buildAndExpand(directoryUuid).toUriString();
         WireMockUtilsCriteria.verifyPostRequest(wireMock, path, true, Map.of(), elementAttributes);
+    }
+
+    public void stubCheckPermission(List<UUID> elementUuids, UUID targetDirectoryUuid, String userId, PermissionType permissionType, Boolean recursiveCheck, int returnStatus) {
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath("/v1/elements/authorized");
+        pathBuilder.queryParam(PARAM_ACCESS_TYPE, permissionType)
+                    .queryParam(PARAM_IDS, elementUuids)
+                    .queryParam(PARAM_TARGET_DIRECTORY_UUID, targetDirectoryUuid)
+                    .queryParam(PARAM_RECURSIVE_CHECK, recursiveCheck);
+
+        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo(pathBuilder.buildAndExpand().toUriString()))
+                .withHeader(HEADER_USER_ID, equalTo(userId))
+            .willReturn(WireMock.aResponse().withStatus(returnStatus)));
+    }
+
+    public void verifyCheckPermission(List<UUID> elementUuids, UUID targetDirectoryUuid, PermissionType permissionType, Boolean recursiveCheck) {
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath("/v1/elements/authorized");
+        pathBuilder.queryParam(PARAM_ACCESS_TYPE, permissionType)
+            .queryParam(PARAM_IDS, elementUuids)
+            .queryParam(PARAM_TARGET_DIRECTORY_UUID, targetDirectoryUuid)
+            .queryParam(PARAM_RECURSIVE_CHECK, recursiveCheck);
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, pathBuilder.buildAndExpand().toUriString(), Map.of());
     }
 }
