@@ -599,9 +599,13 @@ public class NetworkModificationTreeService {
     }
 
     public void assertIsRootOrConstructionNode(UUID nodeUuid) {
-        if (!self.getNode(nodeUuid, null).getType().equals(NodeType.ROOT) && !isConstructionNode(nodeUuid)) {
+        if (!isRootOrConstructionNode(nodeUuid)) {
             throw new StudyException(NOT_ALLOWED);
         }
+    }
+
+    public boolean isRootOrConstructionNode(UUID nodeUuid) {
+        return getNodeEntity(nodeUuid).getType() == NodeType.ROOT || isConstructionNode(nodeUuid);
     }
 
     private void assertInsertNode(
@@ -1262,6 +1266,23 @@ public class NetworkModificationTreeService {
         nodeInfo.getChildren().forEach(child -> self.createNodeTree(study, nodeInfo.getId(), (NetworkModificationNode) child));
 
         return nodeInfo;
+    }
+
+    @Transactional
+    public List<UUID> getHighestNodeUuids(UUID node1Uuid, UUID node2Uuid) {
+        if (node1Uuid.equals(node2Uuid)) {
+            return List.of(node1Uuid);
+        }
+
+        if (nodesRepository.isAncestor(node1Uuid, node2Uuid)) {
+            return List.of(node1Uuid);
+        }
+
+        if (nodesRepository.isAncestor(node2Uuid, node1Uuid)) {
+            return List.of(node2Uuid);
+        }
+
+        return List.of(node1Uuid, node2Uuid);
     }
 
     @Transactional

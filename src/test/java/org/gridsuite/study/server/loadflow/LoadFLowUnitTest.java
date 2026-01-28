@@ -4,13 +4,16 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server;
+package org.gridsuite.study.server.loadflow;
 
+import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -164,6 +167,7 @@ class LoadFLowUnitTest {
         when(networkModificationTreeService.invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters)).thenReturn(invalidateNodeInfos);
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
         when(networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid)).thenReturn(buildInfos);
+        when(networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid)).thenReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
         doReturn(loadflowResultUuid).when(loadFlowService).createRunningStatus();
 
         // execute loadflow rerun

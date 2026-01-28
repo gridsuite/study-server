@@ -87,10 +87,11 @@ import static org.gridsuite.study.server.service.NetworkModificationTreeService.
 import static org.gridsuite.study.server.utils.TestUtils.checkUpdateStatusMessagesReceived;
 import static org.gridsuite.study.server.utils.TestUtils.checkUpdateTypeMessageReceived;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -216,6 +217,8 @@ class NetworkModificationTreeTest {
     private TestUtils studyTestUtils;
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
+    @MockitoSpyBean
+    private StudyService studyService;
 
     @BeforeEach
     void setUp(final MockWebServer server) {
@@ -1295,6 +1298,9 @@ class NetworkModificationTreeTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         newNodeBodyJson = jsonObject.toString();
 
+        reset(studyService);
+        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNode.getId()), any(NetworkModificationNode.class), eq("userId"));
+
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNode.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(newNodeBodyJson)
@@ -1305,6 +1311,8 @@ class NetworkModificationTreeTest {
         assertNotNull(mess);
         newNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+
+        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNode.getId()), any(NetworkModificationNode.class), eq("userId"));
 
         rootNetworkNodeInfoService.updateRootNetworkNode(newNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder()

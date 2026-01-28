@@ -70,7 +70,8 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_DEBUG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.any;
 import static org.mockito.BDDMockito.eq;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -254,6 +255,8 @@ class StudyControllerDynamicSimulationTest {
                 .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
+        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+
         studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
                 .content(objectMapper.writeValueAsString(modificationNode))
                 .contentType(MediaType.APPLICATION_JSON)
@@ -267,6 +270,8 @@ class StudyControllerDynamicSimulationTest {
         assertThat(mess.getHeaders()).containsEntry(NotificationService.HEADER_INSERT_MODE, InsertMode.CHILD.name());
 
         rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getOneRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
+
+        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
 
         return modificationNode;
     }

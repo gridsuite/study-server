@@ -138,6 +138,8 @@ class NetworkModificationUnitTest {
         nodeRepository.deleteAll();
         rootNetworkRepository.deleteAll();
         studyRepository.deleteAll();
+
+        doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
     }
 
     @Test

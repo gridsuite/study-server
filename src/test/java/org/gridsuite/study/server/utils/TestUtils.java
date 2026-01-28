@@ -90,6 +90,10 @@ public final class TestUtils {
         return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).get(0);
     }
 
+    public UUID getNetworkUuid(UUID studyUuid) {
+        return getOneRootNetwork(studyUuid).getNetworkUuid();
+    }
+
     public static Set<RequestWithBody> getRequestsWithBodyDone(int n, MockWebServer server) {
         return IntStream.range(0, n).mapToObj(i -> {
             try {

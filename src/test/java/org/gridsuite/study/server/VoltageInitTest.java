@@ -207,7 +207,7 @@ class VoltageInitTest {
 
     private ObjectWriter objectWriter;
 
-    @Autowired
+    @MockitoSpyBean
     private NetworkModificationTreeService networkModificationTreeService;
 
     @MockitoSpyBean
@@ -240,8 +240,11 @@ class VoltageInitTest {
     @Autowired
     private VoltageInitService voltageInitService;
 
-    @Autowired
+    @MockitoSpyBean
     private UserAdminService userAdminService;
+
+    @MockitoSpyBean
+    private StudyService studyService;
 
     @MockitoBean
     private NetworkStoreService networkStoreService;
@@ -414,6 +417,8 @@ class VoltageInitTest {
     private void initMockBeans(Network network) {
         when(networkStoreService.getNetwork(NETWORK_UUID)).thenReturn(network);
         when(networkStoreService.getNetwork(SECOND_NETWORK_UUID)).thenReturn(network);
+
+        doAnswer(invocation -> List.of()).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
     }
 
     private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, StudyVoltageInitParameters parameters, String userId, HttpStatusCode status) throws Exception {
@@ -1147,7 +1152,7 @@ class VoltageInitTest {
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                   UUID modificationGroupUuid, String variantId, String nodeName) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid,
-                modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY, BuildStatus.NOT_BUILT);
+                modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION, BuildStatus.NOT_BUILT);
     }
 
     private NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
@@ -1165,6 +1170,8 @@ class VoltageInitTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
+        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, studyUpdateDestination);
@@ -1175,6 +1182,7 @@ class VoltageInitTest {
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(NodeBuildStatus.from(buildStatus)).build());
 
+        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
         return modificationNode;
     }
 

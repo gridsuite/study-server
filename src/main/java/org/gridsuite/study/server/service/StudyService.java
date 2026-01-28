@@ -21,7 +21,6 @@ import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsI
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
-import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -42,10 +41,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -557,6 +553,7 @@ public class StudyService {
                 removePccMinParameters(s.getPccMinParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
                 removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
+                removeWorkspacesConfig(s.getWorkspacesConfigUuid());
                 removeNadConfigs(s.getNadConfigsUuids().stream().toList());
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
@@ -626,7 +623,7 @@ public class StudyService {
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID dynamicMarginCalculationParametersUuid,
                                               UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -641,7 +638,7 @@ public class StudyService {
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid,
                 dynamicSecurityAnalysisParametersUuid, dynamicMarginCalculationParametersUuid,
-                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, importParameters, importReportUuid);
+                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, workspacesConfigUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
@@ -766,6 +763,11 @@ public class StudyService {
             copiedSpreadsheetConfigCollectionUuid = studyConfigService.duplicateSpreadsheetConfigCollection(sourceStudyEntity.getSpreadsheetConfigCollectionUuid());
         }
 
+        UUID copiedWorkspacesConfigUuid = null;
+        if (sourceStudyEntity.getWorkspacesConfigUuid() != null) {
+            copiedWorkspacesConfigUuid = studyConfigService.duplicateWorkspacesConfig(sourceStudyEntity.getWorkspacesConfigUuid());
+        }
+
         DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
 
         UUID copiedStateEstimationParametersUuid = null;
@@ -795,6 +797,7 @@ public class StudyService {
             .stateEstimationParametersUuid(copiedStateEstimationParametersUuid)
             .pccMinParametersUuid(copiedPccMinParametersUuid)
             .diagramGridLayoutUuid(diagramGridLayoutId)
+            .workspacesConfigUuid(copiedWorkspacesConfigUuid)
             .build());
     }
 
@@ -1559,33 +1562,11 @@ public class StudyService {
         }
     }
 
-    @Transactional
-    public UUID saveNadConfig(UUID studyUuid, NadConfigInfos nadConfig) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-
-        UUID nadConfigUuid = nadConfigService.saveNadConfig(nadConfig);
-
-        studyEntity.getNadConfigsUuids().add(nadConfigUuid);
-
-        return nadConfigUuid;
-    }
-
-    @Transactional
-    public void deleteNadConfig(UUID studyUuid, UUID nadConfigUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-
-        nadConfigService.deleteNadConfigs(List.of(nadConfigUuid));
-
-        studyEntity.getNadConfigsUuids().remove(nadConfigUuid);
-    }
-
     private void removeNadConfigs(List<UUID> nadConfigUuids) {
-        if (nadConfigUuids != null && !nadConfigUuids.isEmpty()) {
-            try {
-                nadConfigService.deleteNadConfigs(nadConfigUuids);
-            } catch (Exception e) {
-                LOGGER.error("Could not remove NAD configs with uuids:" + nadConfigUuids, e);
-            }
+        try {
+            nadConfigService.deleteNadConfigs(nadConfigUuids);
+        } catch (Exception e) {
+            LOGGER.error("Could not remove NAD configs with uuids:" + nadConfigUuids, e);
         }
     }
 
@@ -1670,7 +1651,7 @@ public class StudyService {
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                     UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID dynamicMarginCalculationParametersUuid,
                                                     UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1689,6 +1670,7 @@ public class StudyService {
                 .pccMinParametersUuid(pccMinParametersUuid)
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
                 .diagramGridLayoutUuid(diagramGridLayoutUuid)
+                .workspacesConfigUuid(workspacesConfigUuid)
                 .monoRoot(true)
                 .build();
 
@@ -1951,7 +1933,14 @@ public class StudyService {
         buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, null);
     }
 
+    private void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userId) {
+        getStudyRootNetworks(studyUuid).forEach(rn -> buildNode(studyUuid, nodeUuid, rn.getId(), userId, null));
+    }
+
     private void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId, AbstractWorkflowInfos workflowInfos) {
+        if (networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()) {
+            return;
+        }
         assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
 
@@ -1966,6 +1955,26 @@ public class StudyService {
         }
     }
 
+    @Transactional
+    public void buildFirstLevelChildren(@NonNull UUID studyUuid, @NonNull UUID parentNodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+        List<NodeEntity> firstLevelChildren = networkModificationTreeService.getChildren(parentNodeUuid);
+        long allowedBuildNodesUpToQuota = getAllowedBuildNodesUpToQuota(studyUuid, rootNetworkUuid, userId);
+        for (NodeEntity child : firstLevelChildren) {
+            if (allowedBuildNodesUpToQuota <= 0) {
+                return;
+            }
+
+            buildNode(
+                studyUuid,
+                child.getIdNode(),
+                rootNetworkUuid,
+                userId,
+                null
+            );
+            allowedBuildNodesUpToQuota--;
+        }
+    }
+
     public void handleBuildSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NetworkModificationResult networkModificationResult) {
         LOGGER.info("Build completed for node '{}'", nodeUuid);
 
@@ -1973,6 +1982,13 @@ public class StudyService {
             NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
 
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
+    }
+
+    private long getAllowedBuildNodesUpToQuota(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+        return userAdminService.getUserMaxAllowedBuilds(userId).map(maxBuilds -> {
+            long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
+            return maxBuilds - nbBuiltNodes;
+        }).orElse(Long.MAX_VALUE);
     }
 
     public void assertCanBuildNode(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
@@ -2456,6 +2472,14 @@ public class StudyService {
 
     private StudyEntity getStudy(UUID studyUuid) {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
+    }
+
+    @Transactional
+    public Map<UUID, NodeBuildStatus> getNodeBuildStatusByRootNetwork(UUID studyUuid, UUID nodeUuid) {
+        return getStudyRootNetworks(studyUuid).stream().collect(Collectors.toMap(
+            RootNetworkEntity::getId,
+            rn -> rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rn.getId()).map(rni -> rni.getNodeBuildStatus().toDto()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"))
+        ));
     }
 
     @Transactional
@@ -3665,6 +3689,20 @@ public class StudyService {
     }
 
     @Transactional
+    public void createNodePostAction(UUID studyUuid, UUID parentNodeUuid, NetworkModificationNode newNode, String userId) {
+        if (newNode.isSecurityNode() && networkModificationTreeService.isRootOrConstructionNode(parentNodeUuid)) {
+            buildNode(studyUuid, newNode.getId(), userId);
+        }
+    }
+
+    @Transactional
+    public void createSequencePostAction(UUID studyUuid, UUID sequenceParentNode, NodeSequenceType nodeSequenceType, String userId) {
+        if (nodeSequenceType == NodeSequenceType.SECURITY_SEQUENCE) {
+            buildNode(studyUuid, sequenceParentNode, userId);
+        }
+    }
+
+    @Transactional
     public NetworkModificationNode createSequence(UUID studyUuid, UUID parentNodeUuid, NodeSequenceType nodeSequenceType, String userId) {
         StudyEntity study = getStudy(studyUuid);
         networkModificationTreeService.assertIsRootOrConstructionNode(parentNodeUuid);
@@ -3849,6 +3887,16 @@ public class StudyService {
 
     private void removeDiagramGridLayout(@Nullable UUID diagramGridLayoutUuid) {
         diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
+    }
+
+    private void removeWorkspacesConfig(@Nullable UUID workspacesConfigUuid) {
+        if (workspacesConfigUuid != null) {
+            try {
+                studyConfigService.deleteWorkspacesConfig(workspacesConfigUuid);
+            } catch (Exception e) {
+                LOGGER.error("Could not remove workspaces config with uuid:" + workspacesConfigUuid, e);
+            }
+        }
     }
 
     public Optional<SpreadsheetParameters> getSpreadsheetParameters(@NonNull final UUID studyUuid) {
