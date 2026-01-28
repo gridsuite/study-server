@@ -459,14 +459,14 @@ public class ConsumerService {
     }
 
     private UUID createDefaultPccMinParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getPccminParameterId() != null) {
+        if (userProfileInfos != null && userProfileInfos.getPccMinParameterId() != null) {
             // try to access/duplicate the user profile pccmin parameters
             try {
-                return pccMinService.duplicatePccMinParameters(userProfileInfos.getPccminParameterId());
+                return pccMinService.duplicatePccMinParameters(userProfileInfos.getPccMinParameterId());
             } catch (Exception e) {
                 // TODO try to report a log in Root subreporter ?
                 LOGGER.error(String.format("Could not duplicate pccmin parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getPccminParameterId(), userId, userProfileInfos.getName()), e);
+                    userProfileInfos.getPccMinParameterId(), userId, userProfileInfos.getName()), e);
             }
         }
         // no profile, or no/bad pcc min parameters in profile => use default values

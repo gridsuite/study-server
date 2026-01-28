@@ -32,7 +32,7 @@ public class UserProfileInfos {
 
     private UUID shortcircuitParameterId;
 
-    private UUID pccminParameterId;
+    private UUID pccMinParameterId;
 
     // note: this parameter is not managed by user-admin-server yet
     private UUID dynamicSecurityAnalysisParameterId;

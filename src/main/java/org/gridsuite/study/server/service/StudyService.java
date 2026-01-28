@@ -3513,17 +3513,17 @@ public class StudyService {
         boolean userProfileIssue = false;
 
         UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos.getPccminParameterId() != null) {
+        if (parameters == null && userProfileInfos.getPccMinParameterId() != null) {
             // reset case, with existing profile, having default pcc min params
             try {
-                UUID pccMinParametersFromProfileUuid = pccMinService.duplicatePccMinParameters(userProfileInfos.getPccminParameterId());
+                UUID pccMinParametersFromProfileUuid = pccMinService.duplicatePccMinParameters(userProfileInfos.getPccMinParameterId());
                 studyEntity.setPccMinParametersUuid(pccMinParametersFromProfileUuid);
                 removePccMinParameters(existingPccMinParametersUuid);
                 return userProfileIssue;
             } catch (Exception e) {
                 userProfileIssue = true;
                 LOGGER.error(String.format("Could not duplicate pcc min parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getPccminParameterId(), userId, userProfileInfos.getName()), e);
+                    userProfileInfos.getPccMinParameterId(), userId, userProfileInfos.getName()), e);
                 // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
             }
         }
