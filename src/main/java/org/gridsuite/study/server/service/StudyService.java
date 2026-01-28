@@ -125,7 +125,6 @@ public class StudyService {
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
-    private final DiagramGridLayoutService diagramGridLayoutService;
     private final NadConfigService nadConfigService;
     private final FilterService filterService;
     private final ActionsService actionsService;
@@ -190,7 +189,6 @@ public class StudyService {
         VoltageInitService voltageInitService,
         DynamicSimulationEventService dynamicSimulationEventService,
         StudyConfigService studyConfigService,
-        DiagramGridLayoutService diagramGridLayoutService,
         NadConfigService nadConfigService,
         FilterService filterService,
         StateEstimationService stateEstimationService,
@@ -227,7 +225,6 @@ public class StudyService {
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
-        this.diagramGridLayoutService = diagramGridLayoutService;
         this.nadConfigService = nadConfigService;
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
@@ -544,7 +541,6 @@ public class StudyService {
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removePccMinParameters(s.getPccMinParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
-                removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
                 removeWorkspacesConfig(s.getWorkspacesConfigUuid());
                 removeNadConfigs(s.getNadConfigsUuids().stream().toList());
             });
@@ -614,7 +610,7 @@ public class StudyService {
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                              UUID spreadsheetConfigCollectionUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -628,7 +624,7 @@ public class StudyService {
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, workspacesConfigUuid, importParameters, importReportUuid);
+                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
@@ -690,7 +686,7 @@ public class StudyService {
 
         StudyEntity sourceStudy = getStudy(sourceStudyUuid);
 
-        StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId(), userId);
+        StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId());
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudy);
         networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudy);
         duplicateStudyNodeAliases(newStudyEntity, sourceStudy);
@@ -702,7 +698,7 @@ public class StudyService {
         return newStudyEntity;
     }
 
-    private StudyEntity duplicateStudyEntity(StudyEntity sourceStudyEntity, UUID newStudyId, String userId) {
+    private StudyEntity duplicateStudyEntity(StudyEntity sourceStudyEntity, UUID newStudyId) {
         UUID copiedLoadFlowParametersUuid = null;
         if (sourceStudyEntity.getLoadFlowParametersUuid() != null) {
             copiedLoadFlowParametersUuid = loadflowService.duplicateLoadFlowParameters(sourceStudyEntity.getLoadFlowParametersUuid());
@@ -1584,7 +1580,7 @@ public class StudyService {
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                     UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID spreadsheetConfigCollectionUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1601,7 +1597,6 @@ public class StudyService {
                 .stateEstimationParametersUuid(stateEstimationParametersUuid)
                 .pccMinParametersUuid(pccMinParametersUuid)
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
-                .diagramGridLayoutUuid(diagramGridLayoutUuid)
                 .workspacesConfigUuid(workspacesConfigUuid)
                 .monoRoot(true)
                 .build();
@@ -3685,10 +3680,6 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         return voltageInitService.getVoltageInitResult(resultUuid, networkuuid, variantId, globalFilters);
-    }
-
-    private void removeDiagramGridLayout(@Nullable UUID diagramGridLayoutUuid) {
-        diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
     }
 
     private void removeWorkspacesConfig(@Nullable UUID workspacesConfigUuid) {

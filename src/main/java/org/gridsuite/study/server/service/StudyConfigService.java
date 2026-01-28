@@ -8,9 +8,6 @@ package org.gridsuite.study.server.service;
 
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
-import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.DiagramPosition;
-import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayout;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -45,9 +42,6 @@ public class StudyConfigService {
     private static final String SPREADSHEET_CONFIG_URI = "/spreadsheet-configs";
     private static final String SPREADSHEET_CONFIG_WITH_ID_URI = SPREADSHEET_CONFIG_URI + UUID_PARAM;
 
-    private static final String DIAGRAM_GRID_LAYOUT_URI = "/diagram-grid-layout";
-    private static final String DIAGRAM_GRID_LAYOUT_WITH_ID_URI = DIAGRAM_GRID_LAYOUT_URI + UUID_PARAM;
-
     private static final String WORKSPACES_CONFIG_URI = "/workspaces-configs";
     private static final String WORKSPACES_CONFIG_WITH_ID_URI = WORKSPACES_CONFIG_URI + UUID_PARAM;
     private static final String WORKSPACES_URI = "/workspaces";
@@ -55,8 +49,6 @@ public class StudyConfigService {
     private static final String NAME_URI = "/name";
     private static final String WORKSPACE_PANELS_URI = "/panels";
     private static final String DEFAULT_URI = "/default";
-
-    private static final DiagramPosition DEFAULT_DIAGRAM_POSITION = new DiagramPosition(2, 2, 0, 0);
 
     private final RestTemplate restTemplate;
 
@@ -318,75 +310,12 @@ public class StudyConfigService {
         restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, null, UUID.class);
     }
 
-    public DiagramGridLayout getDiagramGridLayout(UUID diagramGridLayoutUuid) {
-        Objects.requireNonNull(diagramGridLayoutUuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_WITH_ID_URI)
-            .buildAndExpand(diagramGridLayoutUuid).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-        HttpEntity<String> httpEntity = new HttpEntity<>(null, headers);
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.GET, httpEntity, DiagramGridLayout.class).getBody();
-    }
-
-    public void deleteDiagramGridLayout(UUID diagramGridLayoutUuid) {
-        Objects.requireNonNull(diagramGridLayoutUuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_WITH_ID_URI)
-            .buildAndExpand(diagramGridLayoutUuid).toUriString();
-
-        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.DELETE, null, String.class);
-    }
-
-    public UUID saveDiagramGridLayout(DiagramGridLayout diagramGridLayout) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_URI).toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<DiagramGridLayout> httpEntity = new HttpEntity<>(diagramGridLayout, headers);
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
-    }
-
-    public void updateDiagramGridLayout(UUID diagramGridLayoutUuid, DiagramGridLayout diagramGridLayout) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_WITH_ID_URI)
-            .buildAndExpand(diagramGridLayoutUuid).toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<DiagramGridLayout> httpEntity = new HttpEntity<>(diagramGridLayout, headers);
-        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
-    }
-
-    public UUID createGridLayoutFromNadDiagram(UUID sourceNadConfigUuid, UUID clonedNadConfigUuid, String nadDiagramConfigName) {
-        if (sourceNadConfigUuid == null) {
-            return null;
-        }
-        Map<String, DiagramPosition> diagramPositions = new HashMap<>();
-        diagramPositions.put("lg", DEFAULT_DIAGRAM_POSITION);
-        DiagramGridLayout diagramGridLayout = DiagramGridLayout.builder()
-            .diagramLayouts(List.of(NetworkAreaDiagramLayout.builder()
-                .diagramUuid(UUID.randomUUID())
-                .diagramPositions(diagramPositions)
-                .originalNadConfigUuid(sourceNadConfigUuid)
-                .currentNadConfigUuid(clonedNadConfigUuid)
-                .name(nadDiagramConfigName)
-                .build()))
-            .build();
-
-        var path = UriComponentsBuilder
-            .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + DIAGRAM_GRID_LAYOUT_URI)
-            .buildAndExpand()
-            .toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<DiagramGridLayout> httpEntity = new HttpEntity<>(diagramGridLayout, headers);
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
-    }
-
     // Workspaces Config
     public UUID createWorkspacesConfigFromWorkspaces(List<UUID> workspaceIds) {
         UriComponentsBuilder builder = UriComponentsBuilder
                 .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_URI);
         if (workspaceIds != null && !workspaceIds.isEmpty()) {
-            builder.queryParam("fromWorkspaces", workspaceIds.toArray());
+            builder.queryParam("createFrom", workspaceIds.toArray());
         }
         String path = builder.toUriString();
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();

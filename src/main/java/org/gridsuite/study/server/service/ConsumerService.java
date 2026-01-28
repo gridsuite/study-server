@@ -304,7 +304,7 @@ public class ConsumerService {
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, null, workspacesConfigUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
             importParameters, importReportUuid);
     }
 

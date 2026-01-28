@@ -12,8 +12,6 @@ package org.gridsuite.study.server.service;
  */
 
 import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.dto.diagramgridlayout.diagramlayout.NetworkAreaDiagramLayoutDetails;
-import org.gridsuite.study.server.dto.diagramgridlayout.nad.NadConfigInfos;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
@@ -26,7 +24,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -141,20 +138,6 @@ public class SingleLineDiagramService {
         return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, request, String.class);
     }
 
-    public void createDiagramConfigs(List<NadConfigInfos> nadConfigs) {
-        var path = UriComponentsBuilder
-            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
-            .buildAndExpand()
-            .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<List<NadConfigInfos>> httpEntity = new HttpEntity<>(nadConfigs, headers);
-
-        restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
-    }
-
     public void deleteDiagramConfigs(List<UUID> configUuids) {
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/configs")
@@ -177,39 +160,6 @@ public class SingleLineDiagramService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-    }
-
-    public UUID duplicateNadConfig(UUID sourceNadConfigUuid) {
-        Objects.requireNonNull(sourceNadConfigUuid);
-
-        var path = UriComponentsBuilder
-            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/config")
-            .queryParam("duplicateFrom", sourceNadConfigUuid)
-            .buildAndExpand()
-            .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<NetworkAreaDiagramLayoutDetails> httpEntity = new HttpEntity<>(headers);
-
-        return restTemplate.postForObject(singleLineDiagramServerBaseUri + path, httpEntity, UUID.class);
-    }
-
-    public void updateNadConfig(NadConfigInfos nadConfigInfos) {
-        Objects.requireNonNull(nadConfigInfos);
-        Objects.requireNonNull(nadConfigInfos.getId());
-
-        var path = UriComponentsBuilder
-            .fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION + "/network-area-diagram/config/{configUuid}")
-            .buildAndExpand(nadConfigInfos.getId())
-            .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<NadConfigInfos> httpEntity = new HttpEntity<>(nadConfigInfos, headers);
-
-        restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
     public void createNadPositionsConfigFromCsv(MultipartFile file) {
