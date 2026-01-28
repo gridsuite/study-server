@@ -126,8 +126,6 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     public String getLoadFlowModifications(UUID resultUuid) {
-        String result;
-
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/modifications");
         String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
 
@@ -135,8 +133,6 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     public LoadFlowStatus getLoadFlowStatus(UUID resultUuid) {
-        LoadFlowStatus result;
-
         if (resultUuid == null) {
             return null;
         }
