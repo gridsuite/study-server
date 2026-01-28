@@ -469,7 +469,7 @@ public class ConsumerService {
                     userProfileInfos.getPccminParameterId(), userId, userProfileInfos.getName()), e);
             }
         }
-        // no profile, or no/bad shortcircuit parameters in profile => use default values
+        // no profile, or no/bad pcc min parameters in profile => use default values
         try {
             return pccMinService.createDefaultPccMinParameters();
         } catch (final Exception e) {
