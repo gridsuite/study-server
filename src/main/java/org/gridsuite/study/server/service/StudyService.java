@@ -20,7 +20,6 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
-import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -655,21 +654,6 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
-    public UUID createGridLayoutFromNadDiagram(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getDiagramConfigId() != null) {
-            UUID sourceNadConfig = userProfileInfos.getDiagramConfigId();
-            try {
-                UUID clonedNadConfig = singleLineDiagramService.duplicateNadConfig(sourceNadConfig);
-                String nadConfigName = directoryService.getElementName(sourceNadConfig);
-                return studyConfigService.createGridLayoutFromNadDiagram(sourceNadConfig, clonedNadConfig, nadConfigName);
-            } catch (Exception e) {
-                LOGGER.error(String.format("Could not create a diagram grid layout cloning NAD elment id '%s' from user/profile '%s/%s'. No layout created",
-                        sourceNadConfig, userId, userProfileInfos.getName()), e);
-            }
-        }
-        return null;
-    }
-
     public UserProfileInfos getUserProfile(String userId) {
         try {
             return userAdminService.getUserProfile(userId);
@@ -771,9 +755,6 @@ public class StudyService {
             copiedPccMinParametersUuid = pccMinService.duplicatePccMinParameters(sourceStudyEntity.getPccMinParametersUuid());
         }
 
-        UserProfileInfos userProfile = getUserProfile(userId);
-        UUID diagramGridLayoutId = createGridLayoutFromNadDiagram(userId, userProfile);
-
         return studyRepository.save(StudyEntity.builder()
             .id(newStudyId)
             .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
@@ -787,7 +768,6 @@ public class StudyService {
             .spreadsheetConfigCollectionUuid(copiedSpreadsheetConfigCollectionUuid)
             .stateEstimationParametersUuid(copiedStateEstimationParametersUuid)
             .pccMinParametersUuid(copiedPccMinParametersUuid)
-            .diagramGridLayoutUuid(diagramGridLayoutId)
             .workspacesConfigUuid(copiedWorkspacesConfigUuid)
             .build());
     }
@@ -3705,27 +3685,6 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         return voltageInitService.getVoltageInitResult(resultUuid, networkuuid, variantId, globalFilters);
-    }
-
-    public DiagramGridLayout getDiagramGridLayout(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        UUID diagramGridLayoutUuid = studyEntity.getDiagramGridLayoutUuid();
-        return diagramGridLayoutService.getDiagramGridLayout(diagramGridLayoutUuid);
-    }
-
-    @Transactional
-    public UUID saveDiagramGridLayout(UUID studyUuid, DiagramGridLayout diagramGridLayout) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-
-        UUID existingDiagramGridLayoutUuid = studyEntity.getDiagramGridLayoutUuid();
-
-        if (existingDiagramGridLayoutUuid == null) {
-            UUID newDiagramGridLayoutUuid = diagramGridLayoutService.createDiagramGridLayout(diagramGridLayout);
-            studyEntity.setDiagramGridLayoutUuid(newDiagramGridLayoutUuid);
-            return newDiagramGridLayoutUuid;
-        } else {
-            return diagramGridLayoutService.updateDiagramGridLayout(existingDiagramGridLayoutUuid, diagramGridLayout);
-        }
     }
 
     private void removeDiagramGridLayout(@Nullable UUID diagramGridLayoutUuid) {

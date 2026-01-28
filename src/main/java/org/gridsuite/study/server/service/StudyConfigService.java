@@ -382,10 +382,13 @@ public class StudyConfigService {
     }
 
     // Workspaces Config
-    public UUID createDefaultWorkspacesConfig() {
-        var path = UriComponentsBuilder
-                .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_URI + DEFAULT_URI)
-                .toUriString();
+    public UUID createWorkspacesConfigFromWorkspaces(List<UUID> workspaceIds) {
+        UriComponentsBuilder builder = UriComponentsBuilder
+                .fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_URI);
+        if (workspaceIds != null && !workspaceIds.isEmpty()) {
+            builder.queryParam("fromWorkspaces", workspaceIds.toArray());
+        }
+        String path = builder.toUriString();
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 
