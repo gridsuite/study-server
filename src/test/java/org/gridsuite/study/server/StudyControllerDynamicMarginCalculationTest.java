@@ -59,8 +59,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_DEBUG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.any;
 import static org.mockito.BDDMockito.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -135,6 +134,9 @@ class StudyControllerDynamicMarginCalculationTest {
     private TestUtils studyTestUtils;
 
     @MockitoSpyBean
+    private StudyService studyService;
+
+    @MockitoSpyBean
     private RootNetworkNodeInfoRepository spyRootNetworkNodeInfoRepository;
 
     //output destinations
@@ -194,6 +196,9 @@ class StudyControllerDynamicMarginCalculationTest {
                 .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
+        reset(studyService);
+        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+
         studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
                         .content(objectMapper.writeValueAsString(modificationNode))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -207,6 +212,8 @@ class StudyControllerDynamicMarginCalculationTest {
         assertThat(mess.getHeaders()).containsEntry(NotificationService.HEADER_INSERT_MODE, InsertMode.CHILD.name());
 
         rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getOneRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
+
+        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
 
         return modificationNode;
     }
@@ -384,7 +391,7 @@ class StudyControllerDynamicMarginCalculationTest {
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        Mockito.doNothing().when(spyDynamicMarginCalculationService).deleteAllResults();
+        doNothing().when(spyDynamicMarginCalculationService).deleteAllResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_MARGIN_CALCULATION.toString())
                         .queryParam("dryRun", "false"))
