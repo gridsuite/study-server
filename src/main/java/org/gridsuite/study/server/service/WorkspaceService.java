@@ -45,7 +45,7 @@ public class WorkspaceService {
 
     private UUID getWorkspacesConfigUuidOrElseCreateDefaults(StudyEntity studyEntity) {
         if (studyEntity.getWorkspacesConfigUuid() == null) {
-            studyEntity.setWorkspacesConfigUuid(studyConfigService.createDefaultWorkspacesConfig());
+            studyEntity.setWorkspacesConfigUuid(studyConfigService.createWorkspacesConfigFromWorkspaces(List.of()));
         }
         return studyEntity.getWorkspacesConfigUuid();
     }

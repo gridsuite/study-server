@@ -846,26 +846,27 @@ public class WireMockStubs {
         verifyPostRequest(wireMock, stubId, "/v1/network-area-diagram/config", Map.of("duplicateFrom", WireMock.matching(".*")));
     }
 
-    public void verifyDiagramGridLayout(UUID stubId) {
-        verifyPostRequest(wireMock, stubId, "/v1/diagram-grid-layout", Map.of());
-    }
-
     public void verifyElementNameGet(UUID stubId, String elementUuid) {
         verifyGetRequest(wireMock, stubId, "/v1/elements/" + elementUuid + "/name", Map.of());
     }
 
     public UUID stubWorkspacesConfigDefault(String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/workspaces-configs/default"))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/workspaces-configs"))
+            .atPriority(2)  // checked AFTER duplication stub
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
     }
 
     public void verifyWorkspacesConfigDefault(int nbRequests) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/workspaces-configs/default", Map.of(), nbRequests);
+        RequestPatternBuilder requestPattern = WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/workspaces-configs"))
+            .withoutQueryParam("duplicateFrom");
+        wireMock.verify(nbRequests, requestPattern);
+        WireMockUtilsCriteria.removeRequestMatching(wireMock, requestPattern, nbRequests);
     }
 
     public UUID stubWorkspacesConfigDuplicateFromAny(String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/workspaces-configs"))
             .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+            .atPriority(1)  // checked FIRST
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
     }
 

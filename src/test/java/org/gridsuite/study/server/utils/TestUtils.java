@@ -65,7 +65,7 @@ public final class TestUtils {
             "maxAllowedBuilds":20,
             "spreadsheetConfigCollectionId":null,
             "networkVisualizationParameterId":null,
-            "diagramConfigId":null
+            "workspaceId":null
         }""";
 
     private final RootNetworkRepository rootNetworkRepository;
