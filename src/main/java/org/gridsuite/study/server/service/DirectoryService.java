@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ElementAttributes;
+import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -20,6 +21,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
@@ -31,6 +34,11 @@ import static org.gridsuite.study.server.StudyConstants.DIRECTORY_API_VERSION;
 @Service
 public class DirectoryService {
     public static final String CASE = "CASE";
+    public static final String PARAM_IDS = "ids";
+    public static final String HEADER_USER_ID = "userId";
+    public static final String PARAM_ACCESS_TYPE = "accessType";
+    public static final String PARAM_TARGET_DIRECTORY_UUID = "targetDirectoryUuid";
+    public static final String PARAM_RECURSIVE_CHECK = "recursiveCheck";
 
     private final RestTemplate restTemplate;
 
@@ -72,5 +80,20 @@ public class DirectoryService {
 
         HttpEntity<ElementAttributes> requestEntity = new HttpEntity<>(elementAttributes, headers);
         restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
+    }
+
+    public void checkPermission(List<UUID> elementUuids, UUID targetDirectoryUuid, String userId, PermissionType permissionType, boolean recursiveCheck) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HEADER_USER_ID, userId);
+
+        String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements/authorized")
+            .queryParam(PARAM_ACCESS_TYPE, permissionType)
+            .queryParam(PARAM_IDS, elementUuids)
+            .queryParam(PARAM_TARGET_DIRECTORY_UUID, targetDirectoryUuid)
+            .queryParam(PARAM_RECURSIVE_CHECK, recursiveCheck)
+            .buildAndExpand()
+            .toUriString();
+
+        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
     }
 }
