@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.modification.ModificationApplicationContex
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
+import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -1352,6 +1353,7 @@ class StudyTest extends StudyTestBase {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID nodeUuid = getRootNodeUuid(studyUuid);
 
+        wireMockStubs.directoryServer.stubCheckPermission(List.of(), directoryUuid, userId, PermissionType.WRITE, false, HttpStatus.OK.value());
         wireMockStubs.directoryServer.stubElementExists(directoryUuid, fileName, DirectoryService.CASE, HttpStatus.NO_CONTENT.value());
         wireMockStubs.networkConversionServer.stubExportNetwork(NETWORK_UUID, fileName, mapper.writeValueAsString(exportUuid), HttpStatus.OK.value());
 
@@ -1363,6 +1365,7 @@ class StudyTest extends StudyTestBase {
             .param("description", description)
             .header(USER_ID_HEADER, userId)).andExpect(status().isOk());
 
+        wireMockStubs.directoryServer.verifyCheckPermission(List.of(), directoryUuid, PermissionType.WRITE, false);
         wireMockStubs.directoryServer.verifyElementExists(directoryUuid, fileName, DirectoryService.CASE);
         wireMockStubs.networkConversionServer.verifyExportNetwork(NETWORK_UUID, fileName);
     }
@@ -1373,12 +1376,14 @@ class StudyTest extends StudyTestBase {
         String description = "description";
         String fileName = "myFileName";
         UUID directoryUuid = UUID.randomUUID();
+        String userId = "userId";
 
         UUID studyUuid = createStudyWithStubs(USER_ID_HEADER, CASE_UUID);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         UUID nodeUuid = getRootNodeUuid(studyUuid);
 
+        wireMockStubs.directoryServer.stubCheckPermission(List.of(), directoryUuid, userId, PermissionType.WRITE, false, HttpStatus.OK.value());
         wireMockStubs.directoryServer.stubElementExists(directoryUuid, fileName, DirectoryService.CASE, HttpStatus.OK.value());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
@@ -1389,6 +1394,33 @@ class StudyTest extends StudyTestBase {
             .param("description", description)
             .header(USER_ID_HEADER, "userId")).andExpect(status().isInternalServerError());
 
+        wireMockStubs.directoryServer.verifyCheckPermission(List.of(), directoryUuid, PermissionType.WRITE, false);
         wireMockStubs.directoryServer.verifyElementExists(directoryUuid, fileName, DirectoryService.CASE);
+    }
+
+    @Test
+    void testExportNetworkFailNoPermissions() throws Exception {
+
+        String description = "description";
+        String fileName = "myFileName";
+        UUID directoryUuid = UUID.randomUUID();
+        String userId = "userId";
+
+        UUID studyUuid = createStudyWithStubs(USER_ID_HEADER, CASE_UUID);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+
+        UUID nodeUuid = getRootNodeUuid(studyUuid);
+
+        wireMockStubs.directoryServer.stubCheckPermission(List.of(), directoryUuid, userId, PermissionType.WRITE, false, HttpStatus.INTERNAL_SERVER_ERROR.value());
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
+            studyUuid, firstRootNetworkUuid, nodeUuid, "XIIDM")
+            .param("fileName", fileName)
+            .param("exportToGridExplore", Boolean.TRUE.toString())
+            .param("parentDirectoryUuid", directoryUuid.toString())
+            .param("description", description)
+            .header(USER_ID_HEADER, "userId")).andExpect(status().isInternalServerError());
+
+        wireMockStubs.directoryServer.verifyCheckPermission(List.of(), directoryUuid, PermissionType.WRITE, false);
     }
 }

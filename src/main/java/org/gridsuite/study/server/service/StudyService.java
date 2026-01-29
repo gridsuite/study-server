@@ -30,6 +30,7 @@ import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
+import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
@@ -1052,13 +1053,16 @@ public class StudyService {
     }
 
     public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NodeExportInfos exportInfos, String format, String userId, String parametersJson) {
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-
-        if (exportInfos.exportToGridExplore() && directoryService.elementExists(exportInfos.directoryUuid(), exportInfos.fileName(), DirectoryService.CASE)) {
-            throw new StudyException(ELEMENT_ALREADY_EXISTS);
+        // Checks if we can write on target directory in gridexplore
+        if (exportInfos.exportToGridExplore()) {
+            directoryService.checkPermission(List.of(), exportInfos.directoryUuid(), userId, PermissionType.WRITE, false);
+            if (directoryService.elementExists(exportInfos.directoryUuid(), exportInfos.fileName(), DirectoryService.CASE)) {
+                throw new StudyException(ELEMENT_ALREADY_EXISTS, "export file name " + exportInfos.fileName() + " already exists in directory", Map.of("fileName", exportInfos.fileName()));
+            }
         }
 
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId,
             new NodeExportInfos(exportInfos.exportToGridExplore(), exportInfos.directoryUuid(), exportInfos.fileName(), exportInfos.description()), format, userId, parametersJson);
 
