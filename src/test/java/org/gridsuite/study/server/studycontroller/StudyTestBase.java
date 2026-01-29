@@ -130,8 +130,6 @@ class StudyTestBase {
     protected static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
     protected static final String INVALID_PARAMS_IN_PROFILE_USER_ID = "invalidParamInProfileUser";
     protected static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
-    protected static final String NAD_CONFIG_USER_ID = "nadConfigUser";
-    protected static final String NAD_ELEMENT_NAME = "nadName";
 
     protected static final String PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING = "f09f5282-8e34-48b5-b66e-7ef9f3f36c4f";
     protected static final String PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING = "a09f5282-8e36-48b5-b66e-7ef9f3f36c4f";
@@ -158,7 +156,7 @@ class StudyTestBase {
     protected static final String PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING = "9cec4a7b-ab74-5d78-9d07-ce73c5ef11d9";
     protected static final String PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING = "2c865123-4378-8dd2-9d07-ce73c5ef11d9";
     protected static final String PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING = "207a4bec-6f1a-400f-98f0-e5bcf37d4fcf";
-    protected static final String PROFILE_DIAGRAM_CONFIG_UUID_STRING = "518b5cac-6f1a-400f-98f0-e5bcf37d4fcf";
+    protected static final String PROFILE_WORKSPACE_UUID_STRING = "518b5cac-6f1a-400f-98f0-e5bcf37d4fcf";
 
     protected static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" +
         PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING +
@@ -168,17 +166,7 @@ class StudyTestBase {
         "\",\"voltageInitParameterId\":\"" + PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING +
         "\",\"spreadsheetConfigCollectionId\":\"" + PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING +
         "\",\"networkVisualizationParameterId\":\"" + PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING +
-        "\",\"allLinksValid\":true}";
-
-    protected static final String USER_PROFILE_WITH_DIAGRAM_CONFIG_PARAMS_JSON = "{\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" +
-        PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING +
-        "\",\"securityAnalysisParameterId\":\"" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING +
-        "\",\"sensitivityAnalysisParameterId\":\"" + PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING +
-        "\",\"shortcircuitParameterId\":\"" + PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING +
-        "\",\"voltageInitParameterId\":\"" + PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING +
-        "\",\"spreadsheetConfigCollectionId\":\"" + PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING +
-        "\",\"networkVisualizationParameterId\":\"" + PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING +
-        "\",\"diagramConfigId\":\"" + PROFILE_DIAGRAM_CONFIG_UUID_STRING +
+        "\",\"workspaceId\":\"" + PROFILE_WORKSPACE_UUID_STRING +
         "\",\"allLinksValid\":true}";
 
     protected static final String PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
@@ -401,7 +389,7 @@ class StudyTestBase {
         UUID studyUuid = createStudy(userId, caseUuid, networkInfos);
 
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(1, 7, 1, 1);
+        verifyCreateParameters(1, 7, 1, 1, 1);
 
         return studyUuid;
     }
@@ -443,12 +431,12 @@ class StudyTestBase {
     protected NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                     UUID modificationGroupUuid, String variantId, String nodeName, String userId) throws Exception {
         return createNetworkModificationNode(studyUuid, parentNodeUuid,
-            modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY, BuildStatus.NOT_BUILT, userId);
+            modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION, BuildStatus.NOT_BUILT, userId);
     }
 
     protected NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
                                                                     UUID modificationGroupUuid, String variantId, String nodeName, BuildStatus buildStatus, String userId) throws Exception {
-        return createNetworkModificationNode(studyUuid, parentNodeUuid, modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.SECURITY, buildStatus, userId);
+        return createNetworkModificationNode(studyUuid, parentNodeUuid, modificationGroupUuid, variantId, nodeName, NetworkModificationNodeType.CONSTRUCTION, buildStatus, userId);
     }
 
     protected NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
@@ -576,7 +564,7 @@ class StudyTestBase {
                 wireMockStubs.caseServer.verifyCaseExists(stubCaseExistsId, caseUuid);
             }
             if (stubUserProfileId != null) {
-                wireMockStubs.userAdminServerStubs.verifyUserProfile(userId);
+                wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
             }
             if (stubSendReportId != null) {
                 wireMockStubs.verifySendReport(stubSendReportId);
@@ -586,8 +574,9 @@ class StudyTestBase {
 
     protected record DuplicateParameterStubs(UUID stubParametersDuplicateFromId,
                                              UUID stubSpreadsheetConfigDuplicateFromId,
-                                             UUID stubNetworkVisualizationParamsDuplicateFromId) {
-        public void verify(WireMockStubs wireMockStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests, int networkVisualizationParamsDuplicateFromNbRequests) {
+                                             UUID stubNetworkVisualizationParamsDuplicateFromId,
+                                             UUID stubWorkspacesConfigDuplicateFromId) {
+        public void verify(WireMockStubs wireMockStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests, int networkVisualizationParamsDuplicateFromNbRequests, int workspacesConfigDuplicateFromNbRequests) {
             if (stubParametersDuplicateFromId != null) {
                 wireMockStubs.verifyParametersDuplicateFromAny(stubParametersDuplicateFromId, parametersDuplicateFromNbRequests);
             }
@@ -597,24 +586,29 @@ class StudyTestBase {
             if (stubNetworkVisualizationParamsDuplicateFromId != null) {
                 wireMockStubs.verifyNetworkVisualizationParamsDuplicateFromAny(stubNetworkVisualizationParamsDuplicateFromId, networkVisualizationParamsDuplicateFromNbRequests);
             }
+            if (stubWorkspacesConfigDuplicateFromId != null) {
+                wireMockStubs.verifyWorkspacesConfigDuplicateFromAny(stubWorkspacesConfigDuplicateFromId, workspacesConfigDuplicateFromNbRequests);
+            }
         }
     }
 
     protected record DeleteStudyStubs(UUID stubDeleteParametersId, UUID stubDeleteReportsId,
                                       UUID stubDeleteNetworkVisualizationParamsId,
-                                      UUID stubDeleteSpreadsheetConfigCollectionId) {
+                                      UUID stubDeleteSpreadsheetConfigCollectionId,
+                                      UUID stubDeleteWorkspacesConfigId) {
         public void verify(WireMockStubs wireMockStubs, int deleteParametersNbRequests) {
             wireMockStubs.verifyDeleteReports(stubDeleteReportsId, 2);
             wireMockStubs.verifyDeleteParameters(stubDeleteParametersId, deleteParametersNbRequests);
             wireMockStubs.verifyDeleteNetworkVisualizationParams(stubDeleteNetworkVisualizationParamsId);
             wireMockStubs.verifyDeleteSpreadsheetConfigCollection(stubDeleteSpreadsheetConfigCollectionId);
+            wireMockStubs.verifyDeleteWorkspacesConfig(stubDeleteWorkspacesConfigId);
         }
     }
 
     protected CreateStudyStubs setupCreateStudyStubs(String userId, String userProfileJson, String caseUuid) {
         UUID stubUserProfileId = userProfileJson != null
-            ? wireMockStubs.userAdminServerStubs.stubUserProfile(userId, userProfileJson)
-            : wireMockStubs.userAdminServerStubs.stubUserProfile(userId);
+            ? wireMockStubs.userAdminServer.stubGetUserProfile(userId, userProfileJson)
+            : wireMockStubs.userAdminServer.stubGetUserProfile(userId);
         UUID stubCaseExistsId = wireMockStubs.caseServer.stubCaseExists(caseUuid, true);
         UUID stubSendReportId = wireMockStubs.stubSendReport();
         return new CreateStudyStubs(stubUserProfileId, stubCaseExistsId, stubSendReportId, userId, caseUuid);
@@ -625,20 +619,23 @@ class StudyTestBase {
         wireMockStubs.stubParametersDefault(mapper.writeValueAsString(UUID.randomUUID()));
         wireMockStubs.stubSpreadsheetConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
         wireMockStubs.stubNetworkVisualizationParamsDefault(StudyTest.DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
+        wireMockStubs.stubWorkspacesConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
     }
 
-    protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests) {
-        wireMockStubs.computationServerStubs.verifyParameters(createParametersNbRequests);
-        wireMockStubs.computationServerStubs.verifyParametersDefault(parametersDefaultNbRequests);
+    protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests, int workspacesConfigDefaultNbRequests) {
+        wireMockStubs.computationServer.verifyParameters(createParametersNbRequests);
+        wireMockStubs.computationServer.verifyParametersDefault(parametersDefaultNbRequests);
         wireMockStubs.verifySpreadsheetConfigDefault(spreadsheetConfigDefaultNbRequests);
         wireMockStubs.verifyNetworkVisualizationParamsDefault(networkVisualizationParamsDefaultNbRequests);
+        wireMockStubs.verifyWorkspacesConfigDefault(workspacesConfigDefaultNbRequests);
     }
 
     protected DuplicateParameterStubs setupDuplicateParametersStubs() throws Exception {
         UUID stubParametersDuplicateFromId = wireMockStubs.stubParametersDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromAny(StudyTest.DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
-        return new DuplicateParameterStubs(stubParametersDuplicateFromId, stubSpreadsheetConfigDuplicateFromId, stubNetworkVisualizationParamsDuplicateFromId);
+        UUID stubWorkspacesConfigDuplicateFromId = wireMockStubs.stubWorkspacesConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
+        return new DuplicateParameterStubs(stubParametersDuplicateFromId, stubSpreadsheetConfigDuplicateFromId, stubNetworkVisualizationParamsDuplicateFromId, stubWorkspacesConfigDuplicateFromId);
     }
 
     protected DeleteStudyStubs setupDeleteStudyStubs() {
@@ -650,6 +647,7 @@ class StudyTestBase {
             .willReturn(WireMock.ok())).getId();
         UUID stubDeleteSpreadsheetConfigCollectionId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/spreadsheet-config-collections/.*"))
             .willReturn(WireMock.ok())).getId();
-        return new DeleteStudyStubs(stubDeleteParametersId, stubDeleteReportsId, stubDeleteNetworkVisualizationParamsId, stubDeleteSpreadsheetConfigCollectionId);
+        UUID stubDeleteWorkspacesConfigId = wireMockStubs.stubDeleteWorkspacesConfig();
+        return new DeleteStudyStubs(stubDeleteParametersId, stubDeleteReportsId, stubDeleteNetworkVisualizationParamsId, stubDeleteSpreadsheetConfigCollectionId, stubDeleteWorkspacesConfigId);
     }
 }

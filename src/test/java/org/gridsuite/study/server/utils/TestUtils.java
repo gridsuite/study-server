@@ -65,7 +65,7 @@ public final class TestUtils {
             "maxAllowedBuilds":20,
             "spreadsheetConfigCollectionId":null,
             "networkVisualizationParameterId":null,
-            "diagramConfigId":null
+            "workspaceId":null
         }""";
 
     private final RootNetworkRepository rootNetworkRepository;
@@ -80,6 +80,10 @@ public final class TestUtils {
 
     public RootNetworkEntity getOneRootNetwork(UUID studyUuid) {
         return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).get(0);
+    }
+
+    public UUID getNetworkUuid(UUID studyUuid) {
+        return getOneRootNetwork(studyUuid).getNetworkUuid();
     }
 
     public static Set<RequestWithBody> getRequestsWithBodyDone(int n, MockWebServer server) {

@@ -299,12 +299,12 @@ public class ConsumerService {
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
         UUID pccMinParametersUuid = createDefaultPccMinParameters(userId, userProfileInfos);
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
-        UUID diagramGridLayoutUuid = studyService.createGridLayoutFromNadDiagram(userId, userProfileInfos);
+        UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
             importParameters, importReportUuid);
     }
 
@@ -497,6 +497,23 @@ public class ConsumerService {
         }
     }
 
+    private UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
+        try {
+            List<UUID> workspaceIds = new ArrayList<>();
+            if (userProfileInfos != null && userProfileInfos.getWorkspaceId() != null) {
+                // Create config with profile workspace as first, and two empty workspaces
+                workspaceIds.add(userProfileInfos.getWorkspaceId());
+                workspaceIds.add(null);
+                workspaceIds.add(null);
+            }
+            // Empty list will create default config
+            return studyConfigService.createWorkspacesConfigFromWorkspaces(workspaceIds);
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating workspace collection", e);
+            return null;
+        }
+    }
+
     @Bean
     public Consumer<Message<String>> consumeCaseImportFailed() {
         return message -> {
@@ -657,11 +674,26 @@ public class ConsumerService {
                 // unblock node
                 handleUnblockNode(receiverObj, computationType);
 
-                // send notifications
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                if (computationType == LOAD_FLOW) {
+                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
+                    handleLoadFlowSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, userId);
+                }
+
+                // send notifications
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateResultType());
             }));
+    }
+
+    private void handleLoadFlowSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
+        // Build 1st level children if loadflow is converged, and node is a security type
+        if (userId != null && networkModificationTreeService.isSecurityNode(nodeUuid)) {
+            LoadFlowStatus loadFlowStatus = loadFlowService.getLoadFlowStatus(resultUuid);
+            if (loadFlowStatus == LoadFlowStatus.CONVERGED) {
+                studyService.buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, userId);
+            }
+        }
     }
 
     Optional<NodeReceiver> getNodeReceiver(Message<String> msg) {
@@ -859,49 +891,49 @@ public class ConsumerService {
         String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
         String s3Key = msg.getHeaders().get(HEADER_S3_KEY, String.class);
         String exportInfosStr = msg.getHeaders().get(HEADER_EXPORT_INFOS, String.class);
+        String exportContentType = msg.getHeaders().get(HEADER_EXPORT_CONTENT_TYPE, String.class);
 
         if (receiverString != null) {
             NetworkExportReceiver receiver;
+            UUID studyUuid = null;
+            String userId = "";
+            UUID exportUuid = null;
+            String errorMessage = "";
+            String fileName = "";
+            boolean exportToGridExplore = false;
             try {
                 receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8), NetworkExportReceiver.class);
-                UUID studyUuid = receiver.getStudyUuid();
-                String userId = receiver.getUserId();
-                UUID exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
+                studyUuid = receiver.getStudyUuid();
+                userId = receiver.getUserId();
+                exportUuid = msg.getHeaders().containsKey(HEADER_EXPORT_UUID) ? UUID.fromString((String) Objects.requireNonNull(msg.getHeaders().get(HEADER_EXPORT_UUID))) : null;
 
                 NodeExportInfos nodeExport = null;
                 if (exportInfosStr != null) {
                     nodeExport = objectMapper.readValue(URLDecoder.decode(exportInfosStr, StandardCharsets.UTF_8), NodeExportInfos.class);
                 }
-
-                boolean exportToGridExplore = false;
-                String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
+                fileName = nodeExport != null ? nodeExport.fileName() : "";
+                errorMessage = (String) msg.getHeaders().get(HEADER_ERROR);
 
                 if (nodeExport != null && nodeExport.exportToGridExplore()) {
                     //Create case in directory-server and case-server
                     exportToGridExplore = true;
                     if (StringUtils.isEmpty(errorMessage)) {
-                        errorMessage = createCase(s3Key, nodeExport, userId);
+                        createCase(s3Key, nodeExport, userId, exportContentType);
                     }
                 }
-
-                networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
-                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, exportToGridExplore, userId, errorMessage);
             } catch (Exception e) {
+                errorMessage = e.getMessage();
                 LOGGER.error(e.toString(), e);
+            } finally {
+                networkModificationTreeService.updateExportNetworkStatus(exportUuid, errorMessage == null ? ExportNetworkStatus.SUCCESS : ExportNetworkStatus.FAILED);
+                notificationService.emitNetworkExportFinished(studyUuid, exportUuid, fileName, exportToGridExplore, userId, errorMessage);
             }
         }
     }
 
-    public String createCase(String s3Key, NodeExportInfos nodeExport, String userId) {
-        String errorMessage = null;
-
-        try {
-            UUID caseUuid = caseService.createCase(s3Key, "application/zip");
-            directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId);
-        } catch (Exception e) {
-            errorMessage = e.getMessage();
-        }
-        return errorMessage;
+    public void createCase(String s3Key, NodeExportInfos nodeExport, String userId, String exportContentType) {
+        UUID caseUuid = caseService.createCase(s3Key, exportContentType);
+        directoryService.createElement(nodeExport.directoryUuid(), nodeExport.description(), caseUuid, nodeExport.fileName(), DirectoryService.CASE, userId);
     }
 
     @Bean

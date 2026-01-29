@@ -244,10 +244,9 @@ class StudyControllerCreationTest {
             mapper.writeValueAsString(elementAttributes),
             userId);
 
-        String error = consumerService.createCase(s3Key, nodeExport, userId);
+        consumerService.createCase(s3Key, nodeExport, userId, "application/zip");
         wireMockStubs.caseServer.verifyCreateCase(exportFolder + DELIMITER + exportUuid + DELIMITER + fileName + ".zip", "application/zip");
         wireMockStubs.directoryServer.verifyCreateElement(mapper.writeValueAsString(elementAttributes), nodeExport.directoryUuid());
-        assertThat(error).isNull();
     }
 
     private void verifyMockCallsAfterStudyCreation() {

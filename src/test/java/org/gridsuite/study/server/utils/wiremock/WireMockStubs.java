@@ -49,18 +49,22 @@ public class WireMockStubs {
 
     private final WireMockServer wireMock;
     public final CaseServerStubs caseServer;
-    public final ComputationServerStubs computationServerStubs;
-    public final UserAdminServerStubs userAdminServerStubs;
+    public final ReportServerStubs reportServer;
+    public final LoadflowServerStubs loadflowServer;
+    public final ComputationServerStubs computationServer;
+    public final UserAdminServerStubs userAdminServer;
     public final NetworkConversionServerStubs networkConversionServer;
     public final DirectoryServerStubs directoryServer;
 
     public WireMockStubs(WireMockServer wireMock) {
         this.wireMock = wireMock;
         this.caseServer = new CaseServerStubs(wireMock);
+        this.loadflowServer = new LoadflowServerStubs(wireMock);
         this.networkConversionServer = new NetworkConversionServerStubs(wireMock);
+        this.reportServer = new ReportServerStubs(wireMock);
         this.directoryServer = new DirectoryServerStubs(wireMock);
-        this.computationServerStubs = new ComputationServerStubs(wireMock);
-        this.userAdminServerStubs = new UserAdminServerStubs(wireMock);
+        this.computationServer = new ComputationServerStubs(wireMock);
+        this.userAdminServer = new UserAdminServerStubs(wireMock);
     }
 
     public UUID stubNetworkElementInfosGet(String networkUuid, String elementType, String infoType, String elementId, String responseBody) {
@@ -842,11 +846,40 @@ public class WireMockStubs {
         verifyPostRequest(wireMock, stubId, "/v1/network-area-diagram/config", Map.of("duplicateFrom", WireMock.matching(".*")));
     }
 
-    public void verifyDiagramGridLayout(UUID stubId) {
-        verifyPostRequest(wireMock, stubId, "/v1/diagram-grid-layout", Map.of());
-    }
-
     public void verifyElementNameGet(UUID stubId, String elementUuid) {
         verifyGetRequest(wireMock, stubId, "/v1/elements/" + elementUuid + "/name", Map.of());
+    }
+
+    public UUID stubWorkspacesConfigDefault(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/workspaces-configs"))
+            .atPriority(2)  // checked AFTER duplication stub
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public void verifyWorkspacesConfigDefault(int nbRequests) {
+        RequestPatternBuilder requestPattern = WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/workspaces-configs"))
+            .withoutQueryParam("duplicateFrom");
+        wireMock.verify(nbRequests, requestPattern);
+        WireMockUtilsCriteria.removeRequestMatching(wireMock, requestPattern, nbRequests);
+    }
+
+    public UUID stubWorkspacesConfigDuplicateFromAny(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/workspaces-configs"))
+            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+            .atPriority(1)  // checked FIRST
+            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public void verifyWorkspacesConfigDuplicateFromAny(UUID stubId, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, "/v1/workspaces-configs", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
+    }
+
+    public UUID stubDeleteWorkspacesConfig() {
+        return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/workspaces-configs/.*"))
+            .willReturn(WireMock.ok())).getId();
+    }
+
+    public void verifyDeleteWorkspacesConfig(UUID stubId) {
+        verifyDeleteRequest(wireMock, stubId, "/v1/workspaces-configs/.*", true, Map.of());
     }
 }
