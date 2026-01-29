@@ -1077,7 +1077,7 @@ public class StudyService {
     }
 
     public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NodeExportInfos exportInfos, String format, String userId, String parametersJson) {
-        // Checks to see if we can write on target directory in gridexplore
+        // Checks if we can write on target directory in gridexplore
         if (exportInfos.exportToGridExplore()) {
             directoryService.checkPermission(List.of(), exportInfos.directoryUuid(), userId, PermissionType.WRITE, false);
             if (directoryService.elementExists(exportInfos.directoryUuid(), exportInfos.fileName(), DirectoryService.CASE)) {
