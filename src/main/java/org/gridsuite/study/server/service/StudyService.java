@@ -20,7 +20,6 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
-import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -127,7 +126,6 @@ public class StudyService {
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
-    private final DiagramGridLayoutService diagramGridLayoutService;
     private final NadConfigService nadConfigService;
     private final FilterService filterService;
     private final ActionsService actionsService;
@@ -192,7 +190,6 @@ public class StudyService {
         VoltageInitService voltageInitService,
         DynamicSimulationEventService dynamicSimulationEventService,
         StudyConfigService studyConfigService,
-        DiagramGridLayoutService diagramGridLayoutService,
         NadConfigService nadConfigService,
         FilterService filterService,
         StateEstimationService stateEstimationService,
@@ -229,7 +226,6 @@ public class StudyService {
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
-        this.diagramGridLayoutService = diagramGridLayoutService;
         this.nadConfigService = nadConfigService;
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
@@ -546,7 +542,6 @@ public class StudyService {
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
                 removePccMinParameters(s.getPccMinParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
-                removeDiagramGridLayout(s.getDiagramGridLayoutUuid());
                 removeWorkspacesConfig(s.getWorkspacesConfigUuid());
                 removeNadConfigs(s.getNadConfigsUuids().stream().toList());
             });
@@ -616,7 +611,7 @@ public class StudyService {
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                              UUID spreadsheetConfigCollectionUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -630,7 +625,7 @@ public class StudyService {
                 shortCircuitParametersUuid, dynamicSimulationParametersEntity,
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, workspacesConfigUuid, importParameters, importReportUuid);
+                stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
@@ -654,21 +649,6 @@ public class StudyService {
         notificationService.emitStudyNetworkRecreationDone(studyEntity.getId(), userId);
 
         return createdStudyBasicInfos;
-    }
-
-    public UUID createGridLayoutFromNadDiagram(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getDiagramConfigId() != null) {
-            UUID sourceNadConfig = userProfileInfos.getDiagramConfigId();
-            try {
-                UUID clonedNadConfig = singleLineDiagramService.duplicateNadConfig(sourceNadConfig);
-                String nadConfigName = directoryService.getElementName(sourceNadConfig);
-                return studyConfigService.createGridLayoutFromNadDiagram(sourceNadConfig, clonedNadConfig, nadConfigName);
-            } catch (Exception e) {
-                LOGGER.error(String.format("Could not create a diagram grid layout cloning NAD elment id '%s' from user/profile '%s/%s'. No layout created",
-                        sourceNadConfig, userId, userProfileInfos.getName()), e);
-            }
-        }
-        return null;
     }
 
     public UserProfileInfos getUserProfile(String userId) {
@@ -707,7 +687,7 @@ public class StudyService {
 
         StudyEntity sourceStudy = getStudy(sourceStudyUuid);
 
-        StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId(), userId);
+        StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId());
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudy);
         networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudy);
         duplicateStudyNodeAliases(newStudyEntity, sourceStudy);
@@ -719,7 +699,7 @@ public class StudyService {
         return newStudyEntity;
     }
 
-    private StudyEntity duplicateStudyEntity(StudyEntity sourceStudyEntity, UUID newStudyId, String userId) {
+    private StudyEntity duplicateStudyEntity(StudyEntity sourceStudyEntity, UUID newStudyId) {
         UUID copiedLoadFlowParametersUuid = null;
         if (sourceStudyEntity.getLoadFlowParametersUuid() != null) {
             copiedLoadFlowParametersUuid = loadflowService.duplicateLoadFlowParameters(sourceStudyEntity.getLoadFlowParametersUuid());
@@ -772,9 +752,6 @@ public class StudyService {
             copiedPccMinParametersUuid = pccMinService.duplicatePccMinParameters(sourceStudyEntity.getPccMinParametersUuid());
         }
 
-        UserProfileInfos userProfile = getUserProfile(userId);
-        UUID diagramGridLayoutId = createGridLayoutFromNadDiagram(userId, userProfile);
-
         return studyRepository.save(StudyEntity.builder()
             .id(newStudyId)
             .loadFlowParametersUuid(copiedLoadFlowParametersUuid)
@@ -788,7 +765,6 @@ public class StudyService {
             .spreadsheetConfigCollectionUuid(copiedSpreadsheetConfigCollectionUuid)
             .stateEstimationParametersUuid(copiedStateEstimationParametersUuid)
             .pccMinParametersUuid(copiedPccMinParametersUuid)
-            .diagramGridLayoutUuid(diagramGridLayoutId)
             .workspacesConfigUuid(copiedWorkspacesConfigUuid)
             .build());
     }
@@ -1608,7 +1584,7 @@ public class StudyService {
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                     UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID spreadsheetConfigCollectionUuid, UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1625,7 +1601,6 @@ public class StudyService {
                 .stateEstimationParametersUuid(stateEstimationParametersUuid)
                 .pccMinParametersUuid(pccMinParametersUuid)
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
-                .diagramGridLayoutUuid(diagramGridLayoutUuid)
                 .workspacesConfigUuid(workspacesConfigUuid)
                 .monoRoot(true)
                 .build();
@@ -3709,31 +3684,6 @@ public class StudyService {
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         return voltageInitService.getVoltageInitResult(resultUuid, networkuuid, variantId, globalFilters);
-    }
-
-    public DiagramGridLayout getDiagramGridLayout(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        UUID diagramGridLayoutUuid = studyEntity.getDiagramGridLayoutUuid();
-        return diagramGridLayoutService.getDiagramGridLayout(diagramGridLayoutUuid);
-    }
-
-    @Transactional
-    public UUID saveDiagramGridLayout(UUID studyUuid, DiagramGridLayout diagramGridLayout) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-
-        UUID existingDiagramGridLayoutUuid = studyEntity.getDiagramGridLayoutUuid();
-
-        if (existingDiagramGridLayoutUuid == null) {
-            UUID newDiagramGridLayoutUuid = diagramGridLayoutService.createDiagramGridLayout(diagramGridLayout);
-            studyEntity.setDiagramGridLayoutUuid(newDiagramGridLayoutUuid);
-            return newDiagramGridLayoutUuid;
-        } else {
-            return diagramGridLayoutService.updateDiagramGridLayout(existingDiagramGridLayoutUuid, diagramGridLayout);
-        }
-    }
-
-    private void removeDiagramGridLayout(@Nullable UUID diagramGridLayoutUuid) {
-        diagramGridLayoutService.removeDiagramGridLayout(diagramGridLayoutUuid);
     }
 
     private void removeWorkspacesConfig(@Nullable UUID workspacesConfigUuid) {
