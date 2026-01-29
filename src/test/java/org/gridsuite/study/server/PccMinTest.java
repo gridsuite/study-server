@@ -10,7 +10,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import lombok.AllArgsConstructor;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -604,8 +603,8 @@ class PccMinTest {
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
-    private void updateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String loadflowParametersUuid, String userId, HttpStatusCode status, String returnedUserProfileJson, boolean shouldDuplicate, String duplicateFromUuid, boolean duplicateIsNotFound) throws Exception {
-        wireMockStubs.loadflowServer.stubPutLoadflowParameters(loadflowParametersUuid, parameters);
+    private void updateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status, String returnedUserProfileJson, boolean shouldDuplicate, String duplicateFromUuid, boolean duplicateIsNotFound) throws Exception {
+        wireMockStubs.loadflowServer.stubPutLoadflowParameters(PccMinTest.PCC_MIN_PARAMETERS_UUID_STRING, parameters);
         UUID duplicatedLoadflowParametersUuid = UUID.randomUUID();
         if (parameters == null || parameters.isEmpty()) {
             wireMockStubs.userAdminServer.stubGetUserProfile(userId, returnedUserProfileJson);
@@ -619,7 +618,7 @@ class PccMinTest {
                     .contentType(MediaType.ALL)
                     .content(parameters == null ? "" : parameters))
             .andExpect(status().is(status.value()));
-        wireMockStubs.loadflowServer.verifyPutLoadflowParameters(loadflowParametersUuid, parameters);
+        wireMockStubs.loadflowServer.verifyPutLoadflowParameters(PccMinTest.PCC_MIN_PARAMETERS_UUID_STRING, parameters);
         if (parameters == null || parameters.isEmpty()) {
             wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
         }
@@ -629,19 +628,18 @@ class PccMinTest {
         testMessages(studyNameUserIdUuid);
     }
 
-
     @Test
     void testResetPccMinParametersUserHasNoProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, PCC_MIN_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        updateParametersAndDoChecks(studyNameUserIdUuid, "", PCC_MIN_PARAMETERS_UUID_STRING, NO_PROFILE_USER_ID, HttpStatus.OK, USER_DEFAULT_PROFILE_JSON, false, null, false);
+        updateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK, USER_DEFAULT_PROFILE_JSON, false, null, false);
     }
 
     @Test
     void testResetPccMinParametersUserHasNoParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, PCC_MIN_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        updateParametersAndDoChecks(studyNameUserIdUuid, "", PCC_MIN_PARAMETERS_UUID_STRING, NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK, USER_PROFILE_NO_PARAMS_JSON, false, null, false);
+        updateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK, USER_PROFILE_NO_PARAMS_JSON, false, null, false);
     }
 }
 
