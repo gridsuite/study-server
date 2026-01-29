@@ -25,8 +25,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
-import static org.gridsuite.study.server.StudyConstants.DIRECTORY_API_VERSION;
+import static org.gridsuite.study.server.StudyConstants.*;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -35,7 +34,6 @@ import static org.gridsuite.study.server.StudyConstants.DIRECTORY_API_VERSION;
 public class DirectoryService {
     public static final String CASE = "CASE";
     public static final String PARAM_IDS = "ids";
-    public static final String HEADER_USER_ID = "userId";
     public static final String PARAM_ACCESS_TYPE = "accessType";
     public static final String PARAM_TARGET_DIRECTORY_UUID = "targetDirectoryUuid";
     public static final String PARAM_RECURSIVE_CHECK = "recursiveCheck";
