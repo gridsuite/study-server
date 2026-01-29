@@ -299,13 +299,12 @@ public class ConsumerService {
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
         UUID pccMinParametersUuid = createDefaultPccMinParameters();
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
-        UUID diagramGridLayoutUuid = studyService.createGridLayoutFromNadDiagram(userId, userProfileInfos);
-        UUID workspacesConfigUuid = createDefaultWorkspacesConfig();
+        UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid, workspacesConfigUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
             importParameters, importReportUuid);
     }
 
@@ -487,11 +486,19 @@ public class ConsumerService {
         }
     }
 
-    private UUID createDefaultWorkspacesConfig() {
+    private UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
         try {
-            return studyConfigService.createDefaultWorkspacesConfig();
+            List<UUID> workspaceIds = new ArrayList<>();
+            if (userProfileInfos != null && userProfileInfos.getWorkspaceId() != null) {
+                // Create config with profile workspace as first, and two empty workspaces
+                workspaceIds.add(userProfileInfos.getWorkspaceId());
+                workspaceIds.add(null);
+                workspaceIds.add(null);
+            }
+            // Empty list will create default config
+            return studyConfigService.createWorkspacesConfigFromWorkspaces(workspaceIds);
         } catch (final Exception e) {
-            LOGGER.error("Error while creating default workspace collection", e);
+            LOGGER.error("Error while creating workspace collection", e);
             return null;
         }
     }
