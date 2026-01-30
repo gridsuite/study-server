@@ -64,6 +64,9 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_PARAMETERS_UUID = "parametersUuid";
     public static final String QUERY_PARAM_FILTERS = "filters";
     public static final String QUERY_PARAM_GLOBAL_FILTERS = "globalFilters";
+    public static final String QUERY_PARAM_SORT = "sort";
+    public static final String QUERY_PARAM_PAGE = "page";
+    public static final String QUERY_PARAM_SIZE = "size";
 
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";
