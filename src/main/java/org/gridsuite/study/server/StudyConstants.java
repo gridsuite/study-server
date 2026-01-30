@@ -38,7 +38,6 @@ public final class StudyConstants {
     public static final String STATE_ESTIMATION_API_VERSION = "v1";
     public static final String PCC_MIN_API_VERSION = "v1";
     public static final String DIRECTORY_API_VERSION = "v1";
-    public static final String EXPLORE_API_VERSION = "v1";
 
     public static final String NETWORK_UUID = "networkUuid";
     public static final String CASE_UUID = "caseUuid";
@@ -89,8 +88,8 @@ public final class StudyConstants {
     public static final String QUERY_WITH_TAP_CHANGER = "withRatioTapChangers";
     public static final String HEADER_RECEIVER = "receiver";
     public static final String HEADER_S3_KEY = "s3Key";
+    public static final String HEADER_EXPORT_CONTENT_TYPE = "exportContentType";
     public static final String HEADER_EXPORT_INFOS = "exportInfos";
-    public static final String HEADER_FILE_NAME = "fileName";
     public static final String HEADER_WORKFLOW_TYPE = "workflowType";
     public static final String HEADER_WORKFLOW_INFOS = "workflowInfos";
     public static final String HEADER_ERROR = "error";
