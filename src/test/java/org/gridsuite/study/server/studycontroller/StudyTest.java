@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.modification.ModificationApplicationContex
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
+import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -994,24 +995,6 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
-    void testDuplicateStudyWithGridLayout() throws Exception {
-        UUID study1Uuid = createStudyWithStubs("userId", CASE_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
-        StudyEntity studyEntity = studyRepository.findById(study1Uuid).orElseThrow();
-        studyEntity.setLoadFlowParametersUuid(UUID.randomUUID());
-        studyEntity.setSecurityAnalysisParametersUuid(UUID.randomUUID());
-        studyEntity.setVoltageInitParametersUuid(UUID.randomUUID());
-        studyEntity.setSensitivityAnalysisParametersUuid(UUID.randomUUID());
-        studyEntity.setStateEstimationParametersUuid(UUID.randomUUID());
-        studyEntity.setPccMinParametersUuid(UUID.randomUUID());
-        studyEntity.setNetworkVisualizationParametersUuid(UUID.randomUUID());
-        studyEntity.setSpreadsheetConfigCollectionUuid(UUID.randomUUID());
-        studyEntity.setWorkspacesConfigUuid(UUID.randomUUID());
-        studyRepository.save(studyEntity);
-        testDuplicateStudy(study1Uuid, firstRootNetworkUuid, NAD_CONFIG_USER_ID);
-    }
-
-    @Test
     void testDuplicateStudyWithoutParametersUuid() throws Exception {
         UUID study1Uuid = createStudyWithStubs("userId", CASE_UUID);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
@@ -1044,9 +1027,6 @@ class StudyTest extends StudyTestBase {
             throw new RuntimeException();
         }).when(caseService).duplicateCase(any(), any());
 
-        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/userId/profile"))
-            .willReturn(WireMock.notFound())).getId();
-
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                 .param(CASE_FORMAT, "XIIDM")
                 .header(USER_ID_HEADER, "userId"))
@@ -1062,7 +1042,6 @@ class StudyTest extends StudyTestBase {
         wireMockStubs.verifyNetworkVisualizationParamsDuplicateFrom(stubNetworkVisualizationParamsDuplicateFromId, studyEntity.getNetworkVisualizationParametersUuid().toString());
         wireMockStubs.verifySpreadsheetConfigDuplicateFrom(stubSpreadsheetConfigDuplicateFromId, studyEntity.getSpreadsheetConfigCollectionUuid().toString());
         wireMockStubs.verifyWorkspacesConfigDuplicateFromAny(stubWorkspacesConfigDuplicateFromId, 1);
-        wireMockStubs.userAdminServer.verifyGetUserProfile("userId");
     }
 
     private StudyEntity duplicateStudy(UUID studyUuid, String userId) throws Exception {
@@ -1073,9 +1052,6 @@ class StudyTest extends StudyTestBase {
             .willSetStateTo("indexed")
             .willReturn(WireMock.ok())).getId();
         UUID stubUuid = wireMockStubs.stubDuplicateModificationGroup(mapper.writeValueAsString(Map.of()));
-        wireMockStubs.userAdminServer.stubGetUserProfile(userId);
-        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/users/" + NAD_CONFIG_USER_ID + "/profile"))
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(USER_PROFILE_WITH_DIAGRAM_CONFIG_PARAMS_JSON))).getId();
         UUID stubDuplicateCaseId = wireMockStubs.caseServer.stubDuplicateCaseWithBody(CASE_UUID_STRING, mapper.writeValueAsString(CLONED_CASE_UUID));
         UUID stubReportsDuplicateId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/reports/.*/duplicate"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -1085,15 +1061,6 @@ class StudyTest extends StudyTestBase {
         UUID stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromAny(DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
         UUID stubWorkspacesConfigDuplicateFromId = wireMockStubs.stubWorkspacesConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
-
-        // NAD specific mocks
-        UUID stubDiagramGridLayoutId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/diagram-grid-layout"))
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
-        UUID stubNetworkAreaDiagramConfigId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/network-area-diagram/config"))
-            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(UUID.randomUUID())))).getId();
-        UUID stubElementNameId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/elements/" + PROFILE_DIAGRAM_CONFIG_UUID_STRING + "/name"))
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(mapper.writeValueAsString(NAD_ELEMENT_NAME)))).getId();
 
         String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
                 .header(USER_ID_HEADER, userId))
@@ -1220,14 +1187,6 @@ class StudyTest extends StudyTestBase {
         }
         if (sourceStudy.getWorkspacesConfigUuid() != null) {
             wireMockStubs.verifyWorkspacesConfigDuplicateFromAny(stubWorkspacesConfigDuplicateFromId, 1);
-        }
-        if (NAD_CONFIG_USER_ID.equals(userId)) {
-            wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
-            wireMockStubs.verifyNetworkAreaDiagramConfig(stubNetworkAreaDiagramConfigId);
-            wireMockStubs.verifyElementNameGet(stubElementNameId, PROFILE_DIAGRAM_CONFIG_UUID_STRING);
-            wireMockStubs.verifyDiagramGridLayout(stubDiagramGridLayoutId);
-        } else {
-            wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
         }
         wireMockStubs.verifyReportsDuplicate(stubReportsDuplicateId);
 
@@ -1394,6 +1353,7 @@ class StudyTest extends StudyTestBase {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         UUID nodeUuid = getRootNodeUuid(studyUuid);
 
+        wireMockStubs.directoryServer.stubCheckPermission(List.of(), directoryUuid, userId, PermissionType.WRITE, false, HttpStatus.OK.value());
         wireMockStubs.directoryServer.stubElementExists(directoryUuid, fileName, DirectoryService.CASE, HttpStatus.NO_CONTENT.value());
         wireMockStubs.networkConversionServer.stubExportNetwork(NETWORK_UUID, fileName, mapper.writeValueAsString(exportUuid), HttpStatus.OK.value());
 
@@ -1405,6 +1365,7 @@ class StudyTest extends StudyTestBase {
             .param("description", description)
             .header(USER_ID_HEADER, userId)).andExpect(status().isOk());
 
+        wireMockStubs.directoryServer.verifyCheckPermission(List.of(), directoryUuid, PermissionType.WRITE, false);
         wireMockStubs.directoryServer.verifyElementExists(directoryUuid, fileName, DirectoryService.CASE);
         wireMockStubs.networkConversionServer.verifyExportNetwork(NETWORK_UUID, fileName);
     }
@@ -1415,12 +1376,14 @@ class StudyTest extends StudyTestBase {
         String description = "description";
         String fileName = "myFileName";
         UUID directoryUuid = UUID.randomUUID();
+        String userId = "userId";
 
         UUID studyUuid = createStudyWithStubs(USER_ID_HEADER, CASE_UUID);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         UUID nodeUuid = getRootNodeUuid(studyUuid);
 
+        wireMockStubs.directoryServer.stubCheckPermission(List.of(), directoryUuid, userId, PermissionType.WRITE, false, HttpStatus.OK.value());
         wireMockStubs.directoryServer.stubElementExists(directoryUuid, fileName, DirectoryService.CASE, HttpStatus.OK.value());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
@@ -1431,6 +1394,33 @@ class StudyTest extends StudyTestBase {
             .param("description", description)
             .header(USER_ID_HEADER, "userId")).andExpect(status().isInternalServerError());
 
+        wireMockStubs.directoryServer.verifyCheckPermission(List.of(), directoryUuid, PermissionType.WRITE, false);
         wireMockStubs.directoryServer.verifyElementExists(directoryUuid, fileName, DirectoryService.CASE);
+    }
+
+    @Test
+    void testExportNetworkFailNoPermissions() throws Exception {
+
+        String description = "description";
+        String fileName = "myFileName";
+        UUID directoryUuid = UUID.randomUUID();
+        String userId = "userId";
+
+        UUID studyUuid = createStudyWithStubs(USER_ID_HEADER, CASE_UUID);
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+
+        UUID nodeUuid = getRootNodeUuid(studyUuid);
+
+        wireMockStubs.directoryServer.stubCheckPermission(List.of(), directoryUuid, userId, PermissionType.WRITE, false, HttpStatus.INTERNAL_SERVER_ERROR.value());
+
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}",
+            studyUuid, firstRootNetworkUuid, nodeUuid, "XIIDM")
+            .param("fileName", fileName)
+            .param("exportToGridExplore", Boolean.TRUE.toString())
+            .param("parentDirectoryUuid", directoryUuid.toString())
+            .param("description", description)
+            .header(USER_ID_HEADER, "userId")).andExpect(status().isInternalServerError());
+
+        wireMockStubs.directoryServer.verifyCheckPermission(List.of(), directoryUuid, PermissionType.WRITE, false);
     }
 }
