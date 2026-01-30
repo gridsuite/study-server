@@ -43,5 +43,5 @@ public class UserProfileInfos {
 
     private UUID networkVisualizationParameterId;
 
-    private UUID diagramConfigId;
+    private UUID workspaceId;
 }
