@@ -77,7 +77,7 @@ class ComputationResultFiltersTest {
                 study.getId(), COMPUTATION_TYPE, COMPUTATION_SUB_TYPE)).andExpectAll(status().isOk()).andReturn();
         JSONAssert.assertEquals(COMPUTATION_FILTERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
         wireMockServer.verify(1, postRequestedFor(urlEqualTo("/v1/computation-result-filters/default")));
-        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID+ "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE)));
+        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE)));
         wireMockServer.resetRequests();
 
         study = insertDummyStudy(COMPUTATION_FILTERS_UUID);
@@ -85,7 +85,7 @@ class ComputationResultFiltersTest {
                 study.getId(), COMPUTATION_TYPE, COMPUTATION_SUB_TYPE)).andExpectAll(status().isOk()).andReturn();
         JSONAssert.assertEquals(COMPUTATION_FILTERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
         wireMockServer.verify(0, postRequestedFor(urlEqualTo("/v1/computation-result-filters/default")));
-        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID+ "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE)));
+        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE)));
     }
 
     @Test

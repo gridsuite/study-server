@@ -440,7 +440,7 @@ public class StudyConfigService {
 
     public String getComputationResultFilters(UUID uuid, String computationType, String computationSubType) {
         Objects.requireNonNull(uuid);
-        Map<String, Object> uriVariables = Map.of("id", uuid,"computationType", computationType, "computationSubType", computationSubType);
+        Map<String, Object> uriVariables = Map.of("id", uuid, "computationType", computationType, "computationSubType", computationSubType);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
                 "/{id}/{computationType}/{computationSubType}").buildAndExpand(uriVariables).toUriString();
         return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
