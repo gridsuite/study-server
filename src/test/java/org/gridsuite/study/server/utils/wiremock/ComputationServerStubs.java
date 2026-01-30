@@ -51,6 +51,13 @@ public class ComputationServerStubs {
                 .withBody(statusJson))).getId();
     }
 
+    public UUID stubGetResult(String resultUuid, String statusJson) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid )).withQueryParam("mode", WireMock.equalTo("FULL"))
+                .willReturn(WireMock.ok()
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(statusJson))).getId();
+    }
+
     public void verifyComputationStop(String resultUuid, Map<String, StringValuePattern> queryParams) {
         WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/results/" + resultUuid + "/stop", true, queryParams, null);
     }
