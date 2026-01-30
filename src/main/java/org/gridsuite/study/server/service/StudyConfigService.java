@@ -11,16 +11,15 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.STUDY_CONFIG_API_VERSION;
@@ -425,20 +424,15 @@ public class StudyConfigService {
         restTemplate.delete(studyConfigServerBaseUri + path);
     }
 
-    public UUID createComputationResultFilters() {
-        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI + "/default")
-                .buildAndExpand().toUriString();
-        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+    public String getComputationResultGlobalFilters(UUID uuid, String computationType) {
+        Objects.requireNonNull(uuid);
+        Map<String, Object> uriVariables = Map.of("id", uuid, "computationType", computationType);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
+                "/{id}/{computationType}").buildAndExpand(uriVariables).toUriString();
+        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
     }
 
-    public UUID getOrElseCreateComputationResultFiltersUuid(StudyEntity studyEntity) {
-        if (studyEntity.getComputationResultFiltersUuid() == null) {
-            studyEntity.setComputationResultFiltersUuid(createComputationResultFilters());
-        }
-        return studyEntity.getComputationResultFiltersUuid();
-    }
-
-    public String getComputationResultFilters(UUID uuid, String computationType, String computationSubType) {
+    public String getComputationResultColumnFilters(UUID uuid, String computationType, String computationSubType) {
         Objects.requireNonNull(uuid);
         Map<String, Object> uriVariables = Map.of("id", uuid, "computationType", computationType, "computationSubType", computationSubType);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
@@ -464,5 +458,11 @@ public class StudyConfigService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(columnInfos, headers);
         restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
+    }
+
+    public UUID createComputationResultsFiltersRootId() {
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI + "/default")
+                .buildAndExpand().toUriString();
+        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 }

@@ -41,7 +41,10 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -2789,9 +2792,23 @@ public class StudyService {
     }
 
     @Transactional
-    public String getComputationResultFilters(UUID studyUuid, String computationType, String computationSubType) {
+    public String getComputationResultGlobalFilters(UUID studyUuid, String computationType) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        return studyConfigService.getComputationResultFilters(studyConfigService.getOrElseCreateComputationResultFiltersUuid(studyEntity), computationType, computationSubType);
+        if (studyEntity.getComputationResultFiltersUuid() == null) {
+            UUID rootId = studyConfigService.createComputationResultsFiltersRootId();
+            studyEntity.setComputationResultFiltersUuid(rootId);
+        }
+        return studyConfigService.getComputationResultGlobalFilters(studyEntity.getComputationResultFiltersUuid(), computationType);
+    }
+
+    @Transactional
+    public String getComputationResultColumnFilters(UUID studyUuid, String computationType, String computationSubType) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        if (studyEntity.getComputationResultFiltersUuid() == null) {
+            UUID rootId = studyConfigService.createComputationResultsFiltersRootId();
+            studyEntity.setComputationResultFiltersUuid(rootId);
+        }
+        return studyConfigService.getComputationResultColumnFilters(studyEntity.getComputationResultFiltersUuid(), computationType, computationSubType);
     }
 
     @Transactional

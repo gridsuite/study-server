@@ -31,14 +31,23 @@ public class ComputationResultFiltersController {
         this.studyService = studyService;
     }
 
+    @GetMapping("/{computationType}")
+    @Operation(summary = "Get study's computation result global filters")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The computation result global filters")})
+    public ResponseEntity<String> getComputationResultGlobalFilters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("computationType") String computationType) {
+        return ResponseEntity.ok().body(studyService.getComputationResultGlobalFilters(studyUuid, computationType));
+    }
+
     @GetMapping("/{computationType}/{computationSubType}")
-    @Operation(summary = "Get study's computation result filters")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The computation result filters")})
-    public ResponseEntity<String> getComputationResultFilters(
+    @Operation(summary = "Get study's computation result column filters")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The computation result column filters")})
+    public ResponseEntity<String> getComputationResultColumnFilters(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("computationType") String computationType,
             @PathVariable("computationSubType") String computationSubType) {
-        return ResponseEntity.ok().body(studyService.getComputationResultFilters(studyUuid, computationType, computationSubType));
+        return ResponseEntity.ok().body(studyService.getComputationResultColumnFilters(studyUuid, computationType, computationSubType));
     }
 
     @PostMapping("/{computationType}/global-filters")
