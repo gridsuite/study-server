@@ -104,11 +104,11 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "spreadsheetConfigCollectionUuid")
     private UUID spreadsheetConfigCollectionUuid;
 
+    @Column(name = "workspacesConfigUuid")
+    private UUID workspacesConfigUuid;
+
     @Column(name = "computationResultFiltersUuid")
     private UUID computationResultFiltersUuid;
-
-    @Column(name = "diagramGridLayoutUuid")
-    private UUID diagramGridLayoutUuid;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "study_voltage_init_parameters_id",
