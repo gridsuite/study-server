@@ -31,12 +31,14 @@ public class ComputationResultFiltersController {
         this.studyService = studyService;
     }
 
-    @GetMapping()
+    @GetMapping("/{computationType}/{computationSubType}")
     @Operation(summary = "Get study's computation result filters")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The computation result filters")})
     public ResponseEntity<String> getComputationResultFilters(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getComputationResultFilters(studyUuid));
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("computationType") String computationType,
+            @PathVariable("computationSubType") String computationSubType) {
+        return ResponseEntity.ok().body(studyService.getComputationResultFilters(studyUuid, computationType, computationSubType));
     }
 
     @PostMapping("/{computationType}/global-filters")

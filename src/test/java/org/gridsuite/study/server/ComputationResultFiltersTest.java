@@ -45,8 +45,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ComputationResultFiltersTest {
     private static final String COMPUTATION_FILTERS_JSON = "{\"computationResultFilters\":[]}";
     private static final UUID COMPUTATION_FILTERS_UUID = UUID.randomUUID();
-    private static final UUID COMPUTATION_GLOBAL_FILTERS_UUID = UUID.randomUUID();
-    private static final UUID COLUMN_UUID = UUID.randomUUID();
+    private static final String COMPUTATION_TYPE = "LoadFlow";
+    private static final String COMPUTATION_SUB_TYPE = "LoadFlowResultsVoltageViolations";
     private WireMockServer wireMockServer;
     @Autowired
     private MockMvc mockMvc;
@@ -60,46 +60,48 @@ class ComputationResultFiltersTest {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
         wireMockServer.start();
         studyConfigService.setStudyConfigServerBaseUri(wireMockServer.baseUrl());
-        wireMockServer.stubFor(WireMock.get(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID))
+        wireMockServer.stubFor(WireMock.get(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE))
                         .willReturn(aResponse().withStatus(200).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(COMPUTATION_FILTERS_JSON)));
         wireMockServer.stubFor(WireMock.post(urlEqualTo("/v1/computation-result-filters/default"))
                         .willReturn(aResponse().withStatus(200).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody("\"" + COMPUTATION_FILTERS_UUID + "\"")));
-        wireMockServer.stubFor(WireMock.post(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_GLOBAL_FILTERS_UUID + "/global-filters"))
+        wireMockServer.stubFor(WireMock.post(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE + "/global-filters"))
                 .willReturn(aResponse().withStatus(204)));
-        wireMockServer.stubFor(WireMock.put(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/columns/" + COLUMN_UUID))
+        wireMockServer.stubFor(WireMock.put(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE + "/columns"))
                 .willReturn(aResponse().withStatus(204)));
     }
 
     @Test
     void getComputationResultFilters() throws Exception {
         StudyEntity study = insertDummyStudy(null);
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/computation-result-filters", study.getId())).andExpectAll(status().isOk()).andReturn();
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/{computationSubType}",
+                study.getId(), COMPUTATION_TYPE, COMPUTATION_SUB_TYPE)).andExpectAll(status().isOk()).andReturn();
         JSONAssert.assertEquals(COMPUTATION_FILTERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
         wireMockServer.verify(1, postRequestedFor(urlEqualTo("/v1/computation-result-filters/default")));
-        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID)));
+        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID+ "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE)));
         wireMockServer.resetRequests();
 
         study = insertDummyStudy(COMPUTATION_FILTERS_UUID);
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/computation-result-filters", study.getId())).andExpectAll(status().isOk()).andReturn();
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/{computationSubType}",
+                study.getId(), COMPUTATION_TYPE, COMPUTATION_SUB_TYPE)).andExpectAll(status().isOk()).andReturn();
         JSONAssert.assertEquals(COMPUTATION_FILTERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
         wireMockServer.verify(0, postRequestedFor(urlEqualTo("/v1/computation-result-filters/default")));
-        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID)));
+        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID+ "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE)));
     }
 
     @Test
     void setGlobalFilters() throws Exception {
-        StudyEntity study = insertDummyStudy(COMPUTATION_GLOBAL_FILTERS_UUID);
+        StudyEntity study = insertDummyStudy(COMPUTATION_FILTERS_UUID);
         String json = "{\"globalFilters\":[]}";
-        mockMvc.perform(post("/v1/studies/{studyUuid}/computation-result-filters/{id}/global-filters", study.getId(), COMPUTATION_GLOBAL_FILTERS_UUID)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/global-filters", study.getId(), COMPUTATION_TYPE)
                 .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
     }
 
     @Test
     void updateColumn() throws Exception {
-        StudyEntity study = insertDummyStudy(COLUMN_UUID);
+        StudyEntity study = insertDummyStudy(COMPUTATION_FILTERS_UUID);
         String json = "{\"columnsFilters\":[]}";
-        mockMvc.perform(put("/v1/studies/{studyUuid}/computation-result-filters/{id}/columns/{columnUuid}", study.getId(),
-                COMPUTATION_FILTERS_UUID, COLUMN_UUID).contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
+        mockMvc.perform(put("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/{computationSubType}/columns", study.getId(),
+                COMPUTATION_TYPE, COMPUTATION_SUB_TYPE).contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
     }
 
     private StudyEntity insertDummyStudy(UUID computationResultFiltersUuid) {

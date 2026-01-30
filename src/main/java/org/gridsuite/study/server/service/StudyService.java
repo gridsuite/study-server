@@ -617,7 +617,7 @@ public class StudyService {
                                               UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                               UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                               UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid, UUID computationResultFiltersUuid) {
+                                              UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -632,7 +632,7 @@ public class StudyService {
                 voltageInitParametersUuid, securityAnalysisParametersUuid,
                 sensitivityAnalysisParametersUuid, networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid,
                 stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, diagramGridLayoutUuid,
-                importParameters, importReportUuid, computationResultFiltersUuid);
+                importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
@@ -1616,7 +1616,7 @@ public class StudyService {
                                                     UUID shortCircuitParametersUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity,
                                                     UUID voltageInitParametersUuid, UUID securityAnalysisParametersUuid, UUID sensitivityAnalysisParametersUuid,
                                                     UUID networkVisualizationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID stateEstimationParametersUuid, UUID pccMinParametersUuid,
-                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid, UUID computationResultFilterUuid) {
+                                                    UUID spreadsheetConfigCollectionUuid, UUID diagramGridLayoutUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1634,7 +1634,6 @@ public class StudyService {
                 .pccMinParametersUuid(pccMinParametersUuid)
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
                 .diagramGridLayoutUuid(diagramGridLayoutUuid)
-                .computationResultFiltersUuid(computationResultFilterUuid)
                 .monoRoot(true)
                 .build();
 
@@ -2780,9 +2779,9 @@ public class StudyService {
     }
 
     @Transactional
-    public String getComputationResultFilters(UUID studyUuid) {
+    public String getComputationResultFilters(UUID studyUuid, String computationType, String computationSubType) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        return studyConfigService.getComputationResultFilters(studyConfigService.getOrElseCreateComputationResultFiltersUuid(studyEntity));
+        return studyConfigService.getComputationResultFilters(studyConfigService.getOrElseCreateComputationResultFiltersUuid(studyEntity), computationType, computationSubType);
     }
 
     @Transactional

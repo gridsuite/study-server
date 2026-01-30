@@ -46,7 +46,6 @@ public class StudyConfigService {
     private static final String DIAGRAM_GRID_LAYOUT_WITH_ID_URI = DIAGRAM_GRID_LAYOUT_URI + UUID_PARAM;
 
     private static final String COMPUTATION_RESULT_FILTERS_URI = "/computation-result-filters";
-    private static final String COMPUTATION_RESULT_FILTERS_WITH_ID_URI = COMPUTATION_RESULT_FILTERS_URI + UUID_PARAM;
 
     private static final DiagramPosition DEFAULT_DIAGRAM_POSITION = new DiagramPosition(2, 2, 0, 0);
 
@@ -386,9 +385,11 @@ public class StudyConfigService {
         return studyEntity.getComputationResultFiltersUuid();
     }
 
-    public String getComputationResultFilters(UUID uuid) {
+    public String getComputationResultFilters(UUID uuid, String computationType, String computationSubType) {
         Objects.requireNonNull(uuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_WITH_ID_URI).buildAndExpand(uuid).toUriString();
+        Map<String, Object> uriVariables = Map.of("id", uuid,"computationType", computationType, "computationSubType", computationSubType);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
+                "/{id}/{computationType}/{computationSubType}").buildAndExpand(uriVariables).toUriString();
         return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
     }
 
