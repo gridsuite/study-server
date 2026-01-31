@@ -107,9 +107,6 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "spreadsheetConfigCollectionUuid")
     private UUID spreadsheetConfigCollectionUuid;
 
-    @Column(name = "diagramGridLayoutUuid")
-    private UUID diagramGridLayoutUuid;
-
     @Column(name = "workspacesConfigUuid")
     private UUID workspacesConfigUuid;
 

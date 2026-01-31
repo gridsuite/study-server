@@ -130,8 +130,6 @@ class StudyTestBase {
     protected static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
     protected static final String INVALID_PARAMS_IN_PROFILE_USER_ID = "invalidParamInProfileUser";
     protected static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
-    protected static final String NAD_CONFIG_USER_ID = "nadConfigUser";
-    protected static final String NAD_ELEMENT_NAME = "nadName";
 
     protected static final String PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING = "f09f5282-8e34-48b5-b66e-7ef9f3f36c4f";
     protected static final String PROFILE_SECURITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING = "a09f5282-8e36-48b5-b66e-7ef9f3f36c4f";
@@ -158,7 +156,7 @@ class StudyTestBase {
     protected static final String PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING = "9cec4a7b-ab74-5d78-9d07-ce73c5ef11d9";
     protected static final String PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING = "2c865123-4378-8dd2-9d07-ce73c5ef11d9";
     protected static final String PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING = "207a4bec-6f1a-400f-98f0-e5bcf37d4fcf";
-    protected static final String PROFILE_DIAGRAM_CONFIG_UUID_STRING = "518b5cac-6f1a-400f-98f0-e5bcf37d4fcf";
+    protected static final String PROFILE_WORKSPACE_UUID_STRING = "518b5cac-6f1a-400f-98f0-e5bcf37d4fcf";
 
     protected static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" +
         PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING +
@@ -168,17 +166,7 @@ class StudyTestBase {
         "\",\"voltageInitParameterId\":\"" + PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING +
         "\",\"spreadsheetConfigCollectionId\":\"" + PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING +
         "\",\"networkVisualizationParameterId\":\"" + PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING +
-        "\",\"allLinksValid\":true}";
-
-    protected static final String USER_PROFILE_WITH_DIAGRAM_CONFIG_PARAMS_JSON = "{\"name\":\"Profile with valid params\",\"loadFlowParameterId\":\"" +
-        PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING +
-        "\",\"securityAnalysisParameterId\":\"" + PROFILE_SECURITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING +
-        "\",\"sensitivityAnalysisParameterId\":\"" + PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING +
-        "\",\"shortcircuitParameterId\":\"" + PROFILE_SHORTCIRCUIT_VALID_PARAMETERS_UUID_STRING +
-        "\",\"voltageInitParameterId\":\"" + PROFILE_VOLTAGE_INIT_VALID_PARAMETERS_UUID_STRING +
-        "\",\"spreadsheetConfigCollectionId\":\"" + PROFILE_SPREADSHEET_CONFIG_COLLECTION_VALID_UUID_STRING +
-        "\",\"networkVisualizationParameterId\":\"" + PROFILE_NETWORK_VISUALIZATION_VALID_PARAMETERS_UUID_STRING +
-        "\",\"diagramConfigId\":\"" + PROFILE_DIAGRAM_CONFIG_UUID_STRING +
+        "\",\"workspaceId\":\"" + PROFILE_WORKSPACE_UUID_STRING +
         "\",\"allLinksValid\":true}";
 
     protected static final String PROFILE_LOADFLOW_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";

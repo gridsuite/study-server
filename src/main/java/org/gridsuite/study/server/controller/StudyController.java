@@ -28,7 +28,6 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
-import org.gridsuite.study.server.dto.diagramgridlayout.DiagramGridLayout;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -1047,11 +1046,14 @@ public class StudyController {
         @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
         @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
     public byte[] getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                           @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
-                                                                           @Parameter(description = "Csv translation (JSON)") @RequestBody String csvTranslations) {
-        return rootNetworkNodeInfoService.getSecurityAnalysisResultCsv(nodeUuid, rootNetworkUuid, resultType, csvTranslations);
+                                            @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                            @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
+                                            @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
+                                            @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                            @Parameter(description = "Csv translation (JSON)") @RequestBody String csvTranslations,
+                                            @Parameter(description = "Sort parameters") Sort sort) {
+        return rootNetworkNodeInfoService.getSecurityAnalysisResultCsv(nodeUuid, rootNetworkUuid, resultType, globalFilters, filters, sort, csvTranslations);
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/contingency-count")
@@ -2528,27 +2530,6 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow provider is returned")})
     public ResponseEntity<String> getLoadFlowProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/diagram-grid-layout")
-    @Operation(summary = "Get diagram grid layout of a study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Diagram grid layout is returned"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
-    public ResponseEntity<DiagramGridLayout> getDiagramGridLayout(
-        @PathVariable("studyUuid") UUID studyUuid) {
-        studyService.assertIsStudyExist(studyUuid);
-        DiagramGridLayout diagramGridLayout = studyService.getDiagramGridLayout(studyUuid);
-        return diagramGridLayout != null ? ResponseEntity.ok().body(diagramGridLayout) : ResponseEntity.noContent().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/diagram-grid-layout", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Save diagram grid layout of a study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Diagram grid layout is saved"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
-    public ResponseEntity<UUID> saveDiagramGridLayout(
-        @PathVariable("studyUuid") UUID studyUuid,
-        @RequestBody DiagramGridLayout diagramGridLayout) {
-        studyService.assertIsStudyExist(studyUuid);
-
-        return ResponseEntity.ok().body(studyService.saveDiagramGridLayout(studyUuid, diagramGridLayout));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/spreadsheet/parameters", produces = MediaType.APPLICATION_JSON_VALUE)

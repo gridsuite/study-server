@@ -39,7 +39,6 @@ public final class StudyConstants {
     public static final String STATE_ESTIMATION_API_VERSION = "v1";
     public static final String PCC_MIN_API_VERSION = "v1";
     public static final String DIRECTORY_API_VERSION = "v1";
-    public static final String EXPLORE_API_VERSION = "v1";
 
     public static final String NETWORK_UUID = "networkUuid";
     public static final String CASE_UUID = "caseUuid";
@@ -66,6 +65,9 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_PARAMETERS_UUID = "parametersUuid";
     public static final String QUERY_PARAM_FILTERS = "filters";
     public static final String QUERY_PARAM_GLOBAL_FILTERS = "globalFilters";
+    public static final String QUERY_PARAM_SORT = "sort";
+    public static final String QUERY_PARAM_PAGE = "page";
+    public static final String QUERY_PARAM_SIZE = "size";
 
     public static final String GROUP_UUID = "groupUuid";
     public static final String REPORT_UUID = "reportUuid";
@@ -87,8 +89,8 @@ public final class StudyConstants {
     public static final String QUERY_WITH_TAP_CHANGER = "withRatioTapChangers";
     public static final String HEADER_RECEIVER = "receiver";
     public static final String HEADER_S3_KEY = "s3Key";
+    public static final String HEADER_EXPORT_CONTENT_TYPE = "exportContentType";
     public static final String HEADER_EXPORT_INFOS = "exportInfos";
-    public static final String HEADER_FILE_NAME = "fileName";
     public static final String HEADER_WORKFLOW_TYPE = "workflowType";
     public static final String HEADER_WORKFLOW_INFOS = "workflowInfos";
     public static final String HEADER_ERROR = "error";
