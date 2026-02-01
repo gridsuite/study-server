@@ -49,6 +49,8 @@ public class StudyConfigService {
     private static final String WORKSPACE_PANELS_URI = "/panels";
     private static final String DEFAULT_URI = "/default";
     private static final String COMPUTATION_RESULT_FILTERS_URI = "/computation-result-filters";
+    private static final String COMPUTATION_TYPE = "computationType";
+    private static final String COMPUTATION_SUB_TYPE = "computationSubType";
 
     private final RestTemplate restTemplate;
 
@@ -426,7 +428,7 @@ public class StudyConfigService {
 
     public String getComputationResultGlobalFilters(UUID uuid, String computationType) {
         Objects.requireNonNull(uuid);
-        Map<String, Object> uriVariables = Map.of("id", uuid, "computationType", computationType);
+        Map<String, Object> uriVariables = Map.of("id", uuid, COMPUTATION_TYPE, computationType);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
                 "/{id}/{computationType}").buildAndExpand(uriVariables).toUriString();
         return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
@@ -434,14 +436,14 @@ public class StudyConfigService {
 
     public String getComputationResultColumnFilters(UUID uuid, String computationType, String computationSubType) {
         Objects.requireNonNull(uuid);
-        Map<String, Object> uriVariables = Map.of("id", uuid, "computationType", computationType, "computationSubType", computationSubType);
+        Map<String, Object> uriVariables = Map.of("id", uuid, COMPUTATION_TYPE, computationType, COMPUTATION_SUB_TYPE, computationSubType);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
                 "/{id}/{computationType}/{computationSubType}").buildAndExpand(uriVariables).toUriString();
         return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
     }
 
     public void setGlobalFiltersForComputationResult(UUID id, String computationType, String globalFilters) {
-        Map<String, Object> uriVariables = Map.of("id", id, "computationType", computationType);
+        Map<String, Object> uriVariables = Map.of("id", id, COMPUTATION_TYPE, computationType);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
                 "/{id}/{computationType}/global-filters").buildAndExpand(uriVariables).toUriString();
         HttpHeaders headers = new HttpHeaders();
@@ -451,7 +453,7 @@ public class StudyConfigService {
     }
 
     public void updateColumns(UUID id, String computationType, String computationSubType, String columnInfos) {
-        Map<String, Object> uriVariables = Map.of("id", id, "computationType", computationType, "computationSubType", computationSubType);
+        Map<String, Object> uriVariables = Map.of("id", id, COMPUTATION_TYPE, computationType, COMPUTATION_SUB_TYPE, computationSubType);
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
                 "/{id}/{computationType}/{computationSubType}/columns").buildAndExpand(uriVariables).toUriString();
         HttpHeaders headers = new HttpHeaders();
@@ -461,7 +463,7 @@ public class StudyConfigService {
     }
 
     public UUID createComputationResultsFiltersRootId() {
-        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI + "/default")
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI + DEFAULT_URI)
                 .buildAndExpand().toUriString();
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
