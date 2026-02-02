@@ -24,6 +24,7 @@ import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,7 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
-import static org.gridsuite.study.server.utils.StudyUtils.addPageableToQueryParams;
+import static org.gridsuite.study.server.utils.StudyUtils.*;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
@@ -81,14 +82,14 @@ public class ShortCircuitService extends AbstractComputationService {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
-                .queryParam("reportUuid", reportInfos.reportUuid().toString())
-                .queryParam("reporterId", reportInfos.nodeUuid().toString())
-                .queryParam("reportType", StringUtils.isBlank(busId) ? StudyService.ReportType.SHORT_CIRCUIT.reportKey :
+                .queryParam(QUERY_PARAM_REPORT_UUID, reportInfos.reportUuid().toString())
+                .queryParam(QUERY_PARAM_REPORTER_ID, reportInfos.nodeUuid().toString())
+                .queryParam(QUERY_PARAM_REPORT_TYPE, StringUtils.isBlank(busId) ? StudyService.ReportType.SHORT_CIRCUIT.reportKey :
                         StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS.reportKey)
-                .queryParam("parametersUuid", parametersUuid);
+                .queryParam(QUERY_PARAM_PARAMETERS_UUID, parametersUuid);
 
         if (!StringUtils.isBlank(busId)) {
-            uriComponentsBuilder.queryParam("busId", busId);
+            uriComponentsBuilder.queryParam(QUERY_PARAM_BUS_ID, busId);
         }
 
         if (!StringUtils.isBlank(variantInfos.getVariantId())) {
@@ -153,10 +154,16 @@ public class ShortCircuitService extends AbstractComputationService {
         return restTemplate.exchange(resourcePath, HttpMethod.POST, entity, byte[].class).getBody();
     }
 
-    public byte[] getShortCircuitAnalysisCsvResult(UUID resultUuid, String headersCsv) {
+    public byte[] getShortCircuitAnalysisCsvResult(UUID resultUuid, UUID networkUuid, String variantId, String filters, String globalFilters, Sort sort, String headersCsv) {
         String resultPath = getShortCircuitAnalysisCsvResultResourcePath(resultUuid);
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath);
-        return getShortCircuitAnalysisCsvResultResource(builder.build().toUri(), headersCsv);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath)
+                .queryParam(QUERY_PARAM_NETWORK_UUID, networkUuid)
+                .queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+
+        addFiltersToQueryParams(builder, filters, globalFilters);
+        addSortToQueryParams(builder, sort);
+
+        return getShortCircuitAnalysisCsvResultResource(builder.build().encode().toUri(), headersCsv); // need to encode because of filter JSON array
     }
 
     public String getShortCircuitAnalysisResult(UUID resultUuid, FaultResultsMode mode) {
@@ -165,7 +172,7 @@ public class ShortCircuitService extends AbstractComputationService {
             return null;
         }
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath)
-                .queryParam("mode", mode);
+                .queryParam(QUERY_PARAM_MODE, mode);
 
         return getShortCircuitAnalysisResource(builder.build().toUri());
     }
@@ -175,20 +182,12 @@ public class ShortCircuitService extends AbstractComputationService {
         if (resultsPath == null) {
             return null;
         }
-
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultsPath)
-                .queryParam("rootNetworkUuid", resultParameters.getNetworkUuid())
-                .queryParam("variantId", resultParameters.getVariantId())
-                .queryParam("mode", mode);
+                .queryParam(QUERY_PARAM_NETWORK_UUID, resultParameters.getNetworkUuid())
+                .queryParam(QUERY_PARAM_VARIANT_ID, resultParameters.getVariantId())
+                .queryParam(QUERY_PARAM_MODE, mode);
 
-        if (filters != null && !filters.isEmpty()) {
-            builder.queryParam("filters", filters);
-        }
-
-        if (globalFilters != null && !globalFilters.isEmpty()) {
-            builder.queryParam("globalFilters", globalFilters);
-        }
-
+        addFiltersToQueryParams(builder, filters, globalFilters);
         addPageableToQueryParams(builder, pageable);
 
         return getShortCircuitAnalysisResource(builder.build().encode().toUri()); // need to encode because of filter JSON array
@@ -327,7 +326,7 @@ public class ShortCircuitService extends AbstractComputationService {
     public Map<String, Double> getVoltageLevelIccValues(UUID resultUuid, String voltageLevelId) {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/fault_results/icc")
-            .queryParam("voltageLevelId", voltageLevelId)
+            .queryParam(QUERY_PARAM_VOLTAGE_LEVEL_ID, voltageLevelId)
             .buildAndExpand(resultUuid)
             .toUriString();
         return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<Map<String, Double>>() { }).getBody();
