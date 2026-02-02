@@ -1,10 +1,7 @@
 package org.gridsuite.study.server.dto;
 
 import lombok.Getter;
-import org.apache.commons.lang3.exception.UncheckedException;
 import org.gridsuite.study.server.notification.NotificationService;
-
-import java.util.UUID;
 
 @Getter
 public enum ComputationType {
@@ -54,33 +51,5 @@ public enum ComputationType {
         this.updateStatusType = updateStatusType;
         this.updateResultType = updateResultType;
         this.updateFailedType = updateFailedType;
-    }
-
-    public UUID getResultUuid(Object object) {
-        try {
-            // Transform fieldName (e.g., "loadFlowResultUuid") to getter ("getLoadFlowResultUuid")
-            String getterName = "get" + resultUuidLabel.substring(0, 1).toUpperCase() + resultUuidLabel.substring(1);
-            return (UUID) object.getClass().getMethod(getterName).invoke(object);
-        } catch (Exception e) {
-            throw new UncheckedException(e);
-        }
-    }
-
-    private void updateResultUuid(Object object, UUID resultUuid, String updatePrefix) {
-        try {
-            // Transform fieldName (e.g., "loadFlowResultUuid") to setter ("setLoadFlowResultUuid")
-            String getterName = updatePrefix + resultUuidLabel.substring(0, 1).toUpperCase() + resultUuidLabel.substring(1);
-            object.getClass().getMethod(getterName, UUID.class).invoke(object, resultUuid);
-        } catch (Exception e) {
-            throw new UncheckedException(e);
-        }
-    }
-
-    public void setResultUuid(Object object, UUID resultUuid) {
-        updateResultUuid(object, resultUuid, "set");
-    }
-
-    public void addResultUuid(Object object, UUID resultUuid) {
-        updateResultUuid(object, resultUuid, "add");
     }
 }
