@@ -3730,4 +3730,24 @@ public class StudyService {
             .map(l -> new CurrentLimitViolationInfos(l.getSubjectId(), null))
             .toList();
     }
+
+    @Transactional
+    public UUID getComputationResultFiltersId(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return studyEntity.getComputationResultFiltersUuid();
+    }
+
+    @Transactional
+    public String getComputationResultGlobalFilters(UUID studyUuid, String computationType) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        if (studyEntity.getComputationResultFiltersUuid() == null) {
+            UUID rootId = studyConfigService.createComputationResultsFiltersRootId();
+            studyEntity.setComputationResultFiltersUuid(rootId);
+        }
+        return studyConfigService.getComputationResultGlobalFilters(studyEntity.getComputationResultFiltersUuid(), computationType);
+    }
+
+    public void setGlobalFiltersForComputationResult(UUID id, String computationType, String globalFilters) {
+        studyConfigService.setGlobalFiltersForComputationResult(id, computationType, globalFilters);
+    }
 }

@@ -49,6 +49,8 @@ public class StudyConfigService {
     private static final String NAME_URI = "/name";
     private static final String WORKSPACE_PANELS_URI = "/panels";
     private static final String DEFAULT_URI = "/default";
+    private static final String COMPUTATION_RESULT_FILTERS_URI = "/computation-result-filters";
+    private static final String COMPUTATION_TYPE = "computationType";
 
     private final RestTemplate restTemplate;
 
@@ -422,5 +424,29 @@ public class StudyConfigService {
         String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_WITH_ID_URI + WORKSPACE_WITH_ID_URI + WORKSPACE_PANELS_URI + "/{panelId}/current-nad-config")
                 .buildAndExpand(configId, workspaceId, panelId).toUriString();
         restTemplate.delete(studyConfigServerBaseUri + path);
+    }
+
+    public String getComputationResultGlobalFilters(UUID uuid, String computationType) {
+        Objects.requireNonNull(uuid);
+        Map<String, Object> uriVariables = Map.of("id", uuid, COMPUTATION_TYPE, computationType);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
+                "/{id}/{computationType}").buildAndExpand(uriVariables).toUriString();
+        return restTemplate.getForObject(studyConfigServerBaseUri + path, String.class);
+    }
+
+    public void setGlobalFiltersForComputationResult(UUID id, String computationType, String globalFilters) {
+        Map<String, Object> uriVariables = Map.of("id", id, COMPUTATION_TYPE, computationType);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI +
+                "/{id}/{computationType}/global-filters").buildAndExpand(uriVariables).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(globalFilters, headers);
+        restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, httpEntity, Void.class);
+    }
+
+    public UUID createComputationResultsFiltersRootId() {
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI + DEFAULT_URI)
+                .buildAndExpand().toUriString();
+        return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 }

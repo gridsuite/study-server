@@ -128,6 +128,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Builder.Default
     private Set<UUID> nadConfigsUuids = new HashSet<>();
 
+    @Column(name = "computationResultFiltersUuid")
+    private UUID computationResultFiltersUuid;
+
     @Column(name = "mono_root", columnDefinition = "boolean default true")
     private boolean monoRoot;
 
