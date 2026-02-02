@@ -245,7 +245,7 @@ class PccMinTest {
 
         checkPccMinMessagesReceived(ids.studyId, UPDATE_TYPE_PCC_MIN_STATUS);
         checkPccMinMessagesReceived(ids.studyId, UPDATE_TYPE_PCC_MIN_STATUS);
-        checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_RESULT);
+        checkPccMinMessagesReceived(ids.studyId, UPDATE_TYPE_PCC_MIN_RESULT);
 
         wireMockServer.verify(postRequestedFor(urlPathMatching(
             "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
@@ -326,7 +326,7 @@ class PccMinTest {
         consumerService.consumePccMinFailed().accept(failedMessage);
 
         checkPccMinMessagesReceived(ids.studyId, UPDATE_TYPE_PCC_MIN_STATUS);
-        checkPccMinMessagesReceived(ids.studyId, NotificationService.UPDATE_TYPE_PCC_MIN_FAILED);
+        checkPccMinMessagesReceived(ids.studyId, UPDATE_TYPE_PCC_MIN_FAILED);
 
         wireMockStubs.verifyPccMinFail(stubFail, NETWORK_UUID_STRING, VARIANT_ID_2);
     }
