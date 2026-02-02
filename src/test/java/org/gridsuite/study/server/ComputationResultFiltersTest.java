@@ -21,7 +21,6 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -43,6 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
 class ComputationResultFiltersTest {
+    private static final String BASE_URI = "/v1/computation-result-filters/";
+    public static final String DEFAULT = "default";
     private static final String COMPUTATION_FILTERS_JSON = "{\"computationResultFilters\":[]}";
     private static final UUID COMPUTATION_FILTERS_UUID = UUID.randomUUID();
     private static final String COMPUTATION_TYPE = "LoadFlow";
@@ -55,21 +56,60 @@ class ComputationResultFiltersTest {
     @Autowired
     private StudyRepository studyRepository;
 
+    private void stubGetGlobalFilters() {
+        stubGet(BASE_URI + COMPUTATION_FILTERS_UUID + "/" + ComputationResultFiltersTest.COMPUTATION_TYPE);
+    }
+
+    private void stubGetColumnFilters() {
+        stubGet(BASE_URI + COMPUTATION_FILTERS_UUID + "/" + ComputationResultFiltersTest.COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE);
+    }
+
+    private void stubGet(String url) {
+        wireMockServer.stubFor(WireMock.get(urlEqualTo(url))
+                .willReturn(okJson(COMPUTATION_FILTERS_JSON)));
+    }
+
+    private void stubCreateDefaultFilters() {
+        wireMockServer.stubFor(WireMock.post(urlEqualTo(BASE_URI + DEFAULT)).willReturn(okJson("\"" + COMPUTATION_FILTERS_UUID + "\"")));
+    }
+
+    private void stubSetGlobalFilters() {
+        wireMockServer.stubFor(WireMock.post(urlEqualTo(BASE_URI + COMPUTATION_FILTERS_UUID +
+                "/" + COMPUTATION_TYPE + "/global-filters")).willReturn(noContent()));
+    }
+
+    private void stubUpdateColumns() {
+        wireMockServer.stubFor(WireMock.put(urlEqualTo(BASE_URI + COMPUTATION_FILTERS_UUID + "/" +
+                        COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE + "/columns")).willReturn(noContent()));
+    }
+
+    private void verifyDefaultFiltersCalledOnce() {
+        wireMockServer.verify(1, postRequestedFor(urlEqualTo(BASE_URI + DEFAULT)));
+    }
+
+    private void verifyDefaultFiltersNotCalled() {
+        wireMockServer.verify(0, postRequestedFor(urlEqualTo(BASE_URI + DEFAULT)));
+    }
+
+    private void verifyColumnFiltersCalledOnce() {
+        wireMockServer.verify(1, getRequestedFor(urlEqualTo(BASE_URI + COMPUTATION_FILTERS_UUID +
+                "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE)));
+    }
+
+    private void verifyGlobalFiltersCalledOnce() {
+        wireMockServer.verify(1, getRequestedFor(urlEqualTo(BASE_URI + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE)));
+    }
+
     @BeforeEach
     void setup() {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
         wireMockServer.start();
         studyConfigService.setStudyConfigServerBaseUri(wireMockServer.baseUrl());
-        wireMockServer.stubFor(WireMock.get(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE))
-                        .willReturn(aResponse().withStatus(200).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(COMPUTATION_FILTERS_JSON)));
-        wireMockServer.stubFor(WireMock.get(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE))
-                .willReturn(aResponse().withStatus(200).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(COMPUTATION_FILTERS_JSON)));
-        wireMockServer.stubFor(WireMock.post(urlEqualTo("/v1/computation-result-filters/default"))
-                        .willReturn(aResponse().withStatus(200).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody("\"" + COMPUTATION_FILTERS_UUID + "\"")));
-        wireMockServer.stubFor(WireMock.post(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE + "/global-filters"))
-                .willReturn(aResponse().withStatus(204)));
-        wireMockServer.stubFor(WireMock.put(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE + "/columns"))
-                .willReturn(aResponse().withStatus(204)));
+        stubCreateDefaultFilters();
+        stubGetGlobalFilters();
+        stubGetColumnFilters();
+        stubSetGlobalFilters();
+        stubUpdateColumns();
     }
 
     @Test
@@ -78,31 +118,31 @@ class ComputationResultFiltersTest {
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/{computationSubType}",
                 study.getId(), COMPUTATION_TYPE, COMPUTATION_SUB_TYPE)).andExpectAll(status().isOk()).andReturn();
         JSONAssert.assertEquals(COMPUTATION_FILTERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
-        wireMockServer.verify(1, postRequestedFor(urlEqualTo("/v1/computation-result-filters/default")));
-        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE)));
+        verifyDefaultFiltersCalledOnce();
+        verifyColumnFiltersCalledOnce();
         wireMockServer.resetRequests();
 
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/{computationSubType}",
                 study.getId(), COMPUTATION_TYPE, COMPUTATION_SUB_TYPE)).andExpectAll(status().isOk()).andReturn();
         JSONAssert.assertEquals(COMPUTATION_FILTERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
-        wireMockServer.verify(0, postRequestedFor(urlEqualTo("/v1/computation-result-filters/default")));
-        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE)));
+        verifyDefaultFiltersNotCalled();
+        verifyColumnFiltersCalledOnce();
         wireMockServer.resetRequests();
 
         study = insertDummyStudy(null);
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/computation-result-filters/{computationType}",
                 study.getId(), COMPUTATION_TYPE)).andExpectAll(status().isOk()).andReturn();
         JSONAssert.assertEquals(COMPUTATION_FILTERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
-        wireMockServer.verify(1, postRequestedFor(urlEqualTo("/v1/computation-result-filters/default")));
-        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE)));
+        verifyDefaultFiltersCalledOnce();
+        verifyGlobalFiltersCalledOnce();
         wireMockServer.resetRequests();
 
         study = insertDummyStudy(COMPUTATION_FILTERS_UUID);
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/computation-result-filters/{computationType}",
                 study.getId(), COMPUTATION_TYPE)).andExpectAll(status().isOk()).andReturn();
         JSONAssert.assertEquals(COMPUTATION_FILTERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
-        wireMockServer.verify(0, postRequestedFor(urlEqualTo("/v1/computation-result-filters/default")));
-        wireMockServer.verify(1, getRequestedFor(urlEqualTo("/v1/computation-result-filters/" + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE)));
+        verifyDefaultFiltersNotCalled();
+        verifyGlobalFiltersCalledOnce();
     }
 
     @Test
