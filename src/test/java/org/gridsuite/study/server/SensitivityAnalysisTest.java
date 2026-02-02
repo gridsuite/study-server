@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -19,7 +19,6 @@ import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
@@ -28,7 +27,6 @@ import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.*;
-import org.json.JSONObject;
 import org.junit.jupiter.api.*;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -46,6 +44,7 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.util.*;
 
@@ -116,7 +115,7 @@ class SensitivityAnalysisTest {
         "\"sensitivityInjectionsSet\":[],\"sensitivityInjection\":[],\"sensitivityHVDC\":[],\"sensitivityPST\":[],\"sensitivityNodes\":[]}";
     public static final String SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":90.0,\"angleFlowSensitivityValueThreshold\":0.6,\"flowVoltageSensitivityValueThreshold\":0.1,\"sensitivityInjectionsSet\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"distributionType\":\"PROPORTIONAL\",\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityInjection\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityHVDC\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"sensitivityType\":\"DELTA_MW\",\"hvdcs\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityPST\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"sensitivityType\":\"DELTA_MW\",\"psts\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityNodes\":[{\"monitoredVoltageLevels\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"equipmentsInVoltageRegulation\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}]}";
 
-    private static final String SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":30.0,\"lowVoltageProportionalThreshold\":0.4,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
+    private static final String SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":30.0,\"voltageVoltageSensitivityValueThreshold\":0.4,\"flowVoltageSensitivityValueThreshold\":0.0,\"angleFlowSensitivityValueThreshold\":0.0}";
 
     //output destinations
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
@@ -196,7 +195,7 @@ class SensitivityAnalysisTest {
     }
 
     @BeforeEach
-    void setup() throws JsonProcessingException {
+    void setup() {
         computationServerStubs = new ComputationServerStubs(wireMockServer);
         reportServerStubs = new ReportServerStubs(wireMockServer);
         userAdminServerStubs = new UserAdminServerStubs(wireMockServer);
@@ -224,19 +223,14 @@ class SensitivityAnalysisTest {
             .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
             .children(Collections.emptyList()).build();
 
-        // Only for tests
         String mnBodyJson = objectWriter.writeValueAsString(modificationNode);
-        JSONObject jsonObject = new JSONObject(mnBodyJson);
-        jsonObject.put("variantId", variantId);
-        jsonObject.put("modificationGroupUuid", modificationGroupUuid);
-        mnBodyJson = jsonObject.toString();
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
             .andExpect(status().isOk());
         var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertNotNull(mess);
-        modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
-        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
+        modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(HEADER_NEW_NODE))));
+        assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(HEADER_INSERT_MODE));
 
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).build());
@@ -255,19 +249,19 @@ class SensitivityAnalysisTest {
         consumerService.consumeSensitivityAnalysisResult().accept(MessageBuilder.createMessage("", messageHeaders));
 
         Message<byte[]> sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         String updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
         sensitivityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(studyUuid, sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
         Message<byte[]> sensitivityAnalysisUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(studyUuid, sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_STUDY_UUID));
         updateType = (String) sensitivityAnalysisUpdateMessage.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT, updateType);
     }
 
     @Test
@@ -286,7 +280,7 @@ class SensitivityAnalysisTest {
 
         // run sensitivity analysis on root node (not allowed)
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
-                .header(HEADER_USER_ID, "testUserId"))
+            .header(HEADER_USER_ID, "testUserId"))
             .andExpect(status().isForbidden());
 
         testSensitivityAnalysisWithRootNetworkUuidAndNodeUuid(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, SENSITIVITY_ANALYSIS_RESULT_UUID);
@@ -464,14 +458,14 @@ class SensitivityAnalysisTest {
             .build();
 
         consumerService.consumeSensitivityAnalysisStopped().accept(stoppedMessage);
-        checkMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        checkMessagesReceived(studyUuid, UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
 
         computationServerStubs.verifyComputationStop(resultUuid, Map.of("receiver", WireMock.matching(".*")));
     }
 
     private void checkMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
         assertEquals(updateType, updateTypeToCheck);
     }
@@ -534,40 +528,36 @@ class SensitivityAnalysisTest {
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
 
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
+        assertEquals(studyEntity.getId(), message.getHeaders().get(HEADER_STUDY_UUID));
+        String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
     }
 
     @Test
-    void testResetUuidResultWhenSAFailed() throws Exception {
-        UUID resultUuid = UUID.randomUUID();
+    void testGetSensitivityAnalysisFactorCount() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
-        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
-        RootNode rootNode = networkModificationTreeService.getStudyTree(studyEntity.getId(), null);
-        NetworkModificationNode modificationNode = createNetworkModificationNode(studyEntity.getId(), rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node 1");
-        String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(modificationNode.getId(), firstRootNetworkUuid));
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
+        UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
 
-        // Set an uuid result in the database
-        rootNetworkNodeInfoService.updateComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, resultUuid, SENSITIVITY_ANALYSIS);
-        assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
-        assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
+        wireMockServer.stubFor(post(urlPathMatching("/v1/networks/.*/factor-count"))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .withBody(FAKE_RESULT_JSON)
+            )
+        );
 
-        StudyService studyServiceMock = Mockito.mock(StudyService.class);
-        doAnswer(invocation -> {
-            input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), SENSITIVITY_ANALYSIS_FAILED_DESTINATION);
-            return resultUuid;
-        }).when(studyServiceMock).runSensitivityAnalysis(any(), any(), any(), any());
-        assertNotNull(studyEntity.getId());
-        studyServiceMock.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), firstRootNetworkUuid, "testUserId");
-
-        // Test reset uuid result in the database
-        assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
-
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
+        MockHttpServletRequestBuilder requestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factor-count", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid);
+        requestBuilder.content(SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON);
+        String resultAsString = mockMvc.perform(requestBuilder.header("userId", "userId"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+        assertEquals(FAKE_RESULT_JSON, resultAsString);
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/networks/" + ".*" + "/factor-count",
+            true, Map.of(), null, 1);
     }
 
     // test sensitivity analysis on network 2 will fail
@@ -600,15 +590,15 @@ class SensitivityAnalysisTest {
 
         // Verify message sent to frontend
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
         // Status message
         message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
 
         // Verify the "run-and-save" POST request was called
         wireMockServer.verify(1, WireMock.postRequestedFor(
@@ -639,9 +629,9 @@ class SensitivityAnalysisTest {
 
         // Status message still sent
         message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyUuid2, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(studyUuid2, message.getHeaders().get(HEADER_STUDY_UUID));
         updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
         // Verify run-and-save POST request called
         wireMockServer.verify(1, WireMock.postRequestedFor(
@@ -649,24 +639,24 @@ class SensitivityAnalysisTest {
         ));
     }
 
-    private void createOrUpdateParametersAndDoChecks(UUID studyNameUserIdUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
+    private void createOrUpdateParametersAndDoChecks(UUID studyUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
         mockMvc.perform(
-                post("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)
+                post("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyUuid)
                     .header("userId", userId)
                     .contentType(MediaType.ALL)
                     .content(parameters))
             .andExpect(status().is(status.value()));
 
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
 
         message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(HEADER_UPDATE_TYPE));
 
         message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
-        assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+        assertEquals(studyUuid, message.getHeaders().get(HEADER_ELEMENT_UUID));
     }
 
     @Test
