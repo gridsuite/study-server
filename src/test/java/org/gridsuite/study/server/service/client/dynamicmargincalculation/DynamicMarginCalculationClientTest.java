@@ -202,7 +202,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        String resultParametersJson = dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID);
+        String resultParametersJson = dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID, "userId");
 
         // check result
         assertThat(resultParametersJson).isEqualTo(parametersJson);
@@ -215,7 +215,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID)
+            () -> dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID, "userId")
         );
 
         // --- Error --- //
@@ -225,7 +225,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID)
+            () -> dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID, "userId")
         );
     }
 

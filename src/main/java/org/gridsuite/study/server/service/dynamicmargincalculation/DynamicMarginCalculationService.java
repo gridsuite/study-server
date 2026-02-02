@@ -42,8 +42,8 @@ public class DynamicMarginCalculationService {
         this.dynamicMarginCalculationClient = dynamicMarginCalculationClient;
     }
 
-    public String getParameters(UUID parametersUuid) {
-        return dynamicMarginCalculationClient.getParameters(parametersUuid);
+    public String getParameters(UUID parametersUuid, String userId) {
+        return dynamicMarginCalculationClient.getParameters(parametersUuid, userId);
     }
 
     public UUID createParameters(String parameters) {

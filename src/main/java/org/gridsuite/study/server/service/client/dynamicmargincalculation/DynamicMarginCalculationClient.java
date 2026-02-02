@@ -100,12 +100,18 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
         getRestTemplate().put(url, httpEntity);
     }
 
-    public String getParameters(@NonNull UUID parametersUuid) {
+    public String getParameters(@NonNull UUID parametersUuid, String userId) {
         Objects.requireNonNull(parametersUuid);
 
         String url = getParametersWithUuidUrl(parametersUuid);
 
-        return getRestTemplate().getForObject(url, String.class);
+        HttpHeaders headers = new HttpHeaders();
+        if (StringUtils.isNotBlank(userId)) {
+            headers.set(HEADER_USER_ID, userId);
+        }
+
+        return getRestTemplate()
+            .exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
     }
 
     public UUID createParameters(@NonNull String parametersInfos) {

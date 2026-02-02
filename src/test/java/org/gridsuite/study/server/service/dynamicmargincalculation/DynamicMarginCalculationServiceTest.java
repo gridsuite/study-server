@@ -59,9 +59,9 @@ class DynamicMarginCalculationServiceTest {
 
     @Test
     void testGetParameters() {
-        given(dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID)).willReturn(PARAMETERS_JSON);
+        given(dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID, "userId")).willReturn(PARAMETERS_JSON);
 
-        String parametersJson = dynamicMarginCalculationService.getParameters(PARAMETERS_UUID);
+        String parametersJson = dynamicMarginCalculationService.getParameters(PARAMETERS_UUID, "userId");
 
         assertThat(parametersJson).isEqualTo(PARAMETERS_JSON);
     }

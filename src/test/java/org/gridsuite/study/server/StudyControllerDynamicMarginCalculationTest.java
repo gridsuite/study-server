@@ -500,7 +500,7 @@ class StudyControllerDynamicMarginCalculationTest {
         doAnswer(invocation -> PARAMETERS_UUID)
                 .when(spyDynamicMarginCalculationService).createParameters(any());
         doAnswer(invocation -> jsonParameters)
-                .when(spyDynamicMarginCalculationService).getParameters(PARAMETERS_UUID);
+                .when(spyDynamicMarginCalculationService).getParameters(PARAMETERS_UUID, "userId");
 
         MvcResult result;
 
