@@ -1757,6 +1757,13 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDefaultDynamicSecurityAnalysisProvider(userId));
     }
 
+    @GetMapping(value = "/dynamic-margin-calculation-default-provider")
+    @Operation(summary = "Get dynamic margin calculation default provider")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "The dynamic margin calculation default provider has been found"))
+    public ResponseEntity<String> getDefaultDynamicMarginCalculationProvider(@RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().body(studyService.getDefaultDynamicMarginCalculationProvider(userId));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all")
     @Operation(summary = "reindex root network")
     @ApiResponse(responseCode = "200", description = "Root network reindexed")

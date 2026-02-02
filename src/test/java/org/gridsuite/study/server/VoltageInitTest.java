@@ -920,7 +920,7 @@ class VoltageInitTest {
     }
 
     private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid, UUID rootNetworkUuid) {
-        ALL_COMPUTATION_STATUS.forEach(computationStatus -> checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, computationStatus));
+        TestUtils.ALL_COMPUTATION_STATUS.forEach(computationStatus -> checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, computationStatus));
     }
 
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpactsInfos expectedPayload) throws Exception {

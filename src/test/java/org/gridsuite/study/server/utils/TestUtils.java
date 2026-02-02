@@ -42,7 +42,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.gridsuite.study.server.notification.NotificationService.ALL_COMPUTATION_STATUS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -53,6 +52,20 @@ import static org.mockito.Mockito.doAnswer;
  */
 @Service
 public final class TestUtils {
+
+    public static final List<String> ALL_COMPUTATION_STATUS = List.of(
+            NotificationService.UPDATE_TYPE_LOADFLOW_STATUS,
+            NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS,
+            NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS,
+            NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
+            NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
+            NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS,
+            NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
+            NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS,
+            NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS,
+            NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS,
+            NotificationService.UPDATE_TYPE_PCC_MIN_STATUS
+    );
 
     //output destinations
     public static final String STUDY_UPDATE_DESTINATION = "study.update";

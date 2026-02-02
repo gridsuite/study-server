@@ -33,7 +33,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
-import static org.gridsuite.study.server.notification.NotificationService.ALL_COMPUTATION_STATUS;
+import static org.gridsuite.study.server.utils.TestUtils.ALL_COMPUTATION_STATUS;
 import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.mockito.Mockito.*;
 

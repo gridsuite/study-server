@@ -1052,7 +1052,7 @@ class LoadFlowTest {
     }
 
     private void checkUpdateStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
-        ALL_COMPUTATION_STATUS.forEach(computationStatus -> checkUpdateStatusMessageReceived(studyUuid, nodeUuid, computationStatus));
+        TestUtils.ALL_COMPUTATION_STATUS.forEach(computationStatus -> checkUpdateStatusMessageReceived(studyUuid, nodeUuid, computationStatus));
     }
 
     private void checkUpdateStatusMessagesReceived(UUID studyUuid) {
