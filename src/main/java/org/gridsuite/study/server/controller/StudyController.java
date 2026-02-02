@@ -858,8 +858,11 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
             @Parameter(description = "type") @RequestParam(value = "type") ShortcircuitAnalysisType type,
-            @Parameter(description = "headersCsv") @RequestBody String headersCsv) {
-        return ResponseEntity.ok().body(rootNetworkNodeInfoService.getShortCircuitAnalysisCsvResult(nodeUuid, rootNetworkUuid, type, headersCsv));
+            @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+            @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
+            @Parameter(description = "headersCsv") @RequestBody String headersCsv,
+            Sort sort) {
+        return ResponseEntity.ok().body(rootNetworkNodeInfoService.getShortCircuitAnalysisCsvResult(nodeUuid, rootNetworkUuid, type, filters, globalFilters, sort, headersCsv));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
