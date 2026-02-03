@@ -458,12 +458,12 @@ class SensitivityAnalysisTest {
             .build();
 
         consumerService.consumeSensitivityAnalysisStopped().accept(stoppedMessage);
-        checkMessagesReceived(studyUuid, UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        checkMessageReceived(studyUuid, UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
 
         computationServerStubs.verifyComputationStop(resultUuid, Map.of("receiver", WireMock.matching(".*")));
     }
 
-    private void checkMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
+    private void checkMessageReceived(UUID studyUuid, String updateTypeToCheck) {
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
@@ -550,7 +550,7 @@ class SensitivityAnalysisTest {
 
         MockHttpServletRequestBuilder requestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factor-count", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid);
         requestBuilder.content(SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON);
-        String resultAsString = mockMvc.perform(requestBuilder.header("userId", "userId"))
+        String resultAsString = mockMvc.perform(requestBuilder.header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse()
@@ -642,20 +642,14 @@ class SensitivityAnalysisTest {
     private void createOrUpdateParametersAndDoChecks(UUID studyUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyUuid)
-                    .header("userId", userId)
+                    .header(HEADER_USER_ID, userId)
                     .contentType(MediaType.ALL)
                     .content(parameters))
             .andExpect(status().is(status.value()));
 
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertEquals(studyUuid, message.getHeaders().get(HEADER_STUDY_UUID));
-        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
+        checkMessageReceived(studyUuid, UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        checkMessageReceived(studyUuid, UPDATE_TYPE_COMPUTATION_PARAMETERS);
+        Message<byte[]> message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
         assertEquals(studyUuid, message.getHeaders().get(HEADER_ELEMENT_UUID));
     }
 
