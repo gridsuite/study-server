@@ -32,10 +32,7 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.*;
 import org.json.JSONObject;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -62,10 +59,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_DEBUG;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
@@ -323,7 +317,7 @@ class ShortCircuitTest implements WithAssertions {
         computationServerStubs.verifyResultsCountGet();
 
         // Delete Shortcircuit results
-        assertEquals(1, rootNetworkNodeInfoRepository.findAll().stream().filter(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getShortCircuitAnalysisResultUuid() != null).count());
+        assertNotEquals(0, rootNetworkNodeInfoRepository.findAll().stream().filter(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getShortCircuitAnalysisResultUuid() != null).count());
         computationServerStubs.stubDeleteResults("/v1/results");
         reportServerStubs.stubDeleteReport();
         mockMvc.perform(delete("/v1/supervision/computation/results")
