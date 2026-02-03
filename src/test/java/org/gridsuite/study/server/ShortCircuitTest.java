@@ -277,7 +277,7 @@ class ShortCircuitTest implements WithAssertions {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                 .param("type", "ALL_BUSES")
                 .content(CSV_HEADERS)).andExpectAll(status().isOk(), content().bytes(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT));
-        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv", Map.of());
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv", Map.of("networkUuid", WireMock.equalTo(NETWORK_UUID_STRING), "variantId", WireMock.equalTo(VARIANT_ID_2)));
 
         // get short circuit result but with unknown node
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, firstRootNetworkUuid, unknownModificationNodeUuid)).andExpect(
@@ -376,7 +376,7 @@ class ShortCircuitTest implements WithAssertions {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                 .param("type", "ALL_BUSES")
                 .content(CSV_HEADERS)).andExpectAll(status().isNotFound());
-        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv", Map.of());
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv", Map.of("networkUuid", WireMock.equalTo(NETWORK_UUID_STRING_NOT_FOUND), "variantId", WireMock.equalTo(VARIANT_ID_4)));
     }
 
     private void consumeShortCircuitAnalysisResult(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, String resultUuid, boolean debug) throws JsonProcessingException {

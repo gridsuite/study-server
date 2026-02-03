@@ -65,9 +65,9 @@ public class ShortcircuitServerStubs {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/fault-types", Map.of());
     }
 
-    public void stubGetPagedFaultResults(String resultUuid, String result, String rootNetworkUuid, String variantId, String mode, String page, String size, String sort) {
+    public void stubGetPagedFaultResults(String resultUuid, String result, String networkUuid, String variantId, String mode, String page, String size, String sort) {
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + resultUuid + "/fault_results/paged"))
-                .withQueryParam("rootNetworkUuid", WireMock.equalTo(rootNetworkUuid))
+                .withQueryParam("networkUuid", WireMock.equalTo(networkUuid))
                 .withQueryParam("variantId", WireMock.equalTo(variantId))
                 .withQueryParam("mode", WireMock.equalTo(mode))
                 .withQueryParam("page", WireMock.equalTo(page))
@@ -76,9 +76,9 @@ public class ShortcircuitServerStubs {
                 .willReturn(WireMock.okJson(result)));
     }
 
-    public void verifyGetPagedFaultResults(String resultUuid, String rootNetworkUuid, String variantId, String mode, String page, String size, String sort) {
+    public void verifyGetPagedFaultResults(String resultUuid, String networkUuid, String variantId, String mode, String page, String size, String sort) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/fault_results/paged", Map.of(
-                "rootNetworkUuid", WireMock.equalTo(rootNetworkUuid),
+                "networkUuid" , WireMock.equalTo(networkUuid),
                 "variantId", WireMock.equalTo(variantId),
                 "mode", WireMock.equalTo(mode),
                 "page", WireMock.equalTo(page),
@@ -87,9 +87,9 @@ public class ShortcircuitServerStubs {
         ));
     }
 
-    public void stubGetPagedFeederResults(String resultUuid, String result, String rootNetworkUuid, String variantId, String filters, String mode, String page, String size, String sort) {
+    public void stubGetPagedFeederResults(String resultUuid, String result, String networkUuid, String variantId, String filters, String mode, String page, String size, String sort) {
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + resultUuid + "/feeder_results/paged"))
-                .withQueryParam("rootNetworkUuid", WireMock.equalTo(rootNetworkUuid))
+                .withQueryParam("networkUuid", WireMock.equalTo(networkUuid))
                 .withQueryParam("variantId", WireMock.equalTo(variantId))
                 .withQueryParam("filters", WireMock.equalTo(filters))
                 .withQueryParam("mode", WireMock.equalTo(mode))
@@ -99,9 +99,9 @@ public class ShortcircuitServerStubs {
                 .willReturn(WireMock.okJson(result)));
     }
 
-    public void verifyGetPagedFeederResults(String resultUuid, String rootNetworkUuid, String variantId, String filters, String mode, String page, String size, String sort) {
+    public void verifyGetPagedFeederResults(String resultUuid, String networkUuid, String variantId, String filters, String mode, String page, String size, String sort) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/feeder_results/paged", Map.of(
-                "rootNetworkUuid", WireMock.equalTo(rootNetworkUuid),
+                "networkUuid", WireMock.equalTo(networkUuid),
                 "variantId", WireMock.equalTo(variantId),
                 "filters", WireMock.equalTo(filters),
                 "mode", WireMock.equalTo(mode),
