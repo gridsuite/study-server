@@ -95,14 +95,15 @@ public class ComputationServerStubs {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
     }
 
-    public void stubParameterPut(String paramUuid, String responseJson) {
-        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid))
-                .willReturn(WireMock.okJson(responseJson))
-        );
+    public void stubParameterPut(WireMockServer wireMockServer, String paramUuid, String responseJson) {
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid))
+                .willReturn(WireMock.okJson(responseJson)));
     }
 
-    public void verifyParameterPut(String paramUuid) {
-        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/parameters/" + paramUuid, Map.of(), null);
+    public void verifyParameterPut(WireMockServer wireMockServer, String paramUuid) {
+        wireMockServer.verify(
+                putRequestedFor(urlEqualTo("/v1/parameters/" + paramUuid))
+        );
     }
 
     public void stubParametersGet(String paramUuid, String responseBody) {
