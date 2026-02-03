@@ -170,7 +170,7 @@ public class ComputationServerStubs {
     }
 
     public void verifyDeleteResult(String resultUuid) {
-        WireMockUtilsCriteria.verifyDeleteRequest(wireMock, "/v1/results", false, Map.of("resultsUuids", WireMock.matching(resultUuid)));
+        WireMockUtilsCriteria.verifyDeleteRequest(wireMock, "/v1/results", false, Map.of("resultsUuids", WireMock.equalTo(resultUuid)));
     }
 
     public void stubDeleteResults(String path) {

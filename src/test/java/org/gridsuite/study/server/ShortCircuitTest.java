@@ -323,16 +323,16 @@ class ShortCircuitTest implements WithAssertions {
         computationServerStubs.verifyResultsCountGet();
 
         // Delete Shortcircuit results
-        // In short-circuit server there is no distinction between 1-bus and all-buses, so we remove all kinds of short-circuit
+        assertEquals(1, rootNetworkNodeInfoRepository.findAll().stream().filter(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getShortCircuitAnalysisResultUuid() != null).count());
         computationServerStubs.stubDeleteResults("/v1/results");
         reportServerStubs.stubDeleteReport();
         mockMvc.perform(delete("/v1/supervision/computation/results")
                 .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
                 .queryParam("dryRun", "false"))
             .andExpect(status().isOk());
-        computationServerStubs.verifyDeleteResult(".*");
+        WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, "/v1/results", Map.of("resultsUuids", matching(".*")));
         reportServerStubs.verifyDeleteReport();
-        assertEquals(0, rootNetworkNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
+        assertEquals(0, rootNetworkNodeInfoRepository.findAll().stream().filter(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getShortCircuitAnalysisResultUuid() != null).count());
     }
 
     @Test
