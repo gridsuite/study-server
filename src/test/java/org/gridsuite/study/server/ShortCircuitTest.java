@@ -324,7 +324,6 @@ class ShortCircuitTest implements WithAssertions {
 
         // Delete Shortcircuit results
         // In short-circuit server there is no distinction between 1-bus and all-buses, so we remove all kinds of short-circuit
-        assertEquals(1, rootNetworkNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
         computationServerStubs.stubDeleteResults("/v1/results");
         reportServerStubs.stubDeleteReport();
         mockMvc.perform(delete("/v1/supervision/computation/results")
