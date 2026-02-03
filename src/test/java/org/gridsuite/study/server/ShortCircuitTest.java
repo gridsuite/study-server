@@ -95,8 +95,6 @@ class ShortCircuitTest implements WithAssertions {
 
     private static final String SHORT_CIRCUIT_ANALYSIS_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
 
-    private static final String SHORT_CIRCUIT_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
-
     private static final String SHORT_CIRCUIT_ANALYSIS_RESULT_JSON = "{\"version\":\"1.0\",\"faults\":[]}";
 
     private static final String CSV_HEADERS = "{csvHeaders}";
@@ -105,7 +103,6 @@ class ShortCircuitTest implements WithAssertions {
 
     private static final String SHORT_CIRCUIT_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
 
-    private static final String SHORT_CIRCUIT_ANALYSIS_PROFILE_PARAMETERS_JSON = "{\"withLimitViolations\":\"true\",\"withFortescueResult\":\"false\",\"withFeederResult\":\"true\"}";
     private static final String SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID = UUID.fromString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
     private static final String NO_PROFILE_USER_ID = "noProfileUser";
@@ -115,14 +112,11 @@ class ShortCircuitTest implements WithAssertions {
     private static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
     private static final String PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
     private static final String PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
-    private static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
     private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"shortcircuitParameterId\":\"" + PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
     private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"shortcircuitParameterId\":\"" + PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
-    private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
 
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
-    private static final String VARIANT_ID_3 = "variant_3";
     private static final String VARIANT_ID_4 = "variant_4";
 
     private static final long TIMEOUT = 1000;
@@ -166,7 +160,6 @@ class ShortCircuitTest implements WithAssertions {
     //output destinations
     private final String studyUpdateDestination = "study.update";
     private final String elementUpdateDestination = "element.update";
-    private final String shortCircuitAnalysisDebugDestination = "shortcircuitanalysis.debug";
     private final String shortCircuitAnalysisResultDestination = "shortcircuitanalysis.result";
     private final String shortCircuitAnalysisStoppedDestination = "shortcircuitanalysis.stopped";
     private final String shortCircuitAnalysisFailedDestination = "shortcircuitanalysis.run.dlx";
