@@ -78,7 +78,7 @@ public class ShortcircuitServerStubs {
 
     public void verifyGetPagedFaultResults(String resultUuid, String networkUuid, String variantId, String mode, String page, String size, String sort) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/fault_results/paged", Map.of(
-                "networkUuid" , WireMock.equalTo(networkUuid),
+                "networkUuid", WireMock.equalTo(networkUuid),
                 "variantId", WireMock.equalTo(variantId),
                 "mode", WireMock.equalTo(mode),
                 "page", WireMock.equalTo(page),
