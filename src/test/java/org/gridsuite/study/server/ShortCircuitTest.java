@@ -350,7 +350,6 @@ class ShortCircuitTest implements WithAssertions {
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
     }
 
-
     @Test
     void testGetShortCircuitAnalysisCsvResultNotFound() throws Exception {
         //insert a study
