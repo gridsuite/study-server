@@ -306,28 +306,50 @@ class ShortCircuitTest implements WithAssertions {
                         "receiver", WireMock.matching(".*"),
                         "reporterId", WireMock.matching(".*"),
                         "variantId", WireMock.equalTo(VARIANT_ID)));
+    }
+
+    @Test
+    void testDeleteShortcircuitResult() throws Exception {
+        //insert a study
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_SHORT_CIRCUIT_UUID, null);
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "node 1");
+        UUID modificationNode1Uuid = modificationNode1.getId();
+
+        //run in debug mode an all-buses short circuit analysis
+        computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, VARIANT_ID, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)
+                        .param(QUERY_PARAM_DEBUG, "true")
+                        .header("userId", "userId"))
+                .andExpect(status().isOk());
+        shortcircuitServerStubs.verifyShortcircuitRun(NETWORK_UUID_STRING, VARIANT_ID, true);
+        consumeShortCircuitAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, true);
 
         // Test result count
         // In short-circuit server there is no distinction between 1-bus and all-buses, so the count will return all kinds of short-circuit
         computationServerStubs.stubResultsCount(1);
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
-                .queryParam("dryRun", "true"))
+                        .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
+                        .queryParam("dryRun", "true"))
                 .andExpect(status().isOk());
         computationServerStubs.verifyResultsCountGet();
 
         // Delete Shortcircuit results
-        assertNotEquals(0, rootNetworkNodeInfoRepository.findAll().stream().filter(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getShortCircuitAnalysisResultUuid() != null).count());
+        assertEquals(1, rootNetworkNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
         computationServerStubs.stubDeleteResults("/v1/results");
         reportServerStubs.stubDeleteReport();
         mockMvc.perform(delete("/v1/supervision/computation/results")
-                .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
-                .queryParam("dryRun", "false"))
-            .andExpect(status().isOk());
+                        .queryParam("type", ComputationType.SHORT_CIRCUIT.toString())
+                        .queryParam("dryRun", "false"))
+                .andExpect(status().isOk());
         WireMockUtilsCriteria.verifyDeleteRequest(wireMockServer, "/v1/results", Map.of("resultsUuids", matching(".*")));
         reportServerStubs.verifyDeleteReport();
-        assertEquals(0, rootNetworkNodeInfoRepository.findAll().stream().filter(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getShortCircuitAnalysisResultUuid() != null).count());
+        assertEquals(0, rootNetworkNodeInfoRepository.findAllByShortCircuitAnalysisResultUuidNotNull().size());
     }
+
 
     @Test
     void testGetShortCircuitAnalysisCsvResultNotFound() throws Exception {
