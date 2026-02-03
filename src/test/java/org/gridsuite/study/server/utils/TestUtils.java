@@ -232,7 +232,6 @@ public final class TestUtils {
     public static void assertWiremockServerRequestsEmptyThenClear(WireMockServer wireMockServer) throws UncheckedInterruptedException {
         try {
             wireMockServer.checkForUnmatchedRequests();
-            var test = wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl()));
             assertEquals(0, wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())).size());
         } finally {
             wireMockServer.resetAll();
