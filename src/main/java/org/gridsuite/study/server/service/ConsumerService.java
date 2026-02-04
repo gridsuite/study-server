@@ -303,7 +303,7 @@ public class ConsumerService {
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
         UUID dynamicMarginCalculationParametersUuid = createDefaultDynamicMarginCalculationParameters(userId, userProfileInfos);
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
-        UUID pccMinParametersUuid = createDefaultPccMinParameters();
+        UUID pccMinParametersUuid = createDefaultPccMinParameters(userId, userProfileInfos);
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
         UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
 
@@ -484,7 +484,18 @@ public class ConsumerService {
         }
     }
 
-    private UUID createDefaultPccMinParameters() {
+    private UUID createDefaultPccMinParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getPccMinParameterId() != null) {
+            // try to access/duplicate the user profile pccmin parameters
+            try {
+                return pccMinService.duplicatePccMinParameters(userProfileInfos.getPccMinParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate pccmin parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getPccMinParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad pcc min parameters in profile => use default values
         try {
             return pccMinService.createDefaultPccMinParameters();
         } catch (final Exception e) {

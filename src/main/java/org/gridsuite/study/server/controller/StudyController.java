@@ -2575,7 +2575,6 @@ public class StudyController {
         @PathVariable("studyUuid") UUID studyUuid,
         @RequestBody(required = false) String pccMinParametersInfos,
         @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId);
-        return ResponseEntity.ok().build();
+        return studyService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 }
