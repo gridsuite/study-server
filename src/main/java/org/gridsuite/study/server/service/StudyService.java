@@ -2794,27 +2794,21 @@ public class StudyService {
     @Transactional
     public String getComputationResultGlobalFilters(UUID studyUuid, String computationType) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        if (studyEntity.getComputationResultFiltersUuid() == null) {
-            UUID rootId = studyConfigService.createComputationResultsFiltersRootId();
-            studyEntity.setComputationResultFiltersUuid(rootId);
+        UUID computationResultFiltersId = studyEntity.getComputationResultFiltersUuid();
+        if (Objects.isNull(computationResultFiltersId)) {
+            return null;
         }
-        return studyConfigService.getComputationResultGlobalFilters(studyEntity.getComputationResultFiltersUuid(), computationType);
+        return studyConfigService.getComputationResultGlobalFilters(computationResultFiltersId, computationType);
     }
 
     @Transactional
     public String getComputationResultColumnFilters(UUID studyUuid, String computationType, String computationSubType) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        if (studyEntity.getComputationResultFiltersUuid() == null) {
-            UUID rootId = studyConfigService.createComputationResultsFiltersRootId();
-            studyEntity.setComputationResultFiltersUuid(rootId);
+        UUID computationResultFiltersId = studyEntity.getComputationResultFiltersUuid();
+        if (Objects.isNull(computationResultFiltersId)) {
+            return null;
         }
-        return studyConfigService.getComputationResultColumnFilters(studyEntity.getComputationResultFiltersUuid(), computationType, computationSubType);
-    }
-
-    @Transactional
-    public UUID getComputationResultFiltersId(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return studyEntity.getComputationResultFiltersUuid();
+        return studyConfigService.getComputationResultColumnFilters(computationResultFiltersId, computationType, computationSubType);
     }
 
     /**
@@ -3671,12 +3665,26 @@ public class StudyService {
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
     }
 
-    public void setGlobalFiltersForComputationResult(UUID id, String computationType, String globalFilters) {
-        studyConfigService.setGlobalFiltersForComputationResult(id, computationType, globalFilters);
+    @Transactional
+    public void setGlobalFiltersForComputationResult(UUID studyUuid, String computationType, String globalFilters) {
+        UUID computationResultFiltersId = getComputationResultFiltersId(studyUuid);
+        studyConfigService.setGlobalFiltersForComputationResult(computationResultFiltersId, computationType, globalFilters);
     }
 
-    public void updateColumns(UUID id, String computationType, String computationSubType, String columnInfos) {
-        studyConfigService.updateColumns(id, computationType, computationSubType, columnInfos);
+    @Transactional
+    public void updateColumns(UUID studyUuid, String computationType, String computationSubType, String columnInfos) {
+        UUID computationResultFiltersId = getComputationResultFiltersId(studyUuid);
+        studyConfigService.updateColumns(computationResultFiltersId, computationType, computationSubType, columnInfos);
+    }
+
+    public UUID getComputationResultFiltersId(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        UUID rootId = studyEntity.getComputationResultFiltersUuid();
+        if (Objects.isNull(rootId)) {
+            rootId = studyConfigService.createComputationResultsFiltersRootId();
+            studyEntity.setComputationResultFiltersUuid(rootId);
+        }
+        return rootId;
     }
 
     public void renameSpreadsheetConfig(UUID studyUuid, UUID configUuid, String newName) {

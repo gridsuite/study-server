@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.gridsuite.study.server.utils.assertions.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -91,11 +92,6 @@ class ComputationResultFiltersTest {
         wireMockServer.verify(0, postRequestedFor(urlEqualTo(BASE_URI + DEFAULT)));
     }
 
-    private void verifyColumnFiltersCalledOnce() {
-        wireMockServer.verify(1, getRequestedFor(urlEqualTo(BASE_URI + COMPUTATION_FILTERS_UUID +
-                "/" + COMPUTATION_TYPE + "/" + COMPUTATION_SUB_TYPE)));
-    }
-
     private void verifyGlobalFiltersCalledOnce() {
         wireMockServer.verify(1, getRequestedFor(urlEqualTo(BASE_URI + COMPUTATION_FILTERS_UUID + "/" + COMPUTATION_TYPE)));
     }
@@ -116,41 +112,44 @@ class ComputationResultFiltersTest {
     void getComputationResultFilters() throws Exception {
         StudyEntity study = insertDummyStudy(null);
         MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/{computationSubType}",
-                study.getId(), COMPUTATION_TYPE, COMPUTATION_SUB_TYPE)).andExpectAll(status().isOk()).andReturn();
-        JSONAssert.assertEquals(COMPUTATION_FILTERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
-        verifyDefaultFiltersCalledOnce();
-        verifyColumnFiltersCalledOnce();
-        wireMockServer.resetRequests();
+                study.getId(), COMPUTATION_TYPE, COMPUTATION_SUB_TYPE)).andExpectAll(status().isNoContent()).andReturn();
+        assertThat(mvcResult.getResponse().getContentAsString()).isEmpty();
 
+        study = insertDummyStudy(COMPUTATION_FILTERS_UUID);
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/{computationSubType}",
                 study.getId(), COMPUTATION_TYPE, COMPUTATION_SUB_TYPE)).andExpectAll(status().isOk()).andReturn();
         JSONAssert.assertEquals(COMPUTATION_FILTERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
         verifyDefaultFiltersNotCalled();
-        verifyColumnFiltersCalledOnce();
         wireMockServer.resetRequests();
 
         study = insertDummyStudy(null);
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/computation-result-filters/{computationType}",
-                study.getId(), COMPUTATION_TYPE)).andExpectAll(status().isOk()).andReturn();
-        JSONAssert.assertEquals(COMPUTATION_FILTERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
-        verifyDefaultFiltersCalledOnce();
-        verifyGlobalFiltersCalledOnce();
-        wireMockServer.resetRequests();
+                study.getId(), COMPUTATION_TYPE)).andExpectAll(status().isNoContent()).andReturn();
+        assertThat(mvcResult.getResponse().getContentAsString()).isEmpty();
 
         study = insertDummyStudy(COMPUTATION_FILTERS_UUID);
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/computation-result-filters/{computationType}",
                 study.getId(), COMPUTATION_TYPE)).andExpectAll(status().isOk()).andReturn();
         JSONAssert.assertEquals(COMPUTATION_FILTERS_JSON, mvcResult.getResponse().getContentAsString(), JSONCompareMode.NON_EXTENSIBLE);
-        verifyDefaultFiltersNotCalled();
         verifyGlobalFiltersCalledOnce();
+        wireMockServer.resetRequests();
     }
 
     @Test
     void setGlobalFilters() throws Exception {
-        StudyEntity study = insertDummyStudy(COMPUTATION_FILTERS_UUID);
+        StudyEntity study = insertDummyStudy(null);
         String json = "{\"globalFilters\":[]}";
         mockMvc.perform(post("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/global-filters", study.getId(), COMPUTATION_TYPE)
                 .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
+        verifyDefaultFiltersCalledOnce();
+        wireMockServer.resetRequests();
+
+        study = insertDummyStudy(COMPUTATION_FILTERS_UUID);
+        json = "{\"globalFilters\":[]}";
+        mockMvc.perform(post("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/global-filters", study.getId(), COMPUTATION_TYPE)
+                .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
+        verifyDefaultFiltersNotCalled();
+        wireMockServer.resetRequests();
     }
 
     @Test
@@ -159,6 +158,8 @@ class ComputationResultFiltersTest {
         String json = "{\"columnsFilters\":[]}";
         mockMvc.perform(put("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/{computationSubType}/columns", study.getId(),
                 COMPUTATION_TYPE, COMPUTATION_SUB_TYPE).contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
+        verifyDefaultFiltersNotCalled();
+        wireMockServer.resetRequests();
     }
 
     private StudyEntity insertDummyStudy(UUID computationResultFiltersUuid) {

@@ -16,6 +16,7 @@ import org.gridsuite.study.server.service.StudyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
 import java.util.UUID;
 /**
  * @author Rehili Ghazwa <ghazwa.rehili at rte-france.com>
@@ -37,7 +38,9 @@ public class ComputationResultFiltersController {
     public ResponseEntity<String> getComputationResultGlobalFilters(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("computationType") String computationType) {
-        return ResponseEntity.ok().body(studyService.getComputationResultGlobalFilters(studyUuid, computationType));
+        return Optional.ofNullable(studyService.getComputationResultGlobalFilters(studyUuid, computationType))
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @GetMapping("/{computationType}/{computationSubType}")
@@ -47,7 +50,9 @@ public class ComputationResultFiltersController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("computationType") String computationType,
             @PathVariable("computationSubType") String computationSubType) {
-        return ResponseEntity.ok().body(studyService.getComputationResultColumnFilters(studyUuid, computationType, computationSubType));
+        return Optional.ofNullable(studyService.getComputationResultColumnFilters(studyUuid, computationType, computationSubType))
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PostMapping("/{computationType}/global-filters")
@@ -59,8 +64,7 @@ public class ComputationResultFiltersController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable String computationType,
             @RequestBody String globalFilters) {
-        UUID computationResultFiltersId = studyService.getComputationResultFiltersId(studyUuid);
-        studyService.setGlobalFiltersForComputationResult(computationResultFiltersId, computationType, globalFilters);
+        studyService.setGlobalFiltersForComputationResult(studyUuid, computationType, globalFilters);
         return ResponseEntity.noContent().build();
     }
 
@@ -72,8 +76,7 @@ public class ComputationResultFiltersController {
             @PathVariable String computationType,
             @PathVariable String computationSubType,
             @Valid @RequestBody String columnInfos) {
-        UUID computationResultFiltersId = studyService.getComputationResultFiltersId(studyUuid);
-        studyService.updateColumns(computationResultFiltersId, computationType, computationSubType, columnInfos);
+        studyService.updateColumns(studyUuid, computationType, computationSubType, columnInfos);
         return ResponseEntity.noContent().build();
     }
 }
