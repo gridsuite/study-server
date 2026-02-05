@@ -80,6 +80,9 @@ public class NotificationService {
     public static final String UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_FAILED = "dynamicSecurityAnalysis_failed";
     public static final String UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_RESULT = "dynamicSecurityAnalysisResult";
     public static final String UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS = "dynamicSecurityAnalysis_status";
+    public static final String UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_FAILED = "dynamicMarginCalculation_failed";
+    public static final String UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_RESULT = "dynamicMarginCalculationResult";
+    public static final String UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS = "dynamicMarginCalculation_status";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_RESULT = "voltageInitResult";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_STATUS = "voltageInit_status";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_FAILED = "voltageInit_failed";
