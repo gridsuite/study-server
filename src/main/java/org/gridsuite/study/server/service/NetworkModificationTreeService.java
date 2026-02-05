@@ -154,17 +154,30 @@ public class NetworkModificationTreeService {
 
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         NetworkModificationNodeInfoEntity originNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(originNodeUuid);
-        if (!isDuplicatingStudy && study.getId() != sourceStudy.getId()) {
-            rootNetworkNodeInfoService.createNodeLinks(study, newNodeInfoEntity);
-        } else {
-            // when duplicating node within the same study, we need to retrieve excluded modifications from source node
-            // when duplicating study, we need to retrieve excluded modifications from source node as well, but we also need to have a correspondence between source root networks and duplicated ones
-            //     since they are fetched in order, we ensure the duplicate is made accurately
-            Map<RootNetworkEntity, RootNetworkEntity> originToDuplicateRootNetworkMap = new HashMap<>();
-            for (int i = 0; i < sourceStudy.getRootNetworks().size(); i++) {
-                // when study.getId() == sourceStudy.getId(), this mapping makes root networks target themselves, but it makes the code more concise with study duplication
-                originToDuplicateRootNetworkMap.put(sourceStudy.getRootNetworks().get(i), study.getRootNetworks().get(i));
+
+        // 2️⃣ Build root network map by tag
+        Map<String, RootNetworkEntity> targetRootNetworksByTag = study.getRootNetworks().stream()
+            .collect(Collectors.toMap(RootNetworkEntity::getTag, rn -> rn));
+
+        Map<RootNetworkEntity, RootNetworkEntity> originToDuplicateRootNetworkMap = new HashMap<>();
+        for (RootNetworkEntity sourceRN : sourceStudy.getRootNetworks()) {
+            RootNetworkEntity targetRN = targetRootNetworksByTag.get(sourceRN.getTag());
+            if (targetRN != null) {
+                originToDuplicateRootNetworkMap.put(sourceRN, targetRN);
             }
+        }
+
+        // 3️⃣ Link node to root networks
+        if (!isDuplicatingStudy && !Objects.equals(study.getId(), sourceStudy.getId())) {
+            // Node duplication between studies
+            rootNetworkNodeInfoService.createNodeLinksWithCommonTag(
+                 newNodeInfoEntity,
+                originNodeInfoEntity,
+                 originToDuplicateModificationUuidMap,
+                targetRootNetworksByTag
+            );
+        } else {
+            // Node duplication within the same study (or full study duplication)
             rootNetworkNodeInfoService.duplicateNodeLinks(originNodeInfoEntity.getRootNetworkNodeInfos(), newNodeInfoEntity, originToDuplicateModificationUuidMap, originToDuplicateRootNetworkMap);
         }
 
