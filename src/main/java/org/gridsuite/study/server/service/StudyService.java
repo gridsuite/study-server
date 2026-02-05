@@ -3679,12 +3679,12 @@ public class StudyService {
 
     public UUID getComputationResultFiltersId(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        UUID rootId = studyEntity.getComputationResultFiltersUuid();
-        if (Objects.isNull(rootId)) {
-            rootId = studyConfigService.createComputationResultsFiltersRootId();
-            studyEntity.setComputationResultFiltersUuid(rootId);
+        UUID computationResultFiltersId = studyEntity.getComputationResultFiltersUuid();
+        if (Objects.isNull(computationResultFiltersId)) {
+            computationResultFiltersId = studyConfigService.createComputationResultsFiltersId();
+            studyEntity.setComputationResultFiltersUuid(computationResultFiltersId);
         }
-        return rootId;
+        return computationResultFiltersId;
     }
 
     public void renameSpreadsheetConfig(UUID studyUuid, UUID configUuid, String newName) {

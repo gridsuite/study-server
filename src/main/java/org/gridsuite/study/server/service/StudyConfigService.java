@@ -463,7 +463,7 @@ public class StudyConfigService {
         restTemplate.put(studyConfigServerBaseUri + path, httpEntity);
     }
 
-    public UUID createComputationResultsFiltersRootId() {
+    public UUID createComputationResultsFiltersId() {
         var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + COMPUTATION_RESULT_FILTERS_URI + DEFAULT_URI)
                 .buildAndExpand().toUriString();
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
