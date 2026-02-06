@@ -569,12 +569,7 @@ public class RootNetworkNodeInfoService {
 
     /**
      * Copies modification applicability (via exclusions) from origin study to target study
-     * according to root network tags.
-     * Rules:
-     * - For common tags between origin and target studies:
-     * → keep the same applicability (inactive if excluded in origin)
-     * - For tags present only in target study:
-     * → modification is active by default (no exclusion added)
+     * according to root network tags
      */
     public void copyModificationsToExcludeByCommonRootNetworkTag(
         UUID originStudyUuid, UUID targetStudyUuid, UUID originNodeUuid, UUID targetNodeUuid, Map<UUID, UUID> originToDuplicateModificationsUuids) {

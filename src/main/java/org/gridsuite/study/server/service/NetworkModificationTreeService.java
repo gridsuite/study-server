@@ -155,7 +155,6 @@ public class NetworkModificationTreeService {
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         NetworkModificationNodeInfoEntity originNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(originNodeUuid);
 
-        // 2️⃣ Build root network map by tag
         Map<String, RootNetworkEntity> targetRootNetworksByTag = study.getRootNetworks().stream()
             .collect(Collectors.toMap(RootNetworkEntity::getTag, rn -> rn));
 
@@ -167,7 +166,7 @@ public class NetworkModificationTreeService {
             }
         }
 
-        // 3️⃣ Link node to root networks
+        // Link node to root networks
         if (!isDuplicatingStudy && !Objects.equals(study.getId(), sourceStudy.getId())) {
             // Node duplication between studies
             rootNetworkNodeInfoService.createNodeLinksWithCommonTag(
