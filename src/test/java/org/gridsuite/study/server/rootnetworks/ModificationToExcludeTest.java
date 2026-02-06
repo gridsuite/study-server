@@ -84,11 +84,6 @@ class ModificationToExcludeTest {
     private static final UUID MODIFICATION_TO_EXCLUDE_2 = UUID.randomUUID();
     private static final UUID MODIFICATION_TO_EXCLUDE_3 = UUID.randomUUID();
     private static final UUID MODIFICATION_TO_EXCLUDE_4 = UUID.randomUUID();
-    private static final UUID D_MODIFICATION_TO_EXCLUDE_1 = UUID.randomUUID();
-    private static final UUID D_MODIFICATION_TO_EXCLUDE_2 = UUID.randomUUID();
-    private static final UUID D_MODIFICATION_TO_EXCLUDE_3 = UUID.randomUUID();
-    private static final UUID D_MODIFICATION_TO_EXCLUDE_4 = UUID.randomUUID();
-    private static final UUID D_MODIFICATION_TO_EXCLUDE_5 = UUID.randomUUID();
 
     // this modification should not be included
     private static final UUID MODIFICATION_NEVER_EXCLUDED = UUID.randomUUID();
@@ -97,11 +92,11 @@ class ModificationToExcludeTest {
     private static final Set<UUID> MODIFICATIONS_TO_EXCLUDE_RN_2 = Set.of(MODIFICATION_TO_EXCLUDE_1, MODIFICATION_TO_EXCLUDE_3);
 
     private static final Map<UUID, UUID> ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP = Map.of(
-        MODIFICATION_TO_EXCLUDE_1, D_MODIFICATION_TO_EXCLUDE_1,
-        MODIFICATION_TO_EXCLUDE_2,D_MODIFICATION_TO_EXCLUDE_2,
-        MODIFICATION_TO_EXCLUDE_3, D_MODIFICATION_TO_EXCLUDE_3,
-        MODIFICATION_TO_EXCLUDE_4, D_MODIFICATION_TO_EXCLUDE_4,
-        MODIFICATION_NEVER_EXCLUDED, D_MODIFICATION_TO_EXCLUDE_5
+        MODIFICATION_TO_EXCLUDE_1, UUID.randomUUID(),
+        MODIFICATION_TO_EXCLUDE_2, UUID.randomUUID(),
+        MODIFICATION_TO_EXCLUDE_3, UUID.randomUUID(),
+        MODIFICATION_TO_EXCLUDE_4, UUID.randomUUID(),
+        MODIFICATION_NEVER_EXCLUDED, UUID.randomUUID()
     );
 
     @Autowired
@@ -288,9 +283,7 @@ class ModificationToExcludeTest {
         createDummyRootNetwork(study1, "rootNetwork2", "Y"); // RN2 tag Y
         studyRepository.save(study1);
 
-        List<BasicRootNetworkInfos> rootNetworksStudy1 =
-            studyService.getExistingBasicRootNetworkInfos(study1.getId());
-
+        List<BasicRootNetworkInfos> rootNetworksStudy1 = studyService.getExistingBasicRootNetworkInfos(study1.getId());
 
         NodeEntity rootNodeS1 = networkModificationTreeService.createRoot(study1);
         NetworkModificationNode nodeS1 = networkModificationTreeService.createNode(
@@ -378,13 +371,12 @@ class ModificationToExcludeTest {
             "Modification is active on RN1 (tag X)");
     }
 
-
     @Test
     void testDuplicateNodeFromStudy1ToStudy2WithCommonRootNetwork() {
         // -------- Study 1 setup --------
         StudyEntity study1 = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(study1, "rn1");
-        createDummyRootNetwork(study1, "rn2","rn2"); // has modifications to exclude
+        createDummyRootNetwork(study1, "rn2", "rn2"); // has modifications to exclude
         createDummyRootNetwork(study1, "oth");
         studyRepository.save(study1);
 
@@ -410,10 +402,9 @@ class ModificationToExcludeTest {
 
         // -------- Study 2 setup --------
         StudyEntity study2 = TestUtils.createDummyStudy(NETWORK_UUID2, CASE_UUID2, CASE_NAME2, CASE_FORMAT2, REPORT_UUID2);
-        createDummyRootNetwork(study2, "rn0","rn0");
-        createDummyRootNetwork(study2, "rn2","rn2"); // common root network
+        createDummyRootNetwork(study2, "rn0", "rn0");
+        createDummyRootNetwork(study2, "rn2", "rn2"); // common root network
         createDummyRootNetwork(study2, "oth");
-
         studyRepository.save(study2);
 
         List<BasicRootNetworkInfos> rootNetworksStudy2 = studyService.getExistingBasicRootNetworkInfos(study2.getId());
@@ -703,7 +694,7 @@ class ModificationToExcludeTest {
         rootNetwork0NodeInfo1Entity.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
 
-        // try to execute modification move - if modification move fails, they should not be moved from a node to another in exludedModifications
+        // try to execute modification move - if modification move fails, they should not be moved from a node to another in excludedModifications
         Mockito.doThrow(new RuntimeException()).when(networkModificationService).moveModifications(any(), any(), any(), any(), eq(true));
         List<UUID> modificationsToMove = List.of(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().findFirst().orElseThrow());
         assertThrows(RuntimeException.class, () -> studyService.moveNetworkModifications(studyUuid, firstNodeUuid, firstNodeUuid, modificationsToMove, null, false, USER_ID));
