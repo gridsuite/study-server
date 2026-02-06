@@ -41,7 +41,10 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -2788,6 +2791,26 @@ public class StudyService {
         return studyConfigService.getSpreadsheetConfigCollection(studyConfigService.getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(studyEntity));
     }
 
+    @Transactional
+    public String getComputationResultGlobalFilters(UUID studyUuid, String computationType) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        UUID computationResultFiltersId = studyEntity.getComputationResultFiltersUuid();
+        if (Objects.isNull(computationResultFiltersId)) {
+            return null;
+        }
+        return studyConfigService.getComputationResultGlobalFilters(computationResultFiltersId, computationType);
+    }
+
+    @Transactional
+    public String getComputationResultColumnFilters(UUID studyUuid, String computationType, String computationSubType) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        UUID computationResultFiltersId = studyEntity.getComputationResultFiltersUuid();
+        if (Objects.isNull(computationResultFiltersId)) {
+            return null;
+        }
+        return studyConfigService.getComputationResultColumnFilters(computationResultFiltersId, computationType, computationSubType);
+    }
+
     /**
      * Set spreadsheet config collection on study or reset to default one if empty body.
      * Default is the user profile one, or system default if no profile is available.
@@ -3660,6 +3683,28 @@ public class StudyService {
     public void setGlobalFilters(UUID studyUuid, UUID configUuid, String globalFilters) {
         studyConfigService.setGlobalFilters(configUuid, globalFilters);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
+    }
+
+    @Transactional
+    public void setGlobalFiltersForComputationResult(UUID studyUuid, String computationType, String globalFilters) {
+        UUID computationResultFiltersId = getComputationResultFiltersId(studyUuid);
+        studyConfigService.setGlobalFiltersForComputationResult(computationResultFiltersId, computationType, globalFilters);
+    }
+
+    @Transactional
+    public void updateColumns(UUID studyUuid, String computationType, String computationSubType, String columnInfos) {
+        UUID computationResultFiltersId = getComputationResultFiltersId(studyUuid);
+        studyConfigService.updateColumns(computationResultFiltersId, computationType, computationSubType, columnInfos);
+    }
+
+    public UUID getComputationResultFiltersId(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        UUID computationResultFiltersId = studyEntity.getComputationResultFiltersUuid();
+        if (Objects.isNull(computationResultFiltersId)) {
+            computationResultFiltersId = studyConfigService.createComputationResultsFiltersId();
+            studyEntity.setComputationResultFiltersUuid(computationResultFiltersId);
+        }
+        return computationResultFiltersId;
     }
 
     public void renameSpreadsheetConfig(UUID studyUuid, UUID configUuid, String newName) {
