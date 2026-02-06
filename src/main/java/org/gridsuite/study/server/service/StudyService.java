@@ -3381,11 +3381,11 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runStateEstimation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
+    public UUID runStateEstimation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-        return handleStateEstimationRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
+        return handleStateEstimationRequest(studyEntity, nodeUuid, rootNetworkUuid, userId, debug);
     }
 
     @Transactional
@@ -3396,7 +3396,7 @@ public class StudyService {
         return handlePccMinRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
     }
 
-    private UUID handleStateEstimationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+    private UUID handleStateEstimationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(STATE_ESTIMATION.name(), UUID.randomUUID());
@@ -3413,7 +3413,7 @@ public class StudyService {
             stateEstimationService.deleteStateEstimationResults(List.of(prevResultUuid));
         }
 
-        UUID result = stateEstimationService.runStateEstimation(networkUuid, variantId, studyEntity.getStateEstimationParametersUuid(), new ReportInfos(reportUuid, nodeUuid), receiver, userId);
+        UUID result = stateEstimationService.runStateEstimation(networkUuid, variantId, studyEntity.getStateEstimationParametersUuid(), new ReportInfos(reportUuid, nodeUuid), receiver, userId, debug);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, STATE_ESTIMATION);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
         return result;
