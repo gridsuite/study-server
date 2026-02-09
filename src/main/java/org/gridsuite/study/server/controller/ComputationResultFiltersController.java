@@ -1,0 +1,82 @@
+/*
+ * Copyright (c) 2025, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+package org.gridsuite.study.server.controller;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.service.StudyService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
+import java.util.UUID;
+/**
+ * @author Rehili Ghazwa <ghazwa.rehili at rte-france.com>
+ */
+
+@RestController
+@RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/computation-result-filters")
+@Tag(name = "Study server - Computation result filters")
+public class ComputationResultFiltersController {
+    private final StudyService studyService;
+
+    public ComputationResultFiltersController(StudyService studyService) {
+        this.studyService = studyService;
+    }
+
+    @GetMapping("/{computationType}")
+    @Operation(summary = "Get study's computation result global filters")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The computation result global filters")})
+    public ResponseEntity<String> getComputationResultGlobalFilters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("computationType") String computationType) {
+        return Optional.ofNullable(studyService.getComputationResultGlobalFilters(studyUuid, computationType))
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @GetMapping("/{computationType}/{computationSubType}")
+    @Operation(summary = "Get study's computation result column filters")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The computation result column filters")})
+    public ResponseEntity<String> getComputationResultColumnFilters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("computationType") String computationType,
+            @PathVariable("computationSubType") String computationSubType) {
+        return Optional.ofNullable(studyService.getComputationResultColumnFilters(studyUuid, computationType, computationSubType))
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    @PostMapping("/{computationType}/global-filters")
+    @Operation(summary = "Set global filters",
+            description = "Replaces all existing global filters with the provided list for a computation result")
+    @ApiResponse(responseCode = "204", description = "Global filters set successfully")
+    @ApiResponse(responseCode = "404", description = "computation result global filters not found")
+    public ResponseEntity<Void> setGlobalFiltersForComputationResult(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable String computationType,
+            @RequestBody String globalFilters) {
+        studyService.setGlobalFiltersForComputationResult(studyUuid, computationType, globalFilters);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{computationType}/{computationSubType}/columns")
+    @Operation(summary = "Update a column", description = "Updates a column")
+    @ApiResponse(responseCode = "204", description = "Column updated")
+    public ResponseEntity<Void> updateColumns(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable String computationType,
+            @PathVariable String computationSubType,
+            @Valid @RequestBody String columnInfos) {
+        studyService.updateColumns(studyUuid, computationType, computationSubType, columnInfos);
+        return ResponseEntity.noContent().build();
+    }
+}
