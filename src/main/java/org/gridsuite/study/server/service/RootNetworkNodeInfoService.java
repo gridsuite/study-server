@@ -40,7 +40,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -67,6 +66,7 @@ public class RootNetworkNodeInfoService {
     private final StateEstimationService stateEstimationService;
     private final PccMinService pccMinService;
     private final ReportService reportService;
+    private final NodeDeletionService nodeDeletionService;
 
     public RootNetworkNodeInfoService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                                       NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
@@ -80,7 +80,7 @@ public class RootNetworkNodeInfoService {
                                       DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                                       StateEstimationService stateEstimationService,
                                       PccMinService pccMinService,
-                                      ReportService reportService) {
+                                      ReportService reportService, NodeDeletionService nodeDeletionService) {
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.studyServerExecutionService = studyServerExecutionService;
@@ -94,6 +94,7 @@ public class RootNetworkNodeInfoService {
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
         this.reportService = reportService;
+        this.nodeDeletionService = nodeDeletionService;
     }
 
     public void createRootNetworkLinks(@NonNull UUID studyUuid, @NonNull RootNetworkEntity rootNetworkEntity) {
@@ -563,21 +564,22 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    public void deleteRootNetworkNodeRemoteInfos(List<RootNetworkNodeInfo> rootNetworkNodeInfo) {
-        CompletableFuture.allOf(
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkNodeInfo.stream().map(this::getReportUuids).flatMap(Collection::stream).toList())),
-            studyServerExecutionService.runAsync(() -> loadFlowService.deleteLoadFlowResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getLoadFlowResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(rootNetworkNodeInfo.stream()
-                    .map(RootNetworkNodeInfo::getSecurityAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getSensitivityAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getShortCircuitAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getOneBusShortCircuitAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicSimulationResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicSecurityAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getPccMinResultUuid).filter(Objects::nonNull).toList()))
-        );
+    public void deleteRootNetworkNodeRemoteInfos(List<RootNetworkNodeInfo> rootNetworkNodeInfos) {
+        NodeInfos infos = NodeInfos.builder()
+            .reportUuids(rootNetworkNodeInfos.stream().map(this::getReportUuids).flatMap(Collection::stream).toList())
+            .loadFlowResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getLoadFlowResultUuid).filter(Objects::nonNull).toList())
+            .securityAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getSecurityAnalysisResultUuid).filter(Objects::nonNull).toList())
+            .sensitivityAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getSensitivityAnalysisResultUuid).filter(Objects::nonNull).toList())
+            .shortCircuitAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getShortCircuitAnalysisResultUuid).filter(Objects::nonNull).toList())
+            .oneBusShortCircuitAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getOneBusShortCircuitAnalysisResultUuid).filter(Objects::nonNull).toList())
+            .voltageInitResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).toList())
+            .dynamicSimulationResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getDynamicSimulationResultUuid).filter(Objects::nonNull).toList())
+            .dynamicSecurityAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getDynamicSecurityAnalysisResultUuid).filter(Objects::nonNull).toList())
+            .stateEstimationResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).toList())
+            .pccMinResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getPccMinResultUuid).filter(Objects::nonNull).toList())
+            .build();
+
+        nodeDeletionService.delete(infos);
     }
 
     @Transactional

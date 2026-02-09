@@ -107,6 +107,7 @@ public class StudyService {
     StudyServerExecutionService studyServerExecutionService;
 
     private final String defaultDynamicSimulationProvider;
+    private final NodeDeletionService nodeDeletionService;
 
     private final StudyRepository studyRepository;
     private final StudyCreationRequestRepository studyCreationRequestRepository;
@@ -165,7 +166,7 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
+        @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider, NodeDeletionService nodeDeletionService,
         StudyRepository studyRepository,
         StudyCreationRequestRepository studyCreationRequestRepository,
         NetworkService networkStoreService,
@@ -202,6 +203,7 @@ public class StudyService {
         RootNetworkNodeInfoService rootNetworkNodeInfoService,
         DirectoryService directoryService) {
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
+        this.nodeDeletionService = nodeDeletionService;
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -2304,17 +2306,7 @@ public class StudyService {
         return CompletableFuture.allOf(
             studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())),
             studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())),
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(invalidateNodeInfos.getReportUuids())),
-            studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(invalidateNodeInfos.getLoadFlowResultUuids())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(invalidateNodeInfos.getSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(invalidateNodeInfos.getSensitivityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(invalidateNodeInfos.getVoltageInitResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(invalidateNodeInfos.getDynamicSimulationResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(invalidateNodeInfos.getStateEstimationResultUuids())),
-            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(invalidateNodeInfos.getPccMinResultUuids()))
+            nodeDeletionService.delete(invalidateNodeInfos)
         );
     }
 
@@ -2324,17 +2316,7 @@ public class StudyService {
             studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)),
             studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
             studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)),
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(deleteNodeInfos.getReportUuids())),
-            studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(deleteNodeInfos.getLoadFlowResultUuids())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(deleteNodeInfos.getSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(deleteNodeInfos.getSensitivityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(deleteNodeInfos.getVoltageInitResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(deleteNodeInfos.getDynamicSimulationResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(deleteNodeInfos.getDynamicSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(deleteNodeInfos.getStateEstimationResultUuids())),
-            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(deleteNodeInfos.getPccMinResultUuids()))
+            nodeDeletionService.delete(deleteNodeInfos)
         );
     }
 
