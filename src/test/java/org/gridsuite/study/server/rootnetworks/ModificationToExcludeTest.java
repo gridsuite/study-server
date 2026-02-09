@@ -272,25 +272,19 @@ class ModificationToExcludeTest {
     }
 
     @Test
-    void testDuplicateNodeBetweenStudiesWithModificationsToExclude() {
+    void testDuplicateNodeBetweenStudiesWithModificationsToExcludeForCommonTag() {
         // -------- Study 1 --------
         StudyEntity study1 = TestUtils.createDummyStudy(
             NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID
         );
-        createDummyRootNetwork(study1, "rootNetwork1", "X"); // RN1 tag X
-        createDummyRootNetwork(study1, "rootNetwork2", "Y"); // RN2 tag Y
+        createDummyRootNetwork(study1, "rootNetwork1", "X"); // RN1 with tag X
+        createDummyRootNetwork(study1, "rootNetwork2", "Y"); // RN2 with tag Y
         studyRepository.save(study1);
 
         List<BasicRootNetworkInfos> rootNetworksStudy1 = studyService.getExistingBasicRootNetworkInfos(study1.getId());
 
         NodeEntity rootNodeS1 = networkModificationTreeService.createRoot(study1);
-        NetworkModificationNode nodeS1 = networkModificationTreeService.createNode(
-            study1,
-            rootNodeS1.getIdNode(),
-            createModificationNodeInfo(NODE_1_NAME),
-            InsertMode.AFTER,
-            null
-        );
+        NetworkModificationNode nodeS1 = networkModificationTreeService.createNode(study1, rootNodeS1.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         UUID modificationOrigineUuid = MODIFICATION_TO_EXCLUDE_1;
 
@@ -311,8 +305,8 @@ class ModificationToExcludeTest {
         StudyEntity study2 = TestUtils.createDummyStudy(
             NETWORK_UUID2, CASE_UUID2, CASE_NAME2, CASE_FORMAT2, REPORT_UUID2
         );
-        createDummyRootNetwork(study2, "rootNetwork1_2", "X"); // RN1 tag X
-        createDummyRootNetwork(study2, "rootNetwork2_2", "Y"); // RN2 tag Y
+        createDummyRootNetwork(study2, "rootNetwork1_2", "X"); // RN1 with tag X
+        createDummyRootNetwork(study2, "rootNetwork2_2", "Y"); // RN2 with tag Y
         studyRepository.save(study2);
 
         List<BasicRootNetworkInfos> rootNetworksStudy2 =
@@ -320,17 +314,12 @@ class ModificationToExcludeTest {
 
         NodeEntity rootNodeS2 = networkModificationTreeService.createRoot(study2);
 
-        // Mock de duplication des modifications
         Mockito.doReturn(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP)
             .when(networkModificationService)
             .duplicateModificationsGroup(any(), any());
 
         // -------- Duplicate node --------
-        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(
-            nodeS1.getId(),
-            rootNodeS2.getIdNode(),
-            InsertMode.AFTER
-        );
+        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(nodeS1.getId(), rootNodeS2.getIdNode(), InsertMode.AFTER);
 
         UUID modificationDupliqueeUuid = ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP.get(modificationOrigineUuid);
 
@@ -342,12 +331,7 @@ class ModificationToExcludeTest {
             .findFirst()
             .orElseThrow();
 
-        RootNetworkNodeInfoEntity rnYInfoStudy2 = rootNetworkNodeInfoRepository
-            .findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(
-                duplicatedNodeUuid,
-                rnYStudy2.rootNetworkUuid()
-            )
-            .orElseThrow();
+        RootNetworkNodeInfoEntity rnYInfoStudy2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(duplicatedNodeUuid, rnYStudy2.rootNetworkUuid()).orElseThrow();
 
         assertTrue(rnYInfoStudy2.getModificationsUuidsToExclude().contains(modificationDupliqueeUuid),
             "Duplicated Modification should be excluded on RN2 (tag Y)");
@@ -358,15 +342,9 @@ class ModificationToExcludeTest {
             .findFirst()
             .orElseThrow();
 
-        RootNetworkNodeInfoEntity rnXInfoStudy2 = rootNetworkNodeInfoRepository
-            .findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(
-                duplicatedNodeUuid,
-                rnXStudy2.rootNetworkUuid()
-            )
-            .orElseThrow();
+        RootNetworkNodeInfoEntity rnXInfoStudy2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(duplicatedNodeUuid, rnXStudy2.rootNetworkUuid()).orElseThrow();
 
-        assertTrue(rnXInfoStudy2.getModificationsUuidsToExclude().isEmpty(),
-            "Modification is active on RN1 (tag X)");
+        assertTrue(rnXInfoStudy2.getModificationsUuidsToExclude().isEmpty(), "Modification is active on RN1 (tag X)");
     }
 
     @Test
