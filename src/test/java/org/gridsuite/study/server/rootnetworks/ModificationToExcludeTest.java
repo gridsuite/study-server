@@ -167,10 +167,10 @@ class ModificationToExcludeTest {
 
     @Test
     void testDuplicateModificationsBetweenStudiesWithCommonRootNetworkTags() {
-        // -------- Study 1 setup --------
+        // -------- Study 1  --------
         StudyEntity study1 = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(study1, "rnA", "ok");  // common root network
-        createDummyRootNetwork(study1, "rnB", "no1"); // unique root network
+        createDummyRootNetwork(study1, "rnB", "no1");
         studyRepository.save(study1);
 
         List<BasicRootNetworkInfos> rootNetworksStudy1 = studyService.getExistingBasicRootNetworkInfos(study1.getId());
@@ -191,7 +191,7 @@ class ModificationToExcludeTest {
         commonRnNodeInfoStudy1.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
         rootNetworkNodeInfoRepository.save(commonRnNodeInfoStudy1);
 
-        // -------- Study 2 setup --------
+        // -------- Study 2  --------
         StudyEntity study2 = TestUtils.createDummyStudy(NETWORK_UUID2, CASE_UUID2, CASE_NAME2, CASE_FORMAT2, REPORT_UUID2);
         createDummyRootNetwork(study2, "rnX", "no2"); // not common
         createDummyRootNetwork(study2, "rnA", "ok");  // common root network
@@ -200,18 +200,16 @@ class ModificationToExcludeTest {
         List<BasicRootNetworkInfos> rootNetworksStudy2 = studyService.getExistingBasicRootNetworkInfos(study2.getId());
         NodeEntity rootNode2 = networkModificationTreeService.createRoot(study2);
 
-        // mock duplication of modifications
         Mockito.doReturn(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP)
             .when(networkModificationService)
             .duplicateModificationsGroup(any(), any());
 
-        // -------- Duplicate node --------
         UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(
             node1.getId(), rootNode2.getIdNode(), InsertMode.AFTER
         );
 
         // -------- Assertions --------
-        // common root network -> modifications should be copied
+        // For common root network -> modifications should be copied
         BasicRootNetworkInfos commonRnStudy2 = rootNetworksStudy2.stream()
             .filter(rn -> "ok".equals(rn.tag()))
             .findFirst()
@@ -545,7 +543,7 @@ class ModificationToExcludeTest {
     @Test
     void testDuplicateStudyTreeWithModificationsToExclude() {
         // PREPARE TEST : 2 root network with 3 nodes (rootNode, node1, node2)
-        // This test adds some modifications to exclude in severagit al nodes and root network, duplicate node1 subtree, then check exclusions have been accuratly duplicated
+        // This test adds some modifications to exclude in several al nodes and root network, duplicate node1 subtree, then check exclusions have been accuratly duplicated
         // create study with two root networks
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         createDummyRootNetwork(studyEntity, "secondRootNetwork");

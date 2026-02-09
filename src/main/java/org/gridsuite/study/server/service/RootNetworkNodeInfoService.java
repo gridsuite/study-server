@@ -112,7 +112,7 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    // Helper method to get the root networks that are common between source and destination studies
+    // get the root networks that are common between source and destination studies
     private List<RootNetworkEntity> getCommonRootNetworks(@NonNull UUID sourceStudyUuid, @NonNull UUID destinationStudyUuid) {
         Set<String> sourceTags = rootNetworkNodeInfoRepository
             .findAllByRootNetworkStudyId(sourceStudyUuid).stream()
@@ -120,7 +120,6 @@ public class RootNetworkNodeInfoService {
             .map(RootNetworkEntity::getTag)
             .collect(Collectors.toSet());
 
-        // Return all root networks in the destination study that have a tag present in the source
         return rootNetworkNodeInfoRepository
             .findAllByRootNetworkStudyId(destinationStudyUuid).stream()
             .map(RootNetworkNodeInfoEntity::getRootNetwork)
@@ -155,7 +154,6 @@ public class RootNetworkNodeInfoService {
             // Create a new RootNetworkNodeInfoEntity for the target
             RootNetworkNodeInfoEntity newRNNodeInfo = createDefaultEntity(targetNodeInfoEntity.getId(), modificationsToExclude);
 
-            // Add link to target node
             addLink(targetNodeInfoEntity, targetRN, newRNNodeInfo);
         });
     }
