@@ -120,14 +120,4 @@ public class ShortcircuitServerStubs {
                         "debug", WireMock.equalTo(String.valueOf(debug))),
                 null);
     }
-
-    public void stubParameterPut(String paramUuid, String responseJson) {
-        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid))
-                .willReturn(WireMock.okJson(responseJson))
-        );
-    }
-
-    public void verifyParameterPut(String paramUuid) {
-        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/parameters/" + paramUuid, Map.of(), null);
-    }
 }

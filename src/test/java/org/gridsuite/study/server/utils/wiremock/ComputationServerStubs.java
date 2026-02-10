@@ -95,15 +95,32 @@ public class ComputationServerStubs {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
     }
 
+    /** Preferably use function without WireMockServer in signature
+     * TODO remove after current usages have been fixed
+     **/
+    @Deprecated
     public void stubParameterPut(WireMockServer wireMockServer, String paramUuid, String responseJson) {
         wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid))
                 .willReturn(WireMock.okJson(responseJson)));
     }
 
+    /** This function doesn't remove request after verifying it
+     * TODO remove after current usages have been fixed
+     **/
+    @Deprecated
     public void verifyParameterPut(WireMockServer wireMockServer, String paramUuid) {
         wireMockServer.verify(
                 putRequestedFor(urlEqualTo("/v1/parameters/" + paramUuid))
         );
+    }
+
+    public void stubParameterPut(String paramUuid, String responseJson) {
+        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid))
+                .willReturn(WireMock.okJson(responseJson)));
+    }
+
+    public void verifyParameterPut(String paramUuid) {
+        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/parameters/" + paramUuid, Map.of(), null);
     }
 
     public void stubParametersGet(String paramUuid, String responseBody) {
@@ -157,10 +174,6 @@ public class ComputationServerStubs {
                 "/v1/parameters/" + parametersUuid, Map.of());
     }
 
-    public void verifyParametersDefault() {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters/default", Map.of());
-    }
-
     /*    Results     */
 
     public UUID stubDeleteResult(String resultUuid) {
@@ -193,8 +206,7 @@ public class ComputationServerStubs {
 
     public void stubGetResultCsv(String resultUuid, byte[] csvContent) {
         wireMock.stubFor(WireMock.post(urlPathEqualTo("/v1/results/" + resultUuid + "/csv"))
-                .willReturn(aResponse()
-                        .withStatus(200)
+                .willReturn(WireMock.ok()
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                         .withBody(csvContent)));
     }
