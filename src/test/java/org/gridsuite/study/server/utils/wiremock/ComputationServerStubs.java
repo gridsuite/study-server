@@ -110,7 +110,7 @@ public class ComputationServerStubs {
     @Deprecated
     public void verifyParameterPut(WireMockServer wireMockServer, String paramUuid) {
         wireMockServer.verify(
-                putRequestedFor(urlEqualTo("/v1/parameters/" + paramUuid))
+            putRequestedFor(urlEqualTo("/v1/parameters/" + paramUuid))
         );
     }
 
