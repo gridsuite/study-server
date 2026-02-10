@@ -19,34 +19,11 @@ import java.util.*;
 @NoArgsConstructor
 @Getter
 @Setter
-public class DeleteNodeInfos {
+public class DeleteNodeInfos extends NodeInfos {
+
     private List<UUID> removedNodeUuids = new ArrayList<>();
-
     private List<UUID> modificationGroupUuids = new ArrayList<>();
-
-    private List<UUID> reportUuids = new ArrayList<>();
-
     private Map<UUID, List<String>> variantIds = new HashMap<>();
-
-    private List<UUID> loadFlowResultUuids = new ArrayList<>();
-
-    private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
-
-    private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
-
-    private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
-
-    private List<UUID> oneBusShortCircuitAnalysisResultUuids = new ArrayList<>();
-
-    private List<UUID> voltageInitResultUuids = new ArrayList<>();
-
-    private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
-
-    private List<UUID> dynamicSecurityAnalysisResultUuids = new ArrayList<>();
-
-    private List<UUID> stateEstimationResultUuids = new ArrayList<>();
-
-    private List<UUID> pccMinResultUuids = new ArrayList<>();
 
     public void addRemovedNodeUuid(UUID removedNodeUuid) {
         removedNodeUuids.add(removedNodeUuid);
@@ -56,52 +33,8 @@ public class DeleteNodeInfos {
         modificationGroupUuids.add(modificationGroupUuid);
     }
 
-    public void addReportUuid(UUID reportUuid) {
-        reportUuids.add(reportUuid);
-    }
-
     public void addVariantId(UUID networkUuid, String variantId) {
         variantIds.getOrDefault(networkUuid, new ArrayList<>()).add(variantId);
-    }
-
-    public void addLoadFlowResultUuid(UUID loadFlowResultUuid) {
-        loadFlowResultUuids.add(loadFlowResultUuid);
-    }
-
-    public void addSecurityAnalysisResultUuid(UUID securityAnalysisResultUuid) {
-        securityAnalysisResultUuids.add(securityAnalysisResultUuid);
-    }
-
-    public void addDynamicSimulationResultUuid(UUID dynamicSimulationResultUuid) {
-        dynamicSimulationResultUuids.add(dynamicSimulationResultUuid);
-    }
-
-    public void addDynamicSecurityAnalysisResultUuid(UUID dynamicSecurityAnalysisResultUuid) {
-        dynamicSecurityAnalysisResultUuids.add(dynamicSecurityAnalysisResultUuid);
-    }
-
-    public void addSensitivityAnalysisResultUuid(UUID sensitivityAnalysisResultUuid) {
-        sensitivityAnalysisResultUuids.add(sensitivityAnalysisResultUuid);
-    }
-
-    public void addShortCircuitAnalysisResultUuid(UUID shortCircuitAnalysisResultUuid) {
-        shortCircuitAnalysisResultUuids.add(shortCircuitAnalysisResultUuid);
-    }
-
-    public void addOneBusShortCircuitAnalysisResultUuid(UUID oneBusShortCircuitAnalysisResultUuid) {
-        oneBusShortCircuitAnalysisResultUuids.add(oneBusShortCircuitAnalysisResultUuid);
-    }
-
-    public void addVoltageInitResultUuid(UUID voltageInitResultUuid) {
-        voltageInitResultUuids.add(voltageInitResultUuid);
-    }
-
-    public void addStateEstimationResultUuid(UUID stateEstimationResultUuid) {
-        stateEstimationResultUuids.add(stateEstimationResultUuid);
-    }
-
-    public void addPccMinResultUuid(UUID pccMinResultUuid) {
-        pccMinResultUuids.add(pccMinResultUuid);
     }
 
 }
