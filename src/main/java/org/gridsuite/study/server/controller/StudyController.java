@@ -1511,7 +1511,7 @@ public class StudyController {
                                                               @Parameter(description = "sequence to create") @RequestParam("sequenceType") NodeSequenceType nodeSequenceType,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
         NetworkModificationNode sequenceParentNode = studyService.createSequence(studyUuid, referenceId, nodeSequenceType, userId);
-        studyService.createSequencePostAction(studyUuid, referenceId, nodeSequenceType, userId);
+        studyService.createSequencePostAction(studyUuid, sequenceParentNode.getId(), nodeSequenceType, userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sequenceParentNode);
     }
 
@@ -2498,7 +2498,6 @@ public class StudyController {
         @PathVariable("studyUuid") UUID studyUuid,
         @RequestBody(required = false) String pccMinParametersInfos,
         @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId);
-        return ResponseEntity.ok().build();
+        return studyService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 }
