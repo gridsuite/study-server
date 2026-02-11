@@ -42,6 +42,7 @@ import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
@@ -217,6 +218,8 @@ class StudyTestBase {
 
     protected WireMockStubs wireMockStubs;
 
+    protected ComputationServerStubs computationServerStubs;
+
     @Autowired
     protected TestUtils studyTestUtils;
 
@@ -348,6 +351,7 @@ class StudyTestBase {
 
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
         wireMockStubs = new WireMockStubs(wireMockServer);
+        computationServerStubs = new ComputationServerStubs(wireMockServer);
 
         objectWriter = mapper.writer().withDefaultPrettyPrinter();
 
@@ -615,16 +619,16 @@ class StudyTestBase {
     }
 
     protected void setupCreateParametersStubs() throws Exception {
-        wireMockStubs.stubParameters(mapper.writeValueAsString(UUID.randomUUID()));
-        wireMockStubs.stubParametersDefault(mapper.writeValueAsString(UUID.randomUUID()));
+        computationServerStubs.stubCreateParameter(mapper.writeValueAsString(UUID.randomUUID()));
+        computationServerStubs.stubPostParametersDefault(mapper.writeValueAsString(UUID.randomUUID()));
         wireMockStubs.stubSpreadsheetConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
         wireMockStubs.stubNetworkVisualizationParamsDefault(StudyTest.DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
         wireMockStubs.stubWorkspacesConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
     }
 
     protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests, int workspacesConfigDefaultNbRequests) {
-        wireMockStubs.computationServer.verifyParameters(createParametersNbRequests);
-        wireMockStubs.computationServer.verifyParametersDefault(parametersDefaultNbRequests);
+        computationServerStubs.verifyParameters(createParametersNbRequests);
+        computationServerStubs.verifyParametersDefault(parametersDefaultNbRequests);
         wireMockStubs.verifySpreadsheetConfigDefault(spreadsheetConfigDefaultNbRequests);
         wireMockStubs.verifyNetworkVisualizationParamsDefault(networkVisualizationParamsDefaultNbRequests);
         wireMockStubs.verifyWorkspacesConfigDefault(workspacesConfigDefaultNbRequests);

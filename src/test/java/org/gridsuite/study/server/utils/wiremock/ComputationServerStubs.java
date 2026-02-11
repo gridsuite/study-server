@@ -133,11 +133,10 @@ public class ComputationServerStubs {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + paramUuid, Map.of());
     }
 
-    public void stubCreateParameter(UUID paramUuid) {
-        wireMock.stubFor(
-            post(urlPathEqualTo("/v1/parameters"))
-                .willReturn(okJson("\"" + paramUuid + "\""))
-        );
+    public void stubCreateParameter(String responseBody) {
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters"))
+                .atPriority(10)
+                .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
     }
 
     public void verifyParameterPost(String bodyJson) {

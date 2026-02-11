@@ -742,17 +742,6 @@ public class WireMockStubs {
         verifyPostRequest(wireMock, stubId, "/v1/reports/.*/duplicate", true, Map.of(), null);
     }
 
-    public UUID stubParameters(String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters"))
-                .atPriority(10)
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
-    }
-
-    public UUID stubParametersDefault(String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters/default"))
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
-    }
-
     public UUID stubSpreadsheetConfigDefault(String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/spreadsheet-config-collections/default"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();

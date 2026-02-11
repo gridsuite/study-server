@@ -764,7 +764,7 @@ class SecurityAnalysisTest {
         assertNull(studyEntity.getSecurityAnalysisParametersUuid());
 
         String bodyJson = objectWriter.writeValueAsString(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
-        computationServerStubs.stubCreateParameter(SECURITY_ANALYSIS_PARAMETERS_UUID);
+        computationServerStubs.stubCreateParameter(objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
                 .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
