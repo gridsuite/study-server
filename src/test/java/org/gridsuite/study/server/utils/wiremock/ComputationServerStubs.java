@@ -18,6 +18,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyDeleteRequest;
+import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPostRequest;
+import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPutRequest;
 
 /**
  * @author Maissa Souissi <maissa.souissi@rte-france.com>
@@ -75,6 +78,13 @@ public class ComputationServerStubs {
      * Computation parameter
      */
 
+    public UUID stubParametersDuplicateFromAny(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
+                .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+                .atPriority(10)
+                .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
     public void stubParametersDuplicateFrom(String duplicateFromUuid, String responseBody) {
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
             .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
@@ -85,6 +95,10 @@ public class ComputationServerStubs {
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
             .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
             .willReturn(WireMock.notFound()));
+    }
+
+    public void verifyParametersDuplicateFromAny(UUID stubId, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, "/v1/parameters", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
     }
 
     public void verifyParametersDuplicateFrom(String duplicateFromUuid) {
@@ -171,6 +185,14 @@ public class ComputationServerStubs {
     public void verifyDeleteParameters(String parametersUuid) {
         WireMockUtilsCriteria.verifyDeleteRequest(wireMock,
                 "/v1/parameters/" + parametersUuid, Map.of());
+    }
+
+    public void verifyDeleteParameters(UUID stubId, int nbRequests) {
+        verifyDeleteRequest(wireMock, stubId, "/v1/parameters/.*", true, Map.of(), nbRequests);
+    }
+
+    public void verifyParametersProvider(UUID stubId, int nbRequests) {
+        verifyPutRequest(wireMock, stubId, "/v1/parameters/.*/provider", true, Map.of(), null, nbRequests);
     }
 
     /*    Results     */

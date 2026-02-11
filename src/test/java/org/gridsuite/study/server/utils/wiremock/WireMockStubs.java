@@ -647,10 +647,6 @@ public class WireMockStubs {
         verifyDeleteRequest(wireMock, stubId, "/v1/reports", false, Map.of(), nbRequests);
     }
 
-    public void verifyDeleteParameters(UUID stubId, int nbRequests) {
-        verifyDeleteRequest(wireMock, stubId, "/v1/parameters/.*", true, Map.of(), nbRequests);
-    }
-
     public void verifyDeleteNetworkVisualizationParams(UUID stubId) {
         verifyDeleteRequest(wireMock, stubId, "/v1/network-visualizations-params/.*", true, Map.of());
     }
@@ -730,10 +726,6 @@ public class WireMockStubs {
         verifyHeadRequest(wireMock, stubId, "/v1/networks/" + networkUuid + "/indexed-equipments", Map.of(), nbRequests);
     }
 
-    public void verifyParametersProvider(UUID stubId, int nbRequests) {
-        verifyPutRequest(wireMock, stubId, "/v1/parameters/.*/provider", true, Map.of(), null, nbRequests);
-    }
-
     public void verifyDefaultProvider(UUID stubId, int nbRequests) {
         verifyGetRequest(wireMock, stubId, "/v1/default-provider", Map.of(), nbRequests);
     }
@@ -776,13 +768,6 @@ public class WireMockStubs {
             .willReturn(WireMock.notFound())).getId();
     }
 
-    public UUID stubParametersDuplicateFromAny(String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
-            .withQueryParam("duplicateFrom", WireMock.matching(".*"))
-            .atPriority(10)
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
-    }
-
     public UUID stubSpreadsheetConfigDuplicateFromAny(String responseBody) {
         return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/spreadsheet-config-collections"))
             .withQueryParam("duplicateFrom", WireMock.matching(".*"))
@@ -817,10 +802,6 @@ public class WireMockStubs {
 
     public void verifyNetworkVisualizationParamsDuplicateFrom(UUID stubId, String duplicateFromUuid, int nbRequests) {
         verifyPostRequest(wireMock, stubId, "/v1/network-visualizations-params", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
-    }
-
-    public void verifyParametersDuplicateFromAny(UUID stubId, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, "/v1/parameters", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
     }
 
     public void verifySpreadsheetConfigDuplicateFromAny(UUID stubId, int nbRequests) {
