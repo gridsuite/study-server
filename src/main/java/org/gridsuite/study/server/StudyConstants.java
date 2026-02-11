@@ -116,7 +116,10 @@ public final class StudyConstants {
     }
 
     public enum ModificationsActionType {
-        MOVE, COPY, INSERT
+        MOVE,
+        COPY,
+        SPLIT_COMPOSITE, // the network modifications contained into the composite modifications are extracted and inserted one by one
+        INSERT_COMPOSITE // the composite modifications are fully inserted as composote modifications
     }
 
     public enum Severity {
