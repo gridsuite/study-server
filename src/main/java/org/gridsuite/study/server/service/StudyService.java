@@ -1407,14 +1407,14 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSecurityAnalysis(@NonNull UUID studyUuid, @NonNull List<String> contingencyListNames, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
+    public UUID runSecurityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
         StudyEntity study = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-        return handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, contingencyListNames, userId);
+        return handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
     }
 
-    private UUID handleSecurityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, List<String> contingencyListNames, String userId) {
+    private UUID handleSecurityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID saReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(SECURITY_ANALYSIS.name(), UUID.randomUUID());
@@ -1432,7 +1432,7 @@ public class StudyService {
             securityAnalysisService.deleteSecurityAnalysisResults(List.of(prevResultUuid));
         }
 
-        var runSecurityAnalysisParametersInfos = new RunSecurityAnalysisParametersInfos(study.getSecurityAnalysisParametersUuid(), study.getLoadFlowParametersUuid(), contingencyListNames);
+        var runSecurityAnalysisParametersInfos = new RunSecurityAnalysisParametersInfos(study.getSecurityAnalysisParametersUuid(), study.getLoadFlowParametersUuid());
         UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, variantId, runSecurityAnalysisParametersInfos,
                 new ReportInfos(saReportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SECURITY_ANALYSIS);

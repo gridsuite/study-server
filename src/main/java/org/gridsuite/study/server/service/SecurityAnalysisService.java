@@ -141,8 +141,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         if (parametersInfos.getLoadFlowParametersUuid() != null) {
             uriComponentsBuilder.queryParam("loadFlowParametersUuid", parametersInfos.getLoadFlowParametersUuid());
         }
-        var path = uriComponentsBuilder.queryParam("contingencyListName", parametersInfos.getContingencyListNames())
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
+        var path = uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);

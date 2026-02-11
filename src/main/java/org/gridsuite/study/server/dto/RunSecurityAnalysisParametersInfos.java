@@ -9,7 +9,6 @@ package org.gridsuite.study.server.dto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -22,7 +21,4 @@ public class RunSecurityAnalysisParametersInfos {
     private UUID securityAnalysisParametersUuid;
 
     private UUID loadFlowParametersUuid;
-
-    private List<String> contingencyListNames;
-
 }
