@@ -83,7 +83,7 @@ class SecurityAnalysisTest {
     private static final String SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID = "11111111-9594-4e55-8ec7-07ea965d24eb";
     private static final String SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID = "22222222-9594-4e55-8ec7-07ea965d24eb";
     private static final String NOT_FOUND_NODE_UUID = "e3a85c9b-9594-4e55-8ec7-07ea965d24eb";
-    private static final String CONTINGENCY_LIST_NAME = "ls";
+    private static final String CONTINGENCY_LIST_ID = "7f611fba-1abf-4988-9303-48524a37836b";
     private String limitTypeJson;
     private static final String SECURITY_ANALYSIS_N_RESULT_JSON = "{\"status\":\"CONVERGED\",\"limitViolationsResult\":{\"limitViolations\":[{\"subjectId\":\"l3\",\"limitType\":\"CURRENT\",\"acceptableDuration\":1200,\"limit\":10.0,\"limitReduction\":1.0,\"value\":11.0,\"side\":\"ONE\"}],\"actionsTaken\":[]},\"networkResult\":{\"branchResults\":[],\"busResults\":[],\"threeWindingsTransformerResults\":[]}}";
     private static final String SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_JSON = "[{\"id\":\"l1\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l1\",\"elementType\":\"BRANCH\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l2\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l2\",\"elementType\":\"GENERATOR\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l3\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l3\",\"elementType\":\"BUSBAR_SECTION\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l4\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l4\",\"elementType\":\"LINE\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l6\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l6\",\"elementType\":\"HVDC_LINE\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l7\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l7\",\"elementType\":\"DANGLING_LINE\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l8\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l8\",\"elementType\":\"SHUNT_COMPENSATOR\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"l9\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l9\",\"elementType\":\"TWO_WINDINGS_TRANSFORMER\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"la\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"l0\",\"elementType\":\"THREE_WINDINGS_TRANSFORMER\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]},{\"id\":\"lb\",\"status\":\"CONVERGED\",\"elements\":[{\"id\":\"la\",\"elementType\":\"STATIC_VAR_COMPENSATOR\"}],\"constraints\":[{\"subjectId\":\"vl1\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\",\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0}]}]";
@@ -286,8 +286,8 @@ class SecurityAnalysisTest {
          * RUN SECURITY ANALYSIS START
          */
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, SECURITY_ANALYSIS_RESULT_UUID);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-            studyUuid, firstRootNetworkUuid, nodeUuid, CONTINGENCY_LIST_NAME).header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
+            studyUuid, firstRootNetworkUuid, nodeUuid).header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
 
         consumeSAResult(studyUuid, firstRootNetworkUuid, nodeUuid, SECURITY_ANALYSIS_RESULT_UUID);
 
@@ -391,8 +391,8 @@ class SecurityAnalysisTest {
          * RUN SECURITY ANALYSIS START
          */
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, SECURITY_ANALYSIS_RESULT_UUID);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-            studyUuid, firstRootNetworkUuid, nodeUuid, CONTINGENCY_LIST_NAME).header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
+            studyUuid, firstRootNetworkUuid, nodeUuid).header(HEADER_USER_ID, "testUserId")).andExpect(status().isOk());
 
         consumeSAResult(studyUuid, firstRootNetworkUuid, nodeUuid, SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID);
 
@@ -467,8 +467,8 @@ class SecurityAnalysisTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
 
         // attempt run security analysis on root node → forbidden (not allowed)
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={name}",
-                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, CONTINGENCY_LIST_NAME)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
+                studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid)
                 .header(HEADER_USER_ID, "testUserId"))
             .andExpect(status().isForbidden());
 
@@ -479,8 +479,8 @@ class SecurityAnalysisTest {
 
         // run additional security analysis for deletion test
         MockHttpServletRequestBuilder requestBuilder = post(
-            "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-            studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid, CONTINGENCY_LIST_NAME
+            "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
+            studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid
         );
         requestBuilder
             .contentType(MediaType.APPLICATION_JSON)
@@ -518,7 +518,7 @@ class SecurityAnalysisTest {
     private void consumeSAResult(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, String resultUuid) throws JsonProcessingException {
         // Verify that WireMock received exactly 1 POST request to run security analysis
 
-        computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("contingencyListName", WireMock.equalTo(CONTINGENCY_LIST_NAME), "receiver", WireMock.matching(".*" + nodeUuid + ".*")));
+        computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("receiver", WireMock.matching(".*" + nodeUuid + ".*")));
         // consume SA result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
         MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", resultUuid, HEADER_RECEIVER, resultUuidJson));
@@ -555,8 +555,8 @@ class SecurityAnalysisTest {
         // --- 2. Run security analysis ---
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, resultUuid);
 
-        MockHttpServletRequestBuilder requestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-            studyUuid, rootNetworkUuid, nodeUuid, CONTINGENCY_LIST_NAME);
+        MockHttpServletRequestBuilder requestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
+            studyUuid, rootNetworkUuid, nodeUuid);
         if (securityAnalysisParameters != null) {
             requestBuilder.contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(securityAnalysisParameters));
@@ -657,13 +657,13 @@ class SecurityAnalysisTest {
 
         // get contingency count
         wireMockServer.stubFor(get(urlPathEqualTo("/v1/contingency-lists/count"))
-            .withQueryParam("ids", equalTo(CONTINGENCY_LIST_NAME))
+            .withQueryParam("ids", equalTo(CONTINGENCY_LIST_ID))
             .withQueryParam("networkUuid", equalTo(NETWORK_UUID_STRING))
             .willReturn(okJson(CONTINGENCIES_COUNT))
         );
 
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/contingency-count?contingencyListName={contingencyListName}",
-                studyUuid, rootNetworkUuid, nodeUuid, CONTINGENCY_LIST_NAME))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/contingency-count?contingencyListIds={contingencyListId}",
+                studyUuid, rootNetworkUuid, nodeUuid, CONTINGENCY_LIST_ID))
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         Integer integerResponse = Integer.parseInt(resultAsString);
@@ -801,8 +801,8 @@ class SecurityAnalysisTest {
 
         //run failing security analysis (because in network 2)
         computationServerStubs.stubComputationRun(NETWORK_UUID_2_STRING, null, SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyUuid, firstRootNetworkUuid, nodeUuid, CONTINGENCY_LIST_NAME)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
+                studyUuid, firstRootNetworkUuid, nodeUuid)
                 .header(HEADER_USER_ID, "testUserId"))
             .andExpect(status().isOk());
 
@@ -836,8 +836,8 @@ class SecurityAnalysisTest {
         UUID firstRootNetworkUuid2 = studyTestUtils.getOneRootNetworkUuid(studyUuid2);
         computationServerStubs.stubComputationRun(NETWORK_UUID_3_STRING, null, SECURITY_ANALYSIS_ERROR_NODE_RESULT_UUID);
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyUuid2, firstRootNetworkUuid2, modificationNode1Uuid2, CONTINGENCY_LIST_NAME)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
+                studyUuid2, firstRootNetworkUuid2, modificationNode1Uuid2)
                 .header(HEADER_USER_ID, "testUserId"))
             .andExpect(status().isOk());
         // failed security analysis without receiver -> no failure message sent to frontend
@@ -849,7 +849,8 @@ class SecurityAnalysisTest {
         consumerService.consumeSaFailed().accept(failedMessage);
         // message sent by run and save controller to notify frontend security analysis is running and should update SA status
         checkMessagesReceived(studyUuid2, UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        computationServerStubs.verifyComputationRun(NETWORK_UUID_3_STRING, Map.of("contingencyListName", WireMock.equalTo(CONTINGENCY_LIST_NAME)));
+        wireMockServer.verify(postRequestedFor(urlPathMatching("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*")));
+
     }
 
     @Test
@@ -898,8 +899,8 @@ class SecurityAnalysisTest {
             .willReturn(ok()));
 
         // --- Run security analysis ---
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run?contingencyListName={contingencyListName}",
-                studyUuid, firstRootNetworkUuid, modificationNode1.getId(), CONTINGENCY_LIST_NAME)
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run",
+                studyUuid, firstRootNetworkUuid, modificationNode1.getId())
                 .content(objectWriter.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS))
                 .contentType(MediaType.APPLICATION_JSON)
                 .header(HEADER_USER_ID, "testUserId"))
@@ -910,7 +911,6 @@ class SecurityAnalysisTest {
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         wireMockServer.verify(postRequestedFor(urlPathMatching("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
-            .withQueryParam("contingencyListName", equalTo(CONTINGENCY_LIST_NAME))
             .withQueryParam("receiver", matching(".*")));
 
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
