@@ -2084,8 +2084,9 @@ public class StudyController {
     @Operation(summary = "Get security analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters")})
     public ResponseEntity<String> getSecurityAnalysisParametersValues(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid));
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid, userId));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/security-analysis/parameters")

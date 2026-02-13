@@ -690,7 +690,7 @@ public class StudyService {
 
         StudyEntity sourceStudy = getStudy(sourceStudyUuid);
 
-        StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId());
+        StudyEntity newStudyEntity = duplicateStudyEntity(sourceStudy, studyInfos.getId(), userId);
         rootNetworkService.duplicateStudyRootNetworks(newStudyEntity, sourceStudy);
         networkModificationTreeService.duplicateStudyNodes(newStudyEntity, sourceStudy);
         duplicateStudyNodeAliases(newStudyEntity, sourceStudy);
@@ -702,7 +702,7 @@ public class StudyService {
         return newStudyEntity;
     }
 
-    private StudyEntity duplicateStudyEntity(StudyEntity sourceStudyEntity, UUID newStudyId) {
+    private StudyEntity duplicateStudyEntity(StudyEntity sourceStudyEntity, UUID newStudyId, String userId) {
         UUID copiedLoadFlowParametersUuid = null;
         if (sourceStudyEntity.getLoadFlowParametersUuid() != null) {
             copiedLoadFlowParametersUuid = loadflowService.duplicateLoadFlowParameters(sourceStudyEntity.getLoadFlowParametersUuid());
@@ -715,7 +715,7 @@ public class StudyService {
 
         UUID copiedSecurityAnalysisParametersUuid = null;
         if (sourceStudyEntity.getSecurityAnalysisParametersUuid() != null) {
-            copiedSecurityAnalysisParametersUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(sourceStudyEntity.getSecurityAnalysisParametersUuid());
+            copiedSecurityAnalysisParametersUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(sourceStudyEntity.getSecurityAnalysisParametersUuid(), userId);
         }
 
         UUID copiedSensitivityAnalysisParametersUuid = null;
@@ -1178,9 +1178,9 @@ public class StudyService {
     }
 
     @Transactional
-    public String getSecurityAnalysisParametersValues(UUID studyUuid) {
+    public String getSecurityAnalysisParametersValues(UUID studyUuid, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        return securityAnalysisService.getSecurityAnalysisParameters(securityAnalysisService.getSecurityAnalysisParametersUuidOrElseCreateDefaults(studyEntity));
+        return securityAnalysisService.getSecurityAnalysisParameters(securityAnalysisService.getSecurityAnalysisParametersUuidOrElseCreateDefaults(studyEntity), userId);
     }
 
     @Transactional
@@ -1750,7 +1750,7 @@ public class StudyService {
         if (parameters == null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
             // reset case, with existing profile, having default security analysis params
             try {
-                UUID securityAnalysisParametersFromProfileUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId());
+                UUID securityAnalysisParametersFromProfileUuid = securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId(), userId);
                 studyEntity.setSecurityAnalysisParametersUuid(securityAnalysisParametersFromProfileUuid);
                 removeSecurityAnalysisParameters(existingSecurityAnalysisParametersUuid);
                 return userProfileIssue;
