@@ -38,10 +38,10 @@ public class ActionsService {
         this.restTemplate = restTemplate;
     }
 
-    public Integer getContingencyCount(UUID networkUuid, String variantId, List<String> contingencyListNames) {
+    public Integer getContingencyCount(UUID networkUuid, String variantId, List<UUID> contingencyListIds) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/count")
-                .queryParam(CONTINGENCY_LIST_IDS, contingencyListNames)
+                .queryParam(CONTINGENCY_LIST_IDS, contingencyListIds)
                 .queryParam(NETWORK_UUID, networkUuid);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
