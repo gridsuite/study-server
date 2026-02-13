@@ -14,7 +14,7 @@ spring:
       consumeShortCircuitAnalysisDebug;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeShortCircuitAnalysisCancelFailed;\
       consumeVoltageInitDebug;consumeVoltageInitResult;consumeVoltageInitStopped;consumeVoltageInitFailed;consumeVoltageInitCancelFailed;\
       consumeLoadFlowResult;consumeLoadFlowStopped;consumeLoadFlowFailed;consumeLoadFlowCancelFailed;\
-      consumeStateEstimationResult;consumeStateEstimationStopped;consumeStateEstimationFailed;\
+      consumeStateEstimationResult;consumeStateEstimationDebug;consumeStateEstimationStopped;consumeStateEstimationFailed;\
       consumePccMinResult;consumePccMinStopped;consumePccMinFailed;\
       consumeNetworkExportFinished"
     stream:
@@ -131,6 +131,9 @@ spring:
         consumeStateEstimationResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.result
           group: studyStateEstimationResultGroup
+        consumeStateEstimationDebug-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.debug
+          group: studyStateEstimationDebugGroup
         consumeStateEstimationStopped-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}stateestimation.stopped
           group: studyStateEstimationStoppedGroup
