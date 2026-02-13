@@ -89,6 +89,7 @@ public final class StudyConstants {
     public static final String QUERY_PARAM_REPORT_UUID = "reportUuid";
     public static final String QUERY_PARAM_REPORTER_ID = "reporterId";
     public static final String QUERY_PARAM_REPORT_TYPE = "reportType";
+    public static final String QUERY_PARAM_RESULT_TYPE = "resultType";
     public static final String QUERY_WITH_TAP_CHANGER = "withRatioTapChangers";
     public static final String HEADER_RECEIVER = "receiver";
     public static final String HEADER_S3_KEY = "s3Key";

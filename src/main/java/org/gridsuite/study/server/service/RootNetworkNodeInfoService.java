@@ -707,7 +707,7 @@ public class RootNetworkNodeInfoService {
         UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
             type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
-        return shortCircuitService.getShortCircuitAnalysisCsvResult(resultUuid, networkUuid, variantId, filters, globalFilters, sort, headerCsv);
+        return shortCircuitService.getShortCircuitAnalysisCsvResult(resultUuid, networkUuid, variantId, type, filters, globalFilters, sort, headerCsv);
     }
 
     @Transactional(readOnly = true)

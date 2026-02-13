@@ -154,11 +154,12 @@ public class ShortCircuitService extends AbstractComputationService {
         return restTemplate.exchange(resourcePath, HttpMethod.POST, entity, byte[].class).getBody();
     }
 
-    public byte[] getShortCircuitAnalysisCsvResult(UUID resultUuid, UUID networkUuid, String variantId, String filters, String globalFilters, Sort sort, String headersCsv) {
+    public byte[] getShortCircuitAnalysisCsvResult(UUID resultUuid, UUID networkUuid, String variantId, ShortcircuitAnalysisType type, String filters, String globalFilters, Sort sort, String headersCsv) {
         String resultPath = getShortCircuitAnalysisCsvResultResourcePath(resultUuid);
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath)
                 .queryParam(QUERY_PARAM_NETWORK_UUID, networkUuid)
-                .queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+                .queryParam(QUERY_PARAM_VARIANT_ID, variantId)
+                .queryParam(QUERY_PARAM_RESULT_TYPE, type);
 
         addFiltersToQueryParams(builder, filters, globalFilters);
         addSortToQueryParams(builder, sort);
