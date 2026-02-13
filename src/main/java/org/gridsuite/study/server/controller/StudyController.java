@@ -662,7 +662,7 @@ public class StudyController {
         studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         switch (action) {
-            case COPY, INSERT:
+            case COPY, SPLIT_COMPOSITE, INSERT_COMPOSITE:
                 handleDuplicateOrInsertNetworkModifications(studyUuid, nodeUuid, originStudyUuid, originNodeUuid, modificationsToCopyUuidList, userId, action);
                 break;
             case MOVE:
