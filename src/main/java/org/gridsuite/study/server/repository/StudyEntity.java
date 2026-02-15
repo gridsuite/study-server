@@ -110,6 +110,9 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "workspacesConfigUuid")
     private UUID workspacesConfigUuid;
 
+    @Column(name = "computationResultFiltersUuid")
+    private UUID computationResultFiltersUuid;
+
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "study_voltage_init_parameters_id",
         foreignKey = @ForeignKey(

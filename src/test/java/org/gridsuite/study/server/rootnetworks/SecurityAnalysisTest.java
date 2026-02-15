@@ -697,7 +697,7 @@ class SecurityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), null);
         UUID studyUuid = studyEntity.getId();
         assertNotNull(studyUuid);
-        computationServerStubs.stubParametersDefault(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
+        computationServerStubs.stubGetParametersDefault(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
         wireMockServer.stubFor(
             post(urlEqualTo("/v1/parameters/default"))
                 .willReturn(
@@ -709,7 +709,7 @@ class SecurityAnalysisTest {
         );
 
         computationServerStubs.stubParametersGet(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
-        computationServerStubs.stubParametersDefault(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
+        computationServerStubs.stubGetParametersDefault(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
         mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid))
             .andExpect(status().isOk())
             .andExpect(content().string(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
@@ -764,7 +764,7 @@ class SecurityAnalysisTest {
         assertNull(studyEntity.getSecurityAnalysisParametersUuid());
 
         String bodyJson = objectWriter.writeValueAsString(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
-        computationServerStubs.stubCreateParameter(SECURITY_ANALYSIS_PARAMETERS_UUID);
+        computationServerStubs.stubCreateParameter(objectMapper.writeValueAsString(SECURITY_ANALYSIS_PARAMETERS_UUID));
         mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
                 .header("userId", "userId")
                 .contentType(MediaType.APPLICATION_JSON)
