@@ -553,7 +553,7 @@ class PccMinTest {
         // Not found case
         UUID wrongParamUuid = UUID.randomUUID();
 
-        wireMockServer.stubFor(WireMock.get("v1/parameters/" + wrongParamUuid)
+        wireMockServer.stubFor(WireMock.get("/v1/parameters/" + wrongParamUuid)
             .willReturn(WireMock.notFound()));
 
         assertThrows(
@@ -575,7 +575,7 @@ class PccMinTest {
 
         // Fail case
         UUID wrongParamUuid = UUID.randomUUID();
-        wireMockServer.stubFor(WireMock.put("v1/parameters/" + wrongParamUuid)
+        wireMockServer.stubFor(WireMock.put("/v1/parameters/" + wrongParamUuid)
             .willReturn(WireMock.notFound()));
         assertThrows(
             HttpClientErrorException.NotFound.class,
