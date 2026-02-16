@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com> 
+ * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 public class StudyException extends AbstractBusinessException {
 
