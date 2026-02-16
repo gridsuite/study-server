@@ -314,6 +314,46 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void testInvalidReportIdIsLogged(final CapturedOutput capturedOutput) throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        UUID rootNetworkUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        String invalidReportId = "not-a-uuid";
+        String url = String.format("/v1/studies/%s/root-networks/%s/nodes/%s/report/logs", studyUuid, rootNetworkUuid, nodeUuid);
+
+        mockMvc.perform(get(url).param("reportId", invalidReportId))
+            .andExpect(status().isBadRequest());
+
+        String output = capturedOutput.getOut();
+        String expectedFragment = String.format(
+            "method=GET uri=%s?reportId=%s paramCausingIssue=reportId valueOfParamCausingIssue=%s",
+            url,
+            invalidReportId,
+            invalidReportId);
+        assertTrue(output.contains(expectedFragment), output);
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void testInvalidRequestWithoutParamsIsLogged(final CapturedOutput capturedOutput) throws Exception {
+        UUID studyUuid = UUID.randomUUID();
+        UUID rootNetworkUuid = UUID.randomUUID();
+        String nodeUuid = "UUID.randomUUID()";
+        String url = String.format("/v1/studies/%s/root-networks/%s/nodes/%s/report/logs", studyUuid, rootNetworkUuid, nodeUuid);
+
+        mockMvc.perform(get(url))
+                .andExpect(status().isBadRequest());
+
+        String output = capturedOutput.getOut();
+        String expectedFragment = String.format(
+                "method=GET uri=%s paramCausingIssue=nodeUuid valueOfParamCausingIssue=%s",
+                url,
+                nodeUuid);
+        assertTrue(output.contains(expectedFragment), output);
+    }
+
+    @Test
     void testMetadata() throws Exception {
         UUID studyUuid = createStudyWithStubs("userId", CASE_UUID);
         UUID oldStudyUuid = studyUuid;
