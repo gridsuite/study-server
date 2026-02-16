@@ -2502,11 +2502,31 @@ public class StudyService {
             }
 
             if (networkModificationResults != null) {
+
+                List<RootNetworkEntity> sourceRootNetworks = getStudyRootNetworks(originStudyUuid);
+
+                Map<String, RootNetworkEntity> targetRootNetworkByTag =
+                    studyRootNetworkEntities.stream()
+                        .filter(rn -> rn.getTag() != null)
+                        .collect(Collectors.toMap(
+                            RootNetworkEntity::getTag,
+                            Function.identity()
+                        ));
+
                 int index = 0;
-                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
                 for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
-                    if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
-                        emitNetworkModificationImpacts(targetStudyUuid, targetNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
+                    // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
+                    if (modificationResultOpt.isPresent() && index < sourceRootNetworks.size()) {
+
+                        String sourceTag = sourceRootNetworks.get(index).getTag();
+
+                        RootNetworkEntity targetRootNetwork =
+                            targetRootNetworkByTag.get(sourceTag);
+
+                        if (targetRootNetwork != null) {
+
+                            emitNetworkModificationImpacts(targetStudyUuid, targetNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
+                        }
                     }
                     index++;
                 }
