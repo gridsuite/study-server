@@ -10,10 +10,12 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
+import com.github.tomakehurst.wiremock.client.VerificationException;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -103,8 +105,30 @@ public final class WireMockUtilsCriteria {
         if (body != null) {
             requestBuilder.withRequestBody(WireMock.equalToJson(body));
         }
-        wireMockServer.verify(nbRequests, requestBuilder);
+        verifyWithRetry(wireMockServer, requestBuilder, nbRequests);
         removeRequestMatching(wireMockServer, requestBuilder, nbRequests);
+    }
+
+    private static void verifyWithRetry(WireMockServer wireMockServer, RequestPatternBuilder requestBuilder, int nbRequests) {
+        VerificationException lastError = null;
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+        while (System.nanoTime() < deadline) {
+            try {
+                wireMockServer.verify(nbRequests, requestBuilder);
+                return;
+            } catch (VerificationException e) {
+                lastError = e;
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException interruptedException) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+        if (lastError != null) {
+            throw lastError;
+        }
     }
 
     public static void removeRequestMatching(WireMockServer wireMockServer, RequestPatternBuilder requestBuilder, int nbRequests) {
