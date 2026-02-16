@@ -7,48 +7,46 @@
 package org.gridsuite.study.server.error;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
 import java.util.StringJoiner;
+
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.ResponseEntity;
-import org.springframework.beans.TypeMismatchException;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.lang.Nullable;
 import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.context.request.ServletWebRequest;
-import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.servlet.HandlerExceptionResolver;
+import org.springframework.web.servlet.ModelAndView;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 @ControllerAdvice
-public class RequestLoggingExceptionHandler extends ResponseEntityExceptionHandler {
+@Order(Ordered.HIGHEST_PRECEDENCE)
+public class RequestLoggingExceptionHandler implements HandlerExceptionResolver {
     private static final Logger A_LOGGER = LoggerFactory.getLogger(RequestLoggingExceptionHandler.class);
 
     @Override
-    protected ResponseEntity<@NonNull Object> handleTypeMismatch(
-            @NonNull TypeMismatchException ex,
-            @NonNull HttpHeaders headers,
-            @NonNull HttpStatusCode status,
-            @NonNull WebRequest request) {
-        if (ex instanceof MethodArgumentTypeMismatchException mismatch
-                && request instanceof ServletWebRequest servletWebRequest) {
-            HttpServletRequest servletRequest = servletWebRequest.getRequest();
-            String fullUri = buildFullUri(servletRequest);
+    public @Nullable ModelAndView resolveException(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            Object handler,
+            @NonNull Exception ex) {
+        if (ex instanceof MethodArgumentTypeMismatchException mismatch) {
+            String fullUri = buildFullUri(request);
             A_LOGGER.error(
                 "{} : method={} uri={} paramCausingIssue={} valueOfParamCausingIssue={}",
                 mismatch.getMessage(),
-                servletRequest.getMethod(),
+                request.getMethod(),
                 fullUri,
                 mismatch.getName(),
-                mismatch.getValue(),
-                ex);
+                mismatch.getValue());
         }
-        return super.handleTypeMismatch(ex, headers, status, request);
+        return null;
     }
 
     private static String buildFullUri(HttpServletRequest request) {

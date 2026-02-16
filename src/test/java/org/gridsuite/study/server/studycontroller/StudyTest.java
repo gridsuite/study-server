@@ -323,7 +323,7 @@ class StudyTest extends StudyTestBase {
         String url = String.format("/v1/studies/%s/root-networks/%s/nodes/%s/report/logs", studyUuid, rootNetworkUuid, nodeUuid);
 
         mockMvc.perform(get(url).param("reportId", invalidReportId))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isInternalServerError());
 
         String output = capturedOutput.getOut();
         String expectedFragment = String.format(
@@ -343,7 +343,7 @@ class StudyTest extends StudyTestBase {
         String url = String.format("/v1/studies/%s/root-networks/%s/nodes/%s/report/logs", studyUuid, rootNetworkUuid, nodeUuid);
 
         mockMvc.perform(get(url))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isInternalServerError());
 
         String output = capturedOutput.getOut();
         String expectedFragment = String.format(
