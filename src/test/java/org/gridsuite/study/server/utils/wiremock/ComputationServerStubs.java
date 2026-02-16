@@ -11,12 +11,16 @@ import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
 import java.util.Map;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyDeleteRequest;
+import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPostRequest;
+import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPutRequest;
 
 /**
  * @author Maissa Souissi <maissa.souissi@rte-france.com>
@@ -51,6 +55,13 @@ public class ComputationServerStubs {
                 .withBody(statusJson))).getId();
     }
 
+    public UUID stubGetResult(String resultUuid, String statusJson) {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid)).withQueryParam("mode", WireMock.equalTo("FULL"))
+                .willReturn(WireMock.ok()
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(statusJson))).getId();
+    }
+
     public void verifyComputationStop(String resultUuid, Map<String, StringValuePattern> queryParams) {
         WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/results/" + resultUuid + "/stop", true, queryParams, null);
     }
@@ -67,6 +78,13 @@ public class ComputationServerStubs {
      * Computation parameter
      */
 
+    public UUID stubParametersDuplicateFromAny(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
+                .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+                .atPriority(10)
+                .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
     public void stubParametersDuplicateFrom(String duplicateFromUuid, String responseBody) {
         wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
             .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
@@ -79,6 +97,10 @@ public class ComputationServerStubs {
             .willReturn(WireMock.notFound()));
     }
 
+    public void verifyParametersDuplicateFromAny(UUID stubId, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, "/v1/parameters", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
+    }
+
     public void verifyParametersDuplicateFrom(String duplicateFromUuid) {
         verifyParametersDuplicateFrom(duplicateFromUuid, 1);
     }
@@ -87,16 +109,32 @@ public class ComputationServerStubs {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
     }
 
+    /** Preferably use function without WireMockServer in signature
+     * TODO remove after current usages have been fixed
+     **/
+    @Deprecated
     public void stubParameterPut(WireMockServer wireMockServer, String paramUuid, String responseJson) {
         wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid))
-            .willReturn(WireMock.okJson(responseJson))
-        );
+                .willReturn(WireMock.okJson(responseJson)));
     }
 
+    /** This function doesn't remove request after verifying it
+     * TODO remove after current usages have been fixed
+     **/
+    @Deprecated
     public void verifyParameterPut(WireMockServer wireMockServer, String paramUuid) {
         wireMockServer.verify(
             putRequestedFor(urlEqualTo("/v1/parameters/" + paramUuid))
         );
+    }
+
+    public void stubParameterPut(String paramUuid, String responseJson) {
+        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + paramUuid))
+                .willReturn(WireMock.okJson(responseJson)));
+    }
+
+    public void verifyParameterPut(String paramUuid) {
+        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/parameters/" + paramUuid, Map.of(), null);
     }
 
     public void stubParametersGet(String paramUuid, String responseBody) {
@@ -109,11 +147,10 @@ public class ComputationServerStubs {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/parameters/" + paramUuid, Map.of());
     }
 
-    public void stubCreateParameter(UUID paramUuid) {
-        wireMock.stubFor(
-            post(urlPathEqualTo("/v1/parameters"))
-                .willReturn(okJson("\"" + paramUuid + "\""))
-        );
+    public void stubCreateParameter(String responseBody) {
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters"))
+                .atPriority(10)
+                .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
     }
 
     public void verifyParameterPost(String bodyJson) {
@@ -124,7 +161,12 @@ public class ComputationServerStubs {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of(), nbRequests);
     }
 
-    public void stubParametersDefault(String statusJson) {
+    public void stubPostParametersDefault(String responseBody) {
+        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters/default"))
+                .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
+    }
+
+    public void stubGetParametersDefault(String statusJson) {
         wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/default"))
             .willReturn(WireMock.ok()
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -133,6 +175,24 @@ public class ComputationServerStubs {
 
     public void verifyParametersDefault(int nbRequests) {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters/default", Map.of(), nbRequests);
+    }
+
+    public void stubDeleteParameters(String parametersUuid) {
+        wireMock.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/parameters/" + parametersUuid))
+                .willReturn(WireMock.ok()));
+    }
+
+    public void verifyDeleteParameters(String parametersUuid) {
+        WireMockUtilsCriteria.verifyDeleteRequest(wireMock,
+                "/v1/parameters/" + parametersUuid, Map.of());
+    }
+
+    public void verifyDeleteParameters(UUID stubId, int nbRequests) {
+        verifyDeleteRequest(wireMock, stubId, "/v1/parameters/.*", true, Map.of(), nbRequests);
+    }
+
+    public void verifyParametersProvider(UUID stubId, int nbRequests) {
+        verifyPutRequest(wireMock, stubId, "/v1/parameters/.*/provider", true, Map.of(), null, nbRequests);
     }
 
     /*    Results     */
@@ -164,4 +224,36 @@ public class ComputationServerStubs {
     public void verifyResultsCountGet() {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/supervision/results-count", Map.of());
     }
+
+    public void stubGetResultCsv(String resultUuid, byte[] csvContent) {
+        wireMock.stubFor(WireMock.post(urlPathEqualTo("/v1/results/" + resultUuid + "/csv"))
+                .willReturn(WireMock.ok()
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(csvContent)));
+    }
+
+    public void stubGetResultCsvNotFound(String resultUuid) {
+        wireMock.stubFor(WireMock.post(urlPathEqualTo("/v1/results/" + resultUuid + "/csv"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.NOT_FOUND.value())
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                ));
+    }
+
+    public void verifyGetResultCsv(String resultUuid) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/results/" + resultUuid + "/csv", Map.of());
+    }
+
+    /*    Status     */
+
+    public void stubInvalidateStatus() {
+        wireMock.stubFor(WireMock.put(WireMock.urlMatching("/v1/results/invalidate-status\\?resultUuid=.*"))
+                .willReturn(ok()));
+    }
+
+    public void verifyInvalidateStatus(Map<String, StringValuePattern> queryParams) {
+        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/results/invalidate-status",
+                true, queryParams, null);
+    }
+
 }

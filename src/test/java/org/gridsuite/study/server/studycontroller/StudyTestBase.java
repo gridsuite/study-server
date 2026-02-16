@@ -42,6 +42,7 @@ import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
@@ -217,6 +218,8 @@ class StudyTestBase {
 
     protected WireMockStubs wireMockStubs;
 
+    protected ComputationServerStubs computationServerStubs;
+
     @Autowired
     protected TestUtils studyTestUtils;
 
@@ -348,6 +351,7 @@ class StudyTestBase {
 
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
         wireMockStubs = new WireMockStubs(wireMockServer);
+        computationServerStubs = new ComputationServerStubs(wireMockServer);
 
         objectWriter = mapper.writer().withDefaultPrettyPrinter();
 
@@ -576,9 +580,9 @@ class StudyTestBase {
                                              UUID stubSpreadsheetConfigDuplicateFromId,
                                              UUID stubNetworkVisualizationParamsDuplicateFromId,
                                              UUID stubWorkspacesConfigDuplicateFromId) {
-        public void verify(WireMockStubs wireMockStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests, int networkVisualizationParamsDuplicateFromNbRequests, int workspacesConfigDuplicateFromNbRequests) {
+        public void verify(WireMockStubs wireMockStubs, ComputationServerStubs computationServerStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests, int networkVisualizationParamsDuplicateFromNbRequests, int workspacesConfigDuplicateFromNbRequests) {
             if (stubParametersDuplicateFromId != null) {
-                wireMockStubs.verifyParametersDuplicateFromAny(stubParametersDuplicateFromId, parametersDuplicateFromNbRequests);
+                computationServerStubs.verifyParametersDuplicateFromAny(stubParametersDuplicateFromId, parametersDuplicateFromNbRequests);
             }
             if (stubSpreadsheetConfigDuplicateFromId != null) {
                 wireMockStubs.verifySpreadsheetConfigDuplicateFromAny(stubSpreadsheetConfigDuplicateFromId, spreadsheetConfigDuplicateFromNbRequests);
@@ -596,9 +600,9 @@ class StudyTestBase {
                                       UUID stubDeleteNetworkVisualizationParamsId,
                                       UUID stubDeleteSpreadsheetConfigCollectionId,
                                       UUID stubDeleteWorkspacesConfigId) {
-        public void verify(WireMockStubs wireMockStubs, int deleteParametersNbRequests) {
+        public void verify(WireMockStubs wireMockStubs, ComputationServerStubs computationServerStubs, int deleteParametersNbRequests) {
             wireMockStubs.verifyDeleteReports(stubDeleteReportsId, 2);
-            wireMockStubs.verifyDeleteParameters(stubDeleteParametersId, deleteParametersNbRequests);
+            computationServerStubs.verifyDeleteParameters(stubDeleteParametersId, deleteParametersNbRequests);
             wireMockStubs.verifyDeleteNetworkVisualizationParams(stubDeleteNetworkVisualizationParamsId);
             wireMockStubs.verifyDeleteSpreadsheetConfigCollection(stubDeleteSpreadsheetConfigCollectionId);
             wireMockStubs.verifyDeleteWorkspacesConfig(stubDeleteWorkspacesConfigId);
@@ -615,23 +619,23 @@ class StudyTestBase {
     }
 
     protected void setupCreateParametersStubs() throws Exception {
-        wireMockStubs.stubParameters(mapper.writeValueAsString(UUID.randomUUID()));
-        wireMockStubs.stubParametersDefault(mapper.writeValueAsString(UUID.randomUUID()));
+        computationServerStubs.stubCreateParameter(mapper.writeValueAsString(UUID.randomUUID()));
+        computationServerStubs.stubPostParametersDefault(mapper.writeValueAsString(UUID.randomUUID()));
         wireMockStubs.stubSpreadsheetConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
         wireMockStubs.stubNetworkVisualizationParamsDefault(StudyTest.DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
         wireMockStubs.stubWorkspacesConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
     }
 
     protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests, int workspacesConfigDefaultNbRequests) {
-        wireMockStubs.computationServer.verifyParameters(createParametersNbRequests);
-        wireMockStubs.computationServer.verifyParametersDefault(parametersDefaultNbRequests);
+        computationServerStubs.verifyParameters(createParametersNbRequests);
+        computationServerStubs.verifyParametersDefault(parametersDefaultNbRequests);
         wireMockStubs.verifySpreadsheetConfigDefault(spreadsheetConfigDefaultNbRequests);
         wireMockStubs.verifyNetworkVisualizationParamsDefault(networkVisualizationParamsDefaultNbRequests);
         wireMockStubs.verifyWorkspacesConfigDefault(workspacesConfigDefaultNbRequests);
     }
 
     protected DuplicateParameterStubs setupDuplicateParametersStubs() throws Exception {
-        UUID stubParametersDuplicateFromId = wireMockStubs.stubParametersDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
+        UUID stubParametersDuplicateFromId = computationServerStubs.stubParametersDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubSpreadsheetConfigDuplicateFromId = wireMockStubs.stubSpreadsheetConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
         UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromAny(StudyTest.DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
         UUID stubWorkspacesConfigDuplicateFromId = wireMockStubs.stubWorkspacesConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
