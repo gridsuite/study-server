@@ -48,6 +48,8 @@
         <db-util.version>1.0.5</db-util.version>
         <sonar.organization>gridsuite</sonar.organization>
         <sonar.projectKey>org.gridsuite:study-server</sonar.projectKey>
+        <!-- FIXME to remove at next upgrade of powsybl-ws-dependencies -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <build>
