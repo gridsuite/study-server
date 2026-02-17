@@ -2049,7 +2049,7 @@ public class StudyController {
                                                              @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         DynamicSimulationStatus result = rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result.name()) :
+        return result != null ? ResponseEntity.ok().body(result.name()) :
                 ResponseEntity.noContent().build();
     }
 
@@ -2100,7 +2100,7 @@ public class StudyController {
                                                                                           @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         DynamicSecurityAnalysisStatus result = rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result.name()) :
+        return result != null ? ResponseEntity.ok().body(result.name()) :
                 ResponseEntity.noContent().build();
     }
 
@@ -2153,7 +2153,7 @@ public class StudyController {
                                                                                           @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         DynamicMarginCalculationStatus result = rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result.name()) :
+        return result != null ? ResponseEntity.ok().body(result.name()) :
                 ResponseEntity.noContent().build();
     }
 
