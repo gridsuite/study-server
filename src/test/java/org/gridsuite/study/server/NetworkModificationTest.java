@@ -1986,8 +1986,8 @@ class NetworkModificationTest {
         NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
             UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
         UUID nodeUuid1 = node1.getId();
-        UUID modification1 = UUID.randomUUID();
-        UUID modification2 = UUID.randomUUID();
+        ModificationsToCopyInfos modification1 = ModificationsToCopyInfos.builder().uuid(UUID.randomUUID()).build();
+        ModificationsToCopyInfos modification2 = ModificationsToCopyInfos.builder().uuid(UUID.randomUUID()).build();
         String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
 
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
@@ -2008,7 +2008,7 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
         checkElementUpdatedMessageSent(studyUuid, userId);
 
-        Pair<List<UUID>, List<ModificationApplicationContext>> modificationBody = Pair.of(List.of(modification1, modification2), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
+        Pair<List<ModificationsToCopyInfos>, List<ModificationApplicationContext>> modificationBody = Pair.of(List.of(modification1, modification2), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
         String expectedBody = mapper.writeValueAsString(modificationBody);
         String url = "/v1/groups/" + node1.getModificationGroupUuid();
         WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
@@ -2067,7 +2067,7 @@ class NetworkModificationTest {
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // Duplicate modification from node2 (study2) to node1 (study1)
-        List<UUID> modifications = List.of(UUID.randomUUID());
+        List<ModificationsToCopyInfos> modifications = List.of(ModificationsToCopyInfos.builder().uuid(UUID.randomUUID()).build());
         String modificationUuidListBody = mapper.writeValueAsString(modifications);
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
                 studyEntity1.getId(), node1.getId(), studyEntity2.getId(), node2.getId())
@@ -2080,7 +2080,7 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyEntity1.getId(), node1.getId());
         checkElementUpdatedMessageSent(studyEntity1.getId(), userId);
 
-        Pair<List<UUID>, List<ModificationApplicationContext>> modificationBody = Pair.of(modifications, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(studyTestUtils.getOneRootNetworkUuid(studyEntity1.getId()), node1.getId(), NETWORK_UUID)));
+        Pair<List<ModificationsToCopyInfos>, List<ModificationApplicationContext>> modificationBody = Pair.of(modifications, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(studyTestUtils.getOneRootNetworkUuid(studyEntity1.getId()), node1.getId(), NETWORK_UUID)));
         String expectedBody = mapper.writeValueAsString(modificationBody);
         String url = "/v1/groups/" + node1.getModificationGroupUuid();
         WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
@@ -2104,8 +2104,8 @@ class NetworkModificationTest {
         UUID studyUuid = studyEntity.getId();
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
-        UUID modification1 = UUID.randomUUID();
-        UUID modification2 = UUID.randomUUID();
+        ModificationsToCopyInfos modification1 = ModificationsToCopyInfos.builder().uuid(UUID.randomUUID()).build();
+        ModificationsToCopyInfos modification2 = ModificationsToCopyInfos.builder().uuid(UUID.randomUUID()).build();
         String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
 
         // Random/bad studyId error case
@@ -2139,28 +2139,30 @@ class NetworkModificationTest {
         NetworkModificationNode node2 = createNetworkModificationNode(studyUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "New node 2", userId);
         UUID nodeUuid2 = node2.getId();
-        UUID modification1 = UUID.randomUUID();
-        UUID modification2 = UUID.randomUUID();
-        String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
+        UUID modification1Uuid = UUID.randomUUID();
+        UUID modification2Uuid = UUID.randomUUID();
+        ModificationsToCopyInfos modification1 = ModificationsToCopyInfos.builder().uuid(modification1Uuid).build();
+        ModificationsToCopyInfos modification2 = ModificationsToCopyInfos.builder().uuid(modification2Uuid).build();
+        String modificationsToCopyInfos = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
 
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("MOVE"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(new NetworkModificationsResult(Arrays.asList(modification1, modification2), List.of(Optional.empty()))))
+                        .withBody(mapper.writeValueAsString(new NetworkModificationsResult(Arrays.asList(modification1Uuid, modification2Uuid), List.of(Optional.empty()))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // move 2 modifications within node 1
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
                         studyUuid, nodeUuid1, studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(modificationUuidListBody)
+                        .content(modificationsToCopyInfos)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
 
-        Pair<List<UUID>, List<ModificationApplicationContext>> expectedBody = Pair.of(List.of(modification1, modification2), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
+        Pair<List<UUID>, List<ModificationApplicationContext>> expectedBody = Pair.of(List.of(modification1Uuid, modification2Uuid), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
         String expectedBodyStr = mapper.writeValueAsString(expectedBody);
         String url = "/v1/groups/" + node1.getModificationGroupUuid();
         WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
@@ -2173,7 +2175,7 @@ class NetworkModificationTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
                         studyUuid, nodeUuid2, studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(modificationUuidListBody)
+                        .content(modificationsToCopyInfos)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isOk());
         checkUpdateModelsStatusMessagesReceived(studyUuid, nodeUuid1);
@@ -2185,7 +2187,7 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyUuid, userId);
         checkElementUpdatedMessageSent(studyUuid, userId);
 
-        expectedBody = Pair.of(List.of(modification1, modification2), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
+        expectedBody = Pair.of(List.of(modification1Uuid, modification2Uuid), List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node2.getId(), NETWORK_UUID)));
         expectedBodyStr = mapper.writeValueAsString(expectedBody);
         url = "/v1/groups/" + node2.getModificationGroupUuid();
         WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
@@ -2198,7 +2200,7 @@ class NetworkModificationTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=MOVE",
                         studyUuid, nodeUuid1)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(modificationUuidListBody)
+                        .content(modificationsToCopyInfos)
                         .header(USER_ID_HEADER, "userId"))
                 .andExpect(status().isBadRequest());
     }
@@ -2211,8 +2213,8 @@ class NetworkModificationTest {
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "New node 1", userId);
         createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "New node 2", userId);
-        UUID modification1 = UUID.randomUUID();
-        UUID modification2 = UUID.randomUUID();
+        ModificationsToCopyInfos modification1 = ModificationsToCopyInfos.builder().uuid(UUID.randomUUID()).build();
+        ModificationsToCopyInfos modification2 = ModificationsToCopyInfos.builder().uuid(UUID.randomUUID()).build();
         String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
 
         // Random/bad studyId error case
