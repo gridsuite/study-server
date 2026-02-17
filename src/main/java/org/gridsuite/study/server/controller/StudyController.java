@@ -1061,7 +1061,7 @@ public class StudyController {
     public ResponseEntity<Integer> getContingencyCount(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListIds", required = false) List<UUID> contingencyListIds) {
+                                                             @Parameter(description = "Contingency list UUIDs") @RequestParam(name = "contingencyListIds", required = false) List<UUID> contingencyListIds) {
         return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListIds) ? 0 : studyService.getContingencyCount(studyUuid, contingencyListIds, nodeUuid, rootNetworkUuid));
     }
 

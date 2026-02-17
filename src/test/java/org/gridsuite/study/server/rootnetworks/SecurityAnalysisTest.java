@@ -710,7 +710,8 @@ class SecurityAnalysisTest {
 
         computationServerStubs.stubParametersGet(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING, SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
         computationServerStubs.stubGetParametersDefault(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
+                        .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk())
             .andExpect(content().string(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
 
@@ -732,7 +733,8 @@ class SecurityAnalysisTest {
         assertEquals(UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/security-analysis/parameters", studyUuid)
+                        .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk())
             .andExpect(content().string(SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
 
