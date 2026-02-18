@@ -10,7 +10,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
 
 import java.util.UUID;
 
@@ -22,7 +21,6 @@ import java.util.UUID;
 @Getter
 @Builder
 public class ModificationsToCopyInfos {
-    @Id
     private UUID uuid;
 
     private String compositeName;
