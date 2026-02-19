@@ -1017,11 +1017,9 @@ public class StudyController {
     public ResponseEntity<Void> runSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
-        List<String> nonNullcontingencyListNames = contingencyListNames != null ? contingencyListNames : Collections.emptyList();
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runSecurityAnalysis(studyUuid, nonNullcontingencyListNames, nodeUuid, rootNetworkUuid, userId);
+        studyService.runSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1064,8 +1062,8 @@ public class StudyController {
     public ResponseEntity<Integer> getContingencyCount(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                              @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @Parameter(description = "Contingency list names") @RequestParam(name = "contingencyListName", required = false) List<String> contingencyListNames) {
-        return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListNames) ? 0 : studyService.getContingencyCount(studyUuid, contingencyListNames, nodeUuid, rootNetworkUuid));
+                                                             @Parameter(description = "Contingency list UUIDs") @RequestParam(name = "contingencyListIds", required = false) List<UUID> contingencyListIds) {
+        return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListIds) ? 0 : studyService.getContingencyCount(studyUuid, contingencyListIds, nodeUuid, rootNetworkUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/limit-violations")
@@ -2087,8 +2085,9 @@ public class StudyController {
     @Operation(summary = "Get security analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters")})
     public ResponseEntity<String> getSecurityAnalysisParametersValues(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid));
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid, userId));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
