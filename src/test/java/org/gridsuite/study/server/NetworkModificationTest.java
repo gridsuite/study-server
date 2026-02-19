@@ -1911,7 +1911,6 @@ class NetworkModificationTest {
         UUID modification1Uuid = UUID.randomUUID();
         UUID modification2Uuid = UUID.randomUUID();
         ModificationsToCopyInfos modification1 = ModificationsToCopyInfos.builder().uuid(modification1Uuid).build();
-        ModificationsToCopyInfos modification2 = ModificationsToCopyInfos.builder().uuid(modification2Uuid).build();
 
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("MOVE"))
