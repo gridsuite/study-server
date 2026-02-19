@@ -413,6 +413,8 @@ class NodeControllerTest extends StudyTestBase {
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //dynamicSecurityAnalysis_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        //dynamicMarginCalculation_status
+        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //voltageInit_status
         assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         //stateEstimation_status
@@ -445,6 +447,8 @@ class NodeControllerTest extends StudyTestBase {
             //dynamicSimulation_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //dynamicSecurityAnalysis_status
+            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            //dynamicMarginCalculation_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             //voltageInit_status
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
@@ -952,6 +956,8 @@ class NodeControllerTest extends StudyTestBase {
         //dynamicSimulation_status
         assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
         //dynamicSecurityAnalysis_status
+        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
+        //dynamicMarginCalculation_status
         assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
         //voltageInit_status
         assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));

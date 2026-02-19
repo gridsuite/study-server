@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.timeseries.DoubleTimeSeries;
@@ -18,16 +19,12 @@ import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
-import org.gridsuite.study.server.service.RebuildNodeService;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
-import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
-import org.gridsuite.study.server.error.StudyException;
-import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
+import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
@@ -35,13 +32,16 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
+import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.service.*;
@@ -66,9 +66,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.beans.PropertyEditorSupport;
 import java.util.*;
 
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -1174,6 +1174,23 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDynamicSecurityAnalysisProvider(studyUuid));
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/dynamic-margin-calculation/provider")
+    @Operation(summary = "Set dynamic margin calculation provider for the specified study, no body means reset to default provider")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation provider is set")})
+    public ResponseEntity<Void> setDynamicMarginCalculationProvider(@PathVariable("studyUuid") UUID studyUuid,
+                                                               @RequestBody(required = false) String provider,
+                                                               @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.updateDynamicMarginCalculationProvider(studyUuid, provider, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-margin-calculation/provider")
+    @Operation(summary = "Get dynamic margin calculation provider for a specified study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation provider is returned")})
+    public ResponseEntity<String> getDynamicMarginCalculationProvider(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getDynamicMarginCalculationProvider(studyUuid));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set"),
@@ -1738,6 +1755,13 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDefaultDynamicSecurityAnalysisProvider(userId));
     }
 
+    @GetMapping(value = "/dynamic-margin-calculation-default-provider")
+    @Operation(summary = "Get dynamic margin calculation default provider")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "The dynamic margin calculation default provider has been found"))
+    public ResponseEntity<String> getDefaultDynamicMarginCalculationProvider(@RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().body(studyService.getDefaultDynamicMarginCalculationProvider(userId));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all")
     @Operation(summary = "reindex root network")
     @ApiResponse(responseCode = "200", description = "Root network reindexed")
@@ -2023,7 +2047,7 @@ public class StudyController {
                                                              @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                              @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         DynamicSimulationStatus result = rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result.name()) :
+        return result != null ? ResponseEntity.ok().body(result.name()) :
                 ResponseEntity.noContent().build();
     }
 
@@ -2074,11 +2098,64 @@ public class StudyController {
                                                                                           @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         DynamicSecurityAnalysisStatus result = rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result.name()) :
+        return result != null ? ResponseEntity.ok().body(result.name()) :
                 ResponseEntity.noContent().build();
     }
 
     // --- Dynamic Security Analysis Endpoints END --- //
+
+    // --- Dynamic Margin Calculation Endpoints BEGIN --- //
+
+    @PostMapping(value = "/studies/{studyUuid}/dynamic-margin-calculation/parameters")
+    @Operation(summary = "Set dynamic margin calculation parameters on study, reset to default one if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation parameters are set")})
+    public ResponseEntity<Void> setDynamicMarginCalculationParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) String dmcParameter,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return studyService.setDynamicMarginCalculationParameters(studyUuid, dmcParameter, userId) ?
+                ResponseEntity.noContent().build() :
+                ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-margin-calculation/parameters")
+    @Operation(summary = "Get dynamic margin calculation parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation parameters")})
+    public ResponseEntity<String> getDynamicMarginCalculationParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId
+    ) {
+        return ResponseEntity.ok().body(studyService.getDynamicMarginCalculationParameters(studyUuid, userId));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-margin-calculation/run")
+    @Operation(summary = "run dynamic margin calculation on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation has started")})
+    public ResponseEntity<Void> runDynamicMarginCalculation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                     @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
+                                                     @RequestHeader(HEADER_USER_ID) String userId) throws JsonProcessingException {
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicMarginCalculationProvider);
+        studyService.runDynamicMarginCalculation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-margin-calculation/status")
+    @Operation(summary = "Get the status of dynamic margin calculation result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The status of dynamic margin calculation result"),
+        @ApiResponse(responseCode = "204", description = "No dynamic margin calculation status"),
+        @ApiResponse(responseCode = "404", description = "The dynamic margin calculation has not been found")})
+    public ResponseEntity<String> getDynamicMarginCalculationStatus(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                          @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        DynamicMarginCalculationStatus result = rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid);
+        return result != null ? ResponseEntity.ok().body(result.name()) :
+                ResponseEntity.noContent().build();
+    }
+
+    // --- Dynamic Margin Calculation Endpoints END --- //
 
     @GetMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
     @Operation(summary = "Get security analysis parameters on study")

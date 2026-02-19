@@ -50,6 +50,8 @@ public class RootNetworkNodeInfo {
 
     private UUID dynamicSecurityAnalysisResultUuid;
 
+    private UUID dynamicMarginCalculationResultUuid;
+
     private UUID stateEstimationResultUuid;
 
     private UUID pccMinResultUuid;
@@ -73,6 +75,7 @@ public class RootNetworkNodeInfo {
             .sensitivityAnalysisResultUuid(sensitivityAnalysisResultUuid)
             .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
             .dynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid)
+            .dynamicMarginCalculationResultUuid(dynamicMarginCalculationResultUuid)
             .stateEstimationResultUuid(stateEstimationResultUuid)
             .pccMinResultUuid(pccMinResultUuid)
             .nodeBuildStatus(nodeBuildStatus.toEntity())

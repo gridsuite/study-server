@@ -62,6 +62,9 @@ gridsuite:
       name: dynamic-security-analysis-server
       base-uri: http://localhost:5040
     -
+      name: dynamic-margin-calculation-server
+      base-uri: http://localhost:5041
+    -
       name: timeseries-server
       base-uri: http://localhost:5037
     -

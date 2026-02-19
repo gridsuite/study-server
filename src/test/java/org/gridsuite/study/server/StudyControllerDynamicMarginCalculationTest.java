@@ -12,8 +12,7 @@ import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
-import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
@@ -26,8 +25,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -62,7 +60,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.any;
 import static org.mockito.BDDMockito.eq;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -73,18 +70,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-class StudyControllerDynamicSecurityAnalysisTest {
-    private static final Logger LOGGER = LoggerFactory.getLogger(StudyControllerDynamicSecurityAnalysisTest.class);
+class StudyControllerDynamicMarginCalculationTest {
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyControllerDynamicMarginCalculationTest.class);
 
     private static final String API_VERSION = StudyApi.API_VERSION;
     private static final String DELIMITER = "/";
     private static final String STUDY_END_POINT = "studies";
 
     private static final String STUDY_BASE_URL = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
-    private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-security-analysis/run";
-    private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETERS = "{studyUuid}/dynamic-security-analysis/parameters";
-    private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PROVIDER = "{studyUuid}/dynamic-security-analysis/provider";
-    private static final String STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_STATUS = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-security-analysis/status";
+    private static final String STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-margin-calculation/run";
+    private static final String STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETERS = "{studyUuid}/dynamic-margin-calculation/parameters";
+    private static final String STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_PROVIDER = "{studyUuid}/dynamic-margin-calculation/provider";
+    private static final String STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_STATUS = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-margin-calculation/status";
 
     private static final String HEADER_USER_ID_NAME = "userId";
     private static final String HEADER_USER_ID_VALUE = "userId";
@@ -118,11 +115,8 @@ class StudyControllerDynamicSecurityAnalysisTest {
     @MockitoBean
     private LoadFlowService mockLoadFlowService;
 
-    @MockitoBean
-    private DynamicSimulationService mockDynamicSimulationService;
-
     @MockitoSpyBean
-    private DynamicSecurityAnalysisService spyDynamicSecurityAnalysisService;
+    private DynamicMarginCalculationService spyDynamicMarginCalculationService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -148,17 +142,17 @@ class StudyControllerDynamicSecurityAnalysisTest {
     //output destinations
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
-    private static final String DSA_DEBUG_DESTINATION = "dsa.debug";
-    private static final String DSA_RESULT_DESTINATION = "dsa.result";
-    private static final String DSA_STOPPED_DESTINATION = "dsa.stopped";
-    private static final String DSA_FAILED_DESTINATION = "dsa.run.dlx";
+    private static final String DMC_DEBUG_DESTINATION = "dmc.debug";
+    private static final String DMC_RESULT_DESTINATION = "dmc.result";
+    private static final String DMC_STOPPED_DESTINATION = "dmc.stopped";
+    private static final String DMC_FAILED_DESTINATION = "dmc.run.dlx";
 
     @AfterEach
     void tearDown() {
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
 
-        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, DSA_FAILED_DESTINATION, DSA_RESULT_DESTINATION, DSA_STOPPED_DESTINATION);
+        List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, DMC_FAILED_DESTINATION, DMC_RESULT_DESTINATION, DMC_STOPPED_DESTINATION);
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
     }
 
@@ -225,7 +219,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
     }
 
     @Test
-    void testRunDynamicSecurityAnalysisGivenSecurityNodeAndFailed() throws Exception {
+    void testRunDynamicMarginCalculationGivenSecurityNodeAndFailed() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -235,30 +229,29 @@ class StudyControllerDynamicSecurityAnalysisTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
-        when(mockDynamicSimulationService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
 
-        // setup DynamicSecurityAnalysisService spy
+        // setup DynamicMarginCalculationService spy
         doAnswer(invocation -> RESULT_UUID)
-            .when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(
+            .when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(
                 any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
-                any(), any(), any(), any(), eq(true));
+                any(), any(), any(), any(), any(), eq(true));
 
         // --- call endpoint to be tested --- //
         // run in debug mode on a security node which allows a run
-        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN,
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .param(QUERY_PARAM_DEBUG, "true")
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk());
 
-        // --- check async messages emitted by runDynamicSecurityAnalysis of StudyService --- //
-        // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSecurityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
+        // --- check async messages emitted by runDynamicMarginCalculation of StudyService --- //
+        // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
+        Message<byte[]> dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
         // resultUuid must be present in database at this moment
-        UUID actualResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SECURITY_ANALYSIS);
+        UUID actualResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_MARGIN_CALCULATION);
         LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
@@ -268,21 +261,21 @@ class StudyControllerDynamicSecurityAnalysisTest {
         input.send(MessageBuilder.withPayload("")
                 .setHeader("resultUuid", RESULT_UUID.toString())
                 .setHeader("receiver", receiver)
-                .build(), DSA_FAILED_DESTINATION
+                .build(), DMC_FAILED_DESTINATION
         );
 
         // --- check async messages emitted by consumeDsFailed of ConsumerService --- //
-        // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_FAILED from channel : studyUpdateDestination
-        dynamicSecurityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
+        // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_FAILED from channel : studyUpdateDestination
+        dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_FAILED);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_FAILED);
 
         // mock the notification from dynamic-security-analysis-server to send a debug status notif
         input.send(MessageBuilder.withPayload("")
                 .setHeader("resultUuid", RESULT_UUID.toString())
                 .setHeader("receiver", receiver)
-                .build(), DSA_DEBUG_DESTINATION);
+                .build(), DMC_DEBUG_DESTINATION);
 
         // must have message COMPUTATION_DEBUG_FILE_STATUS from channel : studyUpdateDestination
         Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
@@ -291,11 +284,11 @@ class StudyControllerDynamicSecurityAnalysisTest {
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
 
         // resultUuid must always be present in database at this moment
-        assertThat(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SECURITY_ANALYSIS)).isEqualTo(RESULT_UUID);
+        assertThat(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_MARGIN_CALCULATION)).isEqualTo(RESULT_UUID);
     }
 
     @Test
-    void testRunDynamicSecurityAnalysisGivenRootNode() throws Exception {
+    void testRunDynamicMarginCalculationGivenRootNode() throws Exception {
         // create a root node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -304,14 +297,14 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // --- call endpoint to be tested --- //
         // run on root node => forbidden
-        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN,
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN,
                 studyUuid, firstRootNetworkUuid, rootNodeUuid)
                 .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void testRunDynamicSecurityAnalysisGivenConstructionNode() throws Exception {
+    void testRunDynamicMarginCalculationGivenConstructionNode() throws Exception {
         // create a root node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -321,18 +314,18 @@ class StudyControllerDynamicSecurityAnalysisTest {
         // create a construction node
         NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
-        doAnswer(invocation -> DYNAWO_PROVIDER).when(spyDynamicSecurityAnalysisService).getProvider(any());
+        doAnswer(invocation -> DYNAWO_PROVIDER).when(spyDynamicMarginCalculationService).getProvider(any());
 
         // --- call endpoint to be tested --- //
         // run on root node => forbidden
-        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN,
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN,
                 studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                 .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void testRunDynamicSecurityAnalysisGivenSecurityNode() throws Exception {
+    void testRunDynamicMarginCalculationGivenSecurityNode() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -342,28 +335,27 @@ class StudyControllerDynamicSecurityAnalysisTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
-        when(mockDynamicSimulationService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
 
-        // setup DynamicSecurityAnalysisService mock
-        doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(any(),
-            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), eq(false));
+        // setup DynamicMarginCalculationService mock
+        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(any(),
+            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), any(), eq(false));
 
         MvcResult result;
         // --- call endpoint to be tested --- //
         // run on a security node which allows a run
-        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN,
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk());
 
-        // --- check async messages emitted by runDynamicSecurityAnalysis of StudyService --- //
-        // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSecurityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
+        // --- check async messages emitted by runDynamicMarginCalculation of StudyService --- //
+        // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
+        Message<byte[]> dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
         // resultUuid must be present in database at this moment
-        UUID actualResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SECURITY_ANALYSIS);
+        UUID actualResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_MARGIN_CALCULATION);
         LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
@@ -373,35 +365,35 @@ class StudyControllerDynamicSecurityAnalysisTest {
         input.send(MessageBuilder.withPayload("")
                 .setHeader("resultUuid", RESULT_UUID.toString())
                 .setHeader("receiver", receiver)
-                .build(), DSA_RESULT_DESTINATION
+                .build(), DMC_RESULT_DESTINATION
         );
 
         // --- check async messages emitted by consumeDsResult of ConsumerService --- //
-        // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS from channel : studyUpdateDestination
-        dynamicSecurityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
+        // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
+        dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
 
-        // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_RESULT from channel : studyUpdateDestination
-        Message<byte[]> dynamicSecurityAnalysisResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertThat(dynamicSecurityAnalysisResultMessage.getHeaders())
+        // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_RESULT from channel : studyUpdateDestination
+        Message<byte[]> dynamicMarginCalculationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertThat(dynamicMarginCalculationResultMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_RESULT);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_RESULT);
 
         //Test result count
-        doAnswer(invocation -> 1).when(spyDynamicSecurityAnalysisService).getResultsCount();
+        doAnswer(invocation -> 1).when(spyDynamicMarginCalculationService).getResultsCount();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
-                        .queryParam("type", ComputationType.DYNAMIC_SECURITY_ANALYSIS.toString())
+                        .queryParam("type", ComputationType.DYNAMIC_MARGIN_CALCULATION.toString())
                         .queryParam("dryRun", "true"))
                 .andExpect(status().isOk())
                 .andReturn();
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        Mockito.doNothing().when(spyDynamicSecurityAnalysisService).deleteAllResults();
+        doNothing().when(spyDynamicMarginCalculationService).deleteAllResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
-                        .queryParam("type", ComputationType.DYNAMIC_SECURITY_ANALYSIS.toString())
+                        .queryParam("type", ComputationType.DYNAMIC_MARGIN_CALCULATION.toString())
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -409,7 +401,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
     }
 
     @Test
-    void testRunDynamicSecurityAnalysisGivenSecurityNodeAndStopped() throws Exception {
+    void testRunDynamicMarginCalculationGivenSecurityNodeAndStopped() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -419,27 +411,26 @@ class StudyControllerDynamicSecurityAnalysisTest {
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
-        when(mockDynamicSimulationService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
 
-        // setup DynamicSecurityAnalysisService mock
-        doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(any(),
-            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), eq(false));
+        // setup DynamicMarginCalculationService mock
+        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(any(),
+            eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
         // run on a security node which allows a run
-        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN,
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN,
                         studyUuid, firstRootNetworkUuid, modificationNode1Uuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk());
 
-        // --- check async messages emitted by runDynamicSecurityAnalysis of StudyService --- //
-        // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSecurityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
+        // --- check async messages emitted by runDynamicMarginCalculation of StudyService --- //
+        // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
+        Message<byte[]> dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
         // resultUuid must be present in database at this moment
-        UUID actualResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_SECURITY_ANALYSIS);
+        UUID actualResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(modificationNode1Uuid, firstRootNetworkUuid, ComputationType.DYNAMIC_MARGIN_CALCULATION);
         LOGGER.info("Actual result uuid in the database = {}", actualResultUuid);
         assertThat(actualResultUuid).isEqualTo(RESULT_UUID);
 
@@ -449,47 +440,47 @@ class StudyControllerDynamicSecurityAnalysisTest {
         input.send(MessageBuilder.withPayload("")
                 .setHeader("resultUuid", RESULT_UUID.toString())
                 .setHeader("receiver", receiver)
-                .build(), DSA_STOPPED_DESTINATION
+                .build(), DMC_STOPPED_DESTINATION
         );
 
         // --- check async messages emitted by consumeDsStopped of ConsumerService --- //
-        // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS from channel : studyUpdateDestination
-        dynamicSecurityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
-        assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
+        // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
+        dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
     }
 
     @Test
-    void testGetDynamicSecurityAnalysisStatusResultGivenNodeNotRun() throws Exception {
-        // setup DynamicSecurityAnalysisService mock
-        doAnswer(invocation -> null).when(spyDynamicSecurityAnalysisService).getStatus(RESULT_UUID);
+    void testGetDynamicMarginCalculationStatusResultGivenNodeNotRun() throws Exception {
+        // setup DynamicMarginCalculationService mock
+        doAnswer(invocation -> null).when(spyDynamicMarginCalculationService).getStatus(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet run
-        studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_STATUS,
+        studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_STATUS,
                         STUDY_UUID, ROOT_NETWORK_UUID, NODE_NOT_RUN_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    void testGetDynamicSecurityAnalysisStatus() throws Exception {
-        // setup DynamicSecurityAnalysisService mock
-        Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSecurityAnalysisResultUuid(RESULT_UUID).build()))
+    void testGetDynamicMarginCalculationStatus() throws Exception {
+        // setup DynamicMarginCalculationService mock
+        Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicMarginCalculationResultUuid(RESULT_UUID).build()))
             .when(spyRootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOT_NETWORK_UUID);
-        doAnswer(invocation -> DynamicSecurityAnalysisStatus.FAILED).when(spyDynamicSecurityAnalysisService).getStatus(RESULT_UUID);
+        doAnswer(invocation -> DynamicMarginCalculationStatus.FAILED).when(spyDynamicMarginCalculationService).getStatus(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get status from a node done
-        MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_STATUS,
+        MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_STATUS,
                         STUDY_UUID, ROOT_NETWORK_UUID, NODE_UUID)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk()).andReturn();
-        DynamicSecurityAnalysisStatus statusResult = DynamicSecurityAnalysisStatus.valueOf(result.getResponse().getContentAsString());
+        DynamicMarginCalculationStatus statusResult = DynamicMarginCalculationStatus.valueOf(result.getResponse().getContentAsString());
 
         // --- check result --- //
-        DynamicSecurityAnalysisStatus statusExpected = DynamicSecurityAnalysisStatus.FAILED;
+        DynamicMarginCalculationStatus statusExpected = DynamicMarginCalculationStatus.FAILED;
         LOGGER.info("Status expected = {}", statusExpected);
         LOGGER.info("Status result = {}", statusResult);
         assertThat(statusResult).isEqualTo(statusExpected);
@@ -497,7 +488,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
     // @Disabled("fix later")
     @Test
-    void testSetAndGetDynamicSecurityAnalysisParameters() throws Exception {
+    void testSetAndGetDynamicMarginCalculationParameters() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
@@ -505,17 +496,17 @@ class StudyControllerDynamicSecurityAnalysisTest {
         // prepare request body
         String jsonParameters = PARAMETERS_JSON;
 
-        // setup DynamicSecurityAnalysisService mock
+        // setup DynamicMarginCalculationService mock
         doAnswer(invocation -> PARAMETERS_UUID)
-                .when(spyDynamicSecurityAnalysisService).createParameters(any());
+                .when(spyDynamicMarginCalculationService).createParameters(any());
         doAnswer(invocation -> jsonParameters)
-                .when(spyDynamicSecurityAnalysisService).getParameters(PARAMETERS_UUID);
+                .when(spyDynamicMarginCalculationService).getParameters(PARAMETERS_UUID, "userId");
 
         MvcResult result;
 
         // --- call endpoint to be tested --- //
         // set parameters
-        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETERS, studyUuid)
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETERS, studyUuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonParameters))
@@ -523,10 +514,10 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // --- check result --- //
         // check notifications
-        checkNotificationsAfterModifyingDynamicSecurityAnalysisParameters(studyUuid);
+        checkNotificationsAfterModifyingDynamicMarginCalculationParameters(studyUuid);
 
         // get parameters
-        result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETERS, studyUuid)
+        result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETERS, studyUuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isOk()).andReturn();
@@ -541,33 +532,33 @@ class StudyControllerDynamicSecurityAnalysisTest {
     }
 
     @Test
-    void testSetDynamicSecurityAnalysisProvider() throws Exception {
+    void testSetDynamicMarginCalculationProvider() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
 
-        // setup DynamicSecurityAnalysisService mock
+        // setup DynamicMarginCalculationService mock
         doAnswer(invocation -> null)
-                .when(spyDynamicSecurityAnalysisService).updateProvider(any(), any());
+                .when(spyDynamicMarginCalculationService).updateProvider(any(), any());
 
         // --- call endpoint to be tested --- //
         // set parameters
-        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SECURITY_ANALYSIS_END_POINT_PROVIDER, studyUuid)
+        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_PROVIDER, studyUuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(DYNAWO_PROVIDER)))
                 .andExpect(status().isOk());
 
         // check notifications
-        checkNotificationsAfterModifyingDynamicSecurityAnalysisParameters(studyUuid);
+        checkNotificationsAfterModifyingDynamicMarginCalculationParameters(studyUuid);
     }
 
-    private void checkNotificationsAfterModifyingDynamicSecurityAnalysisParameters(UUID studyUuid) {
-        // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS and UPDATE_TYPE_COMPUTATION_PARAMETERS from channel : studyUpdateDestination
+    private void checkNotificationsAfterModifyingDynamicMarginCalculationParameters(UUID studyUuid) {
+        // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS and UPDATE_TYPE_COMPUTATION_PARAMETERS from channel : studyUpdateDestination
         Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertThat(studyUpdateMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
         studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
