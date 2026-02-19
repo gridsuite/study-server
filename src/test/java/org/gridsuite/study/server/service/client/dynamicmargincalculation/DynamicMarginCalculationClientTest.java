@@ -390,7 +390,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                 .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
-                .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_SECURITY_ANALYSIS.reportKey))
+                .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_MARGIN_CALCULATION.reportKey))
                 .withHeader(HEADER_USER_ID, equalTo("userId"))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(expectedResultUuid))
@@ -412,7 +412,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                 .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
-                .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_SECURITY_ANALYSIS.reportKey))
+                .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_MARGIN_CALCULATION.reportKey))
                 .withHeader(QUERY_PARAM_DEBUG, equalTo("true"))
                 .withHeader(HEADER_USER_ID, equalTo("userId"))
                 .willReturn(WireMock.serverError()));

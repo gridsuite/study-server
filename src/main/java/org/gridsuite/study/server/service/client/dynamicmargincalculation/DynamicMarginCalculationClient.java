@@ -209,7 +209,7 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
                 .queryParam(QUERY_PARAM_REPORT_UUID, reportInfos.reportUuid())
                 .queryParam(QUERY_PARAM_REPORTER_ID, reportInfos.nodeUuid())
-                .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.DYNAMIC_SECURITY_ANALYSIS.reportKey);
+                .queryParam(QUERY_PARAM_REPORT_TYPE, StudyService.ReportType.DYNAMIC_MARGIN_CALCULATION.reportKey);
         String url = uriComponentsBuilder
                 .buildAndExpand(networkUuid)
                 .toUriString();
