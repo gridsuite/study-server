@@ -379,7 +379,7 @@ public class ConsumerService {
         if (userProfileInfos != null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
             // try to access/duplicate the user profile security analysis parameters
             try {
-                return securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId());
+                return securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId(), userId);
             } catch (Exception e) {
                 // TODO try to report a log in Root subreporter ?
                 LOGGER.error(String.format("Could not duplicate security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
