@@ -11,6 +11,7 @@ import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
+import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
@@ -27,6 +28,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
@@ -64,6 +66,7 @@ public class RootNetworkNodeInfoService {
     private final VoltageInitService voltageInitService;
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private final DynamicMarginCalculationService dynamicMarginCalculationService;
     private final StateEstimationService stateEstimationService;
     private final PccMinService pccMinService;
     private final ReportService reportService;
@@ -78,6 +81,7 @@ public class RootNetworkNodeInfoService {
                                       VoltageInitService voltageInitService,
                                       DynamicSimulationService dynamicSimulationService,
                                       DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+                                      DynamicMarginCalculationService dynamicMarginCalculationService,
                                       StateEstimationService stateEstimationService,
                                       PccMinService pccMinService,
                                       ReportService reportService) {
@@ -91,6 +95,7 @@ public class RootNetworkNodeInfoService {
         this.voltageInitService = voltageInitService;
         this.dynamicSimulationService = dynamicSimulationService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
+        this.dynamicMarginCalculationService = dynamicMarginCalculationService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
         this.reportService = reportService;
@@ -160,6 +165,7 @@ public class RootNetworkNodeInfoService {
             case VOLTAGE_INITIALIZATION -> rootNetworkNodeInfoEntity.setVoltageInitResultUuid(computationResultUuid);
             case DYNAMIC_SIMULATION -> rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(computationResultUuid);
             case DYNAMIC_SECURITY_ANALYSIS -> rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(computationResultUuid);
+            case DYNAMIC_MARGIN_CALCULATION -> rootNetworkNodeInfoEntity.setDynamicMarginCalculationResultUuid(computationResultUuid);
             case STATE_ESTIMATION -> rootNetworkNodeInfoEntity.setStateEstimationResultUuid(computationResultUuid);
             case PCC_MIN -> rootNetworkNodeInfoEntity.setPccMinResultUuid(computationResultUuid);
         }
@@ -170,7 +176,7 @@ public class RootNetworkNodeInfoService {
     }
 
     public void fillDeleteNodeInfo(UUID nodeUuid, DeleteNodeInfos deleteNodeInfos) {
-        //get all rootnetworknodeinfo info linked to node
+        //get all rootNetworkNodeInfo info linked to node
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllWithRootNetworkByNodeInfoId(nodeUuid);
         rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfoEntity -> {
             rootNetworkNodeInfoEntity.getModificationReports().forEach((key, value) -> deleteNodeInfos.addReportUuid(value));
@@ -220,6 +226,11 @@ public class RootNetworkNodeInfoService {
             UUID dynamicSecurityAnalysisResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_SECURITY_ANALYSIS);
             if (dynamicSecurityAnalysisResultUuid != null) {
                 deleteNodeInfos.addDynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid);
+            }
+
+            UUID dynamicMarginCalculationResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_MARGIN_CALCULATION);
+            if (dynamicMarginCalculationResultUuid != null) {
+                deleteNodeInfos.addDynamicMarginCalculationResultUuid(dynamicMarginCalculationResultUuid);
             }
 
             UUID stateEstimationResultUuid = getComputationResultUuid(rootNetworkNodeInfoEntity, STATE_ESTIMATION);
@@ -337,7 +348,7 @@ public class RootNetworkNodeInfoService {
                 .collect(Collectors.toSet());
     }
 
-    private static void invalidateBuildStatus(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos) {
+    private void invalidateBuildStatus(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeInfos invalidateNodeInfos) {
         rootNetworkNodeInfoEntity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
         rootNetworkNodeInfoEntity.setVariantId(UUID.randomUUID().toString());
         rootNetworkNodeInfoEntity.setModificationReports(new HashMap<>());
@@ -345,7 +356,7 @@ public class RootNetworkNodeInfoService {
         invalidateNodeInfos.addNodeUuid(rootNetworkNodeInfoEntity.getNodeInfo().getIdNode());
     }
 
-    private static void invalidateComputationResults(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ComputationsInvalidationMode computationsInvalidationMode) {
+    private void invalidateComputationResults(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ComputationsInvalidationMode computationsInvalidationMode) {
         if (!ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
             rootNetworkNodeInfoEntity.setLoadFlowResultUuid(null);
             rootNetworkNodeInfoEntity.setLoadFlowWithRatioTapChangers(null);
@@ -356,6 +367,7 @@ public class RootNetworkNodeInfoService {
         rootNetworkNodeInfoEntity.setOneBusShortCircuitAnalysisResultUuid(null);
         rootNetworkNodeInfoEntity.setDynamicSimulationResultUuid(null);
         rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(null);
+        rootNetworkNodeInfoEntity.setDynamicMarginCalculationResultUuid(null);
         if (!ComputationsInvalidationMode.isPreserveVoltageInitResults(computationsInvalidationMode)) {
             rootNetworkNodeInfoEntity.setVoltageInitResultUuid(null);
         }
@@ -412,6 +424,8 @@ public class RootNetworkNodeInfoService {
                 .ifPresent(invalidateNodeInfos::addDynamicSimulationResultUuid);
         Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_SECURITY_ANALYSIS))
                 .ifPresent(invalidateNodeInfos::addDynamicSecurityAnalysisResultUuid);
+        Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, DYNAMIC_MARGIN_CALCULATION))
+                .ifPresent(invalidateNodeInfos::addDynamicMarginCalculationResultUuid);
         Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, STATE_ESTIMATION))
                 .ifPresent(invalidateNodeInfos::addStateEstimationResultUuid);
         Optional.ofNullable(getComputationResultUuid(rootNetworkNodeInfoEntity, PCC_MIN))
@@ -433,6 +447,7 @@ public class RootNetworkNodeInfoService {
             case VOLTAGE_INITIALIZATION -> rootNetworkNodeInfoEntity.getVoltageInitResultUuid();
             case DYNAMIC_SIMULATION -> rootNetworkNodeInfoEntity.getDynamicSimulationResultUuid();
             case DYNAMIC_SECURITY_ANALYSIS -> rootNetworkNodeInfoEntity.getDynamicSecurityAnalysisResultUuid();
+            case DYNAMIC_MARGIN_CALCULATION -> rootNetworkNodeInfoEntity.getDynamicMarginCalculationResultUuid();
             case STATE_ESTIMATION -> rootNetworkNodeInfoEntity.getStateEstimationResultUuid();
             case PCC_MIN -> rootNetworkNodeInfoEntity.getPccMinResultUuid();
         };
@@ -555,6 +570,9 @@ public class RootNetworkNodeInfoService {
         if (rootNetworkNodeInfo.getDynamicSecurityAnalysisResultUuid() != null) {
             rootNetworkNodeInfoEntity.setDynamicSecurityAnalysisResultUuid(rootNetworkNodeInfo.getDynamicSecurityAnalysisResultUuid());
         }
+        if (rootNetworkNodeInfo.getDynamicMarginCalculationResultUuid() != null) {
+            rootNetworkNodeInfoEntity.setDynamicMarginCalculationResultUuid(rootNetworkNodeInfo.getDynamicMarginCalculationResultUuid());
+        }
         if (rootNetworkNodeInfo.getVoltageInitResultUuid() != null) {
             rootNetworkNodeInfoEntity.setVoltageInitResultUuid(rootNetworkNodeInfo.getVoltageInitResultUuid());
         }
@@ -575,6 +593,7 @@ public class RootNetworkNodeInfoService {
             studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).toList())),
             studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicSimulationResultUuid).filter(Objects::nonNull).toList())),
             studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicSecurityAnalysisResultUuid).filter(Objects::nonNull).toList())),
+            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicMarginCalculationResultUuid).filter(Objects::nonNull).toList())),
             studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).toList())),
             studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getPccMinResultUuid).filter(Objects::nonNull).toList()))
         );
@@ -601,6 +620,7 @@ public class RootNetworkNodeInfoService {
         securityAnalysisService.assertSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS));
         dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
         dynamicSecurityAnalysisService.assertDynamicSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS));
+        dynamicMarginCalculationService.assertDynamicMarginCalculationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION));
         sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
         shortCircuitService.assertShortCircuitAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT), getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT_ONE_BUS));
         voltageInitService.assertVoltageInitNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION));
@@ -788,6 +808,12 @@ public class RootNetworkNodeInfoService {
     public DynamicSecurityAnalysisStatus getDynamicSecurityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS);
         return dynamicSecurityAnalysisService.getStatus(resultUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public DynamicMarginCalculationStatus getDynamicMarginCalculationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION);
+        return dynamicMarginCalculationService.getStatus(resultUuid);
     }
 
     public String getSensitivityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {

@@ -274,8 +274,8 @@ class LoadFlowTest {
                 HEADER_RECEIVER, resultUuidJson,
                 USER_ID_HEADER, "userId"));
         consumerService.consumeLoadFlowResult().accept(MessageBuilder.createMessage("", messageHeaders));
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
+        checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
 
         assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
         if (modificationNode.isSecurityNode()) {
@@ -338,12 +338,12 @@ class LoadFlowTest {
             wireMockStubs.loadflowServer.verifyGetLoadflowProvider(LOADFLOW_PARAMETERS_UUID.toString());
         } else {
             // running loadflow invalidate node children and their computations
-            checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
+            checkUpdateStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
             RequestPatternBuilder getLoadflowProviderRequestBuilder = WireMock.getRequestedFor(WireMock.urlEqualTo("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID.toString() + "/provider"));
             removeRequestMatching(wireMockServer, getLoadflowProviderRequestBuilder, 0);
         }
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateStatusMessageReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
 
         consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode);
 
@@ -372,7 +372,7 @@ class LoadFlowTest {
                 .header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk());
         wireMockStubs.loadflowServer.verifyStopLoadflow(loadflowResultUuid);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
+        checkUpdateStatusMessageReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
     }
 
     private void testLoadFlowFailed(UUID studyNameUserIdUuid, UUID modificationNodeUuid) throws Exception {
@@ -388,8 +388,8 @@ class LoadFlowTest {
 
         wireMockStubs.loadflowServer.verifyGetLoadflowProvider(LOADFLOW_PARAMETERS_UUID.toString());
         wireMockStubs.loadflowServer.verifyRunLoadflow(networkUuid);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_FAILED);
+        checkUpdateStatusMessageReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateStatusMessageReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_FAILED);
     }
 
     @Test
@@ -412,9 +412,9 @@ class LoadFlowTest {
         wireMockStubs.loadflowServer.verifyRunLoadflow(networkUuid);
 
         // running loadflow (with security node) invalidate node children and their computations
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkUpdateStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateStatusMessageReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
 
         consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1);
 
@@ -470,9 +470,9 @@ class LoadFlowTest {
         wireMockStubs.loadflowServer.verifyRunLoadflow(networkUuid);
 
         // running loadflow (with security node) invalidate children and their computations
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
+        checkUpdateStatusMessagesReceived(studyNameUserIdUuid, modificationNode1Uuid);
 
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateStatusMessageReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
 
         consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1);
     }
@@ -509,8 +509,8 @@ class LoadFlowTest {
         wireMockStubs.loadflowServer.verifyRunLoadflow(networkUuid);
 
         // running loadflow ((with security node)) invalidate node children and their computations
-        checkUpdateModelsStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid);
-        checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateStatusMessagesReceived(studyNameUserIdUuid, modificationNode3Uuid);
+        checkUpdateStatusMessageReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         consumeLoadFlowResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3);
 
         //Test result count
@@ -550,7 +550,7 @@ class LoadFlowTest {
         assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_FAILED, updateType);
     }
 
-    private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck, String otherUpdateTypeToCheck) {
+    private void checkUpdateStatusMessageReceived(UUID studyUuid, String updateTypeToCheck, String otherUpdateTypeToCheck) {
         Message<byte[]> loadFlowStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(studyUuid, loadFlowStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) loadFlowStatusMessage.getHeaders().get(HEADER_UPDATE_TYPE);
@@ -561,8 +561,8 @@ class LoadFlowTest {
         }
     }
 
-    private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
-        checkUpdateModelStatusMessagesReceived(studyUuid, updateTypeToCheck, null);
+    private void checkUpdateStatusMessageReceived(UUID studyUuid, String updateTypeToCheck) {
+        checkUpdateStatusMessageReceived(studyUuid, updateTypeToCheck, null);
     }
 
     private void testResultCount() throws Exception {
@@ -590,7 +590,7 @@ class LoadFlowTest {
 
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
 
-        checkUpdateModelsStatusMessagesReceived(studyUuid);
+        checkUpdateStatusMessagesReceived(studyUuid);
 
         assertEquals(BuildStatus.NOT_BUILT, rootNetworkNodeInfoRepository.findById(rootNetworkNodeInfoEntity.getId()).orElseThrow().getNodeBuildStatus().getLocalBuildStatus());
     }
@@ -705,6 +705,8 @@ class LoadFlowTest {
         assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        assertEquals(NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
         assertEquals(studyNameUserIdUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
@@ -922,14 +924,15 @@ class LoadFlowTest {
 
         // node2 and node3 will be invalidated with their children, but the order in which way they are invalidated is not deterministic
         // this is why we don't check node uuid here for those two calls
-        checkUpdateModelsStatusMessagesReceived(studyUuid);
+        checkUpdateStatusMessagesReceived(studyUuid);
 
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS);
+        checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+        checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
+        checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS);
 
         assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node1.getId(), rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
         assertEquals(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT), rootNetworkNodeInfoService.getRootNetworkNodeInfo(node2.getId(), rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow());
@@ -1036,7 +1039,7 @@ class LoadFlowTest {
         return modificationNode;
     }
 
-    private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
+    private void checkUpdateStatusMessageReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating model status
         Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(messageStatus.getPayload()));
@@ -1048,26 +1051,17 @@ class LoadFlowTest {
         assertEquals(updateType, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
-    private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, UPDATE_TYPE_PCC_MIN_STATUS);
+    private void checkUpdateStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
+        TestUtils.ALL_COMPUTATION_STATUS.forEach(computationStatus -> checkUpdateStatusMessageReceived(studyUuid, nodeUuid, computationStatus));
     }
 
-    private void checkUpdateModelsStatusMessagesReceived(UUID studyUuid) {
+    private void checkUpdateStatusMessagesReceived(UUID studyUuid) {
         Message<byte[]> messageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NODE_BUILD_STATUS_UPDATED, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
         List<UUID> nodesToInvalidate = (List<UUID>) headersStatus.get(NotificationService.HEADER_NODES);
-        checkUpdateModelsStatusMessagesReceived(studyUuid, nodesToInvalidate.getFirst());
+        checkUpdateStatusMessagesReceived(studyUuid, nodesToInvalidate.get(0));
     }
 
     @AfterEach

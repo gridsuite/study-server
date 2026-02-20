@@ -25,6 +25,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -74,6 +75,7 @@ public class ConsumerService {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private final DynamicMarginCalculationService dynamicMarginCalculationService;
     private final StateEstimationService stateEstimationService;
     private final PccMinService pccMinService;
     private final DirectoryService directoryService;
@@ -91,7 +93,9 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           StateEstimationService stateEstimationService, PccMinService pccMinService,
+                           DynamicMarginCalculationService dynamicMarginCalculationService,
+                           StateEstimationService stateEstimationService,
+                           PccMinService pccMinService,
                            DirectoryService directoryService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
@@ -106,6 +110,7 @@ public class ConsumerService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
+        this.dynamicMarginCalculationService = dynamicMarginCalculationService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
         this.directoryService = directoryService;
@@ -296,6 +301,7 @@ public class ConsumerService {
         UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
         UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
+        UUID dynamicMarginCalculationParametersUuid = createDefaultDynamicMarginCalculationParameters(userId, userProfileInfos);
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
         UUID pccMinParametersUuid = createDefaultPccMinParameters(userId, userProfileInfos);
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
@@ -304,7 +310,8 @@ public class ConsumerService {
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
             shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
+            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, dynamicMarginCalculationParametersUuid,
+            stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
             importParameters, importReportUuid);
     }
 
@@ -372,7 +379,7 @@ public class ConsumerService {
         if (userProfileInfos != null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
             // try to access/duplicate the user profile security analysis parameters
             try {
-                return securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId());
+                return securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId(), userId);
             } catch (Exception e) {
                 // TODO try to report a log in Root subreporter ?
                 LOGGER.error(String.format("Could not duplicate security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
@@ -444,6 +451,26 @@ public class ConsumerService {
             return dynamicSecurityAnalysisService.createDefaultParameters();
         } catch (final Exception e) {
             LOGGER.error("Error while creating default parameters for dynamic security analysis", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultDynamicMarginCalculationParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getDynamicMarginCalculationParameterId() != null) {
+            // try to access/duplicate the user profile Dynamic Margin Calculation parameters
+            try {
+                return dynamicMarginCalculationService.duplicateParameters(userProfileInfos.getDynamicMarginCalculationParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate dynamic margin calculation parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                        userProfileInfos.getDynamicMarginCalculationParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad dynamic margin calculation parameters in profile => use default values
+        try {
+            return dynamicMarginCalculationService.createDefaultParameters();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default parameters for dynamic margin calculation", e);
             return null;
         }
     }
@@ -554,12 +581,9 @@ public class ConsumerService {
         String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
         UUID resultUuid = null;
 
-        var computationsToReset = List.of(DYNAMIC_SIMULATION, DYNAMIC_SECURITY_ANALYSIS);
-        if (!computationsToReset.contains(computationType)) {
-            String resultId = msg.getHeaders().get(RESULT_UUID, String.class);
-            if (resultId != null) {
-                resultUuid = UUID.fromString(resultId);
-            }
+        String resultId = msg.getHeaders().get(RESULT_UUID, String.class);
+        if (resultId != null) {
+            resultUuid = UUID.fromString(resultId);
         }
         if (!Strings.isBlank(receiver)) {
             NodeReceiver receiverObj = null;
@@ -752,6 +776,26 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumeDsaFailed() {
         return message -> consumeCalculationFailed(message, DYNAMIC_SECURITY_ANALYSIS);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDmcDebug() {
+        return message -> consumeCalculationDebug(message, DYNAMIC_MARGIN_CALCULATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDmcResult() {
+        return message -> consumeCalculationResult(message, DYNAMIC_MARGIN_CALCULATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDmcStopped() {
+        return message -> consumeCalculationStopped(message, DYNAMIC_MARGIN_CALCULATION);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeDmcFailed() {
+        return message -> consumeCalculationFailed(message, DYNAMIC_MARGIN_CALCULATION);
     }
 
     @Bean

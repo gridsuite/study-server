@@ -96,6 +96,9 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "dynamicSecurityAnalysisResultUuid")
     private UUID dynamicSecurityAnalysisResultUuid;
 
+    @Column(name = "dynamicMarginCalculationResultUuid")
+    private UUID dynamicMarginCalculationResultUuid;
+
     @Column(name = "stateEstimationResultUuid")
     private UUID stateEstimationResultUuid;
 
@@ -126,6 +129,7 @@ public class RootNetworkNodeInfoEntity {
             .modificationReports(modificationReports)
             .dynamicSimulationResultUuid(dynamicSimulationResultUuid)
             .dynamicSecurityAnalysisResultUuid(dynamicSecurityAnalysisResultUuid)
+            .dynamicMarginCalculationResultUuid(dynamicMarginCalculationResultUuid)
             .loadFlowResultUuid(loadFlowResultUuid)
             .loadFlowWithRatioTapChangers(loadFlowWithRatioTapChangers)
             .nodeBuildStatus(nodeBuildStatus.toDto())

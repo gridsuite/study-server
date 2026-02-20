@@ -19,6 +19,7 @@ import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.error.StudyBusinessErrorCode;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
@@ -28,6 +29,8 @@ import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.junit.platform.commons.util.StringUtils;
 import org.mockito.stubbing.Answer;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHeaders;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -49,6 +52,24 @@ import static org.mockito.Mockito.doAnswer;
  */
 @Service
 public final class TestUtils {
+
+    public static final List<String> ALL_COMPUTATION_STATUS = List.of(
+            NotificationService.UPDATE_TYPE_LOADFLOW_STATUS,
+            NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS,
+            NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS,
+            NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
+            NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
+            NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS,
+            NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
+            NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS,
+            NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS,
+            NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS,
+            NotificationService.UPDATE_TYPE_PCC_MIN_STATUS
+    );
+
+    //output destinations
+    public static final String STUDY_UPDATE_DESTINATION = "study.update";
+    public static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final long TIMEOUT = 100;
     public static final String USER_DEFAULT_PROFILE_JSON = """
@@ -269,5 +290,21 @@ public final class TestUtils {
             }
             return completableFuture;
         }).when(studyServerExecutionService).runAsync(any(Runnable.class));
+    }
+
+    public static void checkUpdateTypeMessageReceived(UUID studyUuid, UUID nodeUuid, String updateType, OutputDestination output, String destination) {
+        // assert that the broker message has been sent for updating updateType
+        Message<byte[]> messageStatus = output.receive(TIMEOUT, destination);
+        assertEquals("", new String(messageStatus.getPayload()));
+        MessageHeaders headersStatus = messageStatus.getHeaders();
+        assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
+        if (nodeUuid != null) {
+            assertEquals(nodeUuid, headersStatus.get(NotificationService.HEADER_NODE));
+        }
+        assertEquals(updateType, headersStatus.get(NotificationService.HEADER_UPDATE_TYPE));
+    }
+
+    public static void checkUpdateStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, OutputDestination output) {
+        ALL_COMPUTATION_STATUS.forEach(computationStatus -> checkUpdateTypeMessageReceived(studyUuid, nodeUuid, computationStatus, output, STUDY_UPDATE_DESTINATION));
     }
 }

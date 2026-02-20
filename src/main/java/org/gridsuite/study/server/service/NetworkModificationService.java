@@ -12,6 +12,7 @@ import lombok.NonNull;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.ModificationsToCopyInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
@@ -246,7 +247,7 @@ public class NetworkModificationService {
         restTemplate.put(getNetworkModificationServerURI(false) + path, null);
     }
 
-    public NetworkModificationsResult moveModifications(UUID originGroupUuid, UUID targetGroupUuid, UUID beforeUuid, Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos, boolean buildTargetNode) {
+    public NetworkModificationsResult moveModifications(UUID originGroupUuid, UUID targetGroupUuid, UUID beforeUuid, Pair<List<ModificationsToCopyInfos>, List<ModificationApplicationContext>> modificationContextInfos, boolean buildTargetNode) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, ModificationsActionType.MOVE.name())
             .queryParam("originGroupUuid", originGroupUuid)
@@ -257,7 +258,7 @@ public class NetworkModificationService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Pair<List<UUID>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
+        HttpEntity<Pair<List<ModificationsToCopyInfos>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
 
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path.buildAndExpand(targetGroupUuid).toUriString(),
@@ -267,12 +268,12 @@ public class NetworkModificationService {
     }
 
     public NetworkModificationsResult duplicateOrInsertModifications(UUID groupUuid, ModificationsActionType action,
-                                                                     Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
+                                                                     Pair<List<ModificationsToCopyInfos>, List<ModificationApplicationContext>> modificationContextInfos) {
         return handleModifications(groupUuid, null, action, modificationContextInfos);
     }
 
     private NetworkModificationsResult handleModifications(UUID groupUuid, UUID originGroupUuid, ModificationsActionType action,
-                                                           Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
+                                                           Pair<List<ModificationsToCopyInfos>, List<ModificationApplicationContext>> modificationContextInfos) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, action.name());
 
@@ -282,7 +283,7 @@ public class NetworkModificationService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Pair<List<UUID>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
+        HttpEntity<Pair<List<ModificationsToCopyInfos>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
 
         return restTemplate.exchange(
             getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
@@ -312,7 +313,7 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public NetworkModificationsResult duplicateModificationsFromGroup(UUID groupUuid, UUID originGroupUuid, Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
+    public NetworkModificationsResult duplicateModificationsFromGroup(UUID groupUuid, UUID originGroupUuid, Pair<List<ModificationsToCopyInfos>, List<ModificationApplicationContext>> modificationContextInfos) {
         return handleModifications(groupUuid, originGroupUuid, StudyConstants.ModificationsActionType.COPY, modificationContextInfos);
     }
 

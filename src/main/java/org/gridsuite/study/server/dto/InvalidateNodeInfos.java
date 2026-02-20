@@ -40,6 +40,7 @@ public class InvalidateNodeInfos {
     private Set<UUID> pccMinResultUuids = new HashSet<>();
     private Set<UUID> dynamicSimulationResultUuids = new HashSet<>();
     private Set<UUID> dynamicSecurityAnalysisResultUuids = new HashSet<>();
+    private Set<UUID> dynamicMarginCalculationResultUuids = new HashSet<>();
 
     public List<UUID> getNodeUuids() {
         return nodeUuids.stream().toList();
@@ -97,6 +98,10 @@ public class InvalidateNodeInfos {
         return dynamicSecurityAnalysisResultUuids.stream().toList();
     }
 
+    public List<UUID> getDynamicMarginCalculationResultUuids() {
+        return dynamicMarginCalculationResultUuids.stream().toList();
+    }
+
     public void addReportUuid(UUID reportUuid) {
         reportUuids.add(reportUuid);
     }
@@ -137,6 +142,10 @@ public class InvalidateNodeInfos {
         dynamicSecurityAnalysisResultUuids.add(dynamicSecurityAnalysisResultUuid);
     }
 
+    public void addDynamicMarginCalculationResultUuid(UUID dynamicMarginCalculationResultUuid) {
+        dynamicMarginCalculationResultUuids.add(dynamicMarginCalculationResultUuid);
+    }
+
     public void addStateEstimationResultUuid(UUID stateEstimationResultUuid) {
         stateEstimationResultUuids.add(stateEstimationResultUuid);
     }
@@ -170,5 +179,6 @@ public class InvalidateNodeInfos {
         pccMinResultUuids.addAll(invalidateNodeInfos.getPccMinResultUuids());
         dynamicSimulationResultUuids.addAll(invalidateNodeInfos.getDynamicSimulationResultUuids());
         dynamicSecurityAnalysisResultUuids.addAll(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids());
+        dynamicMarginCalculationResultUuids.addAll(invalidateNodeInfos.getDynamicMarginCalculationResultUuids());
     }
 }
