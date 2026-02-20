@@ -27,6 +27,14 @@ import org.springframework.web.servlet.ModelAndView;
  */
 @ControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
+/*
+    This handler is used to catch MethodArgumentTypeMismatchException exceptions 
+    that do not provide enough information on their own and to log details about 
+    the request that caused them.
+
+    After logging is completed, the exception propagates normally, so this class 
+    does not modify any behavior.
+*/
 public class RequestLoggingExceptionHandler implements HandlerExceptionResolver {
     private static final Logger A_LOGGER = LoggerFactory.getLogger(RequestLoggingExceptionHandler.class);
 
