@@ -141,8 +141,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         if (parametersInfos.getLoadFlowParametersUuid() != null) {
             uriComponentsBuilder.queryParam("loadFlowParametersUuid", parametersInfos.getLoadFlowParametersUuid());
         }
-        var path = uriComponentsBuilder.queryParam("contingencyListName", parametersInfos.getContingencyListNames())
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
+        var path = uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
@@ -237,7 +236,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         restTemplate.put(securityAnalysisServerBaseUri + path, httpEntity);
     }
 
-    public UUID duplicateSecurityAnalysisParameters(UUID sourceParametersUuid) {
+    public UUID duplicateSecurityAnalysisParameters(UUID sourceParametersUuid, String userId) {
         Objects.requireNonNull(sourceParametersUuid);
 
         var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
@@ -245,19 +244,23 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 .buildAndExpand().toUriString();
 
         HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
-        return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(null, headers), UUID.class).getBody();
     }
 
-    public String getSecurityAnalysisParameters(UUID parametersUuid) {
+    public String getSecurityAnalysisParameters(UUID parametersUuid, String userId) {
         Objects.requireNonNull(parametersUuid);
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid).toUriString();
 
-        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.GET, new HttpEntity<>(null, headers), String.class).getBody();
     }
 
     public UUID getSecurityAnalysisParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {

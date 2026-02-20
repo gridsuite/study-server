@@ -55,6 +55,7 @@ import static org.gridsuite.study.server.utils.MatcherBasicStudyInfos.createMatc
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.MatcherStudyInfos.createMatcherStudyInfos;
 import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
+import static org.gridsuite.study.server.utils.TestUtils.checkUpdateStatusMessagesReceived;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -956,7 +957,7 @@ class StudyTest extends StudyTestBase {
                 .content(createLoadAttributes)
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
-        checkUpdateModelsStatusMessagesReceived(study1Uuid, node2.getId());
+        checkUpdateStatusMessagesReceived(study1Uuid, node2.getId(), output);
         checkEquipmentCreatingMessagesReceived(study1Uuid, node2.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node2.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
@@ -971,6 +972,7 @@ class StudyTest extends StudyTestBase {
                 .oneBusShortCircuitAnalysisResultUuid(UUID.randomUUID())
                 .dynamicSimulationResultUuid(UUID.randomUUID())
                 .dynamicSecurityAnalysisResultUuid(UUID.randomUUID())
+                .dynamicMarginCalculationResultUuid(UUID.randomUUID())
                 .voltageInitResultUuid(UUID.randomUUID())
                 .stateEstimationResultUuid(UUID.randomUUID())
                 .pccMinResultUuid(UUID.randomUUID())
