@@ -907,6 +907,11 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeStateEstimationDebug() {
+        return message -> consumeCalculationDebug(message, STATE_ESTIMATION);
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeStateEstimationStopped() {
         return message -> consumeCalculationStopped(message, STATE_ESTIMATION);
     }
