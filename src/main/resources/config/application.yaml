@@ -8,6 +8,7 @@ spring:
       definition: "consumeSaResult;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;\
       consumeDsDebug;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeDsCancelFailed;\
       consumeDsaDebug;consumeDsaResult;consumeDsaStopped;consumeDsaFailed;consumeDsaCancelFailed;\
+      consumeDmcDebug;consumeDmcResult;consumeDmcStopped;consumeDmcFailed;consumeDmcCancelFailed;\
       consumeBuildResult;consumeBuildStopped;consumeBuildFailed;\
       consumeCaseImportSucceeded;consumeCaseImportFailed;\
       consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeSensitivityAnalysisCancelFailed;\
@@ -64,6 +65,21 @@ spring:
           group: studyDsaCancelFailedGroup
         consumeDsaFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}dsa.run.dlx
+          group: dlq
+        consumeDmcDebug-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}dmc.debug
+          group: studyDsaDebugGroup
+        consumeDmcResult-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}dmc.result
+          group: studyDsaResultGroup
+        consumeDmcStopped-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}dmc.stopped
+          group: studyDsaStoppedGroup
+        consumeDmcCancelFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}dmc.cancelfailed
+          group: studyDsaCancelFailedGroup
+        consumeDmcFailed-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}dmc.run.dlx
           group: dlq
         consumeBuildResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.result
@@ -207,6 +223,9 @@ gridsuite:
     -
       name: dynamic-security-analysis-server
       base-uri: http://dynamic-security-analysis-server/
+    -
+      name: dynamic-margin-calculation-server
+      base-uri: http://dynamic-margin-calculation-server/
     -
       name: timeseries-server
       base-uri: http://timeseries-server/

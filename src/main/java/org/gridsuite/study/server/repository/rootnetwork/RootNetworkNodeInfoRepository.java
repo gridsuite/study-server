@@ -28,6 +28,8 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     List<RootNetworkNodeInfoEntity> findAllByDynamicSecurityAnalysisResultUuidNotNull();
 
+    List<RootNetworkNodeInfoEntity> findAllByDynamicMarginCalculationResultUuidNotNull();
+
     List<RootNetworkNodeInfoEntity> findAllBySecurityAnalysisResultUuidNotNull();
 
     List<RootNetworkNodeInfoEntity> findAllBySensitivityAnalysisResultUuidNotNull();

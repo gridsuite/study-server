@@ -17,6 +17,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -59,6 +60,8 @@ public class SupervisionService {
 
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
 
+    private final DynamicMarginCalculationService dynamicMarginCalculationService;
+
     private final SecurityAnalysisService securityAnalysisService;
 
     private final SensitivityAnalysisService sensitivityAnalysisService;
@@ -88,6 +91,7 @@ public class SupervisionService {
                               LoadFlowService loadFlowService,
                               DynamicSimulationService dynamicSimulationService,
                               DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+                              DynamicMarginCalculationService dynamicMarginCalculationService,
                               SecurityAnalysisService securityAnalysisService,
                               SensitivityAnalysisService sensitivityAnalysisService,
                               ShortCircuitService shortCircuitService,
@@ -106,6 +110,7 @@ public class SupervisionService {
         this.loadFlowService = loadFlowService;
         this.dynamicSimulationService = dynamicSimulationService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
+        this.dynamicMarginCalculationService = dynamicMarginCalculationService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
@@ -127,6 +132,8 @@ public class SupervisionService {
                     dryRun ? dynamicSimulationService.getResultsCount() : deleteDynamicSimulationResults();
             case DYNAMIC_SECURITY_ANALYSIS ->
                     dryRun ? dynamicSecurityAnalysisService.getResultsCount() : deleteDynamicSecurityAnalysisResults();
+            case DYNAMIC_MARGIN_CALCULATION ->
+                    dryRun ? dynamicMarginCalculationService.getResultsCount() : deleteDynamicMarginCalculationResults();
             case SECURITY_ANALYSIS ->
                     dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
             case SENSITIVITY_ANALYSIS ->
@@ -215,6 +222,16 @@ public class SupervisionService {
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSecurityAnalysisResultUuid(null));
         dynamicSecurityAnalysisService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        return rootNetworkNodeStatusEntities.size();
+    }
+
+    private Integer deleteDynamicMarginCalculationResults() {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicMarginCalculationResultUuidNotNull();
+        rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicMarginCalculationResultUuid(null));
+        dynamicMarginCalculationService.deleteAllResults();
+        LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_MARGIN_CALCULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
 

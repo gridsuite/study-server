@@ -37,6 +37,9 @@ public class UserProfileInfos {
     // note: this parameter is not managed by user-admin-server yet
     private UUID dynamicSecurityAnalysisParameterId;
 
+    // note: this parameter is not managed by user-admin-server yet
+    private UUID dynamicMarginCalculationParameterId;
+
     private UUID voltageInitParameterId;
 
     Integer maxAllowedBuilds;
