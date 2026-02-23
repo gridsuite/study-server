@@ -24,31 +24,68 @@ public class DeleteNodeInfos {
 
     private List<UUID> modificationGroupUuids = new ArrayList<>();
 
-    private List<UUID> reportUuids = new ArrayList<>();
-
     private Map<UUID, List<String>> variantIds = new HashMap<>();
 
-    private List<UUID> loadFlowResultUuids = new ArrayList<>();
+    private Set<UUID> reportUuids = new HashSet<>();
+    private Set<UUID> loadFlowResultUuids = new HashSet<>();
+    private Set<UUID> securityAnalysisResultUuids = new HashSet<>();
+    private Set<UUID> sensitivityAnalysisResultUuids = new HashSet<>();
+    private Set<UUID> shortCircuitAnalysisResultUuids = new HashSet<>();
+    private Set<UUID> oneBusShortCircuitAnalysisResultUuids = new HashSet<>();
+    private Set<UUID> voltageInitResultUuids = new HashSet<>();
+    private Set<UUID> dynamicSimulationResultUuids = new HashSet<>();
+    private Set<UUID> dynamicSecurityAnalysisResultUuids = new HashSet<>();
+    private Set<UUID> dynamicMarginCalculationResultUuids = new HashSet<>();
+    private Set<UUID> stateEstimationResultUuids = new HashSet<>();
+    private Set<UUID> pccMinResultUuids = new HashSet<>();
 
-    private List<UUID> securityAnalysisResultUuids = new ArrayList<>();
+    public List<UUID> getReportUuids() {
+        return reportUuids.stream().toList();
+    }
 
-    private List<UUID> sensitivityAnalysisResultUuids = new ArrayList<>();
+    public List<UUID> getLoadFlowResultUuids() {
+        return loadFlowResultUuids.stream().toList();
+    }
 
-    private List<UUID> shortCircuitAnalysisResultUuids = new ArrayList<>();
+    public List<UUID> getSecurityAnalysisResultUuids() {
+        return securityAnalysisResultUuids.stream().toList();
+    }
 
-    private List<UUID> oneBusShortCircuitAnalysisResultUuids = new ArrayList<>();
+    public List<UUID> getSensitivityAnalysisResultUuids() {
+        return sensitivityAnalysisResultUuids.stream().toList();
+    }
 
-    private List<UUID> voltageInitResultUuids = new ArrayList<>();
+    public List<UUID> getShortCircuitAnalysisResultUuids() {
+        return shortCircuitAnalysisResultUuids.stream().toList();
+    }
 
-    private List<UUID> dynamicSimulationResultUuids = new ArrayList<>();
+    public List<UUID> getOneBusShortCircuitAnalysisResultUuids() {
+        return oneBusShortCircuitAnalysisResultUuids.stream().toList();
+    }
 
-    private List<UUID> dynamicSecurityAnalysisResultUuids = new ArrayList<>();
+    public List<UUID> getVoltageInitResultUuids() {
+        return voltageInitResultUuids.stream().toList();
+    }
 
-    private List<UUID> dynamicMarginCalculationResultUuids = new ArrayList<>();
+    public List<UUID> getStateEstimationResultUuids() {
+        return stateEstimationResultUuids.stream().toList();
+    }
 
-    private List<UUID> stateEstimationResultUuids = new ArrayList<>();
+    public List<UUID> getPccMinResultUuids() {
+        return pccMinResultUuids.stream().toList();
+    }
 
-    private List<UUID> pccMinResultUuids = new ArrayList<>();
+    public List<UUID> getDynamicSimulationResultUuids() {
+        return dynamicSimulationResultUuids.stream().toList();
+    }
+
+    public List<UUID> getDynamicSecurityAnalysisResultUuids() {
+        return dynamicSecurityAnalysisResultUuids.stream().toList();
+    }
+
+    public List<UUID> getDynamicMarginCalculationResultUuids() {
+        return dynamicMarginCalculationResultUuids.stream().toList();
+    }
 
     public void addRemovedNodeUuid(UUID removedNodeUuid) {
         removedNodeUuids.add(removedNodeUuid);

@@ -546,7 +546,7 @@ class RootNetworkTest {
         verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
         verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID2);
         verify(caseService, times(1)).deleteCase(CASE_UUID2);
-        verify(dynamicSimulationService, times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
+        verify(dynamicSimulationService, times(1)).deleteResults(List.of(t check));
         verify(dynamicSecurityAnalysisService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
         verify(dynamicMarginCalculationService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
         // check LOADFLOW_RESULT_UUID2 is also deleted
