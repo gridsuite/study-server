@@ -114,7 +114,6 @@ public class StudyService {
     private final NetworkService networkStoreService;
     private final NetworkModificationService networkModificationService;
     private final ReportService reportService;
-    private final RemoteNodeInfosDeletionService remoteNodeInfosDeletionService;
     private final UserAdminService userAdminService;
     private final StudyInfosService studyInfosService;
     private final EquipmentInfosService equipmentInfosService;
@@ -174,7 +173,7 @@ public class StudyService {
             StudyCreationRequestRepository studyCreationRequestRepository,
             NetworkService networkStoreService,
             NetworkModificationService networkModificationService,
-            ReportService reportService, RemoteNodeInfosDeletionService remoteNodeInfosDeletionService,
+            ReportService reportService,
             UserAdminService userAdminService,
             StudyInfosService studyInfosService,
             EquipmentInfosService equipmentInfosService,
@@ -212,7 +211,6 @@ public class StudyService {
         this.networkStoreService = networkStoreService;
         this.networkModificationService = networkModificationService;
         this.reportService = reportService;
-        this.remoteNodeInfosDeletionService = remoteNodeInfosDeletionService;
         this.userAdminService = userAdminService;
         this.studyInfosService = studyInfosService;
         this.equipmentInfosService = equipmentInfosService;
@@ -2352,7 +2350,7 @@ public class StudyService {
         return CompletableFuture.allOf(
             studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())),
             studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())),
-            remoteNodeInfosDeletionService.delete(invalidateNodeInfos)
+            rootNetworkNodeInfoService.deleteRemoteNodeInfos(invalidateNodeInfos)
         );
     }
 
@@ -2362,18 +2360,8 @@ public class StudyService {
             studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)),
             studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
             studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)),
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(deleteNodeInfos.getReportUuids())),
-            studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(deleteNodeInfos.getLoadFlowResultUuids())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(deleteNodeInfos.getSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(deleteNodeInfos.getSensitivityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(deleteNodeInfos.getVoltageInitResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(deleteNodeInfos.getDynamicSimulationResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(deleteNodeInfos.getDynamicSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(deleteNodeInfos.getDynamicMarginCalculationResultUuids())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(deleteNodeInfos.getStateEstimationResultUuids())),
-            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(deleteNodeInfos.getPccMinResultUuids()))
+            rootNetworkNodeInfoService.deleteRemoteNodeInfos(deleteNodeInfos)
+
         );
     }
 

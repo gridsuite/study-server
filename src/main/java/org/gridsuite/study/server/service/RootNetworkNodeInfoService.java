@@ -42,6 +42,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -57,8 +58,8 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 public class RootNetworkNodeInfoService {
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
-    private final RemoteNodeInfosDeletionService remoteNodeInfosDeletionService;
     private final LoadFlowService loadFlowService;
+    private final ReportService reportService;
     private final SecurityAnalysisService securityAnalysisService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ShortCircuitService shortCircuitService;
@@ -68,10 +69,10 @@ public class RootNetworkNodeInfoService {
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
     private final StateEstimationService stateEstimationService;
     private final PccMinService pccMinService;
+    StudyServerExecutionService studyServerExecutionService;
 
     public RootNetworkNodeInfoService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                                       NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
-                                      RemoteNodeInfosDeletionService remoteNodeInfosDeletionService,
                                       LoadFlowService loadFlowService,
                                       SecurityAnalysisService securityAnalysisService,
                                       SensitivityAnalysisService sensitivityAnalysisService,
@@ -85,7 +86,6 @@ public class RootNetworkNodeInfoService {
                                       ReportService reportService) {
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
-        this.remoteNodeInfosDeletionService = remoteNodeInfosDeletionService;
         this.loadFlowService = loadFlowService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
@@ -96,6 +96,7 @@ public class RootNetworkNodeInfoService {
         this.dynamicMarginCalculationService = dynamicMarginCalculationService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
+        this.reportService = reportService;
     }
 
     public void createRootNetworkLinks(@NonNull UUID studyUuid, @NonNull RootNetworkEntity rootNetworkEntity) {
@@ -597,7 +598,7 @@ public class RootNetworkNodeInfoService {
 
         });
 
-        remoteNodeInfosDeletionService.delete(infos);
+        deleteRemoteNodeInfos(infos);
     }
 
     @Transactional
@@ -627,6 +628,23 @@ public class RootNetworkNodeInfoService {
         voltageInitService.assertVoltageInitNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION));
         stateEstimationService.assertStateEstimationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION));
         pccMinService.assertPccMinNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN));
+    }
+
+    public CompletableFuture<Void> deleteRemoteNodeInfos(NodeInfos infos) {
+        return CompletableFuture.allOf(
+                studyServerExecutionService.runAsync(() -> reportService.deleteReports(infos.getReportUuids())),
+                studyServerExecutionService.runAsync(() -> loadFlowService.deleteLoadFlowResults(infos.getLoadFlowResultUuids())),
+                studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(infos.getSecurityAnalysisResultUuids())),
+                studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(infos.getSensitivityAnalysisResultUuids())),
+                studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getShortCircuitAnalysisResultUuids())),
+                studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getOneBusShortCircuitAnalysisResultUuids())),
+                studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(infos.getVoltageInitResultUuids())),
+                studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(infos.getDynamicSimulationResultUuids())),
+                studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(infos.getDynamicSecurityAnalysisResultUuids())),
+                studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(infos.getDynamicMarginCalculationResultUuids())),
+                studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(infos.getStateEstimationResultUuids())),
+                studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(infos.getPccMinResultUuids()))
+        );
     }
 
     /***************************
