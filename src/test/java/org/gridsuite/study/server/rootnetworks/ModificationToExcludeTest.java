@@ -166,6 +166,76 @@ class ModificationToExcludeTest {
     }
 
     @Test
+    void testDuplicateModificationsBetweenStudiesWithCommonRootNetworkTags() {
+        // -------- Study 1  --------
+        StudyEntity study1 = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        createDummyRootNetwork(study1, "rnA", "ok");  // common root network
+        createDummyRootNetwork(study1, "rnB", "no1");
+        studyRepository.save(study1);
+
+        List<BasicRootNetworkInfos> rootNetworksStudy1 = studyService.getExistingBasicRootNetworkInfos(study1.getId());
+
+        NodeEntity rootNode1 = networkModificationTreeService.createRoot(study1);
+        NetworkModificationNode node1 = networkModificationTreeService.createNode(
+            study1, rootNode1.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null
+        );
+
+        // set modifications to exclude only for common root network
+        BasicRootNetworkInfos commonRnStudy1 = rootNetworksStudy1.stream()
+            .filter(rn -> "ok".equals(rn.tag()))
+            .findFirst()
+            .orElseThrow();
+        RootNetworkNodeInfoEntity commonRnNodeInfoStudy1 = rootNetworkNodeInfoRepository
+            .findByNodeInfoIdAndRootNetworkId(node1.getId(), commonRnStudy1.rootNetworkUuid())
+            .orElseThrow();
+        commonRnNodeInfoStudy1.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
+        rootNetworkNodeInfoRepository.save(commonRnNodeInfoStudy1);
+
+        // -------- Study 2  --------
+        StudyEntity study2 = TestUtils.createDummyStudy(NETWORK_UUID2, CASE_UUID2, CASE_NAME2, CASE_FORMAT2, REPORT_UUID2);
+        createDummyRootNetwork(study2, "rnX", "no2"); // not common
+        createDummyRootNetwork(study2, "rnA", "ok");  // common root network
+        studyRepository.save(study2);
+
+        List<BasicRootNetworkInfos> rootNetworksStudy2 = studyService.getExistingBasicRootNetworkInfos(study2.getId());
+        NodeEntity rootNode2 = networkModificationTreeService.createRoot(study2);
+
+        Mockito.doReturn(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP)
+            .when(networkModificationService)
+            .duplicateModificationsGroup(any(), any());
+
+        UUID duplicatedNodeUuid = networkModificationTreeService.duplicateStudyNode(
+            node1.getId(), rootNode2.getIdNode(), InsertMode.AFTER
+        );
+
+        // -------- Assertions --------
+        // For common root network -> modifications should be copied
+        BasicRootNetworkInfos commonRnStudy2 = rootNetworksStudy2.stream()
+            .filter(rn -> "ok".equals(rn.tag()))
+            .findFirst()
+            .orElseThrow();
+        RootNetworkNodeInfoEntity commonRnNodeInfoStudy2 = rootNetworkNodeInfoRepository
+            .findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(duplicatedNodeUuid, commonRnStudy2.rootNetworkUuid())
+            .orElseThrow();
+        Set<UUID> expectedExcluded = MODIFICATIONS_TO_EXCLUDE_RN_1.stream()
+            .map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get)
+            .collect(Collectors.toSet());
+        assertEquals(expectedExcluded, commonRnNodeInfoStudy2.getModificationsUuidsToExclude(),
+            "Modifications to exclude should be copied for common root network");
+
+        // unique root network -> modifications should be empty
+        BasicRootNetworkInfos uniqueRnStudy2 = rootNetworksStudy2.stream()
+            .filter(rn -> "no2".equals(rn.tag()))
+            .findFirst()
+            .orElseThrow();
+        RootNetworkNodeInfoEntity uniqueRnNodeInfoStudy2 = rootNetworkNodeInfoRepository
+            .findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(duplicatedNodeUuid, uniqueRnStudy2.rootNetworkUuid())
+            .orElseThrow();
+        assertTrue(uniqueRnNodeInfoStudy2.getModificationsUuidsToExclude().isEmpty(),
+            "Modifications to exclude should be empty for non-common root network");
+    }
+
+    @Test
     void testDuplicateNodeWithModificationsToExclude() {
         // create study with two root networks
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
@@ -555,7 +625,7 @@ class ModificationToExcludeTest {
         assertThat(buildInfosCaptor.getValue().getModificationUuidsToExclude().get(secondNode.getModificationGroupUuid())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(MODIFICATIONS_TO_EXCLUDE_RN_2);
     }
 
-    private void createDummyRootNetwork(StudyEntity studyEntity, String name) {
+    private void createDummyRootNetwork(StudyEntity studyEntity, String name, String tag) {
         RootNetworkEntity rootNetworkEntity = RootNetworkInfos.builder()
             .id(UUID.randomUUID())
             .name(name)
@@ -565,5 +635,9 @@ class ModificationToExcludeTest {
             .reportUuid(UUID.randomUUID())
             .build().toEntity();
         studyEntity.addRootNetwork(rootNetworkEntity);
+    }
+
+    private void createDummyRootNetwork(StudyEntity studyEntity, String name) {
+        createDummyRootNetwork(studyEntity, name, UUID.randomUUID().toString().substring(0, 4));
     }
 }

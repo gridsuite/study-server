@@ -2547,15 +2547,16 @@ public class StudyService {
                 .toList();
 
             NetworkModificationsResult networkModificationResults = networkModificationService.duplicateOrInsertModifications(groupUuid, action, Pair.of(modifications, modificationApplicationContexts));
-
-            if (targetStudyUuid.equals(originStudyUuid)) {
-                Map<UUID, UUID> originToDuplicateModificationsUuids = new HashMap<>();
-                for (int i = 0; i < modifications.size(); i++) {
-                    originToDuplicateModificationsUuids.put(modifications.get(i).getUuid(), networkModificationResults.modificationUuids().get(i));
-                }
-                rootNetworkNodeInfoService.copyModificationsToExclude(originNodeUuid, targetNodeUuid, originToDuplicateModificationsUuids);
+            Map<UUID, UUID> originToDuplicateModificationsUuids = new HashMap<>();
+            for (int i = 0; i < modifications.size(); i++) {
+                originToDuplicateModificationsUuids.put(modifications.get(i).getUuid(), networkModificationResults.modificationUuids().get(i));
             }
 
+            if (targetStudyUuid.equals(originStudyUuid)) {
+                rootNetworkNodeInfoService.copyModificationsToExclude(originNodeUuid, targetNodeUuid, originToDuplicateModificationsUuids);
+            } else {
+                rootNetworkNodeInfoService.copyModificationsToExcludeByCommonRootNetworkTag(originStudyUuid, targetStudyUuid, originNodeUuid, targetNodeUuid, originToDuplicateModificationsUuids);
+            }
             if (networkModificationResults != null) {
                 int index = 0;
                 // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
