@@ -20,10 +20,9 @@ import java.util.*;
 @Getter
 @Setter
 public class DeleteNodeInfos extends NodeInfos {
+
     private List<UUID> removedNodeUuids = new ArrayList<>();
-
     private List<UUID> modificationGroupUuids = new ArrayList<>();
-
     private Map<UUID, List<String>> variantIds = new HashMap<>();
 
     public void addRemovedNodeUuid(UUID removedNodeUuid) {

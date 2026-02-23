@@ -26,8 +26,6 @@ public class InvalidateNodeInfos extends NodeInfos {
 
     private Set<UUID> nodeUuids = new HashSet<>();
     private Set<UUID> groupUuids = new HashSet<>();
-
-    private Set<UUID> reportUuids = new HashSet<>();
     private Set<String> variantIds = new HashSet<>();
 
     public List<UUID> getNodeUuids() {
@@ -36,10 +34,6 @@ public class InvalidateNodeInfos extends NodeInfos {
 
     public List<UUID> getGroupUuids() {
         return groupUuids.stream().toList();
-    }
-
-    public List<UUID> getReportUuids() {
-        return reportUuids.stream().toList();
     }
 
     public List<String> getVariantIds() {
