@@ -148,23 +148,18 @@ public class NetworkModificationTreeService {
         return newNode;
     }
 
-    private NetworkModificationNode duplicateNode(@NonNull StudyEntity study, @NonNull StudyEntity sourceStudy, @NonNull UUID referenceNodeId, @NonNull NetworkModificationNode newNodeInfo, @NonNull UUID originNodeUuid, @NonNull InsertMode insertMode, Map<UUID, UUID> originToDuplicateModificationUuidMap, boolean isDuplicatingStudy) {
+    private NetworkModificationNode duplicateNode(@NonNull StudyEntity targetStudy, @NonNull StudyEntity sourceStudy, @NonNull UUID referenceNodeId, @NonNull NetworkModificationNode newNodeInfo, @NonNull UUID originNodeUuid, @NonNull InsertMode insertMode, Map<UUID, UUID> originToDuplicateModificationUuidMap, boolean isDuplicatingStudy) {
         // create new node
-        NetworkModificationNode newNode = createAndInsertNode(study, referenceNodeId, newNodeInfo, insertMode, null);
+        NetworkModificationNode newNode = createAndInsertNode(targetStudy, referenceNodeId, newNodeInfo, insertMode, null);
 
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         NetworkModificationNodeInfoEntity originNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(originNodeUuid);
-        if (!isDuplicatingStudy && study.getId() != sourceStudy.getId()) {
-            rootNetworkNodeInfoService.createNodeLinksFromSourceForCommonTags(
-                    sourceStudy,
-                    study, originNodeInfoEntity.getRootNetworkNodeInfos(),
-                    newNodeInfoEntity,
-                    originToDuplicateModificationUuidMap
-            );
+        if (!isDuplicatingStudy && targetStudy.getId() != sourceStudy.getId()) {
+            rootNetworkNodeInfoService.createNodeLinksFromSourceForCommonTags(targetStudy, originNodeInfoEntity.getRootNetworkNodeInfos(), newNodeInfoEntity, originToDuplicateModificationUuidMap);
         } else {
             Map<RootNetworkEntity, RootNetworkEntity> originToDuplicateRootNetworkMap = new HashMap<>();
             for (int i = 0; i < sourceStudy.getRootNetworks().size(); i++) {
-                 originToDuplicateRootNetworkMap.put(sourceStudy.getRootNetworks().get(i), study.getRootNetworks().get(i));
+                originToDuplicateRootNetworkMap.put(sourceStudy.getRootNetworks().get(i), targetStudy.getRootNetworks().get(i));
             }
             rootNetworkNodeInfoService.duplicateNodeLinks(originNodeInfoEntity.getRootNetworkNodeInfos(), newNodeInfoEntity, originToDuplicateModificationUuidMap, originToDuplicateRootNetworkMap);
         }

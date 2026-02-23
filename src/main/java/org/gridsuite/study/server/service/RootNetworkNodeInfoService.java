@@ -145,13 +145,7 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    public void createNodeLinksFromSourceForCommonTags(
-            @NonNull StudyEntity sourceStudy,
-            @NonNull StudyEntity destinationStudy,
-            @NonNull List<RootNetworkNodeInfoEntity> sourceNodeLinks,
-            @NonNull NetworkModificationNodeInfoEntity destinationNodeInfoEntity,
-            @NonNull Map<UUID, UUID> originToDuplicateModificationUuidMap) {
-
+    public void createNodeLinksFromSourceForCommonTags(@NonNull StudyEntity destinationStudy, @NonNull List<RootNetworkNodeInfoEntity> sourceNodeLinks, @NonNull NetworkModificationNodeInfoEntity destinationNodeInfoEntity, @NonNull Map<UUID, UUID> originToDuplicateModificationUuidMap) {
         // Map tag → link source
         Map<String, RootNetworkNodeInfoEntity> sourceLinkByTag =
                 sourceNodeLinks.stream()
@@ -162,24 +156,19 @@ public class RootNetworkNodeInfoService {
                                 (a, b) -> a
                         ));
 
-        // Pour chaque root network destination
         destinationStudy.getRootNetworks().forEach(destRoot -> {
             String tag = destRoot.getTag();
-
-            // Si tag commun, copier les exclusions
+            // copy exclusions only for common root networks tag
             Set<UUID> exclusions;
             if (tag != null && sourceLinkByTag.containsKey(tag)) {
-                // root network commun → copier exclusions
                 exclusions = sourceLinkByTag.get(tag).getModificationsUuidsToExclude()
                         .stream()
                         .map(originToDuplicateModificationUuidMap::get)
                         .filter(Objects::nonNull)
                         .collect(Collectors.toSet());
             } else {
-                // root network unique → toutes modifications actives
                 exclusions = Collections.emptySet();
             }
-
             RootNetworkNodeInfoEntity entity = createDefaultEntity(destinationNodeInfoEntity.getId(), exclusions);
             addLink(destinationNodeInfoEntity, destRoot, entity);
         });
