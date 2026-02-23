@@ -245,6 +245,23 @@ public class RootNetworkNodeInfoService {
         });
     }
 
+    public CompletableFuture<Void> runRemoteDeletions(NodeInfos infos) {
+        return CompletableFuture.allOf(
+                studyServerExecutionService.runAsync(() -> reportService.deleteReports(infos.getReportUuids())),
+                studyServerExecutionService.runAsync(() -> loadFlowService.deleteLoadFlowResults(infos.getLoadFlowResultUuids())),
+                studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(infos.getSecurityAnalysisResultUuids())),
+                studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(infos.getSensitivityAnalysisResultUuids())),
+                studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getShortCircuitAnalysisResultUuids())),
+                studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getOneBusShortCircuitAnalysisResultUuids())),
+                studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(infos.getVoltageInitResultUuids())),
+                studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(infos.getDynamicSimulationResultUuids())),
+                studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(infos.getDynamicSecurityAnalysisResultUuids())),
+                studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(infos.getDynamicMarginCalculationResultUuids())),
+                studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(infos.getStateEstimationResultUuids())),
+                studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(infos.getPccMinResultUuids()))
+        );
+    }
+
     public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         return invalidateRootNetworkNode(rootNetworkNodeInfoEntity, invalidateTreeParameters);
