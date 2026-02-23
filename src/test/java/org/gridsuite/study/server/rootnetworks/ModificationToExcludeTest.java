@@ -203,36 +203,29 @@ class ModificationToExcludeTest {
 
     @Test
     void testDuplicateNodeWithCommonAndUniqueRootNetworksBetweenStudies() {
-        // 1️⃣ Créer étude source S1
-        StudyEntity studyS1 = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
-        createDummyRootNetwork(studyS1, "S1RN1", "COM"); // root network commun
-        createDummyRootNetwork(studyS1, "S1RN2", "RNS"); // unique source
-        studyRepository.save(studyS1);
-
-        List<BasicRootNetworkInfos> s1RootInfos = studyService.getExistingBasicRootNetworkInfos(studyS1.getId());
-// Supposons que les modifications du node soient A, B, C
         UUID modA = UUID.randomUUID();
         UUID modB = UUID.randomUUID();
         UUID modC = UUID.randomUUID();
-
-// Pour le root network COM, on veut que B et C soient exclus
         Set<UUID> modificationsToExcludeCom = Set.of(modB, modC);
-
-// Pour le root network RNS, toutes les modifications sont exclues
         Set<UUID> modificationsToExcludeRnq = Set.of(modA, modB, modC);
-
-// Optionnel : mapping mock pour duplication
         Map<UUID, UUID> originToDuplicateModificationUuidMap = Map.of(
                 modA, UUID.randomUUID(),
                 modB, UUID.randomUUID(),
                 modC, UUID.randomUUID()
         );
-        // 2️⃣ Créer node source N1 avec modifications A, B, C
+        // Create study S1
+        StudyEntity studyS1 = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        createDummyRootNetwork(studyS1, "S1RN1", "COM");
+        createDummyRootNetwork(studyS1, "S1RN2", "RNS");
+        studyRepository.save(studyS1);
+        List<BasicRootNetworkInfos> s1RootInfos = studyService.getExistingBasicRootNetworkInfos(studyS1.getId());
+
+        // Create node N1 with modifications A, B, C
         NodeEntity rootNodeS1 = networkModificationTreeService.createRoot(studyS1);
         NetworkModificationNode nodeN1 = networkModificationTreeService.createNode(
                 studyS1, rootNodeS1.getIdNode(), createModificationNodeInfo("N1"), InsertMode.AFTER, null);
 
-        // Définir exclusions sur root networks source
+        // Modifications A and B are excluded for the root network with tag "COM" in study S1
         RootNetworkNodeInfoEntity rnComS1 = rootNetworkNodeInfoRepository
                 .findByNodeInfoIdAndRootNetworkId(nodeN1.getId(), s1RootInfos.get(1).rootNetworkUuid())
                 .orElseThrow();
@@ -245,25 +238,25 @@ class ModificationToExcludeTest {
         rnRnsS1.setModificationsUuidsToExclude(modificationsToExcludeRnq); // ex: A, B, C
         rootNetworkNodeInfoRepository.save(rnRnsS1);
 
-        // 3️⃣ Créer étude cible S2
+        // Create Study 2
         StudyEntity studyS2 = TestUtils.createDummyStudy(NETWORK_UUID2, CASE_UUID2, CASE_NAME2, CASE_FORMAT2, REPORT_UUID2);
-        createDummyRootNetwork(studyS2, "S2RN1", "COM"); // commun
-        createDummyRootNetwork(studyS2, "S2RN2", "RNT"); // unique cible
+        createDummyRootNetwork(studyS2, "S2RN1", "COM");
+        createDummyRootNetwork(studyS2, "S2RN2", "RNT");
         studyRepository.save(studyS2);
 
         List<BasicRootNetworkInfos> s2RootInfos = studyService.getExistingBasicRootNetworkInfos(studyS2.getId());
         NodeEntity rootNodeS2 = networkModificationTreeService.createRoot(studyS2);
 
-        // 4️⃣ Mock duplications des UUID
+        // Mock duplicated modifications
         Mockito.doReturn(originToDuplicateModificationUuidMap)
                 .when(networkModificationService)
                 .duplicateModificationsGroup(any(), any());
 
-        // 5️⃣ Dupliquer node N1 de S1 vers S2
+        // Duplicate Node N1 from S1 to S2
         UUID duplicateNodeUuid = networkModificationTreeService.duplicateStudyNode(
                 nodeN1.getId(), rootNodeS2.getIdNode(), InsertMode.AFTER);
 
-        // 6️⃣ Vérifier root network commun (COM) → exclusions copiées
+        // Check that the common root network (COM) on S2 has the same excluded modifications copied from S1
         RootNetworkNodeInfoEntity rnComS2 = rootNetworkNodeInfoRepository
                 .findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(
                         duplicateNodeUuid, s2RootInfos.stream().filter(rn -> "COM".equals(rn.tag())).toList().getFirst().rootNetworkUuid())
@@ -273,16 +266,16 @@ class ModificationToExcludeTest {
                         .map(originToDuplicateModificationUuidMap::get)
                         .collect(Collectors.toSet()),
                 rnComS2.getModificationsUuidsToExclude(),
-                "Exclusions doivent être copiées pour le root network commun"
+                "Excluded modifications must be copied for the common root network"
         );
 
-        // 7️⃣ Vérifier root network unique cible (RNT) → toutes les modifs actives
+        // Check the target unique root network (RNT) → all active modifications
         RootNetworkNodeInfoEntity rnRntS2 = rootNetworkNodeInfoRepository
                 .findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(
                         duplicateNodeUuid, s2RootInfos.stream().filter(rn -> "RNT".equals(rn.tag())).toList().getFirst().rootNetworkUuid())
                 .orElseThrow();
         assertTrue(rnRntS2.getModificationsUuidsToExclude().isEmpty(),
-                "Root network unique cible (RNT) ne devrait pas avoir des modifications to exclude");
+                "Target unique root network (RNT) should not have modifications to exclude");
     }
 
     @Test
