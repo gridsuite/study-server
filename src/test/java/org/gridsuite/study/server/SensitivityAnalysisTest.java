@@ -98,6 +98,8 @@ class SensitivityAnalysisTest {
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
 
+    private static final String USER_ID = "userId";
+
     private static final String SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID SENSITIVITY_ANALYSIS_PARAMETERS_UUID = UUID.fromString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
     private static final String NO_PROFILE_USER_ID = "noProfileUser";
@@ -671,7 +673,8 @@ class SensitivityAnalysisTest {
         assertNotNull(studyNameUserIdUuid);
 
         // Get sensitivity analysis parameters (on existing)
-        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)
+                .header(HEADER_USER_ID, USER_ID)).andExpectAll(
             status().isOk(),
             content().string(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
 
@@ -687,7 +690,8 @@ class SensitivityAnalysisTest {
         studyEntityToUpdate.setSensitivityAnalysisParametersUuid(null);
         studyRepository.save(studyEntityToUpdate);
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/sensitivity-analysis/parameters", studyNameUserIdUuid)
+                .header(HEADER_USER_ID, USER_ID)).andExpectAll(
             status().isOk(),
             content().string(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
 
