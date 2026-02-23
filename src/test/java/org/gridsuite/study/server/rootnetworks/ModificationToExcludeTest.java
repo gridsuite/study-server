@@ -629,7 +629,7 @@ class ModificationToExcludeTest {
         RootNetworkEntity rootNetworkEntity = RootNetworkInfos.builder()
             .id(UUID.randomUUID())
             .name(name)
-            .tag(UUID.randomUUID().toString().substring(0, 4))
+            .tag(tag)
             .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), "caseName", "caseFormat"))
             .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
             .reportUuid(UUID.randomUUID())
