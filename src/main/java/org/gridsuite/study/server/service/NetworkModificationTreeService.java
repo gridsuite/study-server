@@ -155,15 +155,16 @@ public class NetworkModificationTreeService {
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         NetworkModificationNodeInfoEntity originNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(originNodeUuid);
         if (!isDuplicatingStudy && study.getId() != sourceStudy.getId()) {
-            rootNetworkNodeInfoService.createNodeLinks(study, newNodeInfoEntity);
+            rootNetworkNodeInfoService.createNodeLinksFromSourceForCommonTags(
+                    sourceStudy,
+                    study, originNodeInfoEntity.getRootNetworkNodeInfos(),
+                    newNodeInfoEntity,
+                    originToDuplicateModificationUuidMap
+            );
         } else {
-            // when duplicating node within the same study, we need to retrieve excluded modifications from source node
-            // when duplicating study, we need to retrieve excluded modifications from source node as well, but we also need to have a correspondence between source root networks and duplicated ones
-            //     since they are fetched in order, we ensure the duplicate is made accurately
             Map<RootNetworkEntity, RootNetworkEntity> originToDuplicateRootNetworkMap = new HashMap<>();
             for (int i = 0; i < sourceStudy.getRootNetworks().size(); i++) {
-                // when study.getId() == sourceStudy.getId(), this mapping makes root networks target themselves, but it makes the code more concise with study duplication
-                originToDuplicateRootNetworkMap.put(sourceStudy.getRootNetworks().get(i), study.getRootNetworks().get(i));
+                 originToDuplicateRootNetworkMap.put(sourceStudy.getRootNetworks().get(i), study.getRootNetworks().get(i));
             }
             rootNetworkNodeInfoService.duplicateNodeLinks(originNodeInfoEntity.getRootNetworkNodeInfos(), newNodeInfoEntity, originToDuplicateModificationUuidMap, originToDuplicateRootNetworkMap);
         }

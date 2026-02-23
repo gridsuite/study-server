@@ -145,6 +145,46 @@ public class RootNetworkNodeInfoService {
         });
     }
 
+    public void createNodeLinksFromSourceForCommonTags(
+            @NonNull StudyEntity sourceStudy,
+            @NonNull StudyEntity destinationStudy,
+            @NonNull List<RootNetworkNodeInfoEntity> sourceNodeLinks,
+            @NonNull NetworkModificationNodeInfoEntity destinationNodeInfoEntity,
+            @NonNull Map<UUID, UUID> originToDuplicateModificationUuidMap) {
+
+        // Map tag → link source
+        Map<String, RootNetworkNodeInfoEntity> sourceLinkByTag =
+                sourceNodeLinks.stream()
+                        .filter(l -> l.getRootNetwork().getTag() != null)
+                        .collect(Collectors.toMap(
+                                l -> l.getRootNetwork().getTag(),
+                                Function.identity(),
+                                (a, b) -> a
+                        ));
+
+        // Pour chaque root network destination
+        destinationStudy.getRootNetworks().forEach(destRoot -> {
+            String tag = destRoot.getTag();
+
+            // Si tag commun, copier les exclusions
+            Set<UUID> exclusions;
+            if (tag != null && sourceLinkByTag.containsKey(tag)) {
+                // root network commun → copier exclusions
+                exclusions = sourceLinkByTag.get(tag).getModificationsUuidsToExclude()
+                        .stream()
+                        .map(originToDuplicateModificationUuidMap::get)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+            } else {
+                // root network unique → toutes modifications actives
+                exclusions = Collections.emptySet();
+            }
+
+            RootNetworkNodeInfoEntity entity = createDefaultEntity(destinationNodeInfoEntity.getId(), exclusions);
+            addLink(destinationNodeInfoEntity, destRoot, entity);
+        });
+    }
+
     private static RootNetworkNodeInfoEntity createDefaultEntity(UUID nodeUuid) {
         return createDefaultEntity(nodeUuid, new HashSet<>());
     }
