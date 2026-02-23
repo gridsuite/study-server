@@ -114,6 +114,7 @@ public class StudyService {
     private final NetworkService networkStoreService;
     private final NetworkModificationService networkModificationService;
     private final ReportService reportService;
+    private final RemoteNodeInfosDeletionService remoteNodeInfosDeletionService;
     private final UserAdminService userAdminService;
     private final StudyInfosService studyInfosService;
     private final EquipmentInfosService equipmentInfosService;
@@ -168,49 +169,50 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
-        StudyRepository studyRepository,
-        StudyCreationRequestRepository studyCreationRequestRepository,
-        NetworkService networkStoreService,
-        NetworkModificationService networkModificationService,
-        ReportService reportService,
-        UserAdminService userAdminService,
-        StudyInfosService studyInfosService,
-        EquipmentInfosService equipmentInfosService,
-        NetworkModificationTreeService networkModificationTreeService,
-        ObjectMapper objectMapper,
-        StudyServerExecutionService studyServerExecutionService,
-        NotificationService notificationService,
-        LoadFlowService loadflowService,
-        ShortCircuitService shortCircuitService,
-        SingleLineDiagramService singleLineDiagramService,
-        NetworkConversionService networkConversionService,
-        GeoDataService geoDataService,
-        NetworkMapService networkMapService,
-        SecurityAnalysisService securityAnalysisService,
-        ActionsService actionsService,
-        CaseService caseService,
-        SensitivityAnalysisService sensitivityAnalysisService,
-        DynamicSimulationService dynamicSimulationService,
-        DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-        DynamicMarginCalculationService dynamicMarginCalculationService,
-        VoltageInitService voltageInitService,
-        DynamicSimulationEventService dynamicSimulationEventService,
-        StudyConfigService studyConfigService,
-        NadConfigService nadConfigService,
-        FilterService filterService,
-        StateEstimationService stateEstimationService,
-        PccMinService pccMinService,
-        @Lazy StudyService studyService,
-        RootNetworkService rootNetworkService,
-        RootNetworkNodeInfoService rootNetworkNodeInfoService,
-        DirectoryService directoryService) {
+            @Value("${dynamic-simulation.default-provider}") String defaultDynamicSimulationProvider,
+            StudyRepository studyRepository,
+            StudyCreationRequestRepository studyCreationRequestRepository,
+            NetworkService networkStoreService,
+            NetworkModificationService networkModificationService,
+            ReportService reportService, RemoteNodeInfosDeletionService remoteNodeInfosDeletionService,
+            UserAdminService userAdminService,
+            StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
+            NetworkModificationTreeService networkModificationTreeService,
+            ObjectMapper objectMapper,
+            StudyServerExecutionService studyServerExecutionService,
+            NotificationService notificationService,
+            LoadFlowService loadflowService,
+            ShortCircuitService shortCircuitService,
+            SingleLineDiagramService singleLineDiagramService,
+            NetworkConversionService networkConversionService,
+            GeoDataService geoDataService,
+            NetworkMapService networkMapService,
+            SecurityAnalysisService securityAnalysisService,
+            ActionsService actionsService,
+            CaseService caseService,
+            SensitivityAnalysisService sensitivityAnalysisService,
+            DynamicSimulationService dynamicSimulationService,
+            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+            DynamicMarginCalculationService dynamicMarginCalculationService,
+            VoltageInitService voltageInitService,
+            DynamicSimulationEventService dynamicSimulationEventService,
+            StudyConfigService studyConfigService,
+            NadConfigService nadConfigService,
+            FilterService filterService,
+            StateEstimationService stateEstimationService,
+            PccMinService pccMinService,
+            @Lazy StudyService studyService,
+            RootNetworkService rootNetworkService,
+            RootNetworkNodeInfoService rootNetworkNodeInfoService,
+            DirectoryService directoryService) {
         this.defaultDynamicSimulationProvider = defaultDynamicSimulationProvider;
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
         this.networkModificationService = networkModificationService;
         this.reportService = reportService;
+        this.remoteNodeInfosDeletionService = remoteNodeInfosDeletionService;
         this.userAdminService = userAdminService;
         this.studyInfosService = studyInfosService;
         this.equipmentInfosService = equipmentInfosService;
@@ -2350,18 +2352,7 @@ public class StudyService {
         return CompletableFuture.allOf(
             studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())),
             studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())),
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(invalidateNodeInfos.getReportUuids())),
-            studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(invalidateNodeInfos.getLoadFlowResultUuids())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(invalidateNodeInfos.getSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(invalidateNodeInfos.getSensitivityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(invalidateNodeInfos.getVoltageInitResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(invalidateNodeInfos.getDynamicSimulationResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(invalidateNodeInfos.getDynamicMarginCalculationResultUuids())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(invalidateNodeInfos.getStateEstimationResultUuids())),
-            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(invalidateNodeInfos.getPccMinResultUuids()))
+            remoteNodeInfosDeletionService.delete(invalidateNodeInfos)
         );
     }
 
