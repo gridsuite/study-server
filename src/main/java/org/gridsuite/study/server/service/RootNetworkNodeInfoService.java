@@ -132,37 +132,6 @@ public class RootNetworkNodeInfoService {
             .toList();
     }
 
-    // create links for root networks with common tags
-    public void createNodeLinksWithCommonTag(
-        @NonNull NetworkModificationNodeInfoEntity targetNodeInfoEntity,
-        @NonNull NetworkModificationNodeInfoEntity sourceNodeInfoEntity,
-        @NonNull Map<UUID, UUID> originToDuplicateModificationUuidMap,
-        @NonNull Map<String, RootNetworkEntity> targetRootNetworksByTag) {
-
-        // Map source node links by root network tag
-        Map<String, RootNetworkNodeInfoEntity> sourceNodeLinksByTag = sourceNodeInfoEntity.getRootNetworkNodeInfos().stream()
-            .filter(rn -> rn.getRootNetwork().getTag() != null)
-            .collect(Collectors.toMap(rn -> rn.getRootNetwork().getTag(), rn -> rn));
-
-        targetRootNetworksByTag.forEach((tag, targetRN) -> {
-            RootNetworkNodeInfoEntity sourceNodeLink = sourceNodeLinksByTag.get(tag);
-            Set<UUID> modificationsToExclude = Collections.emptySet();
-
-            if (sourceNodeLink != null) {
-                // Map modifications to the duplicated UUIDs
-                modificationsToExclude = sourceNodeLink.getModificationsUuidsToExclude().stream()
-                    .map(originToDuplicateModificationUuidMap::get)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
-            }
-
-            // Create a new RootNetworkNodeInfoEntity for the target
-            RootNetworkNodeInfoEntity newRNNodeInfo = createDefaultEntity(targetNodeInfoEntity.getId(), modificationsToExclude);
-
-            addLink(targetNodeInfoEntity, targetRN, newRNNodeInfo);
-        });
-    }
-
     public void duplicateNodeLinks(List<RootNetworkNodeInfoEntity> sourceNodeLinks, @NonNull NetworkModificationNodeInfoEntity destinationNodeInfoEntity, Map<UUID, UUID> originToDuplicateModificationUuidMap, Map<RootNetworkEntity, RootNetworkEntity> originToDuplicateRootNetworkMap) {
         // For each root network create a link with the node
         sourceNodeLinks.forEach(nodeLink -> {
