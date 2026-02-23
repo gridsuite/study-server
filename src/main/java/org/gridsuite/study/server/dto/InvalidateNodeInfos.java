@@ -71,4 +71,21 @@ public class InvalidateNodeInfos extends NodeInfos {
         dynamicSecurityAnalysisResultUuids.addAll(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids());
         dynamicMarginCalculationResultUuids.addAll(invalidateNodeInfos.getDynamicMarginCalculationResultUuids());
     }
+
+    public NodeInfos toNodeInfos(InvalidateNodeInfos invalidateNodeInfos) {
+        NodeInfos infos = new NodeInfos();
+        infos.setReportUuids(new HashSet<>(invalidateNodeInfos.getReportUuids()));
+        infos.setLoadFlowResultUuids(new HashSet<>(invalidateNodeInfos.getLoadFlowResultUuids()));
+        infos.setSecurityAnalysisResultUuids(new HashSet<>(invalidateNodeInfos.getSecurityAnalysisResultUuids()));
+        infos.setSensitivityAnalysisResultUuids(new HashSet<>(invalidateNodeInfos.getSensitivityAnalysisResultUuids()));
+        infos.setShortCircuitAnalysisResultUuids(new HashSet<>(invalidateNodeInfos.getShortCircuitAnalysisResultUuids()));
+        infos.setOneBusShortCircuitAnalysisResultUuids(new HashSet<>(invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids()));
+        infos.setVoltageInitResultUuids(new HashSet<>(invalidateNodeInfos.getVoltageInitResultUuids()));
+        infos.setDynamicSimulationResultUuids(new HashSet<>(invalidateNodeInfos.getDynamicSimulationResultUuids()));
+        infos.setDynamicSecurityAnalysisResultUuids(new HashSet<>(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids()));
+        infos.setDynamicMarginCalculationResultUuids(new HashSet<>(invalidateNodeInfos.getDynamicMarginCalculationResultUuids()));
+        infos.setStateEstimationResultUuids(new HashSet<>(invalidateNodeInfos.getStateEstimationResultUuids()));
+        infos.setPccMinResultUuids(new HashSet<>(invalidateNodeInfos.getPccMinResultUuids()));
+        return infos;
+    }
 }

@@ -245,23 +245,6 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    public CompletableFuture<Void> runRemoteDeletions(NodeInfos infos) {
-        return CompletableFuture.allOf(
-                studyServerExecutionService.runAsync(() -> reportService.deleteReports(infos.getReportUuids())),
-                studyServerExecutionService.runAsync(() -> loadFlowService.deleteLoadFlowResults(infos.getLoadFlowResultUuids())),
-                studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(infos.getSecurityAnalysisResultUuids())),
-                studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(infos.getSensitivityAnalysisResultUuids())),
-                studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getShortCircuitAnalysisResultUuids())),
-                studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getOneBusShortCircuitAnalysisResultUuids())),
-                studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(infos.getVoltageInitResultUuids())),
-                studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(infos.getDynamicSimulationResultUuids())),
-                studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(infos.getDynamicSecurityAnalysisResultUuids())),
-                studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(infos.getDynamicMarginCalculationResultUuids())),
-                studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(infos.getStateEstimationResultUuids())),
-                studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(infos.getPccMinResultUuids()))
-        );
-    }
-
     public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         return invalidateRootNetworkNode(rootNetworkNodeInfoEntity, invalidateTreeParameters);
@@ -598,22 +581,48 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    public void deleteRootNetworkNodeRemoteInfos(List<RootNetworkNodeInfo> rootNetworkNodeInfo) {
-        CompletableFuture.allOf(
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkNodeInfo.stream().map(this::getReportUuids).flatMap(Collection::stream).toList())),
-            studyServerExecutionService.runAsync(() -> loadFlowService.deleteLoadFlowResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getLoadFlowResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(rootNetworkNodeInfo.stream()
-                    .map(RootNetworkNodeInfo::getSecurityAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getSensitivityAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getShortCircuitAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getOneBusShortCircuitAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicSimulationResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicSecurityAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicMarginCalculationResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getPccMinResultUuid).filter(Objects::nonNull).toList()))
-        );
+    public List<CompletableFuture<?>> runRemoteDeletions(NodeInfos infos) {
+        List<CompletableFuture<?>> futures = new ArrayList<>();
+        futures.add(studyServerExecutionService.runAsync(() -> reportService.deleteReports(infos.getReportUuids())));
+        futures.add(studyServerExecutionService.runAsync(() -> loadFlowService.deleteLoadFlowResults(infos.getLoadFlowResultUuids())));
+        futures.add(studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(infos.getSecurityAnalysisResultUuids())));
+        futures.add(studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(infos.getSensitivityAnalysisResultUuids())));
+        futures.add(studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getShortCircuitAnalysisResultUuids())));
+        futures.add(studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getOneBusShortCircuitAnalysisResultUuids())));
+        futures.add(studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(infos.getVoltageInitResultUuids())));
+        futures.add(studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(infos.getDynamicSimulationResultUuids())));
+        futures.add(studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(infos.getDynamicSecurityAnalysisResultUuids())));
+        futures.add(studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(infos.getDynamicMarginCalculationResultUuids())));
+        futures.add(studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(infos.getStateEstimationResultUuids())));
+        futures.add(studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(infos.getPccMinResultUuids())));
+
+        return futures;
+    }
+
+    public NodeInfos getNodeInfos(List<RootNetworkNodeInfo> rootNetworkNodeInfos) {
+        NodeInfos infos = new NodeInfos();
+        infos.setReportUuids(rootNetworkNodeInfos.stream().map(this::getReportUuids).flatMap(Collection::stream).collect(Collectors.toSet()));
+        infos.setLoadFlowResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getLoadFlowResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setSecurityAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getSecurityAnalysisResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setSensitivityAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getSensitivityAnalysisResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setShortCircuitAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getShortCircuitAnalysisResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setOneBusShortCircuitAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getOneBusShortCircuitAnalysisResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setVoltageInitResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setDynamicSimulationResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getDynamicSimulationResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setDynamicSecurityAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getDynamicSecurityAnalysisResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setDynamicMarginCalculationResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getDynamicMarginCalculationResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setStateEstimationResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setPccMinResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getPccMinResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        return infos;
+    }
+
+    public void deleteRootNetworkNodeRemoteInfos(List<RootNetworkNodeInfo> rootNetworkNodeInfos) {
+        if (rootNetworkNodeInfos == null || rootNetworkNodeInfos.isEmpty()) {
+            return;
+        }
+        NodeInfos infos = getNodeInfos(rootNetworkNodeInfos);
+        List<CompletableFuture<?>> futures = runRemoteDeletions(infos);
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
     }
 
     @Transactional
