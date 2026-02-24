@@ -74,7 +74,7 @@ public class StateEstimationService extends AbstractComputationService {
         return restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
     }
 
-    public UUID runStateEstimation(UUID networkUuid, String variantId, UUID parametersUuid, ReportInfos reportInfos, String receiver, String userId) {
+    public UUID runStateEstimation(UUID networkUuid, String variantId, UUID parametersUuid, ReportInfos reportInfos, String receiver, String userId, boolean debug) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam("reportUuid", reportInfos.reportUuid().toString())
@@ -85,6 +85,9 @@ public class StateEstimationService extends AbstractComputationService {
         }
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
+        }
+        if (debug) {
+            uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, true);
         }
         var path = uriComponentsBuilder.queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(networkUuid).toUriString();
 

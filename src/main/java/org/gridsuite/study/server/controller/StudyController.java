@@ -2403,9 +2403,10 @@ public class StudyController {
     public ResponseEntity<Void> runStateEstimation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
                                                     @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                    @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        studyService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().build();
     }
 
