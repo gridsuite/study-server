@@ -182,6 +182,9 @@ class StateEstimationTest {
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID + "&receiver=.*")) {
                     // estim with success
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimResultUuidStr);
+                } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID + "&debug=true&receiver=.*")) {
+                    // debug estim with success
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimResultUuidStr);
                 } else if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID_2 + "&receiver=.*")) {
                     // estim with failure
                     input.send(MessageBuilder.withPayload("")
@@ -451,5 +454,28 @@ class StateEstimationTest {
 
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+    }
+
+    @Test
+    void testDebugComputation(final MockWebServer server) throws Exception {
+        StudyNodeIds ids = createStudyAndNode(VARIANT_ID, "node 1", null);
+        mockMvc.perform(post(STATE_ESTIMATION_URL_BASE + "run", ids.studyId, ids.rootNetworkUuid, ids.nodeId)
+                        .param("debug", "true")
+                        .header("userId", "userId"))
+                .andExpect(status().isOk());
+        consumeEstimResult(ids, STATE_ESTIMATION_RESULT_UUID);
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID + "&debug=true&receiver=.*")));
+
+        // get estim result
+        MvcResult mvcResult = mockMvc.perform(get(STATE_ESTIMATION_URL_BASE + "result", ids.studyId, ids.rootNetworkUuid, ids.nodeId)).andExpectAll(
+                status().isOk()).andReturn();
+        assertEquals(TestUtils.resourceToString("/estim-result.json"), mvcResult.getResponse().getContentAsString());
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID)));
+
+        // get estim status
+        mockMvc.perform(get(STATE_ESTIMATION_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId)).andExpectAll(
+                status().isOk(),
+                content().string(ESTIM_STATUS_JSON));
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/status")));
     }
 }
