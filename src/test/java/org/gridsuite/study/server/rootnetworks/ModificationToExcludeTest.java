@@ -307,7 +307,11 @@ class ModificationToExcludeTest {
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity2);
 
         // mock duplicateModificationsGroup to return a mapping between origin modification uuid and their duplicate uuid
-        List<UUID> modificationsToDuplicate = List.of(MODIFICATION_NEVER_EXCLUDED, MODIFICATION_TO_EXCLUDE_1, MODIFICATION_TO_EXCLUDE_2);
+        List<ModificationsToCopyInfos> modificationsToDuplicate = List.of(
+                ModificationsToCopyInfos.builder().uuid(MODIFICATION_NEVER_EXCLUDED).build(),
+                ModificationsToCopyInfos.builder().uuid(MODIFICATION_TO_EXCLUDE_1).build(),
+                ModificationsToCopyInfos.builder().uuid(MODIFICATION_TO_EXCLUDE_2).build()
+        );
         Mockito.doReturn(new NetworkModificationsResult(modificationsToDuplicate.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).toList(), List.of())).when(networkModificationService).duplicateOrInsertModifications(any(), any(), any());
 
         // duplicate (excluded) modification uuids for RH1
