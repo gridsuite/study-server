@@ -79,7 +79,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -1245,89 +1244,8 @@ public class StudyService {
         return userProfileIssue;
     }
 
-    public String getDefaultLoadflowProvider(String userId) {
-        if (userId != null) {
-            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
-            if (userProfileInfos.getLoadFlowParameterId() != null) {
-                try {
-                    return loadflowService.getLoadFlowParameters(userProfileInfos.getLoadFlowParameterId()).getProvider();
-                } catch (Exception e) {
-                    LOGGER.error(String.format("Could not get loadflow parameters with id '%s' from user/profile '%s/%s'. Using default provider",
-                            userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
-                    // in case of read error (ex: wrong/dangling uuid in the profile), move on with default provider below
-                }
-            }
-        }
-        return loadflowService.getLoadFlowDefaultProvider();
-    }
-
-    private void updateProvider(UUID studyUuid, String userId, Consumer<StudyEntity> providerSetter) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        providerSetter.accept(studyEntity);
-        notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    public void updateLoadFlowProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> {
-            loadflowService.updateLoadFlowProvider(studyEntity.getLoadFlowParametersUuid(), provider);
-            invalidateAllStudyLoadFlowStatus(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-            notificationService.emitComputationParamsChanged(studyUuid, LOAD_FLOW);
-
-        });
-    }
-
-    public String getDefaultSecurityAnalysisProvider() {
-        return securityAnalysisService.getSecurityAnalysisDefaultProvider();
-    }
-
-    public void updateSecurityAnalysisProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> {
-            securityAnalysisService.updateSecurityAnalysisProvider(studyEntity.getSecurityAnalysisParametersUuid(), provider);
-            invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-            notificationService.emitComputationParamsChanged(studyUuid, SECURITY_ANALYSIS);
-        });
-    }
-
-    public String getDefaultSensitivityAnalysisProvider() {
-        return sensitivityAnalysisService.getSensitivityAnalysisDefaultProvider();
-    }
-
-    public String getDefaultDynamicSimulationProvider() {
-        return defaultDynamicSimulationProvider;
-    }
-
     public String getDynamicSimulationProvider(UUID studyUuid) {
         return getStudy(studyUuid).getDynamicSimulationProvider();
-    }
-
-    @Transactional
-    public void updateDynamicSimulationProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> {
-            studyEntity.setDynamicSimulationProvider(provider != null ? provider : defaultDynamicSimulationProvider);
-            invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
-            invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-            notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_SIMULATION);
-        });
-    }
-
-    public String getDefaultDynamicSecurityAnalysisProvider(String userId) {
-        if (userId != null) {
-            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
-            if (userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
-                try {
-                    return dynamicSecurityAnalysisService.getProvider(userProfileInfos.getDynamicSecurityAnalysisParameterId());
-                } catch (Exception e) {
-                    LOGGER.error(String.format("Could not get dynamic security analysis provider with id '%s' from user/profile '%s/%s'. Using default provider",
-                            userProfileInfos.getDynamicSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
-                    // in case of read error (ex: wrong/dangling uuid in the profile), move on with default provider below
-                }
-            }
-        }
-        return dynamicSecurityAnalysisService.getDefaultProvider();
     }
 
     public String getDynamicSecurityAnalysisProvider(UUID studyUuid) {
@@ -1335,45 +1253,9 @@ public class StudyService {
         return dynamicSecurityAnalysisService.getProvider(studyEntity.getDynamicSecurityAnalysisParametersUuid());
     }
 
-    public void updateDynamicSecurityAnalysisProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> {
-            dynamicSecurityAnalysisService.updateProvider(studyEntity.getDynamicSecurityAnalysisParametersUuid(), provider);
-            invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-            notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_SECURITY_ANALYSIS);
-
-        });
-    }
-
-    public String getDefaultDynamicMarginCalculationProvider(String userId) {
-        if (userId != null) {
-            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
-            if (userProfileInfos.getDynamicMarginCalculationParameterId() != null) {
-                try {
-                    return dynamicMarginCalculationService.getProvider(userProfileInfos.getDynamicMarginCalculationParameterId());
-                } catch (Exception e) {
-                    LOGGER.error(String.format("Could not get dynamic margin calculation provider with id '%s' from user/profile '%s/%s'. Using default provider",
-                            userProfileInfos.getDynamicMarginCalculationParameterId(), userId, userProfileInfos.getName()), e);
-                    // in case of read error (ex: wrong/dangling uuid in the profile), move on with default provider below
-                }
-            }
-        }
-        return dynamicMarginCalculationService.getDefaultProvider();
-    }
-
     public String getDynamicMarginCalculationProvider(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return dynamicMarginCalculationService.getProvider(studyEntity.getDynamicMarginCalculationParametersUuid());
-    }
-
-    public void updateDynamicMarginCalculationProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> {
-            dynamicMarginCalculationService.updateProvider(studyEntity.getDynamicMarginCalculationParametersUuid(), provider);
-            invalidateDynamicMarginCalculationStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
-            notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_MARGIN_CALCULATION);
-
-        });
     }
 
     @Transactional
@@ -1703,11 +1585,6 @@ public class StudyService {
             // reset case, with existing profile, having default LF params
             try {
                 UUID loadFlowParametersFromProfileUuid = loadflowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
-                if (existingLoadFlowParametersUuid != null) {
-                    //For a reset to defaultValues we need to keep the provider if it exists because it's updated separately
-                    String keptProvider = loadflowService.getLoadFlowParameters(existingLoadFlowParametersUuid).getProvider();
-                    loadflowService.updateLoadFlowProvider(loadFlowParametersFromProfileUuid, keptProvider);
-                }
                 studyEntity.setLoadFlowParametersUuid(loadFlowParametersFromProfileUuid);
                 removeLoadFlowParameters(existingLoadFlowParametersUuid);
                 return userProfileIssue;
