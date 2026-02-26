@@ -635,7 +635,7 @@ class LoadFlowTest {
         testMessages(studyNameUserIdUuid);
     }
 
-    private void updateParametersAndDoChecksForResetLoadFlowParameters(UUID studyNameUserIdUuid, String loadflowParametersUuid, String userId, String returnedUserProfileJson, String duplicateFromUuid, String returnedLoadFlowParameters) throws Exception {
+    private void updateParametersAndDoChecksForResetLoadFlowParameters(UUID studyNameUserIdUuid, String loadflowParametersUuid, String userId, String returnedUserProfileJson, String duplicateFromUuid) throws Exception {
         UUID duplicatedLoadflowParametersUuid = UUID.randomUUID();
         wireMockStubs.userAdminServer.stubGetUserProfile(userId, returnedUserProfileJson);
         wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(duplicatedLoadflowParametersUuid), false);
@@ -726,7 +726,7 @@ class LoadFlowTest {
     void testResetLoadFlowParametersUserHasValidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        updateParametersAndDoChecksForResetLoadFlowParameters(studyNameUserIdUuid, LOADFLOW_PARAMETERS_UUID_STRING, VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING, LOADFLOW_DEFAULT_PARAMETERS_JSON);
+        updateParametersAndDoChecksForResetLoadFlowParameters(studyNameUserIdUuid, LOADFLOW_PARAMETERS_UUID_STRING, VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING);
     }
 
     @Test
