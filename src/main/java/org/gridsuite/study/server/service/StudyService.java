@@ -749,7 +749,9 @@ public class StudyService {
             copiedWorkspacesConfigUuid = studyConfigService.duplicateWorkspacesConfig(sourceStudyEntity.getWorkspacesConfigUuid());
         }
 
-        DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
+        DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ?
+            DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper).setProvider(sourceStudyEntity.getDynamicSimulationProvider()) :
+            DynamicSimulationService.getDefaultDynamicSimulationParameters().setProvider(defaultDynamicSimulationProvider);
 
         UUID copiedStateEstimationParametersUuid = null;
         if (sourceStudyEntity.getStateEstimationParametersUuid() != null) {
@@ -1615,10 +1617,11 @@ public class StudyService {
         }
     }
 
-    public void updateDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity) {
+    public void updateDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, String provider) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> {
             studyEntity1.setDynamicSimulationParameters(dynamicSimulationParametersEntity);
+            studyEntity1.setDynamicSimulationProvider(provider);
             invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         });
@@ -2880,7 +2883,9 @@ public class StudyService {
 
     @Transactional
     public void setDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersInfos dsParameter, String userId) {
-        updateDynamicSimulationParameters(studyUuid, DynamicSimulationService.toEntity(dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters(), objectMapper));
+        updateDynamicSimulationParameters(studyUuid,
+            DynamicSimulationService.toEntity(dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters(), objectMapper),
+            dsParameter != null ? dsParameter.getProvider() : this.defaultDynamicSimulationProvider);
 
         // Dynamic security analysis depends on dynamic simulation => must invalidate
         invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
@@ -2897,7 +2902,9 @@ public class StudyService {
     }
 
     private DynamicSimulationParametersInfos getDynamicSimulationParameters(StudyEntity studyEntity) {
-        return studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
+        return studyEntity.getDynamicSimulationParameters() != null ?
+            DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper).setProvider(studyEntity.getDynamicSimulationProvider()) :
+            DynamicSimulationService.getDefaultDynamicSimulationParameters().setProvider(this.defaultDynamicSimulationProvider);
     }
 
     @Transactional(readOnly = true)
