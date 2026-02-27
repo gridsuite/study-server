@@ -13,7 +13,6 @@ import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyConfigService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -56,8 +55,6 @@ class WorkspaceConfigTest {
     private StudyRepository studyRepository;
     @Autowired
     private StudyConfigService studyConfigService;
-    @Autowired
-    private NetworkModificationTreeService networkModificationTreeService;
 
     private WireMockServer wireMockServer;
 
@@ -289,7 +286,6 @@ class WorkspaceConfigTest {
     @AfterEach
     void tearDown() {
         wireMockServer.stop();
-        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
     }
 }
