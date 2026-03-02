@@ -79,8 +79,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfigurationWithTestChannel
 class SensitivityAnalysisTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SensitivityAnalysisTest.class);
-
     private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
@@ -781,7 +779,6 @@ class SensitivityAnalysisTest {
 
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        // run-and-save called
         computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of(
             "reportType", equalTo("SensitivityAnalysis"),
             "variantId", equalTo(VARIANT_ID),
