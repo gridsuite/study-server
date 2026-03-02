@@ -13,12 +13,14 @@ package org.gridsuite.study.server.service;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -31,6 +33,11 @@ public class ActionsService {
     private static final String NETWORK_UUID = "networkUuid";
     private static final String CONTINGENCY_LIST_IDS = "ids";
 
+    public static final Map<String, Integer> EMPTY_CONTINGENCY_COUNT = Map.of(
+            "contingencies", 0,
+            "notFoundElements", 0
+    );
+
     private String actionsServerBaseUri;
 
     public ActionsService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
@@ -38,7 +45,7 @@ public class ActionsService {
         this.restTemplate = restTemplate;
     }
 
-    public Integer getContingencyCount(UUID networkUuid, String variantId, List<UUID> contingencyListIds) {
+    public Map<String, Integer> getContingencyCount(UUID networkUuid, String variantId, List<UUID> contingencyListIds) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/count")
                 .queryParam(CONTINGENCY_LIST_IDS, contingencyListIds)
@@ -46,7 +53,12 @@ public class ActionsService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        return restTemplate.exchange(actionsServerBaseUri + uriComponentsBuilder.toUriString(), HttpMethod.GET, null, Integer.class).getBody();
+        return restTemplate.exchange(
+                actionsServerBaseUri + uriComponentsBuilder.toUriString(),
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<String, Integer>>() { }
+        ).getBody();
     }
 
     public void setActionsServerBaseUri(String actionsServerBaseUri) {
