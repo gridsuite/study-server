@@ -47,6 +47,11 @@ public class ComputationServerStubs {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/networks/" + networkUuid + "/run-and-save", queryParams);
     }
 
+    public void stubComputationStop(String resultUuid) {
+        wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/stop"))
+            .willReturn(WireMock.ok()));
+    }
+
     public UUID stubGetResultStatus(String resultUuid, String statusJson) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/status"))
             .willReturn(WireMock.ok()
@@ -235,8 +240,20 @@ public class ComputationServerStubs {
                 ));
     }
 
-    public void verifyGetResultCsv(String resultUuid) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/results/" + resultUuid + "/csv", Map.of());
+    public void verifyGetResult(String resultUuid, Map<String, StringValuePattern> queryParams) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid, queryParams);
+    }
+
+    public void verifyGetResultCsv(String resultUuid, Map<String, StringValuePattern> queryParams) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/results/" + resultUuid + "/csv", queryParams);
+    }
+
+    public void verifyGetResultFilterOptions(String resultUuid, Map<String, StringValuePattern> queryParams) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/filter-options", queryParams);
+    }
+
+    public void verifyPostResultCsv(String resultUuid, String subPath) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/results/" + resultUuid + "/" + subPath + "/csv", Map.of());
     }
 
     /*    Status     */
