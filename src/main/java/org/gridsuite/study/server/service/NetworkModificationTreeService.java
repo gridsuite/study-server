@@ -148,7 +148,7 @@ public class NetworkModificationTreeService {
         return newNode;
     }
 
-    private NetworkModificationNode duplicateNode(@NonNull StudyEntity targetStudy, @NonNull StudyEntity sourceStudy, @NonNull UUID referenceNodeId, @NonNull NetworkModificationNode newNodeInfo, @NonNull UUID originNodeUuid, @NonNull InsertMode insertMode, Map<UUID, UUID> mappingModificationUuids, boolean isDuplicatingStudy) {
+    private NetworkModificationNode duplicateNode(@NonNull StudyEntity targetStudy, @NonNull UUID referenceNodeId, @NonNull NetworkModificationNode newNodeInfo, @NonNull UUID originNodeUuid, @NonNull InsertMode insertMode, Map<UUID, UUID> mappingModificationUuids) {
         // create new node
         NetworkModificationNode newNode = createAndInsertNode(targetStudy, referenceNodeId, newNodeInfo, insertMode, null);
 
@@ -186,7 +186,6 @@ public class NetworkModificationTreeService {
 
         NetworkModificationNode node = duplicateNode(
             anchorNodeEntity.getStudy(),
-            networkModificationNodeInfoEntity.getNode().getStudy(),
             anchorNodeUuid,
             NetworkModificationNode.builder()
                 .modificationGroupUuid(newGroupUuid)
@@ -196,8 +195,7 @@ public class NetworkModificationTreeService {
                 .build(),
                 nodeToCopyUuid,
                 insertMode,
-            originToDuplicateModificationUuidMap,
-            false
+            originToDuplicateModificationUuidMap
         );
 
         return node.getId();
@@ -442,11 +440,11 @@ public class NetworkModificationTreeService {
     public void duplicateStudyNodes(StudyEntity studyEntity, StudyEntity sourceStudyEntity) {
         createRoot(studyEntity);
         AbstractNode rootNode = getStudyTree(sourceStudyEntity.getId(), null);
-        cloneStudyTree(rootNode, null, studyEntity, sourceStudyEntity, true);
+        cloneStudyTree(rootNode, null, studyEntity);
     }
 
     @Transactional
-    public UUID cloneStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity studyEntity, StudyEntity sourceStudyEntity, boolean isDuplicatingStudy) {
+    public UUID cloneStudyTree(AbstractNode nodeToDuplicate, UUID nodeParentId, StudyEntity studyEntity) {
         UUID rootId = null;
         if (NodeType.ROOT.equals(nodeToDuplicate.getType())) {
             rootId = getStudyRootNodeUuid(studyEntity.getId());
@@ -460,13 +458,13 @@ public class NetworkModificationTreeService {
             model.setName(getSuffixedNodeName(studyEntity.getId(), model.getName()));
 
             Map<UUID, UUID> originToDuplicateModificationUuidMap = networkModificationService.duplicateModificationsGroup(modificationGroupToDuplicateId, newModificationGroupId);
-            nextParentId = duplicateNode(studyEntity, sourceStudyEntity, nodeParentId, model, nodeToDuplicate.getId(), InsertMode.CHILD, originToDuplicateModificationUuidMap, isDuplicatingStudy).getId();
+            nextParentId = duplicateNode(studyEntity, nodeParentId, model, nodeToDuplicate.getId(), InsertMode.CHILD, originToDuplicateModificationUuidMap).getId();
         } else {
             // when cloning studyTree, we don't clone root node
             // if cloning the whole study, the root node is previously created
             nextParentId = rootId;
         }
-        nodeToDuplicate.getChildren().forEach(childToDuplicate -> self.cloneStudyTree(childToDuplicate, nextParentId, studyEntity, sourceStudyEntity, isDuplicatingStudy));
+        nodeToDuplicate.getChildren().forEach(childToDuplicate -> self.cloneStudyTree(childToDuplicate, nextParentId, studyEntity));
 
         return nextParentId;
     }
