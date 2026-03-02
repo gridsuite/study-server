@@ -2547,16 +2547,9 @@ public class StudyService {
                 .toList();
 
             NetworkModificationsResult networkModificationResults = networkModificationService.duplicateOrInsertModifications(groupUuid, action, Pair.of(modifications, modificationApplicationContexts));
-            Map<UUID, UUID> originToDuplicateModificationsUuids = new HashMap<>();
-            for (int i = 0; i < modifications.size(); i++) {
-                originToDuplicateModificationsUuids.put(modifications.get(i).getUuid(), networkModificationResults.modificationUuids().get(i));
-            }
 
-            if (targetStudyUuid.equals(originStudyUuid)) {
-                rootNetworkNodeInfoService.copyModificationsToExclude(originNodeUuid, targetNodeUuid, originToDuplicateModificationsUuids);
-            } else {
-                rootNetworkNodeInfoService.copyModificationsToExcludeByCommonRootNetworkTag(originStudyUuid, targetStudyUuid, originNodeUuid, targetNodeUuid, originToDuplicateModificationsUuids);
-            }
+            copyModificationsToExclude(originNodeUuid, targetNodeUuid, modifications, networkModificationResults);
+
             if (networkModificationResults != null) {
                 int index = 0;
                 // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
@@ -2572,6 +2565,17 @@ public class StudyService {
             notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(targetStudyUuid, userId);
+    }
+
+    private void copyModificationsToExclude(UUID originNodeUuid,
+                                            UUID targetNodeUuid,
+                                            List<ModificationsToCopyInfos> modifications, NetworkModificationsResult networkModificationResults) {
+        Map<UUID, UUID> mappingModificationsUuids = new HashMap<>();
+        for (int i = 0; i < modifications.size(); i++) {
+            mappingModificationsUuids.put(modifications.get(i).getUuid(), networkModificationResults.modificationUuids().get(i));
+        }
+
+        rootNetworkNodeInfoService.copyModificationsToExcludeFromTags(originNodeUuid, targetNodeUuid, mappingModificationsUuids);
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {

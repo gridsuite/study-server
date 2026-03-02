@@ -117,60 +117,28 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    // get the root networks that are common between source and destination studies
-    private List<RootNetworkEntity> getCommonRootNetworks(@NonNull UUID sourceStudyUuid, @NonNull UUID destinationStudyUuid) {
-        Set<String> sourceTags = rootNetworkNodeInfoRepository
-            .findAllByRootNetworkStudyId(sourceStudyUuid).stream()
-            .map(RootNetworkNodeInfoEntity::getRootNetwork)
-            .map(RootNetworkEntity::getTag)
-            .collect(Collectors.toSet());
-
-        return rootNetworkNodeInfoRepository
-            .findAllByRootNetworkStudyId(destinationStudyUuid).stream()
-            .map(RootNetworkNodeInfoEntity::getRootNetwork)
-            .filter(rn -> rn.getTag() != null && sourceTags.contains(rn.getTag()))
-            .toList();
-    }
-
-    public void duplicateNodeLinks(List<RootNetworkNodeInfoEntity> sourceNodeLinks, @NonNull NetworkModificationNodeInfoEntity destinationNodeInfoEntity, Map<UUID, UUID> originToDuplicateModificationUuidMap, Map<RootNetworkEntity, RootNetworkEntity> originToDuplicateRootNetworkMap) {
-        // For each root network create a link with the node
-        sourceNodeLinks.forEach(nodeLink -> {
-            // when duplicating a rootNetworkNodeInfoEntity, we need to keep modificationsToExclude
-            // use correspondence map to use duplicate modification uuids
-            RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(
-                destinationNodeInfoEntity.getId(),
-                nodeLink.getModificationsUuidsToExclude().stream().map(originToDuplicateModificationUuidMap::get).collect(Collectors.toSet())
+    public void createNodeLinksFromTags(@NonNull StudyEntity targetStudy,
+                                        @NonNull NetworkModificationNodeInfoEntity originNodeInfo, NetworkModificationNodeInfoEntity targetNodeInfo,
+                                        @NonNull Map<UUID, UUID> mappingModificationUuids) {
+        Map<UUID, RootNetworkNodeInfoEntity> mappingRootNetworksFromTag = new HashMap<>();
+        targetStudy.getRootNetworks().forEach(targetRootNetwork -> {
+            Optional<RootNetworkNodeInfoEntity> originRootNetworkNodeInfo = originNodeInfo.getRootNetworkNodeInfos().stream().filter(originRootNetworkNode -> originRootNetworkNode.getRootNetwork().getTag().equals(targetRootNetwork.getTag())).findFirst();
+            originRootNetworkNodeInfo.ifPresent(originRootNetworkNodeInfoEntity ->
+                mappingRootNetworksFromTag.put(targetRootNetwork.getId(), originRootNetworkNodeInfoEntity)
             );
-            addLink(destinationNodeInfoEntity, originToDuplicateRootNetworkMap.get(nodeLink.getRootNetwork()), newRootNetworkNodeInfoEntity);
         });
-    }
 
-    public void createNodeLinksFromSourceForCommonTags(@NonNull StudyEntity destinationStudy, @NonNull List<RootNetworkNodeInfoEntity> sourceNodeLinks, @NonNull NetworkModificationNodeInfoEntity destinationNodeInfoEntity, @NonNull Map<UUID, UUID> originToDuplicateModificationUuidMap) {
-        // Map tag → link source
-        Map<String, RootNetworkNodeInfoEntity> sourceLinkByTag =
-                sourceNodeLinks.stream()
-                        .filter(l -> l.getRootNetwork().getTag() != null)
-                        .collect(Collectors.toMap(
-                                l -> l.getRootNetwork().getTag(),
-                                Function.identity(),
-                                (a, b) -> a
-                        ));
-
-        destinationStudy.getRootNetworks().forEach(destRoot -> {
-            String tag = destRoot.getTag();
-            // copy exclusions only for common root networks tag
-            Set<UUID> exclusions;
-            if (tag != null && sourceLinkByTag.containsKey(tag)) {
-                exclusions = sourceLinkByTag.get(tag).getModificationsUuidsToExclude()
-                        .stream()
-                        .map(originToDuplicateModificationUuidMap::get)
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toSet());
+        targetStudy.getRootNetworks().forEach(targetRootNetwork -> {
+            RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity;
+            if (mappingRootNetworksFromTag.containsKey(targetRootNetwork.getId())) {
+                newRootNetworkNodeInfoEntity = createDefaultEntity(
+                    targetNodeInfo.getId(),
+                    mappingRootNetworksFromTag.get(targetRootNetwork.getId()).getModificationsUuidsToExclude().stream().map(mappingModificationUuids::get).collect(Collectors.toSet())
+                );
             } else {
-                exclusions = Collections.emptySet();
+                newRootNetworkNodeInfoEntity = createDefaultEntity(targetNodeInfo.getId());
             }
-            RootNetworkNodeInfoEntity entity = createDefaultEntity(destinationNodeInfoEntity.getId(), exclusions);
-            addLink(destinationNodeInfoEntity, destRoot, entity);
+            addLink(targetNodeInfo, targetRootNetwork, newRootNetworkNodeInfoEntity);
         });
     }
 
@@ -570,44 +538,23 @@ public class RootNetworkNodeInfoService {
             }));
     }
 
-    public void copyModificationsToExclude(UUID originNodeUuid, UUID targetNodeUuid, Map<UUID, UUID> originToDuplicateModificationsUuids) {
-        rootNetworkNodeInfoRepository.findAllByNodeInfoId(originNodeUuid)
-            .forEach(originRootNetworkNodeInfoEntity -> getRootNetworkNodeInfo(targetNodeUuid, originRootNetworkNodeInfoEntity.getRootNetwork().getId()).ifPresent(targetRootNetworkNodeInfoEntity -> {
-                Set<UUID> modificationsToCopy = originRootNetworkNodeInfoEntity.getModificationsUuidsToExclude().stream().map(originToDuplicateModificationsUuids::get).filter(Objects::nonNull).collect(Collectors.toSet());
-                targetRootNetworkNodeInfoEntity.addModificationsToExclude(modificationsToCopy);
-            }));
-    }
+    public void copyModificationsToExcludeFromTags(UUID originNodeUuid, UUID targetNodeUuid, Map<UUID, UUID> mappingModificationsUuids) {
+        Map<UUID, RootNetworkNodeInfoEntity> mappingRootNetworksFromTag = new HashMap<>();
+        List<RootNetworkNodeInfoEntity> originRootNetworksNodeInfos = rootNetworkNodeInfoRepository.findAllWithRootNetworkByNodeInfoId(originNodeUuid);
+        List<RootNetworkNodeInfoEntity> targetRootNetworksNodeInfos = rootNetworkNodeInfoRepository.findAllWithRootNetworkByNodeInfoId(targetNodeUuid);
 
-    /**
-     * Copies modification applicability (via exclusions) from origin study to target study
-     * according to root network tags
-     */
-    public void copyModificationsToExcludeByCommonRootNetworkTag(
-        UUID originStudyUuid, UUID targetStudyUuid, UUID originNodeUuid, UUID targetNodeUuid, Map<UUID, UUID> originToDuplicateModificationsUuids) {
-        List<RootNetworkEntity> targetRootNetworksWithCommonTags = getCommonRootNetworks(originStudyUuid, targetStudyUuid);
+        originRootNetworksNodeInfos.forEach(originRootNetworkNodeInfo -> {
+            Optional<RootNetworkNodeInfoEntity> targetRootNetworkNodeInfo = targetRootNetworksNodeInfos.stream().filter(targetRootNetworkNode -> targetRootNetworkNode.getRootNetwork().getTag().equals(originRootNetworkNodeInfo.getRootNetwork().getTag())).findFirst();
+            targetRootNetworkNodeInfo.ifPresent(targetRootNetworkNodeInfoEntity ->
+                mappingRootNetworksFromTag.put(originRootNetworkNodeInfo.getId(), targetRootNetworkNodeInfoEntity)
+            );
+        });
 
-        Map<String, RootNetworkEntity> targetRootByTag = targetRootNetworksWithCommonTags.stream()
-            .filter(rn -> rn.getTag() != null)
-            .collect(Collectors.toMap(RootNetworkEntity::getTag, Function.identity(), (a, b) -> a));
-
-        rootNetworkNodeInfoRepository.findAllByNodeInfoId(originNodeUuid).forEach(originNodeInfo -> {
-            RootNetworkEntity targetRoot = targetRootByTag.get(originNodeInfo.getRootNetwork().getTag());
-            if (targetRoot == null) {
-                return;
+        originRootNetworksNodeInfos.forEach(originRootNetworkNodeInfo -> {
+            if (mappingRootNetworksFromTag.containsKey(originRootNetworkNodeInfo.getId())) {
+                Set<UUID> modificationsToCopy = originRootNetworkNodeInfo.getModificationsUuidsToExclude().stream().map(mappingModificationsUuids::get).filter(Objects::nonNull).collect(Collectors.toSet());
+                mappingRootNetworksFromTag.get(originRootNetworkNodeInfo.getId()).addModificationsToExclude(modificationsToCopy);
             }
-
-            getRootNetworkNodeInfo(targetNodeUuid, targetRoot.getId())
-                .ifPresent(targetNodeInfo -> {
-                    // Collect mapped exclusions into a Set
-                    Set<UUID> duplicatedExcludedModifications = originNodeInfo.getModificationsUuidsToExclude().stream()
-                        .map(originToDuplicateModificationsUuids::get)
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toSet());
-
-                    if (!duplicatedExcludedModifications.isEmpty()) {
-                        targetNodeInfo.addModificationsToExclude(duplicatedExcludedModifications);
-                    }
-                });
         });
     }
 
