@@ -242,7 +242,7 @@ public final class TestUtils {
         try {
             wireMockServer.checkForUnmatchedRequests(); // requests no matched ? (it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify')
             var requests = wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl()));
-            assertEquals(0, requests.size(), "Uncatch WireMock requests found:\n" + requests.stream()
+            assertEquals(0, requests.size(), "Unverified WireMock requests found:\n" + requests.stream()
                 .map(r -> "URL: " + r.getUrl() + ", Method: " + r.getMethod() + ", Body: " + r.getBodyAsString() + ", Params: " + r.getQueryParams())
                 .collect(Collectors.joining("\n")));
         } finally {

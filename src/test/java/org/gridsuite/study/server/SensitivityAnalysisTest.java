@@ -11,14 +11,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.powsybl.commons.exceptions.UncheckedInterruptedException;
 import com.powsybl.sensitivity.SensitivityAnalysisParameters;
 import com.powsybl.sensitivity.SensitivityFunctionType;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.error.StudyException;
-import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
@@ -26,11 +27,14 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.gridsuite.study.server.utils.wiremock.*;
-import org.junit.jupiter.api.*;
+import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
+import org.gridsuite.study.server.utils.wiremock.ReportServerStubs;
+import org.gridsuite.study.server.utils.wiremock.UserAdminServerStubs;
+import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -46,12 +50,15 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.client.WireMock.ok;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
@@ -59,8 +66,10 @@ import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -72,8 +81,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
 class SensitivityAnalysisTest {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(SensitivityAnalysisTest.class);
 
     private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
     private static final String SENSITIVITY_ANALYSIS_OTHER_NODE_RESULT_UUID = "11131111-8594-4e55-8ef7-07ea965d24eb";
@@ -181,21 +188,10 @@ class SensitivityAnalysisTest {
     @Autowired
     private TestUtils studyTestUtils;
 
-    @BeforeAll
-    static void initWireMock(@Autowired InputDestination input) {
-        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
-        wireMockServer.start();
-    }
-
-    @AfterAll
-    static void shutdownWireMock() {
-        if (wireMockServer != null) {
-            wireMockServer.shutdown();
-        }
-    }
-
     @BeforeEach
     void setup() {
+        wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
+        wireMockServer.start();
         computationServerStubs = new ComputationServerStubs(wireMockServer);
         reportServerStubs = new ReportServerStubs(wireMockServer);
         userAdminServerStubs = new UserAdminServerStubs(wireMockServer);
@@ -311,6 +307,7 @@ class SensitivityAnalysisTest {
             .andExpect(status().isOk());
 
         consumeSensitivityAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid, SENSITIVITY_ANALYSIS_RESULT_UUID);
+        computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("receiver", WireMock.matching(".*")));
 
         // --- 3. Test result count (dryRun) ---
         computationServerStubs.stubResultsCount(1);
@@ -361,6 +358,7 @@ class SensitivityAnalysisTest {
             .andExpect(status().isOk());
 
         consumeSensitivityAnalysisResult(studyUuid, rootNetworkUuid, nodeUuid, resultUuid);
+        computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("receiver", WireMock.matching(".*")));
 
         // --- 3. GET sensitivity analysis result ---
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + resultUuid + ".*"))
@@ -370,17 +368,17 @@ class SensitivityAnalysisTest {
                 studyUuid, rootNetworkUuid, nodeUuid, "fakeJsonSelector"))
             .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
 
-        wireMockServer.verify(1, WireMock.getRequestedFor(WireMock.urlPathMatching("/v1/results/" + resultUuid + ".*")));
+        computationServerStubs.verifyGetResult(resultUuid, Map.of("selector", WireMock.matching(".*")));
 
         // --- 4. GET sensitivity analysis filter-options ---
-        wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + resultUuid + "/filter-options.*"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/filter-options"))
             .willReturn(WireMock.ok().withBody(FAKE_RESULT_JSON)));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}",
                 studyUuid, rootNetworkUuid, nodeUuid, "fakeJsonSelector"))
             .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
 
-        wireMockServer.verify(1, WireMock.getRequestedFor(WireMock.urlPathMatching("/v1/results/" + resultUuid + "/filter-options.*")));
+        computationServerStubs.verifyGetResultFilterOptions(resultUuid, Map.of("selector", WireMock.matching(".*")));
 
         // --- 5. GET sensitivity analysis with filters and globalFilters ---
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid))
@@ -395,13 +393,13 @@ class SensitivityAnalysisTest {
                 studyUuid, rootNetworkUuid, nodeUuid))
             .andExpectAll(status().isOk(), content().string(FAKE_RESULT_JSON));
 
-        wireMockServer.verify(1, WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/results/" + resultUuid))
-            .withQueryParam("selector", WireMock.equalTo("subjectId"))
-            .withQueryParam("filters", WireMock.equalTo("lineId2"))
-            .withQueryParam("globalFilters", WireMock.equalTo("ss"))
-            .withQueryParam("networkUuid", WireMock.matching(".*"))
-            .withQueryParam("variantId", WireMock.matching(".*"))
-        );
+        computationServerStubs.verifyGetResult(resultUuid, Map.of(
+            "selector", WireMock.equalTo("subjectId"),
+            "filters", WireMock.equalTo("lineId2"),
+            "globalFilters", WireMock.equalTo("ss"),
+            "networkUuid", WireMock.matching(".*"),
+            "variantId", WireMock.matching(".*")
+        ));
 
         // --- 6. GET sensitivity analysis status ---
         computationServerStubs.stubGetResultStatus(resultUuid, SENSITIVITY_ANALYSIS_STATUS_JSON);
@@ -441,11 +439,10 @@ class SensitivityAnalysisTest {
                 .content(content))
             .andExpectAll(status().isOk(), content().bytes(SENSITIVITY_RESULTS_AS_ZIPPED_CSV));
 
-        wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlPathMatching("/v1/results/" + resultUuid + "/csv.*")));
+        computationServerStubs.verifyGetResultCsv(resultUuid, Map.of("selector", WireMock.matching(".*")));
 
         // --- 8. Stop sensitivity analysis ---
-        wireMockServer.stubFor(WireMock.put(WireMock.urlPathMatching("/v1/results/" + resultUuid + "/stop"))
-            .willReturn(WireMock.ok()));
+        computationServerStubs.stubComputationStop(resultUuid);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/stop",
                 studyUuid, rootNetworkUuid, nodeUuid)
@@ -497,9 +494,11 @@ class SensitivityAnalysisTest {
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, firstRootNetworkUuid, modificationNodeUuid, FAKE_RESULT_JSON))
             .andExpect(status().isNotFound()).andReturn();
+        computationServerStubs.verifyGetResult(notFoundSensitivityUuid.toString(), Map.of("selector", WireMock.matching(".*")));
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, firstRootNetworkUuid, modificationNodeUuid, FAKE_RESULT_JSON))
             .andExpect(status().isNotFound()).andReturn();
+        computationServerStubs.verifyGetResultFilterOptions(notFoundSensitivityUuid.toString(), Map.of("selector", WireMock.matching(".*")));
     }
 
     @Test
@@ -601,9 +600,7 @@ class SensitivityAnalysisTest {
         assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED, updateType);
 
         // Verify the "run-and-save" POST request was called
-        wireMockServer.verify(1, WireMock.postRequestedFor(
-            WireMock.urlPathMatching("/v1/networks/" + NETWORK_UUID_2_STRING + "/run-and-save.*")
-        ));
+        computationServerStubs.verifyComputationRun(NETWORK_UUID_2_STRING, Map.of("variantId", WireMock.matching(".*")));
 
         // --- Test coverage: failed message without receiver ---
         StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
@@ -634,9 +631,7 @@ class SensitivityAnalysisTest {
         assertEquals(UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS, updateType);
 
         // Verify run-and-save POST request called
-        wireMockServer.verify(1, WireMock.postRequestedFor(
-            WireMock.urlPathMatching("/v1/networks/" + NETWORK_UUID_3_STRING + "/run-and-save.*")
-        ));
+        computationServerStubs.verifyComputationRun(NETWORK_UUID_3_STRING, Map.of("variantId", WireMock.matching(".*")));
     }
 
     private void createOrUpdateParametersAndDoChecks(UUID studyUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
@@ -656,16 +651,10 @@ class SensitivityAnalysisTest {
     @Test
     void testSensitivityAnalysisParameters() throws Exception {
 
-        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID))
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON)));
-        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID))
-            .willReturn(WireMock.ok()));
-
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(objectMapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID))));
-
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters/default"))
-            .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(objectMapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID))));
+        computationServerStubs.stubParametersGet(SENSITIVITY_ANALYSIS_PARAMETERS_UUID.toString(), SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON);
+        computationServerStubs.stubParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID.toString(), "");
+        computationServerStubs.stubCreateParameter(objectMapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID));
+        computationServerStubs.stubPostParametersDefault(objectMapper.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID));
 
         UUID studyNameUserIdUuid = insertDummyStudy(UUID.randomUUID(), UUID.randomUUID(), SENSITIVITY_ANALYSIS_PARAMETERS_UUID).getId();
         assertNotNull(studyNameUserIdUuid);
@@ -675,12 +664,12 @@ class SensitivityAnalysisTest {
             status().isOk(),
             content().string(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
 
-        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID)));
+        computationServerStubs.verifyParametersGet(SENSITIVITY_ANALYSIS_PARAMETERS_UUID.toString());
 
         // Set sensitivity analysis parameters (will update)
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON, "userId", HttpStatus.OK);
 
-        wireMockServer.verify(WireMock.putRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID)));
+        computationServerStubs.verifyParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID.toString());
 
         // Get sensitivity analysis (not existing, so it will create default)
         StudyEntity studyEntityToUpdate = studyRepository.findById(studyNameUserIdUuid).orElseThrow(() -> new StudyException(NOT_FOUND));
@@ -691,8 +680,8 @@ class SensitivityAnalysisTest {
             status().isOk(),
             content().string(SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON));
 
-        wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/default")));
-        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID)));
+        computationServerStubs.verifyParametersDefault(1);
+        computationServerStubs.verifyParametersGet(SENSITIVITY_ANALYSIS_PARAMETERS_UUID.toString());
         assertEquals(SENSITIVITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSensitivityAnalysisParametersUuid());
 
         // Set sensitivity analysis parameters (will create)
@@ -701,7 +690,7 @@ class SensitivityAnalysisTest {
 
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON, "userId", HttpStatus.OK);
 
-        wireMockServer.verify(WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/parameters")));
+        computationServerStubs.verifyParameters(1);
         assertEquals(SENSITIVITY_ANALYSIS_PARAMETERS_UUID, studyRepository.findById(studyNameUserIdUuid).orElseThrow().getSensitivityAnalysisParametersUuid());
     }
 
@@ -710,12 +699,12 @@ class SensitivityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         userAdminServerStubs.stubGetUserProfile(NO_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(wireMockServer, SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING, SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
+        computationServerStubs.stubParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING, SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
 
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PROFILE_USER_ID, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(NO_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(wireMockServer, SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
     @Test
@@ -723,12 +712,12 @@ class SensitivityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         userAdminServerStubs.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(wireMockServer, SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING, SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
+        computationServerStubs.stubParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING, SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
 
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", NO_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(wireMockServer, SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
     }
 
     @Test
@@ -737,12 +726,12 @@ class SensitivityAnalysisTest {
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(wireMockServer, SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING, SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
+        computationServerStubs.stubParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING, SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON);
         computationServerStubs.stubParametersDuplicateFromNotFound(PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", INVALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.NO_CONTENT);
 
         userAdminServerStubs.verifyGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
-        computationServerStubs.verifyParameterPut(wireMockServer, SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
+        computationServerStubs.verifyParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING);
     }
 
@@ -772,12 +761,10 @@ class SensitivityAnalysisTest {
             "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
             .willReturn(ok()));
 
-        wireMockServer.stubFor(post(urlPathMatching("/v1/results/invalidate-status.*"))
-            .withQueryParam("resultUuid", matching(".*"))
-            .willReturn(ok()));
+        computationServerStubs.stubInvalidateStatus();
 
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
-        computationServerStubs.stubParameterPut(wireMockServer, SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING, objectWriter.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS));
+        computationServerStubs.stubParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING, objectWriter.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS));
         computationServerStubs.stubParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_PARAMS_JSON);
 
         // ---------------- Run sensitivity analysis ----------------
@@ -795,18 +782,16 @@ class SensitivityAnalysisTest {
 
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
-        // run-and-save called
-        wireMockServer.verify(postRequestedFor(
-            urlPathMatching("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
-            .withQueryParam("reportType", equalTo("SensitivityAnalysis"))
-            .withQueryParam("variantId", equalTo(VARIANT_ID))
-            .withQueryParam("receiver", matching(".*"))
-        );
+        computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of(
+            "reportType", equalTo("SensitivityAnalysis"),
+            "variantId", equalTo(VARIANT_ID),
+            "receiver", matching(".*")
+        ));
         // parameters duplicated
+        userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
+        computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
         computationServerStubs.stubParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_PARAMS_JSON);
-        wireMockServer.verify(deleteRequestedFor(
-            urlPathEqualTo("/v1/parameters/" + SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING))
-        );
+        computationServerStubs.verifyDeleteParameters(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
         long invalidateCalls = wireMockServer.getAllServeEvents().stream()
             .filter(e -> e.getRequest().getUrl().startsWith("/v1/results/invalidate-status"))
             .count();
@@ -818,20 +803,13 @@ class SensitivityAnalysisTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
-        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters"))
-            .withQueryParam("duplicateFrom", equalTo(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))
-            .willReturn(WireMock.ok()
-                .withBody(DUPLICATED_PARAMS_JSON)
-                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-            ));
+        computationServerStubs.stubParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_PARAMS_JSON);
 
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         // --- Verify requests ---
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
-        wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters"))
-            .withQueryParam("duplicateFrom", equalTo(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING))
-        );
+        computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
     }
 
     @AfterEach
@@ -840,14 +818,7 @@ class SensitivityAnalysisTest {
         studyRepository.deleteAll();
 
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION, SENSITIVITY_ANALYSIS_FAILED_DESTINATION, SENSITIVITY_ANALYSIS_RESULT_DESTINATION, SENSITIVITY_ANALYSIS_STOPPED_DESTINATION);
+        TestUtils.assertWiremockServerRequestsEmptyThenShutdown(wireMockServer);
         TestUtils.assertQueuesEmptyThenClear(destinations, output);
-
-        try {
-            TestUtils.assertQueuesEmptyThenClear(
-                destinations, output
-            );
-        } catch (UncheckedInterruptedException e) {
-            LOGGER.error("Error while attempting to get the request done : ", e);
-        }
     }
 }
