@@ -633,10 +633,10 @@ class SecurityAnalysisTest {
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/contingency-count?contingencyListIds={contingencyListId}",
                 studyUuid, rootNetworkUuid, nodeUuid, CONTINGENCY_LIST_ID))
             .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        Integer integerResponse = Integer.parseInt(resultAsString);
+        resultAsString = mvcResult.getResponse().getContentAsString(); // lui est déjà internal server error
+        Map<String, Integer> count = objectMapper.readValue(resultAsString, new TypeReference<Map<String, Integer>>() { });
         Integer expectedResponse = Integer.parseInt(CONTINGENCIES_COUNT);
-        assertEquals(expectedResponse, integerResponse);
+        assertEquals(expectedResponse, count.get("contingencies"));
 
         securityAnalysisServerStubs.verifyContingencyListCount(Map.of("ids", WireMock.matching(".*")));
 
