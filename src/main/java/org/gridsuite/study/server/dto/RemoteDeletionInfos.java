@@ -19,7 +19,7 @@ import java.util.*;
 @NoArgsConstructor
 @Getter
 @Setter
-public class NodeInfos {
+public class RemoteDeletionInfos {
     protected Set<UUID> reportUuids = new HashSet<>();
     protected Set<UUID> loadFlowResultUuids = new HashSet<>();
     protected Set<UUID> securityAnalysisResultUuids = new HashSet<>();

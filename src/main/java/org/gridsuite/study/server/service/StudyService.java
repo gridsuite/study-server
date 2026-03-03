@@ -2349,8 +2349,9 @@ public class StudyService {
         List<CompletableFuture<?>> futures = new ArrayList<>();
         futures.add(studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())));
         futures.add(studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())));
-        futures.addAll(rootNetworkNodeInfoService.runRemoteDeletions(invalidateNodeInfos.toNodeInfos(invalidateNodeInfos)));
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(invalidateNodeInfos.toRemoteDeletionInfos(invalidateNodeInfos)));
+        // Do not wait completion and do not throw exception
+        return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
 
     private void deleteNodesInfos(DeleteNodeInfos deleteNodeInfos) {
@@ -2358,8 +2359,9 @@ public class StudyService {
         futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)));
         futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)));
         futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)));
-        futures.addAll(rootNetworkNodeInfoService.runRemoteDeletions(deleteNodeInfos));
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(deleteNodeInfos));
+        // Do not wait completion and do not throw exception
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
 
     @Transactional

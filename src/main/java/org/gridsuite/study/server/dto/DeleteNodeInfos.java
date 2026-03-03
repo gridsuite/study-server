@@ -19,7 +19,7 @@ import java.util.*;
 @NoArgsConstructor
 @Getter
 @Setter
-public class DeleteNodeInfos extends NodeInfos {
+public class DeleteNodeInfos extends RemoteDeletionInfos {
     private List<UUID> removedNodeUuids = new ArrayList<>();
 
     private List<UUID> modificationGroupUuids = new ArrayList<>();

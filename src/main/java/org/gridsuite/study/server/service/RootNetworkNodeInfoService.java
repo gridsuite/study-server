@@ -581,26 +581,25 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    public List<CompletableFuture<?>> runRemoteDeletions(NodeInfos infos) {
-        List<CompletableFuture<?>> futures = new ArrayList<>();
-        futures.add(studyServerExecutionService.runAsync(() -> reportService.deleteReports(infos.getReportUuids())));
-        futures.add(studyServerExecutionService.runAsync(() -> loadFlowService.deleteLoadFlowResults(infos.getLoadFlowResultUuids())));
-        futures.add(studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(infos.getSecurityAnalysisResultUuids())));
-        futures.add(studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(infos.getSensitivityAnalysisResultUuids())));
-        futures.add(studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getShortCircuitAnalysisResultUuids())));
-        futures.add(studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getOneBusShortCircuitAnalysisResultUuids())));
-        futures.add(studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(infos.getVoltageInitResultUuids())));
-        futures.add(studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(infos.getDynamicSimulationResultUuids())));
-        futures.add(studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(infos.getDynamicSecurityAnalysisResultUuids())));
-        futures.add(studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(infos.getDynamicMarginCalculationResultUuids())));
-        futures.add(studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(infos.getStateEstimationResultUuids())));
-        futures.add(studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(infos.getPccMinResultUuids())));
-
-        return futures;
+    public List<CompletableFuture<?>> getRemoteDeletions(RemoteDeletionInfos infos) {
+        return List.of(
+            studyServerExecutionService.runAsync(() -> reportService.deleteReports(infos.getReportUuids())),
+            studyServerExecutionService.runAsync(() -> loadFlowService.deleteLoadFlowResults(infos.getLoadFlowResultUuids())),
+            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(infos.getSecurityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(infos.getSensitivityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getShortCircuitAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getOneBusShortCircuitAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(infos.getVoltageInitResultUuids())),
+            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(infos.getDynamicSimulationResultUuids())),
+            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(infos.getDynamicSecurityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(infos.getDynamicMarginCalculationResultUuids())),
+            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(infos.getStateEstimationResultUuids())),
+            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(infos.getPccMinResultUuids()))
+        );
     }
 
-    public NodeInfos getNodeInfos(List<RootNetworkNodeInfo> rootNetworkNodeInfos) {
-        NodeInfos infos = new NodeInfos();
+    public RemoteDeletionInfos getRemoteDeletionInfos(List<RootNetworkNodeInfo> rootNetworkNodeInfos) {
+        RemoteDeletionInfos infos = new RemoteDeletionInfos();
         infos.setReportUuids(rootNetworkNodeInfos.stream().map(this::getReportUuids).flatMap(Collection::stream).collect(Collectors.toSet()));
         infos.setLoadFlowResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getLoadFlowResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
         infos.setSecurityAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getSecurityAnalysisResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
@@ -620,9 +619,8 @@ public class RootNetworkNodeInfoService {
         if (rootNetworkNodeInfos == null || rootNetworkNodeInfos.isEmpty()) {
             return;
         }
-        NodeInfos infos = getNodeInfos(rootNetworkNodeInfos);
-        List<CompletableFuture<?>> futures = runRemoteDeletions(infos);
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        // Do not wait completion and do not throw exception
+        CompletableFuture.allOf(getRemoteDeletions(getRemoteDeletionInfos(rootNetworkNodeInfos)).toArray(CompletableFuture[]::new));
     }
 
     @Transactional

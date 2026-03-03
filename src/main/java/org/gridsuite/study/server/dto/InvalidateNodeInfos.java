@@ -19,7 +19,7 @@ import java.util.UUID;
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @NoArgsConstructor
-public class InvalidateNodeInfos extends NodeInfos {
+public class InvalidateNodeInfos extends RemoteDeletionInfos {
     @Getter
     @Setter
     private UUID networkUuid;
@@ -72,8 +72,8 @@ public class InvalidateNodeInfos extends NodeInfos {
         dynamicMarginCalculationResultUuids.addAll(invalidateNodeInfos.getDynamicMarginCalculationResultUuids());
     }
 
-    public NodeInfos toNodeInfos(InvalidateNodeInfos invalidateNodeInfos) {
-        NodeInfos infos = new NodeInfos();
+    public RemoteDeletionInfos toRemoteDeletionInfos(InvalidateNodeInfos invalidateNodeInfos) {
+        RemoteDeletionInfos infos = new RemoteDeletionInfos();
         infos.setReportUuids(new HashSet<>(invalidateNodeInfos.getReportUuids()));
         infos.setLoadFlowResultUuids(new HashSet<>(invalidateNodeInfos.getLoadFlowResultUuids()));
         infos.setSecurityAnalysisResultUuids(new HashSet<>(invalidateNodeInfos.getSecurityAnalysisResultUuids()));
