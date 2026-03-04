@@ -726,10 +726,6 @@ public class WireMockStubs {
         verifyHeadRequest(wireMock, stubId, "/v1/networks/" + networkUuid + "/indexed-equipments", Map.of(), nbRequests);
     }
 
-    public void verifyDefaultProvider(UUID stubId, int nbRequests) {
-        verifyGetRequest(wireMock, stubId, "/v1/default-provider", Map.of(), nbRequests);
-    }
-
     public void verifyReportsDuplicate(UUID stubId) {
         verifyPostRequest(wireMock, stubId, "/v1/reports/.*/duplicate", true, Map.of(), null);
     }

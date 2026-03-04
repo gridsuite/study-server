@@ -178,17 +178,6 @@ public class LoadflowServerStubs {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of());
     }
 
-    public void stubGetDefaultProvider(String responseBody) {
-        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/default-provider"))
-                .willReturn(WireMock.ok().withBody(responseBody)
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
-        );
-    }
-
-    public void verifyGetDefaultProvider() {
-        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/default-provider", Map.of());
-    }
-
     public void stubGetResultsCount(String responseBody) {
         wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/supervision/results-count"))
                 .willReturn(WireMock.ok().withBody(responseBody)
@@ -216,17 +205,6 @@ public class LoadflowServerStubs {
 
     public void verifyDuplicateLoadflowParameters(String loadflowParametersToDuplicateUuid) {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of("duplicateFrom", WireMock.equalTo(loadflowParametersToDuplicateUuid)));
-    }
-
-    public void stubPutLoadflowProvider(String parametersUuid, String providerName) {
-        wireMock.stubFor(WireMock.put(WireMock.urlEqualTo("/v1/parameters/" + parametersUuid + "/provider"))
-                .withRequestBody(new EqualToPattern(providerName))
-                .willReturn(WireMock.ok())
-        );
-    }
-
-    public void verifyPutLoadflowProvider(String parametersUuid) {
-        WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/parameters/" + parametersUuid + "/provider", Map.of(), null);
     }
 
     public void stubDeleteLoadFlowParameters(String parametersUuid) {
