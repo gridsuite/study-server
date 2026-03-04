@@ -129,14 +129,12 @@ class LoadFlowTest {
     private static final String USER_ID_HEADER = "userId";
 
     private static final String DEFAULT_PROVIDER = "defaultProvider";
-    private static final String OTHER_PROVIDER = "otherProvider";
 
     private static String LIMIT_VIOLATIONS_JSON;
 
     private static String COMPUTING_STATUS_JSON;
 
     private static String LOADFLOW_DEFAULT_PARAMETERS_JSON;
-    private static String LOADFLOW_PROFILE_PARAMETERS_JSON;
 
     //output destinations
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
@@ -241,13 +239,6 @@ class LoadFlowTest {
                 .specificParametersPerProvider(Map.of())
                 .build();
         LOADFLOW_DEFAULT_PARAMETERS_JSON = objectMapper.writeValueAsString(loadFlowParametersInfos);
-        LoadFlowParametersInfos profileLoadFlowParametersInfos = LoadFlowParametersInfos.builder()
-                .provider(OTHER_PROVIDER)
-                .commonParameters(LoadFlowParameters.load())
-                .specificParametersPerProvider(Map.of())
-                .build();
-        LOADFLOW_PROFILE_PARAMETERS_JSON = objectMapper.writeValueAsString(profileLoadFlowParametersInfos);
-
     }
 
     private void assertNodeBlocked(UUID nodeUuid, UUID rootNetworkUuid, boolean isNodeBlocked) {
@@ -644,12 +635,10 @@ class LoadFlowTest {
         testMessages(studyNameUserIdUuid);
     }
 
-    private void updateParametersAndDoChecksForResetLoadFlowParameters(UUID studyNameUserIdUuid, String loadflowParametersUuid, String userId, String returnedUserProfileJson, String duplicateFromUuid, String returnedLoadFlowParameters) throws Exception {
+    private void updateParametersAndDoChecksForResetLoadFlowParameters(UUID studyNameUserIdUuid, String loadflowParametersUuid, String userId, String returnedUserProfileJson, String duplicateFromUuid) throws Exception {
         UUID duplicatedLoadflowParametersUuid = UUID.randomUUID();
         wireMockStubs.userAdminServer.stubGetUserProfile(userId, returnedUserProfileJson);
         wireMockStubs.loadflowServer.stubDuplicateLoadflowParameters(duplicateFromUuid, objectMapper.writeValueAsString(duplicatedLoadflowParametersUuid), false);
-        wireMockStubs.loadflowServer.stubGetLoadflowParameters(loadflowParametersUuid, returnedLoadFlowParameters, false);
-        wireMockStubs.loadflowServer.stubPutLoadflowProvider(duplicatedLoadflowParametersUuid.toString(), PROVIDER);
         wireMockStubs.loadflowServer.stubDeleteLoadFlowParameters(loadflowParametersUuid);
 
         mockMvc.perform(
@@ -660,8 +649,6 @@ class LoadFlowTest {
                 .andExpect(status().is(HttpStatus.OK.value()));
         wireMockStubs.userAdminServer.verifyGetUserProfile(userId);
         wireMockStubs.loadflowServer.verifyDuplicateLoadflowParameters(duplicateFromUuid);
-        wireMockStubs.loadflowServer.verifyGetLoadflowParameters(loadflowParametersUuid);
-        wireMockStubs.loadflowServer.verifyPutLoadflowProvider(duplicatedLoadflowParametersUuid.toString());
         wireMockStubs.loadflowServer.verifyDeleteLoadFlowParameters(loadflowParametersUuid);
 
         testMessages(studyNameUserIdUuid);
@@ -739,7 +726,7 @@ class LoadFlowTest {
     void testResetLoadFlowParametersUserHasValidParamsInProfile() throws Exception {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, LOADFLOW_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
-        updateParametersAndDoChecksForResetLoadFlowParameters(studyNameUserIdUuid, LOADFLOW_PARAMETERS_UUID_STRING, VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING, LOADFLOW_DEFAULT_PARAMETERS_JSON);
+        updateParametersAndDoChecksForResetLoadFlowParameters(studyNameUserIdUuid, LOADFLOW_PARAMETERS_UUID_STRING, VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING);
     }
 
     @Test
@@ -747,53 +734,6 @@ class LoadFlowTest {
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_LOADFLOW_UUID, null);
         UUID studyNameUserIdUuid = studyEntity.getId();
         createParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON, true, PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING);
-    }
-
-    // the following testGetDefaultProviders tests are related to StudyTest::testGetDefaultProviders but with a user and different profile cases
-    @Test
-    void testGetDefaultProvidersFromProfile() throws Exception {
-        wireMockStubs.userAdminServer.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
-        wireMockStubs.loadflowServer.stubGetLoadflowParameters(PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING, LOADFLOW_PROFILE_PARAMETERS_JSON, false);
-        mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, VALID_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
-                status().isOk(),
-                content().string(OTHER_PROVIDER));
-        wireMockStubs.userAdminServer.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
-        wireMockStubs.loadflowServer.verifyGetLoadflowParameters(PROFILE_LOADFLOW_VALID_PARAMETERS_UUID_STRING);
-    }
-
-    @Test
-    void testGetDefaultProvidersFromProfileInvalid() throws Exception {
-        wireMockStubs.userAdminServer.stubGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_INVALID_PARAMS_JSON);
-        wireMockStubs.loadflowServer.stubGetLoadflowParameters(PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING, null, true);
-        wireMockStubs.loadflowServer.stubGetDefaultProvider(DEFAULT_PROVIDER);
-        mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, INVALID_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
-                status().isOk(),
-                content().string(DEFAULT_PROVIDER));
-        wireMockStubs.userAdminServer.verifyGetUserProfile(INVALID_PARAMS_IN_PROFILE_USER_ID);
-        wireMockStubs.loadflowServer.verifyGetLoadflowParameters(PROFILE_LOADFLOW_INVALID_PARAMETERS_UUID_STRING);
-        wireMockStubs.loadflowServer.verifyGetDefaultProvider();
-    }
-
-    @Test
-    void testGetDefaultProvidersWithoutProfile() throws Exception {
-        wireMockStubs.userAdminServer.stubGetUserProfile(NO_PROFILE_USER_ID, USER_DEFAULT_PROFILE_JSON);
-        wireMockStubs.loadflowServer.stubGetDefaultProvider(DEFAULT_PROVIDER);
-        mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, NO_PROFILE_USER_ID)).andExpectAll(
-                status().isOk(),
-                content().string(DEFAULT_PROVIDER));
-        wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
-        wireMockStubs.loadflowServer.verifyGetDefaultProvider();
-    }
-
-    @Test
-    void testGetDefaultProvidersWithoutParamInProfile() throws Exception {
-        wireMockStubs.userAdminServer.stubGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_NO_PARAMS_JSON);
-        wireMockStubs.loadflowServer.stubGetDefaultProvider(DEFAULT_PROVIDER);
-        mockMvc.perform(get("/v1/loadflow-default-provider").header(USER_ID_HEADER, NO_PARAMS_IN_PROFILE_USER_ID)).andExpectAll(
-                status().isOk(),
-                content().string(DEFAULT_PROVIDER));
-        wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PARAMS_IN_PROFILE_USER_ID);
-        wireMockStubs.loadflowServer.verifyGetDefaultProvider();
     }
 
     @Test

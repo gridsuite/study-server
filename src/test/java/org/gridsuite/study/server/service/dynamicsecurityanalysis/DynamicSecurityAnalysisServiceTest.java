@@ -196,24 +196,6 @@ class DynamicSecurityAnalysisServiceTest {
     }
 
     @Test
-    void testUpdateProvider() {
-        doNothing().when(dynamicSecurityAnalysisClient).updateProvider(PARAMETERS_UUID, DYNAWO_PROVIDER);
-
-        dynamicSecurityAnalysisService.updateProvider(PARAMETERS_UUID, DYNAWO_PROVIDER);
-
-        verify(dynamicSecurityAnalysisClient, times(1)).updateProvider(PARAMETERS_UUID, DYNAWO_PROVIDER);
-    }
-
-    @Test
-    void testGetDefaultProvider() {
-        given(dynamicSecurityAnalysisClient.getDefaultProvider()).willReturn(DYNAWO_PROVIDER);
-
-        String provider = dynamicSecurityAnalysisService.getDefaultProvider();
-
-        assertThat(provider).isEqualTo(DYNAWO_PROVIDER);
-    }
-
-    @Test
     void testGetProvider() {
         given(dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID)).willReturn(DYNAWO_PROVIDER);
 

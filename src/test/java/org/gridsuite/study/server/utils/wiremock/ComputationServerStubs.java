@@ -20,7 +20,6 @@ import java.util.UUID;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyDeleteRequest;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPostRequest;
-import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPutRequest;
 
 /**
  * @author Maissa Souissi <maissa.souissi@rte-france.com>
@@ -194,10 +193,6 @@ public class ComputationServerStubs {
 
     public void verifyDeleteParameters(UUID stubId, int nbRequests) {
         verifyDeleteRequest(wireMock, stubId, "/v1/parameters/.*", true, Map.of(), nbRequests);
-    }
-
-    public void verifyParametersProvider(UUID stubId, int nbRequests) {
-        verifyPutRequest(wireMock, stubId, "/v1/parameters/.*/provider", true, Map.of(), null, nbRequests);
     }
 
     /*    Results     */

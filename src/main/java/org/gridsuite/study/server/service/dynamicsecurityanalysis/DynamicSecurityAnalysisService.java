@@ -119,14 +119,6 @@ public class DynamicSecurityAnalysisService {
         return studyEntity.getDynamicSecurityAnalysisParametersUuid();
     }
 
-    public void updateProvider(UUID parametersUuid, String provider) {
-        dynamicSecurityAnalysisClient.updateProvider(parametersUuid, provider);
-    }
-
-    public String getDefaultProvider() {
-        return dynamicSecurityAnalysisClient.getDefaultProvider();
-    }
-
     public String getProvider(UUID parametersUuid) {
         return dynamicSecurityAnalysisClient.getProvider(parametersUuid);
     }
