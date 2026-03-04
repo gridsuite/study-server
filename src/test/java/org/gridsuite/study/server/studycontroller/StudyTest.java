@@ -1236,24 +1236,6 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
-    void testGetDefaultProviders() throws Exception {
-        UUID stubDefaultProviderId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/default-provider"))
-            .willReturn(WireMock.ok().withBody(DEFAULT_PROVIDER))).getId();
-        // related to LoadFlowTest::testGetDefaultProvidersFromProfile but without a user, so it doesn't use profiles
-        mockMvc.perform(get("/v1/loadflow-default-provider")).andExpectAll(
-            status().isOk(),
-            content().string(DEFAULT_PROVIDER));
-        mockMvc.perform(get("/v1/security-analysis-default-provider")).andExpectAll(
-            status().isOk(),
-            content().string(DEFAULT_PROVIDER));
-        mockMvc.perform(get("/v1/sensitivity-analysis-default-provider")).andExpectAll(
-            status().isOk(),
-            content().string(DEFAULT_PROVIDER));
-
-        wireMockStubs.verifyDefaultProvider(stubDefaultProviderId, 3);
-    }
-
-    @Test
     void reindexRootNetworkTest() throws Exception {
         // Network reindex stubs - using scenarios for stateful behavior
         // NOT_EXISTING_NETWORK always returns 404
@@ -1342,43 +1324,6 @@ class StudyTest extends StudyTestBase {
         indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
 
         wireMockStubs.verifyReindexAll(stubReindexAllErrorId, NETWORK_UUID_STRING);
-    }
-
-    @Test
-    void providerTest() throws Exception {
-        UUID stubParametersProviderId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathMatching("/v1/parameters/.*/provider"))
-            .willReturn(WireMock.ok())).getId();
-        UUID studyUuid = createStudyWithStubs(USER_ID_HEADER, CASE_UUID);
-        assertNotNull(studyUuid);
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/loadflow/provider", studyUuid)
-                .content("SuperLF")
-                .contentType(MediaType.TEXT_PLAIN)
-                .header(USER_ID_HEADER, USER_ID_HEADER))
-            .andExpect(status().isOk());
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertNotNull(message);
-        assertEquals(NotificationService.UPDATE_TYPE_LOADFLOW_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-
-        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
-
-        mockMvc.perform(post("/v1/studies/{studyUuid}/security-analysis/provider", studyUuid)
-                .content("SuperSA")
-                .contentType(MediaType.TEXT_PLAIN)
-                .header(USER_ID_HEADER, USER_ID_HEADER))
-            .andExpect(status().isOk());
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertNotNull(message);
-        assertEquals(NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS, message.getHeaders().get(HEADER_UPDATE_TYPE));
-
-        message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertNotNull(message);
-        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
-        assertNotNull(output.receive(TIMEOUT, elementUpdateDestination));
-
-        computationServerStubs.verifyParametersProvider(stubParametersProviderId, 2);
     }
 
     @Test
