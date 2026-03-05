@@ -153,7 +153,6 @@ class ComputationResultFiltersTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/global-filters", study.getId(), COMPUTATION_TYPE)
                 .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
         verifyDefaultFiltersCalledOnce();
-        // When a new computationResultFiltersId is created, a notification is emitted
         checkComputationResultTabUpdateMessageReceived(study.getId(), COMPUTATION_TYPE, null);
         wireMockServer.resetRequests();
 
