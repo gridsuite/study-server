@@ -1950,8 +1950,7 @@ public class StudyService {
         assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         StudyEntity studyEntity = getStudy(targetStudyUuid);
-        StudyEntity sourceStudyEntity = getStudy(sourceStudyUuid);
-        UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity, sourceStudyEntity, false);
+        UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity);
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
@@ -2406,13 +2405,7 @@ public class StudyService {
 
             NetworkModificationsResult networkModificationResults = networkModificationService.duplicateOrInsertModifications(groupUuid, action, Pair.of(modifications, modificationApplicationContexts));
 
-            if (targetStudyUuid.equals(originStudyUuid)) {
-                Map<UUID, UUID> originToDuplicateModificationsUuids = new HashMap<>();
-                for (int i = 0; i < modifications.size(); i++) {
-                    originToDuplicateModificationsUuids.put(modifications.get(i).getUuid(), networkModificationResults.modificationUuids().get(i));
-                }
-                rootNetworkNodeInfoService.copyModificationsToExclude(originNodeUuid, targetNodeUuid, originToDuplicateModificationsUuids);
-            }
+            copyModificationsToExclude(originNodeUuid, targetNodeUuid, modifications, networkModificationResults);
 
             if (networkModificationResults != null) {
                 int index = 0;
@@ -2429,6 +2422,17 @@ public class StudyService {
             notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(targetStudyUuid, userId);
+    }
+
+    private void copyModificationsToExclude(UUID originNodeUuid,
+                                            UUID targetNodeUuid,
+                                            List<ModificationsToCopyInfos> modifications, NetworkModificationsResult networkModificationResults) {
+        Map<UUID, UUID> mappingModificationsUuids = new HashMap<>();
+        for (int i = 0; i < modifications.size(); i++) {
+            mappingModificationsUuids.put(modifications.get(i).getUuid(), networkModificationResults.modificationUuids().get(i));
+        }
+
+        rootNetworkNodeInfoService.copyModificationsToExcludeFromTags(originNodeUuid, targetNodeUuid, mappingModificationsUuids);
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
