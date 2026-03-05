@@ -289,30 +289,6 @@ public class LoadFlowService extends AbstractComputationService {
         restTemplate.delete(loadFlowServerBaseUri + path);
     }
 
-    public void updateLoadFlowProvider(UUID parameterUuid, String provider) {
-        Objects.requireNonNull(provider);
-
-        var path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI + "/provider")
-                .buildAndExpand(parameterUuid)
-                .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
-
-        restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
-    }
-
-    public String getLoadFlowDefaultProvider() {
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/default-provider")
-                .buildAndExpand()
-                .toUriString();
-
-        return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
-    }
-
     public UUID createDefaultLoadFlowParameters() {
 
         var path = UriComponentsBuilder

@@ -319,15 +319,6 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
     }
 
-    public String getSensitivityAnalysisDefaultProvider() {
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/default-provider")
-                .buildAndExpand()
-                .toUriString();
-
-        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
-    }
-
     public String getSensitivityAnalysisFactorCount(UUID networkUuid, String variantId, String sensitivityAnalysisParameters) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/factor-count");

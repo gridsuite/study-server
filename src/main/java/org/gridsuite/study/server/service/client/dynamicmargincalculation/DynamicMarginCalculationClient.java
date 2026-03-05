@@ -57,17 +57,6 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
     }
 
     // --- Related parameters methods --- //
-
-    public String getDefaultProvider() {
-        String rootBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, null);
-
-        String url = UriComponentsBuilder
-                .fromUriString(rootBaseUrl + "/default-provider")
-                .toUriString();
-
-        return getRestTemplate().getForObject(url, String.class);
-    }
-
     public String getProvider(@NonNull UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
         String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER);
@@ -78,26 +67,6 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
                 .toUriString();
 
         return getRestTemplate().getForObject(url, String.class);
-    }
-
-    public void updateProvider(@NonNull UUID parametersUuid, @NonNull String provider) {
-        Objects.requireNonNull(parametersUuid);
-        Objects.requireNonNull(provider);
-
-        String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER);
-
-        String url = UriComponentsBuilder
-                .fromUriString(parametersBaseUrl + "/{uuid}/provider")
-                .buildAndExpand(parametersUuid)
-                .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
-
-        // call dynamic-margin-calculation REST API
-        getRestTemplate().put(url, httpEntity);
     }
 
     public String getParameters(@NonNull UUID parametersUuid, String userId) {

@@ -80,7 +80,6 @@ class StudyControllerDynamicMarginCalculationTest {
     private static final String STUDY_BASE_URL = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
     private static final String STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-margin-calculation/run";
     private static final String STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETERS = "{studyUuid}/dynamic-margin-calculation/parameters";
-    private static final String STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_PROVIDER = "{studyUuid}/dynamic-margin-calculation/provider";
     private static final String STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_STATUS = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-margin-calculation/status";
 
     private static final String HEADER_USER_ID_NAME = "userId";
@@ -529,28 +528,6 @@ class StudyControllerDynamicMarginCalculationTest {
         LOGGER.info("Parameters result in Json = {}", resultJson);
         assertThat(resultJson).isEqualTo(jsonParameters);
 
-    }
-
-    @Test
-    void testSetDynamicMarginCalculationProvider() throws Exception {
-        // create a node in the db
-        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
-        UUID studyUuid = studyEntity.getId();
-
-        // setup DynamicMarginCalculationService mock
-        doAnswer(invocation -> null)
-                .when(spyDynamicMarginCalculationService).updateProvider(any(), any());
-
-        // --- call endpoint to be tested --- //
-        // set parameters
-        studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_MARGIN_CALCULATION_END_POINT_PROVIDER, studyUuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(DYNAWO_PROVIDER)))
-                .andExpect(status().isOk());
-
-        // check notifications
-        checkNotificationsAfterModifyingDynamicMarginCalculationParameters(studyUuid);
     }
 
     private void checkNotificationsAfterModifyingDynamicMarginCalculationParameters(UUID studyUuid) {

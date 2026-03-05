@@ -196,24 +196,6 @@ class DynamicMarginCalculationServiceTest {
     }
 
     @Test
-    void testUpdateProvider() {
-        doNothing().when(dynamicMarginCalculationClient).updateProvider(PARAMETERS_UUID, DYNAWO_PROVIDER);
-
-        dynamicMarginCalculationService.updateProvider(PARAMETERS_UUID, DYNAWO_PROVIDER);
-
-        verify(dynamicMarginCalculationClient, times(1)).updateProvider(PARAMETERS_UUID, DYNAWO_PROVIDER);
-    }
-
-    @Test
-    void testGetDefaultProvider() {
-        given(dynamicMarginCalculationClient.getDefaultProvider()).willReturn(DYNAWO_PROVIDER);
-
-        String provider = dynamicMarginCalculationService.getDefaultProvider();
-
-        assertThat(provider).isEqualTo(DYNAWO_PROVIDER);
-    }
-
-    @Test
     void testGetProvider() {
         given(dynamicMarginCalculationClient.getProvider(PARAMETERS_UUID)).willReturn(DYNAWO_PROVIDER);
 
