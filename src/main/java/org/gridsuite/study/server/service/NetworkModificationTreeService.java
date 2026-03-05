@@ -440,7 +440,7 @@ public class NetworkModificationTreeService {
     public void duplicateStudyNodes(StudyEntity studyEntity, StudyEntity sourceStudyEntity) {
         createRoot(studyEntity);
         AbstractNode rootNode = getStudyTree(sourceStudyEntity.getId(), null);
-        cloneStudyTree(rootNode, null, studyEntity);
+        this.cloneStudyTree(rootNode, null, studyEntity);
     }
 
     @Transactional
