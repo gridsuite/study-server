@@ -117,16 +117,28 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    public void duplicateNodeLinks(List<RootNetworkNodeInfoEntity> sourceNodeLinks, @NonNull NetworkModificationNodeInfoEntity destinationNodeInfoEntity, Map<UUID, UUID> originToDuplicateModificationUuidMap, Map<RootNetworkEntity, RootNetworkEntity> originToDuplicateRootNetworkMap) {
-        // For each root network create a link with the node
-        sourceNodeLinks.forEach(nodeLink -> {
-            // when duplicating a rootNetworkNodeInfoEntity, we need to keep modificationsToExclude
-            // use correspondence map to use duplicate modification uuids
-            RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity = createDefaultEntity(
-                destinationNodeInfoEntity.getId(),
-                nodeLink.getModificationsUuidsToExclude().stream().map(originToDuplicateModificationUuidMap::get).collect(Collectors.toSet())
+    public void createNodeLinksFromTags(@NonNull StudyEntity targetStudy,
+                                        @NonNull NetworkModificationNodeInfoEntity originNodeInfo, NetworkModificationNodeInfoEntity targetNodeInfo,
+                                        @NonNull Map<UUID, UUID> mappingModificationUuids) {
+        Map<UUID, RootNetworkNodeInfoEntity> mappingRootNetworksFromTag = new HashMap<>();
+        targetStudy.getRootNetworks().forEach(targetRootNetwork -> {
+            Optional<RootNetworkNodeInfoEntity> originRootNetworkNodeInfo = originNodeInfo.getRootNetworkNodeInfos().stream().filter(originRootNetworkNode -> originRootNetworkNode.getRootNetwork().getTag().equals(targetRootNetwork.getTag())).findFirst();
+            originRootNetworkNodeInfo.ifPresent(originRootNetworkNodeInfoEntity ->
+                mappingRootNetworksFromTag.put(targetRootNetwork.getId(), originRootNetworkNodeInfoEntity)
             );
-            addLink(destinationNodeInfoEntity, originToDuplicateRootNetworkMap.get(nodeLink.getRootNetwork()), newRootNetworkNodeInfoEntity);
+        });
+
+        targetStudy.getRootNetworks().forEach(targetRootNetwork -> {
+            RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity;
+            if (mappingRootNetworksFromTag.containsKey(targetRootNetwork.getId())) {
+                newRootNetworkNodeInfoEntity = createDefaultEntity(
+                    targetNodeInfo.getId(),
+                    mappingRootNetworksFromTag.get(targetRootNetwork.getId()).getModificationsUuidsToExclude().stream().map(mappingModificationUuids::get).collect(Collectors.toSet())
+                );
+            } else {
+                newRootNetworkNodeInfoEntity = createDefaultEntity(targetNodeInfo.getId());
+            }
+            addLink(targetNodeInfo, targetRootNetwork, newRootNetworkNodeInfoEntity);
         });
     }
 
@@ -526,12 +538,24 @@ public class RootNetworkNodeInfoService {
             }));
     }
 
-    public void copyModificationsToExclude(UUID originNodeUuid, UUID targetNodeUuid, Map<UUID, UUID> originToDuplicateModificationsUuids) {
-        rootNetworkNodeInfoRepository.findAllByNodeInfoId(originNodeUuid)
-            .forEach(originRootNetworkNodeInfoEntity -> getRootNetworkNodeInfo(targetNodeUuid, originRootNetworkNodeInfoEntity.getRootNetwork().getId()).ifPresent(targetRootNetworkNodeInfoEntity -> {
-                Set<UUID> modificationsToCopy = originRootNetworkNodeInfoEntity.getModificationsUuidsToExclude().stream().map(originToDuplicateModificationsUuids::get).filter(Objects::nonNull).collect(Collectors.toSet());
-                targetRootNetworkNodeInfoEntity.addModificationsToExclude(modificationsToCopy);
-            }));
+    public void copyModificationsToExcludeFromTags(UUID originNodeUuid, UUID targetNodeUuid, Map<UUID, UUID> mappingModificationsUuids) {
+        Map<UUID, RootNetworkNodeInfoEntity> mappingRootNetworksFromTag = new HashMap<>();
+        List<RootNetworkNodeInfoEntity> originRootNetworksNodeInfos = rootNetworkNodeInfoRepository.findAllWithRootNetworkByNodeInfoId(originNodeUuid);
+        List<RootNetworkNodeInfoEntity> targetRootNetworksNodeInfos = rootNetworkNodeInfoRepository.findAllWithRootNetworkByNodeInfoId(targetNodeUuid);
+
+        originRootNetworksNodeInfos.forEach(originRootNetworkNodeInfo -> {
+            Optional<RootNetworkNodeInfoEntity> targetRootNetworkNodeInfo = targetRootNetworksNodeInfos.stream().filter(targetRootNetworkNode -> targetRootNetworkNode.getRootNetwork().getTag().equals(originRootNetworkNodeInfo.getRootNetwork().getTag())).findFirst();
+            targetRootNetworkNodeInfo.ifPresent(targetRootNetworkNodeInfoEntity ->
+                mappingRootNetworksFromTag.put(originRootNetworkNodeInfo.getId(), targetRootNetworkNodeInfoEntity)
+            );
+        });
+
+        originRootNetworksNodeInfos.forEach(originRootNetworkNodeInfo -> {
+            if (mappingRootNetworksFromTag.containsKey(originRootNetworkNodeInfo.getId())) {
+                Set<UUID> modificationsToCopy = originRootNetworkNodeInfo.getModificationsUuidsToExclude().stream().map(mappingModificationsUuids::get).filter(Objects::nonNull).collect(Collectors.toSet());
+                mappingRootNetworksFromTag.get(originRootNetworkNodeInfo.getId()).addModificationsToExclude(modificationsToCopy);
+            }
+        });
     }
 
     @Transactional
@@ -581,22 +605,46 @@ public class RootNetworkNodeInfoService {
         }
     }
 
-    public void deleteRootNetworkNodeRemoteInfos(List<RootNetworkNodeInfo> rootNetworkNodeInfo) {
-        CompletableFuture.allOf(
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkNodeInfo.stream().map(this::getReportUuids).flatMap(Collection::stream).toList())),
-            studyServerExecutionService.runAsync(() -> loadFlowService.deleteLoadFlowResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getLoadFlowResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(rootNetworkNodeInfo.stream()
-                    .map(RootNetworkNodeInfo::getSecurityAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getSensitivityAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getShortCircuitAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getOneBusShortCircuitAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicSimulationResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicSecurityAnalysisResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getDynamicMarginCalculationResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).toList())),
-            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(rootNetworkNodeInfo.stream().map(RootNetworkNodeInfo::getPccMinResultUuid).filter(Objects::nonNull).toList()))
+    public List<CompletableFuture<?>> getRemoteDeletions(RemoteDeletionInfos infos) {
+        return List.of(
+            studyServerExecutionService.runAsync(() -> reportService.deleteReports(infos.getReportUuids())),
+            studyServerExecutionService.runAsync(() -> loadFlowService.deleteLoadFlowResults(infos.getLoadFlowResultUuids())),
+            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(infos.getSecurityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(infos.getSensitivityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getShortCircuitAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getOneBusShortCircuitAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(infos.getVoltageInitResultUuids())),
+            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(infos.getDynamicSimulationResultUuids())),
+            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(infos.getDynamicSecurityAnalysisResultUuids())),
+            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(infos.getDynamicMarginCalculationResultUuids())),
+            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(infos.getStateEstimationResultUuids())),
+            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(infos.getPccMinResultUuids()))
         );
+    }
+
+    public RemoteDeletionInfos getRemoteDeletionInfos(List<RootNetworkNodeInfo> rootNetworkNodeInfos) {
+        RemoteDeletionInfos infos = new RemoteDeletionInfos();
+        infos.setReportUuids(rootNetworkNodeInfos.stream().map(this::getReportUuids).flatMap(Collection::stream).collect(Collectors.toSet()));
+        infos.setLoadFlowResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getLoadFlowResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setSecurityAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getSecurityAnalysisResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setSensitivityAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getSensitivityAnalysisResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setShortCircuitAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getShortCircuitAnalysisResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setOneBusShortCircuitAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getOneBusShortCircuitAnalysisResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setVoltageInitResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getVoltageInitResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setDynamicSimulationResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getDynamicSimulationResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setDynamicSecurityAnalysisResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getDynamicSecurityAnalysisResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setDynamicMarginCalculationResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getDynamicMarginCalculationResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setStateEstimationResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getStateEstimationResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        infos.setPccMinResultUuids(rootNetworkNodeInfos.stream().map(RootNetworkNodeInfo::getPccMinResultUuid).filter(Objects::nonNull).collect(Collectors.toSet()));
+        return infos;
+    }
+
+    public void deleteRootNetworkNodeRemoteInfos(List<RootNetworkNodeInfo> rootNetworkNodeInfos) {
+        if (rootNetworkNodeInfos == null || rootNetworkNodeInfos.isEmpty()) {
+            return;
+        }
+        // Do not wait completion and do not throw exception
+        CompletableFuture.allOf(getRemoteDeletions(getRemoteDeletionInfos(rootNetworkNodeInfos)).toArray(CompletableFuture[]::new));
     }
 
     @Transactional
