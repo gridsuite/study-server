@@ -8,10 +8,12 @@ package org.gridsuite.study.server;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.StudyConfigService;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,15 +23,21 @@ import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.MediaType;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.List;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.utils.assertions.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -44,6 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfigurationWithTestChannel
 class ComputationResultFiltersTest {
     private static final String BASE_URI = "/v1/computation-result-filters/";
+    private static final String STUDY_UPDATE_DESTINATION = "study.update";
     public static final String DEFAULT = "default";
     private static final String COMPUTATION_FILTERS_JSON = "{\"computationResultFilters\":[]}";
     private static final UUID COMPUTATION_FILTERS_UUID = UUID.randomUUID();
@@ -52,6 +61,8 @@ class ComputationResultFiltersTest {
     private WireMockServer wireMockServer;
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private OutputDestination output;
     @Autowired
     private StudyConfigService studyConfigService;
     @Autowired
@@ -142,6 +153,8 @@ class ComputationResultFiltersTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/global-filters", study.getId(), COMPUTATION_TYPE)
                 .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
         verifyDefaultFiltersCalledOnce();
+        // When a new computationResultFiltersId is created, a notification is emitted
+        checkComputationResultTabUpdateMessageReceived(study.getId(), COMPUTATION_TYPE, null);
         wireMockServer.resetRequests();
 
         study = insertDummyStudy(COMPUTATION_FILTERS_UUID);
@@ -149,6 +162,7 @@ class ComputationResultFiltersTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/global-filters", study.getId(), COMPUTATION_TYPE)
                 .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
         verifyDefaultFiltersNotCalled();
+        checkComputationResultTabUpdateMessageReceived(study.getId(), COMPUTATION_TYPE, null);
         wireMockServer.resetRequests();
     }
 
@@ -159,7 +173,21 @@ class ComputationResultFiltersTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/{computationSubType}/columns", study.getId(),
                 COMPUTATION_TYPE, COMPUTATION_SUB_TYPE).contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
         verifyDefaultFiltersNotCalled();
+        checkComputationResultTabUpdateMessageReceived(study.getId(), COMPUTATION_TYPE, COMPUTATION_SUB_TYPE);
         wireMockServer.resetRequests();
+    }
+
+    private void checkComputationResultTabUpdateMessageReceived(UUID studyUuid, String expectedComputationType, String expectedComputationSubtype) {
+        Message<byte[]> messageStudyUpdate = output.receive(1000, STUDY_UPDATE_DESTINATION);
+        MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
+        assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
+        assertEquals(NotificationService.UPDATE_COMPUTATION_RESULT_TAB, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(expectedComputationType, headersStudyUpdate.get(NotificationService.HEADER_COMPUTATION_TYPE));
+        if (expectedComputationSubtype == null) {
+            assertNull(headersStudyUpdate.get(NotificationService.HEADER_COMPUTATION_SUBTYPE));
+        } else {
+            assertEquals(expectedComputationSubtype, headersStudyUpdate.get(NotificationService.HEADER_COMPUTATION_SUBTYPE));
+        }
     }
 
     private StudyEntity insertDummyStudy(UUID computationResultFiltersUuid) {
@@ -175,5 +203,6 @@ class ComputationResultFiltersTest {
         if (wireMockServer != null) {
             wireMockServer.stop();
         }
+        TestUtils.assertQueuesEmptyThenClear(List.of(STUDY_UPDATE_DESTINATION), output);
     }
 }
