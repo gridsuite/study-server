@@ -280,7 +280,6 @@ public class SensitivityAnalysisService extends AbstractComputationService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
