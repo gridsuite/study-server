@@ -62,8 +62,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -550,7 +549,7 @@ class RootNetworkTest {
         verify(dynamicSecurityAnalysisService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
         verify(dynamicMarginCalculationService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
         // check LOADFLOW_RESULT_UUID2 is also deleted
-        verify(loadFlowService, times(1)).deleteLoadFlowResults(List.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2));
+        verify(loadFlowService, times(1)).deleteLoadFlowResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
         verify(securityAnalysisService, times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
         verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
         verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));

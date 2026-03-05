@@ -119,14 +119,6 @@ public class DynamicMarginCalculationService {
         return studyEntity.getDynamicMarginCalculationParametersUuid();
     }
 
-    public void updateProvider(UUID parametersUuid, String provider) {
-        dynamicMarginCalculationClient.updateProvider(parametersUuid, provider);
-    }
-
-    public String getDefaultProvider() {
-        return dynamicMarginCalculationClient.getDefaultProvider();
-    }
-
     public String getProvider(UUID parametersUuid) {
         return dynamicMarginCalculationClient.getProvider(parametersUuid);
     }

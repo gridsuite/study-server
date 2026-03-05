@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.gridsuite.study.server.dto.dynamicsimulation.curve.CurveInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.network.NetworkInfos;
@@ -27,8 +28,10 @@ import java.util.List;
 @AllArgsConstructor
 @Getter
 @Setter
+@Accessors(chain = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DynamicSimulationParametersInfos {
+    private String provider;
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private Double startTime;
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
