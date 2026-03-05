@@ -303,29 +303,6 @@ public class SecurityAnalysisService extends AbstractComputationService {
         return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void updateSecurityAnalysisProvider(UUID parameterUuid, String provider) {
-        Objects.requireNonNull(provider);
-
-        var path = UriComponentsBuilder
-            .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI + "/provider")
-            .buildAndExpand(parameterUuid)
-            .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        HttpEntity<String> httpEntity = new HttpEntity<>(provider, headers);
-
-        restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.PUT, httpEntity, Void.class);
-    }
-
-    public String getSecurityAnalysisDefaultProvider() {
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/default-provider")
-                .buildAndExpand()
-                .toUriString();
-
-        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
-    }
-
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuid) {
         return getEnumValues(enumName, resultUuid, SECURITY_ANALYSIS_API_VERSION, securityAnalysisServerBaseUri, restTemplate);
