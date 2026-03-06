@@ -42,6 +42,7 @@ public class NotificationService {
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_UPDATE_TYPE = "updateType";
     public static final String HEADER_COMPUTATION_TYPE = "computationType";
+    public static final String HEADER_COMPUTATION_SUBTYPE = "computationSubtype";
     public static final String HEADER_RESULT_UUID = "resultUuid";
     public static final String HEADER_UPDATE_TYPE_SUBSTATIONS_IDS = "substationsIds";
     public static final String HEADER_USER_ID = "userId";
@@ -99,6 +100,7 @@ public class NotificationService {
     public static final String UPDATE_TYPE_PCC_MIN_RESULT = "pccMinResult";
     public static final String UPDATE_TYPE_PCC_MIN_STATUS = "pccMin_status";
     public static final String UPDATE_TYPE_COMPUTATION_PARAMETERS = "computationParametersUpdated";
+    public static final String UPDATE_COMPUTATION_RESULT_TAB = "computationResultTabUpdated";
     public static final String UPDATE_NETWORK_VISUALIZATION_PARAMETERS = "networkVisualizationParametersUpdated";
     public static final String UPDATE_SPREADSHEET_NODE_ALIASES = "nodeAliasesUpdated";
     public static final String UPDATE_SPREADSHEET_TAB = "spreadsheetTabUpdated";
@@ -197,6 +199,14 @@ public class NotificationService {
     public void emitComputationParamsChanged(UUID studyUuid, ComputationType computationType) {
         sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_COMPUTATION_PARAMETERS, MessageBuilder.withPayload("")
                .setHeader(HEADER_COMPUTATION_TYPE, computationType.name())
+        );
+    }
+
+    @PostCompletion
+    public void emitComputationResultTabChanged(UUID studyUuid, String computationType, String computationSubtype) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_COMPUTATION_RESULT_TAB, MessageBuilder.withPayload("")
+                .setHeader(HEADER_COMPUTATION_TYPE, computationType)
+                .setHeader(HEADER_COMPUTATION_SUBTYPE, computationSubtype)
         );
     }
 
