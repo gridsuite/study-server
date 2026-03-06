@@ -1059,10 +1059,10 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/contingency-count")
     @Operation(summary = "Get contingency count for a list of contingency list on a study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The contingency count")})
-    public ResponseEntity<Map<String, Integer>> getContingencyCount(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                             @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @Parameter(description = "Contingency list UUIDs") @RequestParam(name = "contingencyListIds", required = false) List<UUID> contingencyListIds) {
+    public ResponseEntity<ContingencyCount> getContingencyCount(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                                @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                @Parameter(description = "Contingency list UUIDs") @RequestParam(name = "contingencyListIds", required = false) List<UUID> contingencyListIds) {
         return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListIds) ? ActionsService.EMPTY_CONTINGENCY_COUNT : studyService.getContingencyCount(studyUuid, contingencyListIds, nodeUuid, rootNetworkUuid));
     }
 

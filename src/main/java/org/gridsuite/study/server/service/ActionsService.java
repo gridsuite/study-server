@@ -13,14 +13,12 @@ package org.gridsuite.study.server.service;
 
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -33,10 +31,7 @@ public class ActionsService {
     private static final String NETWORK_UUID = "networkUuid";
     private static final String CONTINGENCY_LIST_IDS = "ids";
 
-    public static final Map<String, Integer> EMPTY_CONTINGENCY_COUNT = Map.of(
-            "contingencies", 0,
-            "notFoundElements", 0
-    );
+    public static final ContingencyCount EMPTY_CONTINGENCY_COUNT = new ContingencyCount(0, 0);
 
     private String actionsServerBaseUri;
 
@@ -45,7 +40,7 @@ public class ActionsService {
         this.restTemplate = restTemplate;
     }
 
-    public Map<String, Integer> getContingencyCount(UUID networkUuid, String variantId, List<UUID> contingencyListIds) {
+    public ContingencyCount getContingencyCount(UUID networkUuid, String variantId, List<UUID> contingencyListIds) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/count")
                 .queryParam(CONTINGENCY_LIST_IDS, contingencyListIds)
@@ -57,7 +52,7 @@ public class ActionsService {
                 actionsServerBaseUri + uriComponentsBuilder.toUriString(),
                 HttpMethod.GET,
                 null,
-                new ParameterizedTypeReference<Map<String, Integer>>() { }
+                ContingencyCount.class
         ).getBody();
     }
 

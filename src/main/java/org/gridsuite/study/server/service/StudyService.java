@@ -1364,7 +1364,7 @@ public class StudyService {
         return result;
     }
 
-    public Map<String, Integer> getContingencyCount(UUID studyUuid, List<UUID> contingencyListIds, UUID nodeUuid, UUID rootNetworkUuid) {
+    public ContingencyCount getContingencyCount(UUID studyUuid, List<UUID> contingencyListIds, UUID nodeUuid, UUID rootNetworkUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListIds);
         Objects.requireNonNull(nodeUuid);
