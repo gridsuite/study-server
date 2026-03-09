@@ -3736,14 +3736,14 @@ public class StudyService {
     public void setGlobalFiltersForComputationResult(UUID studyUuid, String computationType, String globalFilters) {
         UUID computationResultFiltersId = getComputationResultFiltersId(studyUuid);
         studyConfigService.setGlobalFiltersForComputationResult(computationResultFiltersId, computationType, globalFilters);
-        notificationService.emitComputationResultTabChanged(studyUuid, computationType, null);
+        notificationService.emitComputationResultGlobalFilterChanged(studyUuid, computationType);
     }
 
     @Transactional
     public void updateColumns(UUID studyUuid, String computationType, String computationSubType, String columnInfos) {
         UUID computationResultFiltersId = getComputationResultFiltersId(studyUuid);
         studyConfigService.updateColumns(computationResultFiltersId, computationType, computationSubType, columnInfos);
-        notificationService.emitComputationResultTabChanged(studyUuid, computationType, computationSubType);
+        notificationService.emitComputationResultColumnFilterChanged(studyUuid, computationType, computationSubType);
     }
 
     public UUID getComputationResultFiltersId(UUID studyUuid) {

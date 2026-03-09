@@ -100,7 +100,9 @@ public class NotificationService {
     public static final String UPDATE_TYPE_PCC_MIN_RESULT = "pccMinResult";
     public static final String UPDATE_TYPE_PCC_MIN_STATUS = "pccMin_status";
     public static final String UPDATE_TYPE_COMPUTATION_PARAMETERS = "computationParametersUpdated";
-    public static final String UPDATE_COMPUTATION_RESULT_TAB = "computationResultTabUpdated";
+    public static final String UPDATE_COMPUTATION_RESULT_COLUMN_FILTER = "computationResultColumnFilterUpdated";
+    public static final String UPDATE_COMPUTATION_RESULT_GLOBAL_FILTER = "computationResultGlobalFilterUpdated";
+
     public static final String UPDATE_NETWORK_VISUALIZATION_PARAMETERS = "networkVisualizationParametersUpdated";
     public static final String UPDATE_SPREADSHEET_NODE_ALIASES = "nodeAliasesUpdated";
     public static final String UPDATE_SPREADSHEET_TAB = "spreadsheetTabUpdated";
@@ -203,8 +205,15 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitComputationResultTabChanged(UUID studyUuid, String computationType, String computationSubtype) {
-        sendStudyUpdateMessage(studyUuid, UPDATE_COMPUTATION_RESULT_TAB, MessageBuilder.withPayload("")
+    public void emitComputationResultGlobalFilterChanged(UUID studyUuid, String computationType) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_COMPUTATION_RESULT_GLOBAL_FILTER, MessageBuilder.withPayload("")
+                .setHeader(HEADER_COMPUTATION_TYPE, computationType)
+        );
+    }
+
+    @PostCompletion
+    public void emitComputationResultColumnFilterChanged(UUID studyUuid, String computationType, String computationSubtype) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_COMPUTATION_RESULT_COLUMN_FILTER, MessageBuilder.withPayload("")
                 .setHeader(HEADER_COMPUTATION_TYPE, computationType)
                 .setHeader(HEADER_COMPUTATION_SUBTYPE, computationSubtype)
         );

@@ -153,7 +153,7 @@ class ComputationResultFiltersTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/global-filters", study.getId(), COMPUTATION_TYPE)
                 .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
         verifyDefaultFiltersCalledOnce();
-        checkComputationResultTabUpdateMessageReceived(study.getId(), COMPUTATION_TYPE, null);
+        checkComputationResultTabUpdateMessageReceived(study.getId(), NotificationService.UPDATE_COMPUTATION_RESULT_GLOBAL_FILTER, COMPUTATION_TYPE, null);
         wireMockServer.resetRequests();
 
         study = insertDummyStudy(COMPUTATION_FILTERS_UUID);
@@ -161,7 +161,7 @@ class ComputationResultFiltersTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/global-filters", study.getId(), COMPUTATION_TYPE)
                 .contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
         verifyDefaultFiltersNotCalled();
-        checkComputationResultTabUpdateMessageReceived(study.getId(), COMPUTATION_TYPE, null);
+        checkComputationResultTabUpdateMessageReceived(study.getId(), NotificationService.UPDATE_COMPUTATION_RESULT_GLOBAL_FILTER, COMPUTATION_TYPE, null);
         wireMockServer.resetRequests();
     }
 
@@ -172,15 +172,15 @@ class ComputationResultFiltersTest {
         mockMvc.perform(put("/v1/studies/{studyUuid}/computation-result-filters/{computationType}/{computationSubType}/columns", study.getId(),
                 COMPUTATION_TYPE, COMPUTATION_SUB_TYPE).contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isNoContent());
         verifyDefaultFiltersNotCalled();
-        checkComputationResultTabUpdateMessageReceived(study.getId(), COMPUTATION_TYPE, COMPUTATION_SUB_TYPE);
+        checkComputationResultTabUpdateMessageReceived(study.getId(), NotificationService.UPDATE_COMPUTATION_RESULT_COLUMN_FILTER, COMPUTATION_TYPE, COMPUTATION_SUB_TYPE);
         wireMockServer.resetRequests();
     }
 
-    private void checkComputationResultTabUpdateMessageReceived(UUID studyUuid, String expectedComputationType, String expectedComputationSubtype) {
+    private void checkComputationResultTabUpdateMessageReceived(UUID studyUuid, String expectedNotificationType, String expectedComputationType, String expectedComputationSubtype) {
         Message<byte[]> messageStudyUpdate = output.receive(1000, STUDY_UPDATE_DESTINATION);
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_COMPUTATION_RESULT_TAB, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
+        assertEquals(expectedNotificationType, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(expectedComputationType, headersStudyUpdate.get(NotificationService.HEADER_COMPUTATION_TYPE));
         if (expectedComputationSubtype == null) {
             assertNull(headersStudyUpdate.get(NotificationService.HEADER_COMPUTATION_SUBTYPE));
