@@ -2025,7 +2025,7 @@ class NetworkModificationTest {
                         "action", WireMock.equalTo("COPY")),
                 expectedBody);
 
-        verify(rootNetworkNodeInfoService, times(1)).copyModificationsToExclude(any(), any(), any());
+        verify(rootNetworkNodeInfoService, times(1)).copyModificationsToExcludeFromTags(any(), any(), any());
 
         // now we do the same but on a built node
         RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid1, studyTestUtils.getOneRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
@@ -2097,7 +2097,7 @@ class NetworkModificationTest {
                 "action", WireMock.equalTo("COPY")),
             expectedBody);
 
-        verify(rootNetworkNodeInfoService, times(0)).copyModificationsToExclude(any(), any(), any());
+        verify(rootNetworkNodeInfoService, times(1)).copyModificationsToExcludeFromTags(any(), any(), any());
 
         // Move modification between studies is forbidden
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",

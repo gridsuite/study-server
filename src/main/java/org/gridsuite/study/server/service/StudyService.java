@@ -528,6 +528,16 @@ public class StudyService {
         return networkModificationTreeService.getNetworkModificationsByNodeInfos(modificationsByGroup);
     }
 
+    @Transactional
+    public String getExportedNetworkModifications(UUID studyUuid, UUID nodeUuid) {
+        if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+        UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+
+        return networkModificationService.getModificationsToExport(groupId);
+    }
+
     private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
@@ -1364,7 +1374,7 @@ public class StudyService {
         return result;
     }
 
-    public Integer getContingencyCount(UUID studyUuid, List<UUID> contingencyListIds, UUID nodeUuid, UUID rootNetworkUuid) {
+    public ContingencyCount getContingencyCount(UUID studyUuid, List<UUID> contingencyListIds, UUID nodeUuid, UUID rootNetworkUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListIds);
         Objects.requireNonNull(nodeUuid);
@@ -1950,8 +1960,7 @@ public class StudyService {
         assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         StudyEntity studyEntity = getStudy(targetStudyUuid);
-        StudyEntity sourceStudyEntity = getStudy(sourceStudyUuid);
-        UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity, sourceStudyEntity, false);
+        UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity);
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
@@ -2225,45 +2234,23 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    // /!\ Do not wait completion and do not throw exception
     private CompletableFuture<Void> deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {
-        return CompletableFuture.allOf(
-            studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())),
-            studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())),
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(invalidateNodeInfos.getReportUuids())),
-            studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(invalidateNodeInfos.getLoadFlowResultUuids())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(invalidateNodeInfos.getSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(invalidateNodeInfos.getSensitivityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(invalidateNodeInfos.getVoltageInitResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(invalidateNodeInfos.getDynamicSimulationResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(invalidateNodeInfos.getDynamicMarginCalculationResultUuids())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(invalidateNodeInfos.getStateEstimationResultUuids())),
-            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(invalidateNodeInfos.getPccMinResultUuids()))
-        );
+        List<CompletableFuture<?>> futures = new ArrayList<>();
+        futures.add(studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())));
+        futures.add(studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())));
+        futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(invalidateNodeInfos.toRemoteDeletionInfos(invalidateNodeInfos)));
+        // Do not wait completion and do not throw exception
+        return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
 
-    // /!\ Do not wait completion and do not throw exception
     private void deleteNodesInfos(DeleteNodeInfos deleteNodeInfos) {
-        CompletableFuture.allOf(
-            studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)),
-            studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
-            studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)),
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(deleteNodeInfos.getReportUuids())),
-            studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(deleteNodeInfos.getLoadFlowResultUuids())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(deleteNodeInfos.getSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(deleteNodeInfos.getSensitivityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(deleteNodeInfos.getVoltageInitResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(deleteNodeInfos.getDynamicSimulationResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(deleteNodeInfos.getDynamicSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(deleteNodeInfos.getDynamicMarginCalculationResultUuids())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(deleteNodeInfos.getStateEstimationResultUuids())),
-            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(deleteNodeInfos.getPccMinResultUuids()))
-        );
+        List<CompletableFuture<?>> futures = new ArrayList<>();
+        futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)));
+        futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)));
+        futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)));
+        futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(deleteNodeInfos));
+        // Do not wait completion and do not throw exception
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
 
     @Transactional
@@ -2428,13 +2415,7 @@ public class StudyService {
 
             NetworkModificationsResult networkModificationResults = networkModificationService.duplicateOrInsertModifications(groupUuid, action, Pair.of(modifications, modificationApplicationContexts));
 
-            if (targetStudyUuid.equals(originStudyUuid)) {
-                Map<UUID, UUID> originToDuplicateModificationsUuids = new HashMap<>();
-                for (int i = 0; i < modifications.size(); i++) {
-                    originToDuplicateModificationsUuids.put(modifications.get(i).getUuid(), networkModificationResults.modificationUuids().get(i));
-                }
-                rootNetworkNodeInfoService.copyModificationsToExclude(originNodeUuid, targetNodeUuid, originToDuplicateModificationsUuids);
-            }
+            copyModificationsToExclude(originNodeUuid, targetNodeUuid, modifications, networkModificationResults);
 
             if (networkModificationResults != null) {
                 int index = 0;
@@ -2451,6 +2432,17 @@ public class StudyService {
             notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(targetStudyUuid, userId);
+    }
+
+    private void copyModificationsToExclude(UUID originNodeUuid,
+                                            UUID targetNodeUuid,
+                                            List<ModificationsToCopyInfos> modifications, NetworkModificationsResult networkModificationResults) {
+        Map<UUID, UUID> mappingModificationsUuids = new HashMap<>();
+        for (int i = 0; i < modifications.size(); i++) {
+            mappingModificationsUuids.put(modifications.get(i).getUuid(), networkModificationResults.modificationUuids().get(i));
+        }
+
+        rootNetworkNodeInfoService.copyModificationsToExcludeFromTags(originNodeUuid, targetNodeUuid, mappingModificationsUuids);
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
@@ -3318,10 +3310,11 @@ public class StudyService {
     }
 
     @Transactional
-    public String getSensitivityAnalysisParameters(UUID studyUuid) {
+    public String getSensitivityAnalysisParameters(UUID studyUuid, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return sensitivityAnalysisService.getSensitivityAnalysisParameters(
-                sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
+                sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity),
+                userId);
     }
 
     @Transactional
@@ -3355,7 +3348,7 @@ public class StudyService {
         }
 
         if (existingSensitivityAnalysisParametersUuid == null) {
-            existingSensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters);
+            existingSensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters, userId);
             studyEntity.setSensitivityAnalysisParametersUuid(existingSensitivityAnalysisParametersUuid);
         } else {
             sensitivityAnalysisService.updateSensitivityAnalysisParameters(existingSensitivityAnalysisParametersUuid, parameters);

@@ -93,6 +93,16 @@ public class NetworkModificationService {
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
     }
 
+    public String getModificationsToExport(UUID groupUUid) {
+        Objects.requireNonNull(groupUUid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "export")
+            .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+            .buildAndExpand(groupUUid)
+            .toUriString();
+
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
+    }
+
     public Integer getModificationsCount(UUID groupUUid, boolean stashedModifications) {
         Objects.requireNonNull(groupUUid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_COUNT_PATH)
