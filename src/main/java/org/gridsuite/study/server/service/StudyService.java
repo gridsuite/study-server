@@ -1374,7 +1374,7 @@ public class StudyService {
         return result;
     }
 
-    public Integer getContingencyCount(UUID studyUuid, List<UUID> contingencyListIds, UUID nodeUuid, UUID rootNetworkUuid) {
+    public ContingencyCount getContingencyCount(UUID studyUuid, List<UUID> contingencyListIds, UUID nodeUuid, UUID rootNetworkUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListIds);
         Objects.requireNonNull(nodeUuid);
@@ -3310,10 +3310,11 @@ public class StudyService {
     }
 
     @Transactional
-    public String getSensitivityAnalysisParameters(UUID studyUuid) {
+    public String getSensitivityAnalysisParameters(UUID studyUuid, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return sensitivityAnalysisService.getSensitivityAnalysisParameters(
-                sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
+                sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity),
+                userId);
     }
 
     @Transactional
@@ -3347,7 +3348,7 @@ public class StudyService {
         }
 
         if (existingSensitivityAnalysisParametersUuid == null) {
-            existingSensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters);
+            existingSensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters, userId);
             studyEntity.setSensitivityAnalysisParametersUuid(existingSensitivityAnalysisParametersUuid);
         } else {
             sensitivityAnalysisService.updateSensitivityAnalysisParameters(existingSensitivityAnalysisParametersUuid, parameters);
