@@ -558,6 +558,7 @@ public class StudyService {
                 removeDynamicMarginCalculationParameters(s.getDynamicMarginCalculationParametersUuid());
                 removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
+                removeShortcircuitParameters(s.getShortCircuitParametersUuid());
                 removePccMinParameters(s.getPccMinParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
                 removeWorkspacesConfig(s.getWorkspacesConfigUuid());

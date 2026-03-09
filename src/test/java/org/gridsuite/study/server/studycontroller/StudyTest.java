@@ -253,7 +253,7 @@ class StudyTest extends StudyTestBase {
 
         wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid, false);
         wireMockStubs.caseServer.verifyDeleteCase(stubDeleteCaseId, CASE_UUID_STRING);
-        deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 7); // voltageInit, loadFlow, securityAnalysis, sensitivityAnalysis, stateEstimation, pccMin, dynamic
+        deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 8); // voltageInit, loadFlow, securityAnalysis, sensitivityAnalysis, stateEstimation, pccMin, dynamic, shortCircuit
     }
 
     @Test
@@ -262,6 +262,7 @@ class StudyTest extends StudyTestBase {
         UUID studyUuid = createStudyWithStubs("userId", CASE_UUID);
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
         studyEntity.setLoadFlowParametersUuid(null);
+        studyEntity.setShortCircuitParametersUuid(null);
         studyEntity.setSecurityAnalysisParametersUuid(null);
         studyEntity.setVoltageInitParametersUuid(null);
         studyEntity.setSensitivityAnalysisParametersUuid(null);
@@ -311,7 +312,7 @@ class StudyTest extends StudyTestBase {
 
         wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid, false);
         wireMockStubs.caseServer.verifyDeleteCase(stubDeleteCaseId, nonExistingCaseUuid.toString());
-        deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 7);
+        deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 8);
     }
 
     @Test
