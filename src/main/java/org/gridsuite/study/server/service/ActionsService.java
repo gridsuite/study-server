@@ -31,6 +31,8 @@ public class ActionsService {
     private static final String NETWORK_UUID = "networkUuid";
     private static final String CONTINGENCY_LIST_IDS = "ids";
 
+    public static final ContingencyCount EMPTY_CONTINGENCY_COUNT = new ContingencyCount(0, 0);
+
     private String actionsServerBaseUri;
 
     public ActionsService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
@@ -38,7 +40,7 @@ public class ActionsService {
         this.restTemplate = restTemplate;
     }
 
-    public Integer getContingencyCount(UUID networkUuid, String variantId, List<UUID> contingencyListIds) {
+    public ContingencyCount getContingencyCount(UUID networkUuid, String variantId, List<UUID> contingencyListIds) {
         var uriComponentsBuilder = UriComponentsBuilder
                 .fromPath(DELIMITER + ACTIONS_API_VERSION + "/contingency-lists/count")
                 .queryParam(CONTINGENCY_LIST_IDS, contingencyListIds)
@@ -46,7 +48,12 @@ public class ActionsService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        return restTemplate.exchange(actionsServerBaseUri + uriComponentsBuilder.toUriString(), HttpMethod.GET, null, Integer.class).getBody();
+        return restTemplate.exchange(
+                actionsServerBaseUri + uriComponentsBuilder.toUriString(),
+                HttpMethod.GET,
+                null,
+                ContingencyCount.class
+        ).getBody();
     }
 
     public void setActionsServerBaseUri(String actionsServerBaseUri) {

@@ -68,47 +68,6 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
     }
 
     @Test
-    void testGetDefaultProvider() {
-        String url = buildEndPointUrl("", API_VERSION, null) + "/default-provider";
-
-        // --- Success --- //
-        String expectedDefaultProvider = DYNAWO_PROVIDER;
-
-        // configure mock server response
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
-                .willReturn(WireMock.ok()
-                        .withBody(expectedDefaultProvider)
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE)
-                ));
-        // call service to test
-        String defaultProvider = dynamicSecurityAnalysisClient.getDefaultProvider();
-
-        // check result
-        assertThat(defaultProvider).isEqualTo(expectedDefaultProvider);
-
-        // --- Not Found --- //
-        // configure mock server response
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
-                .willReturn(WireMock.notFound()));
-
-        // check result
-        assertThrows(
-            HttpClientErrorException.NotFound.class,
-            () -> dynamicSecurityAnalysisClient.getDefaultProvider()
-        );
-
-        // --- Error --- //
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
-                .willReturn(WireMock.serverError()));
-
-        // check result
-        assertThrows(
-            HttpServerErrorException.class,
-            () -> dynamicSecurityAnalysisClient.getDefaultProvider()
-        );
-    }
-
-    @Test
     void testGetProvider() {
         String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + "/provider";
 
@@ -146,45 +105,6 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         assertThrows(
             HttpServerErrorException.class,
             () -> dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID)
-        );
-    }
-
-    @Test
-    void testUpdateProvider() {
-        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + "/provider";
-
-        // --- Success --- //
-        String newProvider = DYNAWO_PROVIDER + "_2";
-
-        // configure mock server response
-        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
-                        .withRequestBody(equalTo(newProvider))
-                .willReturn(WireMock.ok()
-                        .withBody(newProvider)
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE)
-                ));
-        // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicSecurityAnalysisClient.updateProvider(PARAMETERS_UUID, newProvider));
-
-        // --- Not Found --- //
-        // configure mock server response
-        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
-                .willReturn(WireMock.notFound()));
-
-        // check result
-        assertThrows(
-            HttpClientErrorException.NotFound.class,
-            () -> dynamicSecurityAnalysisClient.updateProvider(PARAMETERS_UUID, newProvider)
-        );
-
-        // --- Error --- //
-        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
-                .willReturn(WireMock.serverError()));
-
-        // check result
-        assertThrows(
-            HttpServerErrorException.class,
-            () -> dynamicSecurityAnalysisClient.updateProvider(PARAMETERS_UUID, newProvider)
         );
     }
 

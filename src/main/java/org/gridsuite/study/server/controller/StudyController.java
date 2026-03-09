@@ -1059,11 +1059,11 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/contingency-count")
     @Operation(summary = "Get contingency count for a list of contingency list on a study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The contingency count")})
-    public ResponseEntity<Integer> getContingencyCount(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                             @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @Parameter(description = "Contingency list UUIDs") @RequestParam(name = "contingencyListIds", required = false) List<UUID> contingencyListIds) {
-        return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListIds) ? 0 : studyService.getContingencyCount(studyUuid, contingencyListIds, nodeUuid, rootNetworkUuid));
+    public ResponseEntity<ContingencyCount> getContingencyCount(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                                @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                                @Parameter(description = "Contingency list UUIDs") @RequestParam(name = "contingencyListIds", required = false) List<UUID> contingencyListIds) {
+        return ResponseEntity.ok().body(CollectionUtils.isEmpty(contingencyListIds) ? ActionsService.EMPTY_CONTINGENCY_COUNT : studyService.getContingencyCount(studyUuid, contingencyListIds, nodeUuid, rootNetworkUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/limit-violations")
@@ -1120,37 +1120,6 @@ public class StudyController {
         return ResponseEntity.ok().body(parametersId);
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/loadflow/provider")
-    @Operation(summary = "set load flow provider for the specified study, no body means reset to default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The load flow provider is set")})
-    public ResponseEntity<Void> setLoadflowProvider(@PathVariable("studyUuid") UUID studyUuid,
-                                                    @RequestBody(required = false) String provider,
-                                                    @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertNoBlockedNodeInStudy(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid));
-        studyService.updateLoadFlowProvider(studyUuid, provider, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/security-analysis/provider")
-    @Operation(summary = "set security analysis provider for the specified study, no body means reset to default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis provider is set")})
-    public ResponseEntity<Void> setSecurityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid,
-                                                            @RequestBody(required = false) String provider,
-                                                            @RequestHeader("userId") String userId) {
-        studyService.updateSecurityAnalysisProvider(studyUuid, provider, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/provider")
-    @Operation(summary = "Set dynamic simulation provider for the specified study, no body means reset to default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is set")})
-    public ResponseEntity<Void> setDynamicSimulationProvider(@PathVariable("studyUuid") UUID studyUuid,
-                                                               @RequestBody(required = false) String provider,
-                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.updateDynamicSimulationProvider(studyUuid, provider, userId);
-        return ResponseEntity.ok().build();
-    }
-
     @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/provider")
     @Operation(summary = "Get dynamic simulation provider for a specified study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is returned")})
@@ -1158,31 +1127,11 @@ public class StudyController {
         return ResponseEntity.ok().body(studyService.getDynamicSimulationProvider(studyUuid));
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/dynamic-security-analysis/provider")
-    @Operation(summary = "Set dynamic security analysis provider for the specified study, no body means reset to default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis provider is set")})
-    public ResponseEntity<Void> setDynamicSecurityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid,
-                                                               @RequestBody(required = false) String provider,
-                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.updateDynamicSecurityAnalysisProvider(studyUuid, provider, userId);
-        return ResponseEntity.ok().build();
-    }
-
     @GetMapping(value = "/studies/{studyUuid}/dynamic-security-analysis/provider")
     @Operation(summary = "Get dynamic security analysis provider for a specified study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis provider is returned")})
     public ResponseEntity<String> getDynamicSecurityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getDynamicSecurityAnalysisProvider(studyUuid));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/dynamic-margin-calculation/provider")
-    @Operation(summary = "Set dynamic margin calculation provider for the specified study, no body means reset to default provider")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation provider is set")})
-    public ResponseEntity<Void> setDynamicMarginCalculationProvider(@PathVariable("studyUuid") UUID studyUuid,
-                                                               @RequestBody(required = false) String provider,
-                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.updateDynamicMarginCalculationProvider(studyUuid, provider, userId);
-        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/dynamic-margin-calculation/provider")
@@ -1357,6 +1306,15 @@ public class StudyController {
                                                                                                @Parameter(description = "Only metadata") @RequestParam(name = "onlyMetadata", required = false, defaultValue = "false") Boolean onlyMetadata) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body(networkModificationTreeService.getNetworkModifications(nodeUuid, onlyStashed, onlyMetadata));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/export", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get network modifications to export for a given node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications to export was returned"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
+    public ResponseEntity<String> getExportedNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                          @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getExportedNetworkModifications(studyUuid, nodeUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/excluded-network-modifications", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -1717,50 +1675,6 @@ public class StudyController {
                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.stopBuild(nodeUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/loadflow-default-provider")
-    @Operation(summary = "get load flow default provider")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "The load flow default provider has been found"))
-    public ResponseEntity<String> getDefaultLoadflowProvider(
-        @RequestHeader(name = HEADER_USER_ID, required = false) String userId // not required to allow to query the system default provider without a user
-    ) {
-        return ResponseEntity.ok().body(studyService.getDefaultLoadflowProvider(userId));
-    }
-
-    @GetMapping(value = "/security-analysis-default-provider")
-    @Operation(summary = "get security analysis default provider")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "The security analysis default provider has been found"))
-    public ResponseEntity<String> getDefaultSecurityAnalysisProvider() {
-        return ResponseEntity.ok().body(studyService.getDefaultSecurityAnalysisProvider());
-    }
-
-    @GetMapping(value = "/sensitivity-analysis-default-provider")
-    @Operation(summary = "get sensitivity analysis default provider value")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "The sensitivity analysis default provider has been found"))
-    public ResponseEntity<String> getDefaultSensitivityAnalysisProvider() {
-        return ResponseEntity.ok().body(studyService.getDefaultSensitivityAnalysisProvider());
-    }
-
-    @GetMapping(value = "/dynamic-simulation-default-provider")
-    @Operation(summary = "Get dynamic simulation default provider")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "The dynamic simulation default provider has been found"))
-    public ResponseEntity<String> getDefaultDynamicSimulationProvider() {
-        return ResponseEntity.ok().body(studyService.getDefaultDynamicSimulationProvider());
-    }
-
-    @GetMapping(value = "/dynamic-security-analysis-default-provider")
-    @Operation(summary = "Get dynamic security analysis default provider")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "The dynamic security analysis default provider has been found"))
-    public ResponseEntity<String> getDefaultDynamicSecurityAnalysisProvider(@RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.getDefaultDynamicSecurityAnalysisProvider(userId));
-    }
-
-    @GetMapping(value = "/dynamic-margin-calculation-default-provider")
-    @Operation(summary = "Get dynamic margin calculation default provider")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "The dynamic margin calculation default provider has been found"))
-    public ResponseEntity<String> getDefaultDynamicMarginCalculationProvider(@RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.getDefaultDynamicMarginCalculationProvider(userId));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all")
@@ -2271,8 +2185,9 @@ public class StudyController {
     @Operation(summary = "Get sensitivity analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters")})
     public ResponseEntity<String> getSensitivityAnalysisParameters(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParameters(studyUuid));
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParameters(studyUuid, userId));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")

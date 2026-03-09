@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service.dynamicsimulation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.DoubleTimeSeries;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
@@ -22,6 +21,7 @@ import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.solver.SolverTypeInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.DynamicSimulationParametersEntity;
 
 import java.util.Collections;
@@ -96,7 +96,7 @@ public interface DynamicSimulationService {
         List<SolverInfos> solvers = List.of(idaSolver, simSolver);
 
         NetworkInfos network = getDefaultNetwork();
-        return new DynamicSimulationParametersInfos(0.0, 500.0, "", idaSolver.getId(), solvers, network, null, null);
+        return new DynamicSimulationParametersInfos(null, 0.0, 500.0, "", idaSolver.getId(), solvers, network, null, null);
     }
 
     static IdaSolverInfos getDefaultIdaSolver() {

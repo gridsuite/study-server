@@ -243,14 +243,19 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return studyEntity.getSensitivityAnalysisParametersUuid();
     }
 
-    public String getSensitivityAnalysisParameters(UUID parametersUuid) {
+    public String getSensitivityAnalysisParameters(UUID parametersUuid, String userId) {
 
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid)
             .toUriString();
 
-        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
+
+        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.GET, httpEntity, String.class).getBody();
     }
 
     public UUID createDefaultSensitivityAnalysisParameters() {
@@ -263,7 +268,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, null, UUID.class);
     }
 
-    public UUID createSensitivityAnalysisParameters(String parameters) {
+    public UUID createSensitivityAnalysisParameters(String parameters, String userId) {
 
         Objects.requireNonNull(parameters);
 
@@ -273,7 +278,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
             .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set(HEADER_USER_ID, userId);
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
@@ -317,15 +322,6 @@ public class SensitivityAnalysisService extends AbstractComputationService {
             .toUriString();
 
         restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
-    }
-
-    public String getSensitivityAnalysisDefaultProvider() {
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/default-provider")
-                .buildAndExpand()
-                .toUriString();
-
-        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
     }
 
     public String getSensitivityAnalysisFactorCount(UUID networkUuid, String variantId, String sensitivityAnalysisParameters) {

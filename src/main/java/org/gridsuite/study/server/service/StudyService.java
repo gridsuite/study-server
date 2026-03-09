@@ -79,7 +79,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -529,6 +528,16 @@ public class StudyService {
         return networkModificationTreeService.getNetworkModificationsByNodeInfos(modificationsByGroup);
     }
 
+    @Transactional
+    public String getExportedNetworkModifications(UUID studyUuid, UUID nodeUuid) {
+        if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+        UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+
+        return networkModificationService.getModificationsToExport(groupId);
+    }
+
     private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
@@ -751,7 +760,9 @@ public class StudyService {
             copiedWorkspacesConfigUuid = studyConfigService.duplicateWorkspacesConfig(sourceStudyEntity.getWorkspacesConfigUuid());
         }
 
-        DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
+        DynamicSimulationParametersInfos dynamicSimulationParameters = sourceStudyEntity.getDynamicSimulationParameters() != null ?
+            DynamicSimulationService.fromEntity(sourceStudyEntity.getDynamicSimulationParameters(), objectMapper).setProvider(sourceStudyEntity.getDynamicSimulationProvider()) :
+            DynamicSimulationService.getDefaultDynamicSimulationParameters().setProvider(defaultDynamicSimulationProvider);
 
         UUID copiedStateEstimationParametersUuid = null;
         if (sourceStudyEntity.getStateEstimationParametersUuid() != null) {
@@ -1246,89 +1257,8 @@ public class StudyService {
         return userProfileIssue;
     }
 
-    public String getDefaultLoadflowProvider(String userId) {
-        if (userId != null) {
-            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
-            if (userProfileInfos.getLoadFlowParameterId() != null) {
-                try {
-                    return loadflowService.getLoadFlowParameters(userProfileInfos.getLoadFlowParameterId()).getProvider();
-                } catch (Exception e) {
-                    LOGGER.error(String.format("Could not get loadflow parameters with id '%s' from user/profile '%s/%s'. Using default provider",
-                            userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
-                    // in case of read error (ex: wrong/dangling uuid in the profile), move on with default provider below
-                }
-            }
-        }
-        return loadflowService.getLoadFlowDefaultProvider();
-    }
-
-    private void updateProvider(UUID studyUuid, String userId, Consumer<StudyEntity> providerSetter) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        providerSetter.accept(studyEntity);
-        notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    public void updateLoadFlowProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> {
-            loadflowService.updateLoadFlowProvider(studyEntity.getLoadFlowParametersUuid(), provider);
-            invalidateAllStudyLoadFlowStatus(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-            notificationService.emitComputationParamsChanged(studyUuid, LOAD_FLOW);
-
-        });
-    }
-
-    public String getDefaultSecurityAnalysisProvider() {
-        return securityAnalysisService.getSecurityAnalysisDefaultProvider();
-    }
-
-    public void updateSecurityAnalysisProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> {
-            securityAnalysisService.updateSecurityAnalysisProvider(studyEntity.getSecurityAnalysisParametersUuid(), provider);
-            invalidateSecurityAnalysisStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-            notificationService.emitComputationParamsChanged(studyUuid, SECURITY_ANALYSIS);
-        });
-    }
-
-    public String getDefaultSensitivityAnalysisProvider() {
-        return sensitivityAnalysisService.getSensitivityAnalysisDefaultProvider();
-    }
-
-    public String getDefaultDynamicSimulationProvider() {
-        return defaultDynamicSimulationProvider;
-    }
-
     public String getDynamicSimulationProvider(UUID studyUuid) {
         return getStudy(studyUuid).getDynamicSimulationProvider();
-    }
-
-    @Transactional
-    public void updateDynamicSimulationProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> {
-            studyEntity.setDynamicSimulationProvider(provider != null ? provider : defaultDynamicSimulationProvider);
-            invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
-            invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-            notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_SIMULATION);
-        });
-    }
-
-    public String getDefaultDynamicSecurityAnalysisProvider(String userId) {
-        if (userId != null) {
-            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
-            if (userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
-                try {
-                    return dynamicSecurityAnalysisService.getProvider(userProfileInfos.getDynamicSecurityAnalysisParameterId());
-                } catch (Exception e) {
-                    LOGGER.error(String.format("Could not get dynamic security analysis provider with id '%s' from user/profile '%s/%s'. Using default provider",
-                            userProfileInfos.getDynamicSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
-                    // in case of read error (ex: wrong/dangling uuid in the profile), move on with default provider below
-                }
-            }
-        }
-        return dynamicSecurityAnalysisService.getDefaultProvider();
     }
 
     public String getDynamicSecurityAnalysisProvider(UUID studyUuid) {
@@ -1336,45 +1266,9 @@ public class StudyService {
         return dynamicSecurityAnalysisService.getProvider(studyEntity.getDynamicSecurityAnalysisParametersUuid());
     }
 
-    public void updateDynamicSecurityAnalysisProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> {
-            dynamicSecurityAnalysisService.updateProvider(studyEntity.getDynamicSecurityAnalysisParametersUuid(), provider);
-            invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-            notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_SECURITY_ANALYSIS);
-
-        });
-    }
-
-    public String getDefaultDynamicMarginCalculationProvider(String userId) {
-        if (userId != null) {
-            UserProfileInfos userProfileInfos = userAdminService.getUserProfile(userId);
-            if (userProfileInfos.getDynamicMarginCalculationParameterId() != null) {
-                try {
-                    return dynamicMarginCalculationService.getProvider(userProfileInfos.getDynamicMarginCalculationParameterId());
-                } catch (Exception e) {
-                    LOGGER.error(String.format("Could not get dynamic margin calculation provider with id '%s' from user/profile '%s/%s'. Using default provider",
-                            userProfileInfos.getDynamicMarginCalculationParameterId(), userId, userProfileInfos.getName()), e);
-                    // in case of read error (ex: wrong/dangling uuid in the profile), move on with default provider below
-                }
-            }
-        }
-        return dynamicMarginCalculationService.getDefaultProvider();
-    }
-
     public String getDynamicMarginCalculationProvider(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return dynamicMarginCalculationService.getProvider(studyEntity.getDynamicMarginCalculationParametersUuid());
-    }
-
-    public void updateDynamicMarginCalculationProvider(UUID studyUuid, String provider, String userId) {
-        updateProvider(studyUuid, userId, studyEntity -> {
-            dynamicMarginCalculationService.updateProvider(studyEntity.getDynamicMarginCalculationParametersUuid(), provider);
-            invalidateDynamicMarginCalculationStatusOnAllNodes(studyUuid);
-            notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
-            notificationService.emitComputationParamsChanged(studyUuid, DYNAMIC_MARGIN_CALCULATION);
-
-        });
     }
 
     @Transactional
@@ -1481,7 +1375,7 @@ public class StudyService {
         return result;
     }
 
-    public Integer getContingencyCount(UUID studyUuid, List<UUID> contingencyListIds, UUID nodeUuid, UUID rootNetworkUuid) {
+    public ContingencyCount getContingencyCount(UUID studyUuid, List<UUID> contingencyListIds, UUID nodeUuid, UUID rootNetworkUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(contingencyListIds);
         Objects.requireNonNull(nodeUuid);
@@ -1704,11 +1598,6 @@ public class StudyService {
             // reset case, with existing profile, having default LF params
             try {
                 UUID loadFlowParametersFromProfileUuid = loadflowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
-                if (existingLoadFlowParametersUuid != null) {
-                    //For a reset to defaultValues we need to keep the provider if it exists because it's updated separately
-                    String keptProvider = loadflowService.getLoadFlowParameters(existingLoadFlowParametersUuid).getProvider();
-                    loadflowService.updateLoadFlowProvider(loadFlowParametersFromProfileUuid, keptProvider);
-                }
                 studyEntity.setLoadFlowParametersUuid(loadFlowParametersFromProfileUuid);
                 removeLoadFlowParameters(existingLoadFlowParametersUuid);
                 return userProfileIssue;
@@ -1739,10 +1628,11 @@ public class StudyService {
         }
     }
 
-    public void updateDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity) {
+    public void updateDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersEntity dynamicSimulationParametersEntity, String provider) {
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         studyEntity.ifPresent(studyEntity1 -> {
             studyEntity1.setDynamicSimulationParameters(dynamicSimulationParametersEntity);
+            studyEntity1.setDynamicSimulationProvider(provider);
             invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
             notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
         });
@@ -2071,8 +1961,7 @@ public class StudyService {
         assertDuplicateStudySubtree(sourceStudyUuid, targetStudyUuid, parentNodeToCopyUuid, referenceNodeUuid);
         AbstractNode studySubTree = networkModificationTreeService.getStudySubtree(sourceStudyUuid, parentNodeToCopyUuid, null);
         StudyEntity studyEntity = getStudy(targetStudyUuid);
-        StudyEntity sourceStudyEntity = getStudy(sourceStudyUuid);
-        UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity, sourceStudyEntity, false);
+        UUID duplicatedNodeUuid = networkModificationTreeService.cloneStudyTree(studySubTree, referenceNodeUuid, studyEntity);
         notificationService.emitSubtreeInserted(targetStudyUuid, duplicatedNodeUuid, referenceNodeUuid);
         notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
@@ -2346,45 +2235,23 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    // /!\ Do not wait completion and do not throw exception
     private CompletableFuture<Void> deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {
-        return CompletableFuture.allOf(
-            studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())),
-            studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())),
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(invalidateNodeInfos.getReportUuids())),
-            studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(invalidateNodeInfos.getLoadFlowResultUuids())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(invalidateNodeInfos.getSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(invalidateNodeInfos.getSensitivityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(invalidateNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(invalidateNodeInfos.getVoltageInitResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(invalidateNodeInfos.getDynamicSimulationResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(invalidateNodeInfos.getDynamicSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(invalidateNodeInfos.getDynamicMarginCalculationResultUuids())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(invalidateNodeInfos.getStateEstimationResultUuids())),
-            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(invalidateNodeInfos.getPccMinResultUuids()))
-        );
+        List<CompletableFuture<?>> futures = new ArrayList<>();
+        futures.add(studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())));
+        futures.add(studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())));
+        futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(invalidateNodeInfos.toRemoteDeletionInfos(invalidateNodeInfos)));
+        // Do not wait completion and do not throw exception
+        return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
 
-    // /!\ Do not wait completion and do not throw exception
     private void deleteNodesInfos(DeleteNodeInfos deleteNodeInfos) {
-        CompletableFuture.allOf(
-            studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)),
-            studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)),
-            studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)),
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(deleteNodeInfos.getReportUuids())),
-            studyServerExecutionService.runAsync(() -> loadflowService.deleteLoadFlowResults(deleteNodeInfos.getLoadFlowResultUuids())),
-            studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(deleteNodeInfos.getSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(deleteNodeInfos.getSensitivityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(deleteNodeInfos.getOneBusShortCircuitAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> voltageInitService.deleteVoltageInitResults(deleteNodeInfos.getVoltageInitResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSimulationService.deleteResults(deleteNodeInfos.getDynamicSimulationResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicSecurityAnalysisService.deleteResults(deleteNodeInfos.getDynamicSecurityAnalysisResultUuids())),
-            studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(deleteNodeInfos.getDynamicMarginCalculationResultUuids())),
-            studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(deleteNodeInfos.getStateEstimationResultUuids())),
-            studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(deleteNodeInfos.getPccMinResultUuids()))
-        );
+        List<CompletableFuture<?>> futures = new ArrayList<>();
+        futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)));
+        futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)));
+        futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)));
+        futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(deleteNodeInfos));
+        // Do not wait completion and do not throw exception
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
 
     @Transactional
@@ -2549,13 +2416,7 @@ public class StudyService {
 
             NetworkModificationsResult networkModificationResults = networkModificationService.duplicateOrInsertModifications(groupUuid, action, Pair.of(modifications, modificationApplicationContexts));
 
-            if (targetStudyUuid.equals(originStudyUuid)) {
-                Map<UUID, UUID> originToDuplicateModificationsUuids = new HashMap<>();
-                for (int i = 0; i < modifications.size(); i++) {
-                    originToDuplicateModificationsUuids.put(modifications.get(i).getUuid(), networkModificationResults.modificationUuids().get(i));
-                }
-                rootNetworkNodeInfoService.copyModificationsToExclude(originNodeUuid, targetNodeUuid, originToDuplicateModificationsUuids);
-            }
+            copyModificationsToExclude(originNodeUuid, targetNodeUuid, modifications, networkModificationResults);
 
             if (networkModificationResults != null) {
                 int index = 0;
@@ -2572,6 +2433,17 @@ public class StudyService {
             notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(targetStudyUuid, userId);
+    }
+
+    private void copyModificationsToExclude(UUID originNodeUuid,
+                                            UUID targetNodeUuid,
+                                            List<ModificationsToCopyInfos> modifications, NetworkModificationsResult networkModificationResults) {
+        Map<UUID, UUID> mappingModificationsUuids = new HashMap<>();
+        for (int i = 0; i < modifications.size(); i++) {
+            mappingModificationsUuids.put(modifications.get(i).getUuid(), networkModificationResults.modificationUuids().get(i));
+        }
+
+        rootNetworkNodeInfoService.copyModificationsToExcludeFromTags(originNodeUuid, targetNodeUuid, mappingModificationsUuids);
     }
 
     private void checkStudyContainsNode(UUID studyUuid, UUID nodeUuid) {
@@ -3004,7 +2876,9 @@ public class StudyService {
 
     @Transactional
     public void setDynamicSimulationParameters(UUID studyUuid, DynamicSimulationParametersInfos dsParameter, String userId) {
-        updateDynamicSimulationParameters(studyUuid, DynamicSimulationService.toEntity(dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters(), objectMapper));
+        updateDynamicSimulationParameters(studyUuid,
+            DynamicSimulationService.toEntity(dsParameter != null ? dsParameter : DynamicSimulationService.getDefaultDynamicSimulationParameters(), objectMapper),
+            dsParameter != null ? dsParameter.getProvider() : this.defaultDynamicSimulationProvider);
 
         // Dynamic security analysis depends on dynamic simulation => must invalidate
         invalidateDynamicSecurityAnalysisStatusOnAllNodes(studyUuid);
@@ -3021,7 +2895,9 @@ public class StudyService {
     }
 
     private DynamicSimulationParametersInfos getDynamicSimulationParameters(StudyEntity studyEntity) {
-        return studyEntity.getDynamicSimulationParameters() != null ? DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper) : DynamicSimulationService.getDefaultDynamicSimulationParameters();
+        return studyEntity.getDynamicSimulationParameters() != null ?
+            DynamicSimulationService.fromEntity(studyEntity.getDynamicSimulationParameters(), objectMapper).setProvider(studyEntity.getDynamicSimulationProvider()) :
+            DynamicSimulationService.getDefaultDynamicSimulationParameters().setProvider(this.defaultDynamicSimulationProvider);
     }
 
     @Transactional(readOnly = true)
@@ -3435,10 +3311,11 @@ public class StudyService {
     }
 
     @Transactional
-    public String getSensitivityAnalysisParameters(UUID studyUuid) {
+    public String getSensitivityAnalysisParameters(UUID studyUuid, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return sensitivityAnalysisService.getSensitivityAnalysisParameters(
-                sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
+                sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity),
+                userId);
     }
 
     @Transactional
@@ -3472,7 +3349,7 @@ public class StudyService {
         }
 
         if (existingSensitivityAnalysisParametersUuid == null) {
-            existingSensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters);
+            existingSensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters, userId);
             studyEntity.setSensitivityAnalysisParametersUuid(existingSensitivityAnalysisParametersUuid);
         } else {
             sensitivityAnalysisService.updateSensitivityAnalysisParameters(existingSensitivityAnalysisParametersUuid, parameters);
