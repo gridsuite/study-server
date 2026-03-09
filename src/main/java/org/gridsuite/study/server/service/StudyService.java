@@ -528,6 +528,16 @@ public class StudyService {
         return networkModificationTreeService.getNetworkModificationsByNodeInfos(modificationsByGroup);
     }
 
+    @Transactional
+    public String getExportedNetworkModifications(UUID studyUuid, UUID nodeUuid) {
+        if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
+            throw new StudyException(NOT_ALLOWED);
+        }
+        UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+
+        return networkModificationService.getModificationsToExport(groupId);
+    }
+
     private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid) {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);

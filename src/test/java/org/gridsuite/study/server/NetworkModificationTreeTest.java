@@ -1510,6 +1510,29 @@ class NetworkModificationTreeTest {
             .andReturn().getResponse().getContentAsString();
     }
 
+    @Test
+    void testGetNetworkModificationsNodeToExport() throws Exception {
+        String userId = "userId";
+        RootNode root = createRoot();
+        NetworkModificationNode node = NetworkModificationTreeTest.buildNetworkModificationConstructionNode("modification node 1", "", UUID.randomUUID(), VARIANT_ID,
+                randomUuidsResultStack(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, node, userId);
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/export", root.getStudyId(), node.getId()))
+                .andExpect(status().isNotFound());
+
+        // No network modification for a root node
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/export", root.getStudyId(), root.getId()))
+                .andExpect(status().isNotFound());
+
+        node = NetworkModificationTreeTest.buildNetworkModificationConstructionNode("modification node 2", "", MODIFICATION_GROUP_UUID, VARIANT_ID,
+                randomUuidsResultStack(), BuildStatus.BUILT);
+        createNode(root.getStudyId(), root, node, userId);
+        mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/export", root.getStudyId(), node.getId()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+    }
+
     private void checkMessagesReceivedWhenRestoreOrStash(RootNode root, NetworkModificationNode node, String restoreOrStashUpdateType) {
         checkUpdateTypeMessageReceived(root.getStudyId(), null, restoreOrStashUpdateType, output, STUDY_UPDATE_DESTINATION);
         checkUpdateTypeMessageReceived(root.getStudyId(), null, NODE_BUILD_STATUS_UPDATED, output, STUDY_UPDATE_DESTINATION);
