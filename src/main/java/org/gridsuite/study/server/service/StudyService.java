@@ -3349,7 +3349,7 @@ public class StudyService {
         }
 
         if (existingSensitivityAnalysisParametersUuid == null) {
-            existingSensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters, userId);
+            existingSensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters);
             studyEntity.setSensitivityAnalysisParametersUuid(existingSensitivityAnalysisParametersUuid);
         } else {
             sensitivityAnalysisService.updateSensitivityAnalysisParameters(existingSensitivityAnalysisParametersUuid, parameters);
