@@ -16,6 +16,7 @@ import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import com.powsybl.security.LimitViolationType;
 import com.powsybl.security.SecurityAnalysisParameters;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
+import org.gridsuite.study.server.dto.ContingencyCount;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
