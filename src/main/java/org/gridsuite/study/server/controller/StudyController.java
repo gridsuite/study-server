@@ -48,6 +48,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
+import org.gridsuite.study.server.utils.AllComputationStatus;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
@@ -2482,5 +2483,31 @@ public class StudyController {
         @RequestBody(required = false) String pccMinParametersInfos,
         @RequestHeader(HEADER_USER_ID) String userId) {
         return studyService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computations/status")
+    @Operation(summary = "Get all computation status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all status are returned")})
+    public ResponseEntity<AllComputationStatus> getAllComputationsStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                         @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        AllComputationStatus allComputationStatus = new AllComputationStatus();
+        LoadFlowStatus loadFlowStatus = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
+        allComputationStatus.setLoadFlowStatus(loadFlowStatus == null ? null : loadFlowStatus.name());
+        allComputationStatus.setPccMinStatus(rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid));
+        DynamicMarginCalculationStatus dynamicMarginCalculationStatus = rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid);
+        allComputationStatus.setDynamicMarginCalculationStatus(dynamicMarginCalculationStatus == null ? null : dynamicMarginCalculationStatus.name());
+        DynamicSecurityAnalysisStatus dynamicSecurityAnalysisStatus = rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
+        allComputationStatus.setDynamicSecurityAnalysisStatus(dynamicSecurityAnalysisStatus == null ? null : dynamicSecurityAnalysisStatus.name());
+        DynamicSimulationStatus dynamicSimulationStatus = rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid);
+        allComputationStatus.setDynamicSimulationStatus(dynamicSimulationStatus == null ? null : dynamicSimulationStatus.name());
+        allComputationStatus.setStateEstimationStatus(rootNetworkNodeInfoService.getStateEstimationStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.setSensitivityAnalysisStatus(rootNetworkNodeInfoService.getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid));
+        SecurityAnalysisStatus securityAnalysisStatus = rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
+        allComputationStatus.setSecurityAnalysisStatus(securityAnalysisStatus == null ? null : securityAnalysisStatus.name());
+        allComputationStatus.setOneBusShortCircuitStatus(rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ONE_BUS));;
+        allComputationStatus.setAllBusShortCircuitStatus(rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ALL_BUSES));;
+        allComputationStatus.setVoltageInitStatus(rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(allComputationStatus);
     }
 }
