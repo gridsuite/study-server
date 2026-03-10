@@ -558,6 +558,7 @@ public class StudyService {
                 removeDynamicMarginCalculationParameters(s.getDynamicMarginCalculationParametersUuid());
                 removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 removeStateEstimationParameters(s.getStateEstimationParametersUuid());
+                removeShortcircuitParameters(s.getShortCircuitParametersUuid());
                 removePccMinParameters(s.getPccMinParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
                 removeWorkspacesConfig(s.getWorkspacesConfigUuid());
@@ -736,7 +737,7 @@ public class StudyService {
 
         UUID copiedSensitivityAnalysisParametersUuid = null;
         if (sourceStudyEntity.getSensitivityAnalysisParametersUuid() != null) {
-            copiedSensitivityAnalysisParametersUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(sourceStudyEntity.getSensitivityAnalysisParametersUuid());
+            copiedSensitivityAnalysisParametersUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(sourceStudyEntity.getSensitivityAnalysisParametersUuid(), userId);
         }
 
         UUID copiedVoltageInitParametersUuid = null;
@@ -3335,7 +3336,7 @@ public class StudyService {
         if (parameters == null && userProfileInfos.getSensitivityAnalysisParameterId() != null) {
             // reset case, with existing profile, having default sensitivity analysis params
             try {
-                UUID sensitivityAnalysisParametersFromProfileUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId());
+                UUID sensitivityAnalysisParametersFromProfileUuid = sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId(), userId);
                 studyEntity.setSensitivityAnalysisParametersUuid(sensitivityAnalysisParametersFromProfileUuid);
                 removeSensitivityAnalysisParameters(existingSensitivityAnalysisParametersUuid);
                 return userProfileIssue;
@@ -3348,7 +3349,7 @@ public class StudyService {
         }
 
         if (existingSensitivityAnalysisParametersUuid == null) {
-            existingSensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters, userId);
+            existingSensitivityAnalysisParametersUuid = sensitivityAnalysisService.createSensitivityAnalysisParameters(parameters);
             studyEntity.setSensitivityAnalysisParametersUuid(existingSensitivityAnalysisParametersUuid);
         } else {
             sensitivityAnalysisService.updateSensitivityAnalysisParameters(existingSensitivityAnalysisParametersUuid, parameters);

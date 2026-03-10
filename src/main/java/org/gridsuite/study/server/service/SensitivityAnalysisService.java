@@ -268,7 +268,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, null, UUID.class);
     }
 
-    public UUID createSensitivityAnalysisParameters(String parameters, String userId) {
+    public UUID createSensitivityAnalysisParameters(String parameters) {
 
         Objects.requireNonNull(parameters);
 
@@ -278,14 +278,13 @@ public class SensitivityAnalysisService extends AbstractComputationService {
             .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
         return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
     }
 
-    public UUID duplicateSensitivityAnalysisParameters(UUID sourceParametersUuid) {
+    public UUID duplicateSensitivityAnalysisParameters(UUID sourceParametersUuid, String userId) {
 
         Objects.requireNonNull(sourceParametersUuid);
 
@@ -295,7 +294,12 @@ public class SensitivityAnalysisService extends AbstractComputationService {
             .buildAndExpand()
             .toUriString();
 
-        return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, null, UUID.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
+
+        return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
     }
 
     public void updateSensitivityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
