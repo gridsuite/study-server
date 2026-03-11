@@ -359,7 +359,7 @@ public class ConsumerService {
         if (userProfileInfos != null && userProfileInfos.getSensitivityAnalysisParameterId() != null) {
             // try to access/duplicate the user profile sensitivity analysis parameters
             try {
-                return sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId());
+                return sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId(), userId);
             } catch (Exception e) {
                 // TODO try to report a log in Root subreporter ?
                 LOGGER.error(String.format("Could not duplicate sensitivity analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",

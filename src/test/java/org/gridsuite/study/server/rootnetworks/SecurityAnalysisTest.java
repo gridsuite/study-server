@@ -16,6 +16,7 @@ import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import com.powsybl.security.LimitViolationType;
 import com.powsybl.security.SecurityAnalysisParameters;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
+import org.gridsuite.study.server.dto.ContingencyCount;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -95,7 +96,7 @@ class SecurityAnalysisTest {
     private static final byte[] SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_CSV_ZIPPED = {0x02, 0x03};
     private static final byte[] SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED = {0x04, 0x03};
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
-    private static final String CONTINGENCIES_COUNT = "2";
+    private static final ContingencyCount CONTINGENCIES_COUNT = new ContingencyCount(2, 0);
 
     public static final String SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":0.0,\"lowVoltageProportionalThreshold\":0.0,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
     private static final String SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":30.0,\"lowVoltageProportionalThreshold\":0.4,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
@@ -628,26 +629,25 @@ class SecurityAnalysisTest {
         computationServerStubs.verifyComputationStop(resultUuid, Map.of("receiver", WireMock.matching(".*")));
 
         // get contingency count
-        securityAnalysisServerStubs.stubContingencyListCount(CONTINGENCIES_COUNT, Map.of("ids", equalTo(CONTINGENCY_LIST_ID), "networkUuid", equalTo(NETWORK_UUID_STRING)));
+        securityAnalysisServerStubs.stubContingencyListCount(objectMapper.writeValueAsString(CONTINGENCIES_COUNT), Map.of("ids", equalTo(CONTINGENCY_LIST_ID), "networkUuid", equalTo(NETWORK_UUID_STRING)));
 
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/contingency-count?contingencyListIds={contingencyListId}",
                 studyUuid, rootNetworkUuid, nodeUuid, CONTINGENCY_LIST_ID))
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        Integer integerResponse = Integer.parseInt(resultAsString);
-        Integer expectedResponse = Integer.parseInt(CONTINGENCIES_COUNT);
-        assertEquals(expectedResponse, integerResponse);
+        ContingencyCount count = objectMapper.readValue(resultAsString, ContingencyCount.class);
+        Integer expectedResponse = CONTINGENCIES_COUNT.contingencies();
+        assertEquals(expectedResponse, count.contingencies());
 
         securityAnalysisServerStubs.verifyContingencyListCount(Map.of("ids", WireMock.matching(".*")));
 
         // get contingency count with no list
-        securityAnalysisServerStubs.stubContingencyListCount("0", Map.of("networkUuid", equalTo(NETWORK_UUID_STRING)));
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/contingency-count",
                 studyUuid, rootNetworkUuid, nodeUuid))
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
-        Integer integerResponse2 = Integer.parseInt(resultAsString);
-        assertEquals(0, integerResponse2);
+        ContingencyCount count2 = objectMapper.readValue(resultAsString, ContingencyCount.class);
+        assertEquals(0, count2.contingencies());
 
     }
 

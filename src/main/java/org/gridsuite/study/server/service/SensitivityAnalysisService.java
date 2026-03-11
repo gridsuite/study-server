@@ -243,14 +243,19 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return studyEntity.getSensitivityAnalysisParametersUuid();
     }
 
-    public String getSensitivityAnalysisParameters(UUID parametersUuid) {
+    public String getSensitivityAnalysisParameters(UUID parametersUuid, String userId) {
 
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid)
             .toUriString();
 
-        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
+
+        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.GET, httpEntity, String.class).getBody();
     }
 
     public UUID createDefaultSensitivityAnalysisParameters() {
@@ -273,14 +278,13 @@ public class SensitivityAnalysisService extends AbstractComputationService {
             .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
         return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
     }
 
-    public UUID duplicateSensitivityAnalysisParameters(UUID sourceParametersUuid) {
+    public UUID duplicateSensitivityAnalysisParameters(UUID sourceParametersUuid, String userId) {
 
         Objects.requireNonNull(sourceParametersUuid);
 
@@ -290,7 +294,12 @@ public class SensitivityAnalysisService extends AbstractComputationService {
             .buildAndExpand()
             .toUriString();
 
-        return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, null, UUID.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+
+        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
+
+        return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
     }
 
     public void updateSensitivityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
