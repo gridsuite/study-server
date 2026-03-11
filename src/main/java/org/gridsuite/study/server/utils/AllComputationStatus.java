@@ -7,14 +7,12 @@
 package org.gridsuite.study.server.utils;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.extern.jackson.Jacksonized;
-import org.gridsuite.study.server.dto.LoadFlowStatus;
-import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
-import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
-import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 
 /**
  * @author Etienne Lesot <etienne.lesot at rte-france.com>
