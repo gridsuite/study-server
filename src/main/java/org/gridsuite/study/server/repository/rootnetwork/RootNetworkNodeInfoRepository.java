@@ -60,14 +60,14 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     List<RootNetworkNodeInfoEntity> findAllByRootNetworkStudyIdAndNodeInfoNodeTypeAndLoadFlowResultUuidNotNull(UUID studyUuid, NetworkModificationNodeType nodeType);
 
-    @Query("SELECT count(rnni) > 0 from RootNetworkNodeInfoEntity rnni LEFT JOIN rnni.rootNetwork rn LEFT JOIN rn.study s " +
-        "where s.id = :studyUuid and (rnni.nodeBuildStatus.globalBuildStatus = :buildStatus or rnni.nodeBuildStatus.localBuildStatus = :buildStatus)")
-    boolean existsByStudyUuidAndBuildStatus(UUID studyUuid, BuildStatus buildStatus);
-
     List<RootNetworkNodeInfoEntity> getAllByRootNetworkIdAndNodeInfoIdIn(UUID rootNetworkUuid, List<UUID> nodesUuids);
 
     @Query(value = "SELECT count(rnni) > 0 FROM RootNetworkNodeInfoEntity rnni WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodesUuids AND rnni.blockedNode = true ")
     boolean existsByNodeUuidsAndBlockedNode(UUID rootNetworkUuid, List<UUID> nodesUuids);
+
+    @Query(value = "SELECT count(rnni) > 0 FROM RootNetworkNodeInfoEntity rnni WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodesUuids AND" +
+        " (rnni.nodeBuildStatus.globalBuildStatus = :buildStatus or rnni.nodeBuildStatus.localBuildStatus = :buildStatus) ")
+    boolean existsByNodeUuidsAndBuildStatus(UUID rootNetworkUuid, List<UUID> nodesUuids, BuildStatus buildStatus);
 
     /**
      * Finds report UUIDs that are still referenced by other RootNetworkNodeInfo entities.

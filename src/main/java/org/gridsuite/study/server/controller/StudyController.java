@@ -1409,7 +1409,6 @@ public class StudyController {
                                                                      @Parameter(description = "New activated value") @RequestParam(name = "activated") Boolean activated,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
-        studyService.assertNoBuildNoComputationForRootNetworkNode(nodeUuid, rootNetworkUuid);
         studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
         rebuildNodeService.updateNetworkModificationsActivation(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId, activated);
         return ResponseEntity.ok().build();
@@ -1507,12 +1506,14 @@ public class StudyController {
     @Operation(summary = "Move to trash the node with given id")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The node has been successfully moved to trash"),
+        @ApiResponse(responseCode = "403", description = "The node can't be moved to trash"),
         @ApiResponse(responseCode = "404", description = "The study or the node not found")})
     public ResponseEntity<Void> stashNode(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                                  @Parameter(description = "id of child to delete (move to trash)") @PathVariable("id") UUID nodeId,
                                                  @Parameter(description = "to stash a node with its children") @RequestParam(value = "stashChildren", defaultValue = "false") boolean stashChildren,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertNoBlockedNodeInStudy(studyUuid, nodeId);
+        studyService.assertCanUpdateModifications(studyUuid, nodeId);
         studyService.stashNode(studyUuid, nodeId, stashChildren, userId);
         return ResponseEntity.ok().build();
     }
@@ -1627,13 +1628,13 @@ public class StudyController {
     @Operation(summary = "build a study node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The study node has been built"),
                            @ApiResponse(responseCode = "404", description = "The study or node doesn't exist"),
-                           @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
+                           @ApiResponse(responseCode = "403", description = "The study node can't be built")})
     public ResponseEntity<Void> buildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
-        studyService.assertNoBuildNoComputationForRootNetworkNode(nodeUuid, rootNetworkUuid);
+        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
         studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
