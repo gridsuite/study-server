@@ -2515,8 +2515,8 @@ public class StudyController {
         allComputationStatus.setSensitivityAnalysisStatus(rootNetworkNodeInfoService.getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid));
         SecurityAnalysisStatus securityAnalysisStatus = rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
         allComputationStatus.setSecurityAnalysisStatus(securityAnalysisStatus == null ? null : securityAnalysisStatus.name());
-        allComputationStatus.setOneBusShortCircuitStatus(rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ONE_BUS));;
-        allComputationStatus.setAllBusShortCircuitStatus(rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ALL_BUSES));;
+        allComputationStatus.setOneBusShortCircuitStatus(rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ONE_BUS));
+        allComputationStatus.setAllBusShortCircuitStatus(rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ALL_BUSES));
         allComputationStatus.setVoltageInitStatus(rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(allComputationStatus);
     }
