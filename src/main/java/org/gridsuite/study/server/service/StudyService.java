@@ -2342,7 +2342,14 @@ public class StudyService {
     }
 
     @Transactional
-    public void moveNetworkModifications(@NonNull UUID studyUuid, UUID targetNodeUuid, @NonNull UUID originNodeUuid, List<UUID> modificationUuidList, UUID beforeUuid, boolean isTargetInDifferentNodeTree, String userId) {
+    public void moveNetworkModifications(
+            @NonNull UUID studyUuid,
+            UUID targetNodeUuid,
+            @NonNull UUID originNodeUuid,
+            List<UUID> modificationUuidList,
+            UUID beforeUuid,
+            boolean isTargetInDifferentNodeTree,
+            String userId) {
         boolean isTargetDifferentNode = !targetNodeUuid.equals(originNodeUuid);
 
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
@@ -2364,8 +2371,7 @@ public class StudyService {
                 .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
                 .toList();
 
-            List<ModificationsToCopyInfos> modificationsToCopyInfos = modificationUuidList.stream().map(modifUuid -> ModificationsToCopyInfos.builder().uuid(modifUuid).build()).toList();
-            NetworkModificationsResult networkModificationsResult = networkModificationService.moveModifications(originGroupUuid, targetGroupUuid, beforeUuid, Pair.of(modificationsToCopyInfos, modificationApplicationContexts), isTargetInDifferentNodeTree);
+            NetworkModificationsResult networkModificationsResult = networkModificationService.moveModifications(originGroupUuid, targetGroupUuid, beforeUuid, Pair.of(modificationUuidList, modificationApplicationContexts), isTargetInDifferentNodeTree);
             rootNetworkNodeInfoService.moveModificationsToExclude(originNodeUuid, targetNodeUuid, networkModificationsResult.modificationUuids());
 
             // Target node
@@ -2394,14 +2400,12 @@ public class StudyService {
     }
 
     @Transactional
-    public void duplicateOrInsertNetworkModifications(
+    public void duplicateNetworkModifications(
             UUID targetStudyUuid,
             UUID targetNodeUuid,
-            UUID originStudyUuid,
             UUID originNodeUuid,
-            List<ModificationsToCopyInfos> modifications,
-            String userId,
-            StudyConstants.ModificationsActionType action) {
+            List<UUID> modificationsUuids,
+            String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         notificationService.emitStartModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
@@ -2414,9 +2418,51 @@ public class StudyService {
                 .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
                 .toList();
 
-            NetworkModificationsResult networkModificationResults = networkModificationService.duplicateOrInsertModifications(groupUuid, action, Pair.of(modifications, modificationApplicationContexts));
+            NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
 
-            copyModificationsToExclude(originNodeUuid, targetNodeUuid, modifications, networkModificationResults);
+            copyModificationsToExclude(originNodeUuid, targetNodeUuid, modificationsUuids, networkModificationResults);
+
+            if (networkModificationResults != null) {
+                int index = 0;
+                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
+                for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
+                    if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
+                        emitNetworkModificationImpacts(targetStudyUuid, targetNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
+                    }
+                    index++;
+                }
+            }
+
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
+        }
+        notificationService.emitElementUpdated(targetStudyUuid, userId);
+    }
+
+    @Transactional
+    public void insertCompositeNetworkModifications(
+            UUID targetStudyUuid,
+            UUID targetNodeUuid,
+            UUID originNodeUuid,
+            List<ModificationsToCopyInfos> modifications,
+            String userId,
+            StudyConstants.CompositeModificationsActionType action) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        try {
+            checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
+
+            List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(targetStudyUuid);
+            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
+
+            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
+                .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
+                .toList();
+
+            NetworkModificationsResult networkModificationResults = networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(modifications, modificationApplicationContexts));
+
+            List<UUID> modificationsUuids = modifications.stream().map(ModificationsToCopyInfos::getUuid).toList();
+            copyModificationsToExclude(originNodeUuid, targetNodeUuid, modificationsUuids, networkModificationResults);
 
             if (networkModificationResults != null) {
                 int index = 0;
@@ -2437,10 +2483,11 @@ public class StudyService {
 
     private void copyModificationsToExclude(UUID originNodeUuid,
                                             UUID targetNodeUuid,
-                                            List<ModificationsToCopyInfos> modifications, NetworkModificationsResult networkModificationResults) {
+                                            List<UUID> modificationsUuids,
+                                            NetworkModificationsResult networkModificationResults) {
         Map<UUID, UUID> mappingModificationsUuids = new HashMap<>();
-        for (int i = 0; i < modifications.size(); i++) {
-            mappingModificationsUuids.put(modifications.get(i).getUuid(), networkModificationResults.modificationUuids().get(i));
+        for (int i = 0; i < modificationsUuids.size(); i++) {
+            mappingModificationsUuids.put(modificationsUuids.get(i), networkModificationResults.modificationUuids().get(i));
         }
 
         rootNetworkNodeInfoService.copyModificationsToExcludeFromTags(originNodeUuid, targetNodeUuid, mappingModificationsUuids);
