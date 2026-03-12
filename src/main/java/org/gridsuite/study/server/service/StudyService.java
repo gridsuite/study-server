@@ -2444,7 +2444,7 @@ public class StudyService {
             UUID targetStudyUuid,
             UUID targetNodeUuid,
             UUID originNodeUuid,
-            List<ModificationsToCopyInfos> modifications,
+            List<Pair<UUID, String>> modifications,
             String userId,
             StudyConstants.CompositeModificationsActionType action) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
@@ -2461,7 +2461,7 @@ public class StudyService {
 
             NetworkModificationsResult networkModificationResults = networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(modifications, modificationApplicationContexts));
 
-            List<UUID> modificationsUuids = modifications.stream().map(ModificationsToCopyInfos::getUuid).toList();
+            List<UUID> modificationsUuids = modifications.stream().map(Pair::getFirst).toList();
             copyModificationsToExclude(originNodeUuid, targetNodeUuid, modificationsUuids, networkModificationResults);
 
             if (networkModificationResults != null) {

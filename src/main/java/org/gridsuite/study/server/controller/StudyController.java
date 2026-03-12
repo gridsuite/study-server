@@ -678,6 +678,9 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * @param modificationsToInsert pair of the composite uuid and its name
+     */
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-modifications", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "For a list of composite network modifications passed in body, insert them into the target node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated.")})
@@ -686,16 +689,16 @@ public class StudyController {
                                                          @RequestParam("action") CompositeModificationsActionType action,
                                                          @RequestParam("originStudyUuid") UUID originStudyUuid,
                                                          @RequestParam("originNodeUuid") UUID originNodeUuid,
-                                                         @RequestBody List<ModificationsToCopyInfos> modificationsToCopyInfos,
+                                                         @RequestBody List<Pair<UUID, String>> modificationsToInsert,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
         studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
-        handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, originStudyUuid, modificationsToCopyInfos, userId, action);
+        handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, originStudyUuid, modificationsToInsert, userId, action);
         return ResponseEntity.ok().build();
     }
 
-    private void handleInsertCompositeNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, UUID originStudyUuid, List<ModificationsToCopyInfos> modificationsToCopy, String userId, CompositeModificationsActionType action) {
+    private void handleInsertCompositeNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, UUID originStudyUuid, List<Pair<UUID, String>> modificationsToCopy, String userId, CompositeModificationsActionType action) {
         studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
         studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
         try {
