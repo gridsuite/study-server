@@ -1132,18 +1132,25 @@ public class StudyService {
     }
 
     @Transactional
-    public void assertCanUpdateModifications(UUID studyUuid, UUID nodeUuid) {
+    public void assertCanUpdateNodeInStudy(UUID studyUuid, UUID nodeUuid) {
         assertIsNodeNotReadOnly(nodeUuid);
-        assertNoBuildNoComputationInTree(studyUuid, nodeUuid);
+        List<UUID> nodesUuids = networkModificationTreeService.getNodeTreeUuids(nodeUuid);
+        getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
+            assertNoBuildNoComputationInTree(rootNetwork.getId(), nodesUuids)
+        );
     }
 
-    private void assertNoBuildNoComputationInTree(UUID studyUuid, UUID nodeUuid) {
+    @Transactional
+    public void assertCanUpdateNodeInTree(UUID rootNetworkUuid, UUID nodeUuid) {
+        assertIsNodeNotReadOnly(nodeUuid);
         List<UUID> nodesUuids = networkModificationTreeService.getNodeTreeUuids(nodeUuid);
-        getStudyRootNetworks(studyUuid).forEach(rootNetwork -> {
-            // TODO test all tree for computations
-            rootNetworkNodeInfoService.assertComputationNotRunning(nodeUuid, rootNetwork.getId());
-            rootNetworkNodeInfoService.assertNoBuildingNode(rootNetwork.getId(), nodesUuids);
-        });
+        assertNoBuildNoComputationInTree(rootNetworkUuid, nodesUuids);
+    }
+
+    private void assertNoBuildNoComputationInTree(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        // TODO modify computations endpoints to test multiple uuids
+        nodesUuids.forEach(uuid -> rootNetworkNodeInfoService.assertComputationNotRunning(uuid, rootNetworkUuid));
+        rootNetworkNodeInfoService.assertNoBuildingNode(rootNetworkUuid, nodesUuids);
     }
 
     public void assertIsStudyAndNodeExist(UUID studyUuid, UUID nodeUuid) {

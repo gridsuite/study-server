@@ -449,6 +449,7 @@ class NetworkModificationTreeTest {
                                                NetworkModificationNode security1,
                                                NetworkModificationNode security2) throws Exception {
         // Construction node cannot be inserted before a security node
+        doNothing().when(rootNetworkNodeInfoService).assertComputationNotRunning(any(), any());
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                         studyId, construction2.getId(), security1.getId(), InsertMode.BEFORE)
                         .header(USER_ID_HEADER, userId))
