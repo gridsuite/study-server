@@ -1131,20 +1131,13 @@ public class StudyService {
         }
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public void assertCanUpdateNodeInStudy(UUID studyUuid, UUID nodeUuid) {
         assertIsNodeNotReadOnly(nodeUuid);
         List<UUID> nodesUuids = networkModificationTreeService.getNodeTreeUuids(nodeUuid);
         getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
             assertNoBuildNoComputationInTree(rootNetwork.getId(), nodesUuids)
         );
-    }
-
-    @Transactional
-    public void assertCanUpdateNodeInTree(UUID rootNetworkUuid, UUID nodeUuid) {
-        assertIsNodeNotReadOnly(nodeUuid);
-        List<UUID> nodesUuids = networkModificationTreeService.getNodeTreeUuids(nodeUuid);
-        assertNoBuildNoComputationInTree(rootNetworkUuid, nodesUuids);
     }
 
     private void assertNoBuildNoComputationInTree(UUID rootNetworkUuid, List<UUID> nodesUuids) {
