@@ -341,6 +341,12 @@ public class NetworkModificationTreeService {
         return nodesUuids;
     }
 
+    public List<UUID> getNodeBranchUuids(UUID nodeUuid) {
+        List<UUID> nodesUuids = nodesRepository.findAllAncestorsUuids(nodeUuid);
+        nodesUuids.addAll(getNodeTreeUuids(nodeUuid));
+        return nodesUuids;
+    }
+
     public List<UUID> getAllChildrenUuids(UUID parentUuid) {
         return nodesRepository.findAllChildrenUuids(parentUuid);
     }

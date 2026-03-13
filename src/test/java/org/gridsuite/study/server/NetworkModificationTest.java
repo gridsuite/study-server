@@ -562,6 +562,100 @@ class NetworkModificationTest {
     }
 
     @Test
+    void testBuildAsserts() throws Exception {
+        String userId = USER_ID;
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID rootNetworkUuid = studyEntity.getFirstRootNetwork().getId();
+        UUID studyNameUserIdUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyNameUserIdUuid).getId();
+
+        // Branch 1
+        NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyNameUserIdUuid,
+            rootNodeUuid, UUID.randomUUID(), "variant_1", "node 1", userId);
+        NetworkModificationNode modificationNode2 = createNetworkModificationNode(studyNameUserIdUuid,
+            modificationNode1.getId(), UUID.randomUUID(), "variant_2", "node 2", userId);
+
+        // Branch 2
+        NetworkModificationNode modificationNode3 = createNetworkModificationNode(studyNameUserIdUuid,
+            rootNodeUuid, UUID.randomUUID(), "variant_3", "node 3", userId);
+        NetworkModificationNode modificationNode4 = createNetworkModificationNode(studyNameUserIdUuid,
+            modificationNode3.getId(), UUID.randomUUID(), "variant_4", "node 4", userId);
+        NetworkModificationNode modificationNode5 = createNetworkModificationNode(studyNameUserIdUuid,
+            modificationNode4.getId(), UUID.randomUUID(), "variant_5", "node 5", userId);
+
+        /*
+                            root
+                    |               \
+          modificationNode1       modificationNode3
+                 |                          \
+          modificationNode2       modificationNode4
+                                            \
+                                  modificationNode5
+         */
+
+        // just test asserts
+        doNothing().when(studyService).buildNode(any(), any(), any(), any());
+
+        // Build all nodes is ok
+        testBuildAsserts(studyNameUserIdUuid, rootNetworkUuid,
+            Set.of(modificationNode1.getId(), modificationNode2.getId(), modificationNode3.getId(), modificationNode4.getId(), modificationNode5.getId()),
+            Set.of());
+
+        // Mark the node 1 status as building
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
+        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
+
+        // Build all nodes branch1 is not ok
+        // Build all nodes branch1 is ok
+        testBuildAsserts(studyNameUserIdUuid, rootNetworkUuid,
+            Set.of(modificationNode3.getId(), modificationNode4.getId(), modificationNode5.getId()),
+            Set.of(modificationNode1.getId(), modificationNode2.getId())
+        );
+
+        // Mark the node 2 status as building
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode2.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
+        rootNetworkNodeInfo2Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
+        rootNetworkNodeInfoRepository.saveAll(List.of(rootNetworkNodeInfo1Entity, rootNetworkNodeInfo2Entity));
+
+        // Build all nodes branch1 is not ok
+        // Build all nodes branch1 is ok
+        testBuildAsserts(studyNameUserIdUuid, rootNetworkUuid,
+            Set.of(modificationNode3.getId(), modificationNode4.getId(), modificationNode5.getId()),
+            Set.of(modificationNode1.getId(), modificationNode2.getId())
+        );
+
+        // Mark the node 4 status as building
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo4Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode4.getId(), studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        rootNetworkNodeInfo2Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
+        rootNetworkNodeInfo4Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
+        rootNetworkNodeInfoRepository.saveAll(List.of(rootNetworkNodeInfo2Entity, rootNetworkNodeInfo4Entity));
+
+        // Build all nodes branch1 is ok
+        // Build all nodes branch1 is not ok
+        testBuildAsserts(studyNameUserIdUuid, rootNetworkUuid,
+            Set.of(modificationNode1.getId(), modificationNode2.getId()),
+            Set.of(modificationNode3.getId(), modificationNode4.getId(), modificationNode5.getId())
+        );
+
+        verify(rootNetworkNodeInfoService, times(20)).assertNoBuildingNode(any(), any());
+    }
+
+    private void testBuildAsserts(UUID studyUuid, UUID rootNetworkUuid, Set<UUID> nodesUuidsOk, Set<UUID> nodesUuidsNotOk) throws Exception {
+        for (UUID nodeUuid : nodesUuidsOk) {
+            mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid)
+                    .header(USER_ID_HEADER, USER_ID))
+                .andExpect(status().isOk());
+        }
+        for (UUID nodeUuid : nodesUuidsNotOk) {
+            mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid)
+                    .header(USER_ID_HEADER, USER_ID))
+                .andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
     void testNetworkModificationSwitch() throws Exception {
         reportServerStubs.stubDeleteReport();
 

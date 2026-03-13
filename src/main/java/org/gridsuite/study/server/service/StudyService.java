@@ -1140,6 +1140,12 @@ public class StudyService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public void assertCanBuildNode(UUID rootNetworkUuid, UUID nodeUuid) {
+        List<UUID> nodesUuids = networkModificationTreeService.getNodeBranchUuids(nodeUuid);
+        rootNetworkNodeInfoService.assertNoBuildingNode(rootNetworkUuid, nodesUuids);
+    }
+
     private void assertNoBuildNoComputationInTree(UUID rootNetworkUuid, List<UUID> nodesUuids) {
         // TODO modify computations endpoints to test multiple uuids
         nodesUuids.forEach(uuid -> rootNetworkNodeInfoService.assertComputationNotRunning(uuid, rootNetworkUuid));
@@ -1809,7 +1815,7 @@ public class StudyService {
         if (networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()) {
             return;
         }
-        assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
+        assertNoMaxBuilds(studyUuid, rootNetworkUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
 
         // Store all reports (inherited + new) for this node
@@ -1859,7 +1865,7 @@ public class StudyService {
         }).orElse(Long.MAX_VALUE);
     }
 
-    public void assertCanBuildNode(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+    public void assertNoMaxBuilds(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         // check restrictions on node builds number
         userAdminService.getUserMaxAllowedBuilds(userId).ifPresent(maxBuilds -> {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
