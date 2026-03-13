@@ -485,15 +485,8 @@ public class RootNetworkNodeInfoService {
         return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyIdAndNodeInfoNodeTypeAndLoadFlowResultUuidNotNull(studyUuid, NetworkModificationNodeType.SECURITY);
     }
 
-    public void assertNoRootNetworkNodeIsBuilding(UUID studyUuid) {
-        if (rootNetworkNodeInfoRepository.existsByStudyUuidAndBuildStatus(studyUuid, BuildStatus.BUILDING)) {
-            throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
-        }
-    }
-
-    public void assertNetworkNodeIsNotBuilding(UUID rootNetworkUuid, UUID nodeUuid) {
-        NodeBuildStatusEmbeddable buildStatusEmbeddable = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).map(RootNetworkNodeInfoEntity::getNodeBuildStatus).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        if (buildStatusEmbeddable.getGlobalBuildStatus().isBuilding() || buildStatusEmbeddable.getLocalBuildStatus().isBuilding()) {
+    public void assertNoBuildingNode(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndBuildStatus(rootNetworkUuid, nodesUuids, BuildStatus.BUILDING)) {
             throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
         }
     }

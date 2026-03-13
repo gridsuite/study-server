@@ -281,7 +281,7 @@ class StudyTestBase {
     @Autowired
     protected NetworkModificationTreeService networkModificationTreeService;
 
-    @Autowired
+    @MockitoSpyBean
     protected RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @MockitoBean

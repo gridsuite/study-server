@@ -1131,20 +1131,24 @@ public class StudyService {
         }
     }
 
-    @Transactional
-    public void assertCanUpdateModifications(UUID studyUuid, UUID nodeUuid) {
+    @Transactional(readOnly = true)
+    public void assertCanUpdateNodeInStudy(UUID studyUuid, UUID nodeUuid) {
         assertIsNodeNotReadOnly(nodeUuid);
-        assertNoBuildNoComputationForNode(studyUuid, nodeUuid);
+        List<UUID> nodesUuids = networkModificationTreeService.getNodeTreeUuids(nodeUuid);
+        getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
+            assertNoBuildNoComputationInTree(rootNetwork.getId(), nodesUuids)
+        );
+    }
+
+    private void assertNoBuildNoComputationInTree(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        // TODO modify computations endpoints to test multiple uuids
+        nodesUuids.forEach(uuid -> rootNetworkNodeInfoService.assertComputationNotRunning(uuid, rootNetworkUuid));
+        rootNetworkNodeInfoService.assertNoBuildingNode(rootNetworkUuid, nodesUuids);
     }
 
     public void assertIsStudyAndNodeExist(UUID studyUuid, UUID nodeUuid) {
         assertIsStudyExist(studyUuid);
         assertIsNodeExist(studyUuid, nodeUuid);
-    }
-
-    public void assertNoBuildNoComputationForRootNetworkNode(UUID nodeUuid, UUID rootNetworkUuid) {
-        rootNetworkNodeInfoService.assertComputationNotRunning(nodeUuid, rootNetworkUuid);
-        rootNetworkNodeInfoService.assertNetworkNodeIsNotBuilding(rootNetworkUuid, nodeUuid);
     }
 
     @Transactional(readOnly = true)
@@ -1158,13 +1162,6 @@ public class StudyService {
         getStudyRootNetworks(studyUuid).stream().forEach(rootNetwork ->
             rootNetworkNodeInfoService.assertNoBlockedNode(rootNetwork.getId(), nodesUuids)
         );
-    }
-
-    public void assertNoBuildNoComputationForNode(UUID studyUuid, UUID nodeUuid) {
-        getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
-            rootNetworkNodeInfoService.assertComputationNotRunning(nodeUuid, rootNetwork.getId())
-        );
-        rootNetworkNodeInfoService.assertNoRootNetworkNodeIsBuilding(studyUuid);
     }
 
     public void assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {

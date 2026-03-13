@@ -209,7 +209,7 @@ class NetworkModificationTreeTest {
 
     @Autowired
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
-    @Autowired
+    @MockitoSpyBean
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
     private RootNetworkService rootNetworkService;
@@ -449,6 +449,7 @@ class NetworkModificationTreeTest {
                                                NetworkModificationNode security1,
                                                NetworkModificationNode security2) throws Exception {
         // Construction node cannot be inserted before a security node
+        doNothing().when(rootNetworkNodeInfoService).assertComputationNotRunning(any(), any());
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                         studyId, construction2.getId(), security1.getId(), InsertMode.BEFORE)
                         .header(USER_ID_HEADER, userId))
@@ -636,6 +637,7 @@ class NetworkModificationTreeTest {
         assertEquals("not built node", networkModificationNode.getDescription());
 
         //stash 1 node and do the checks
+        doNothing().when(rootNetworkNodeInfoService).assertComputationNotRunning(any(), any());
         stashNode(root.getStudyId(), children.get(0), false, Set.of(children.get(0)), userId);
         var stashedNode = nodeRepository.findById(children.get(0).getId()).orElseThrow();
         assertTrue(stashedNode.isStashed());
@@ -1744,6 +1746,7 @@ class NetworkModificationTreeTest {
         checkNodeAliasUpdateMessageReceived(root.getStudyId());
 
         // Stashing node3 (with stashChildren=true) should result in aliases no more associated to nodes node3, node4 and node5
+        doNothing().when(rootNetworkNodeInfoService).assertComputationNotRunning(any(), any());
         stashNode(root.getStudyId(), node3, true, Set.of(node3, node4, node5), userId);
         nodeAliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
             .getResponse()
