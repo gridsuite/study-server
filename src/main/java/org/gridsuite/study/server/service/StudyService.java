@@ -2443,7 +2443,6 @@ public class StudyService {
     public void insertCompositeNetworkModifications(
             UUID targetStudyUuid,
             UUID targetNodeUuid,
-            UUID originNodeUuid,
             List<Pair<UUID, String>> modifications,
             String userId,
             StudyConstants.CompositeModificationsActionType action) {
@@ -2460,9 +2459,6 @@ public class StudyService {
                 .toList();
 
             NetworkModificationsResult networkModificationResults = networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(modifications, modificationApplicationContexts));
-
-            List<UUID> modificationsUuids = modifications.stream().map(Pair::getFirst).toList();
-            copyModificationsToExclude(originNodeUuid, targetNodeUuid, modificationsUuids, networkModificationResults);
 
             if (networkModificationResults != null) {
                 int index = 0;
