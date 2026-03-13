@@ -692,7 +692,7 @@ public class StudyController {
                                                          @RequestBody List<Pair<UUID, String>> modificationsToInsert,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        studyService.assertCanUpdateModifications(studyUuid, nodeUuid);
+        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
         handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, modificationsToInsert, userId, action);
         return ResponseEntity.ok().build();
     }
