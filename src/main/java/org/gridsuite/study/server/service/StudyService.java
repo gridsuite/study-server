@@ -31,6 +31,7 @@ import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
@@ -1194,7 +1195,7 @@ public class StudyService {
     }
 
     @Transactional
-    public String getSecurityAnalysisParametersValues(UUID studyUuid, String userId) {
+    public String getSecurityAnalysisParametersValues(UUID studyUuid, String userId) throws JsonProcessingException {
         StudyEntity studyEntity = getStudy(studyUuid);
         return securityAnalysisService.getSecurityAnalysisParameters(securityAnalysisService.getSecurityAnalysisParametersUuidOrElseCreateDefaults(studyEntity), userId);
     }
@@ -3308,15 +3309,13 @@ public class StudyService {
     }
 
     @Transactional
-    public String getSensitivityAnalysisParameters(UUID studyUuid, String userId) {
+    public SensitivityAnalysisParametersInfos getSensitivityAnalysisParameters(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        return sensitivityAnalysisService.getSensitivityAnalysisParameters(
-                sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity),
-                userId);
+        return sensitivityAnalysisService.getSensitivityAnalysisParameters(sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
     }
 
     @Transactional
-    public boolean setSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
+    public boolean setSensitivityAnalysisParameters(UUID studyUuid, SensitivityAnalysisParametersInfos parameters, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         boolean userProfileIssue = createOrUpdateSensitivityAnalysisParameters(studyEntity, parameters, userId);
         invalidateSensitivityAnalysisStatusOnAllNodes(studyUuid);
@@ -3326,7 +3325,7 @@ public class StudyService {
         return userProfileIssue;
     }
 
-    public boolean createOrUpdateSensitivityAnalysisParameters(StudyEntity studyEntity, String parameters, String userId) {
+    public boolean createOrUpdateSensitivityAnalysisParameters(StudyEntity studyEntity, SensitivityAnalysisParametersInfos parameters, String userId) {
         boolean userProfileIssue = false;
         UUID existingSensitivityAnalysisParametersUuid = studyEntity.getSensitivityAnalysisParametersUuid();
         UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;

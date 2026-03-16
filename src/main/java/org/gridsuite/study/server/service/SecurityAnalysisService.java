@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.securityanalysis.SecurityAnalysisParameters;
+import org.gridsuite.study.server.dto.securityanalysis.SecurityAnalysisParametersInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
@@ -52,15 +54,19 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
     private final ObjectMapper objectMapper;
 
+    private final SecurityAnalysisParametersMapper parametersMapper;
+
     @Setter
     private String securityAnalysisServerBaseUri;
 
     @Autowired
     public SecurityAnalysisService(RemoteServicesProperties remoteServicesProperties,
-                                   ObjectMapper objectMapper, RestTemplate restTemplate) {
+                                   ObjectMapper objectMapper, RestTemplate restTemplate,
+                                   SecurityAnalysisParametersMapper parametersMapper) {
         this.securityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("security-analysis-server");
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;
+        this.parametersMapper = parametersMapper;
     }
 
     public String getSecurityAnalysisResult(UUID resultUuid, UUID networkUuid, String variantId, SecurityAnalysisResultType resultType, String filters, String globalFilters, Pageable pageable) {
@@ -250,7 +256,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(null, headers), UUID.class).getBody();
     }
 
-    public String getSecurityAnalysisParameters(UUID parametersUuid, String userId) {
+    public String getSecurityAnalysisParameters(UUID parametersUuid, String userId) throws JsonProcessingException {
         Objects.requireNonNull(parametersUuid);
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
@@ -260,7 +266,15 @@ public class SecurityAnalysisService extends AbstractComputationService {
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.GET, new HttpEntity<>(null, headers), String.class).getBody();
+        SecurityAnalysisParameters params = restTemplate.exchange(
+                securityAnalysisServerBaseUri + path,
+                HttpMethod.GET,
+                new HttpEntity<>(null, headers),
+                SecurityAnalysisParameters.class
+        ).getBody();
+        SecurityAnalysisParametersInfos enrichedParams = parametersMapper.enrichParametersInfos(params);
+
+        return objectMapper.writeValueAsString(enrichedParams);
     }
 
     public UUID getSecurityAnalysisParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {

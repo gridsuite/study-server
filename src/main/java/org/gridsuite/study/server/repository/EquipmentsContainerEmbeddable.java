@@ -9,7 +9,7 @@ package org.gridsuite.study.server.repository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.gridsuite.study.server.dto.sensianalysis.EquipmentsContainer;
+import org.gridsuite.study.server.dto.EquipmentsContainer;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;

@@ -10,6 +10,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParameters;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
@@ -50,12 +52,16 @@ public class SensitivityAnalysisService extends AbstractComputationService {
 
     private final ObjectMapper objectMapper;
 
+    private final SensitivityAnalysisParametersMapper parametersMapper;
+
     SensitivityAnalysisService(RemoteServicesProperties remoteServicesProperties,
                                RestTemplate restTemplate,
-                               ObjectMapper objectMapper) {
+                               ObjectMapper objectMapper,
+                               SensitivityAnalysisParametersMapper parametersMapper) {
         this.sensitivityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("sensitivity-analysis-server");
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.parametersMapper = parametersMapper;
     }
 
     public void setSensitivityAnalysisServerBaseUri(String sensitivityAnalysisServerBaseUri) {
@@ -243,19 +249,21 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return studyEntity.getSensitivityAnalysisParametersUuid();
     }
 
-    public String getSensitivityAnalysisParameters(UUID parametersUuid, String userId) {
+    public SensitivityAnalysisParametersInfos getSensitivityAnalysisParameters(UUID parametersUuid) {
 
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid)
             .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
+        SensitivityAnalysisParameters params = restTemplate.exchange(
+                sensitivityAnalysisServerBaseUri + path,
+                HttpMethod.GET,
+                new HttpEntity<>(new HttpHeaders()),
+                SensitivityAnalysisParameters.class
+        ).getBody();
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
-
-        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.GET, httpEntity, String.class).getBody();
+        return parametersMapper.enrichParametersInfos(params);
     }
 
     public UUID createDefaultSensitivityAnalysisParameters() {
@@ -268,18 +276,19 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, null, UUID.class);
     }
 
-    public UUID createSensitivityAnalysisParameters(String parameters) {
+    public UUID createSensitivityAnalysisParameters(SensitivityAnalysisParametersInfos parametersInfos) {
 
-        Objects.requireNonNull(parameters);
+        Objects.requireNonNull(parametersInfos);
 
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters")
             .buildAndExpand()
             .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
+        SensitivityAnalysisParameters parameters = parametersMapper.getParameters(parametersInfos);
 
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+        HttpHeaders headers = new HttpHeaders();
+        HttpEntity<SensitivityAnalysisParameters> httpEntity = new HttpEntity<>(parameters, headers);
 
         return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
     }
@@ -302,16 +311,16 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
     }
 
-    public void updateSensitivityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
+    public void updateSensitivityAnalysisParameters(UUID parametersUuid, @Nullable SensitivityAnalysisParametersInfos parametersInfos) {
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid)
             .toUriString();
 
+        SensitivityAnalysisParameters parameters = parametersMapper.getParameters(parametersInfos);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
+        HttpEntity<SensitivityAnalysisParameters> httpEntity = new HttpEntity<>(parameters, headers);
 
         restTemplate.put(sensitivityAnalysisServerBaseUri + path, httpEntity);
     }
