@@ -1985,6 +1985,88 @@ class NetworkModificationTest {
     }
 
     @Test
+    void testInsertComposite() throws Exception {
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
+        UUID nodeUuid1 = node1.getId();
+        Pair<UUID, String> modification1 = Pair.of(UUID.randomUUID(), "composite 1");
+        Pair<UUID, String> modification2 = Pair.of(UUID.randomUUID(), "composite 2");
+        String compositesData = mapper.writeValueAsString(
+                Arrays.asList(
+                        modification1,
+                        modification2
+                )
+        );
+
+        UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/network-composite-modifications/groups/.*"))
+                .withQueryParam("action", WireMock.equalTo("INSERT"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID(), UUID.randomUUID()), List.of(Optional.empty()))))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
+
+        // insert 2 composite modifications in node1
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/composite-modifications?action=INSERT",
+                        studyUuid, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(compositesData)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+        checkUpdateStatusMessagesReceived(studyUuid, nodeUuid1, output);
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+        checkElementUpdatedMessageSent(studyUuid, userId);
+
+        Pair<List<Pair<UUID, String>>, List<ModificationApplicationContext>> modificationBody =
+                Pair.of(
+                        List.of(modification1, modification2),
+                        List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)
+                        )
+                );
+        String expectedBody = mapper.writeValueAsString(modificationBody);
+        String url = "/v1/network-composite-modifications/groups/" + node1.getModificationGroupUuid();
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
+                        "action", WireMock.equalTo("INSERT")),
+                expectedBody);
+
+        /*verify(rootNetworkNodeInfoService, times(1)).copyModificationsToExcludeFromTags(any(), any(), any());
+
+        // now we do the same but on a built node
+        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid1, studyTestUtils.getOneRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILT));
+        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
+
+        groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
+                .withQueryParam("action", WireMock.equalTo("COPY"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID(), UUID.randomUUID()), List.of(Optional.of(NetworkModificationResult.builder().build())))))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                        studyUuid, nodeUuid1, studyUuid, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(compositesData)
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpect(status().isOk());
+
+        NetworkImpactsInfos expectedPayload = NetworkImpactsInfos.builder().build();
+        checkUpdateStatusMessagesReceived(studyUuid, nodeUuid1, output);
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkElementUpdatedMessageSent(studyUuid, userId);
+        checkEquipmentMessagesReceived(studyUuid, List.of(nodeUuid1), expectedPayload);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+
+        url = "/v1/groups/" + node1.getModificationGroupUuid();
+        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
+                        "action", WireMock.equalTo("COPY")),
+                expectedBody);*/
+    }
+
+    @Test
     void testDuplicateModification() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
