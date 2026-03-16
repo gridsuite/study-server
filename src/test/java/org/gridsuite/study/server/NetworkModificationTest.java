@@ -607,7 +607,7 @@ class NetworkModificationTest {
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
 
         // Build all nodes branch1 is not ok
-        // Build all nodes branch1 is ok
+        // Build all nodes branch2 is ok
         testBuildAsserts(studyNameUserIdUuid, rootNetworkUuid,
             Set.of(modificationNode3.getId(), modificationNode4.getId(), modificationNode5.getId()),
             Set.of(modificationNode1.getId(), modificationNode2.getId())
@@ -620,7 +620,7 @@ class NetworkModificationTest {
         rootNetworkNodeInfoRepository.saveAll(List.of(rootNetworkNodeInfo1Entity, rootNetworkNodeInfo2Entity));
 
         // Build all nodes branch1 is not ok
-        // Build all nodes branch1 is ok
+        // Build all nodes branch2 is ok
         testBuildAsserts(studyNameUserIdUuid, rootNetworkUuid,
             Set.of(modificationNode3.getId(), modificationNode4.getId(), modificationNode5.getId()),
             Set.of(modificationNode1.getId(), modificationNode2.getId())
@@ -633,7 +633,7 @@ class NetworkModificationTest {
         rootNetworkNodeInfoRepository.saveAll(List.of(rootNetworkNodeInfo2Entity, rootNetworkNodeInfo4Entity));
 
         // Build all nodes branch1 is ok
-        // Build all nodes branch1 is not ok
+        // Build all nodes branch2 is not ok
         testBuildAsserts(studyNameUserIdUuid, rootNetworkUuid,
             Set.of(modificationNode1.getId(), modificationNode2.getId()),
             Set.of(modificationNode3.getId(), modificationNode4.getId(), modificationNode5.getId())
