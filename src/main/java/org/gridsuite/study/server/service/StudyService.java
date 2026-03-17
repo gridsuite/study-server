@@ -2425,21 +2425,24 @@ public class StudyService {
 
             copyModificationsToExclude(originNodeUuid, targetNodeUuid, modificationsUuids, networkModificationResults);
 
-            if (networkModificationResults != null) {
-                int index = 0;
-                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
-                for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
-                    if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
-                        emitNetworkModificationImpacts(targetStudyUuid, targetNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
-                    }
-                    index++;
-                }
-            }
-
+            sendImpactNotifications(targetStudyUuid, targetNodeUuid, networkModificationResults, studyRootNetworkEntities);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(targetStudyUuid, userId);
+    }
+
+    private void sendImpactNotifications(UUID targetStudyUuid, UUID targetNodeUuid, NetworkModificationsResult networkModificationResults, List<RootNetworkEntity> studyRootNetworkEntities) {
+        if (networkModificationResults != null) {
+            int index = 0;
+            // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
+            for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
+                if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
+                    emitNetworkModificationImpacts(targetStudyUuid, targetNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
+                }
+                index++;
+            }
+        }
     }
 
     @Transactional
@@ -2463,17 +2466,7 @@ public class StudyService {
 
             NetworkModificationsResult networkModificationResults = networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(modifications, modificationApplicationContexts));
 
-            if (networkModificationResults != null) {
-                int index = 0;
-                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
-                for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
-                    if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
-                        emitNetworkModificationImpacts(targetStudyUuid, targetNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
-                    }
-                    index++;
-                }
-            }
-
+            sendImpactNotifications(targetStudyUuid, targetNodeUuid, networkModificationResults, studyRootNetworkEntities);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
         }
