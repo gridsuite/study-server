@@ -814,6 +814,18 @@ public class ConsumerService {
     }
 
     @Bean
+    public Consumer<Message<String>> consumeSaProgress() {
+        return message -> getNodeReceiver(message).ifPresent(receiverObj -> {
+            Integer current = message.getHeaders().get(NotificationService.HEADER_SA_PROGRESS_CURRENT, Integer.class);
+            Integer total = message.getHeaders().get(NotificationService.HEADER_SA_PROGRESS_TOTAL, Integer.class);
+            if (current != null && total != null) {
+                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                notificationService.emitSecurityAnalysisProgress(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), current, total);
+            }
+        });
+    }
+
+    @Bean
     public Consumer<Message<String>> consumeSensitivityAnalysisResult() {
         return message -> consumeCalculationResult(message, SENSITIVITY_ANALYSIS);
     }
