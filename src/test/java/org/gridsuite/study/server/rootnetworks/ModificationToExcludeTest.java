@@ -523,7 +523,7 @@ class ModificationToExcludeTest {
         Mockito.doReturn(
                         new NetworkModificationsResult(
                                 modifications.stream()
-                                        .map(m -> ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP.get(m))
+                                        .map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get)
                                         .toList(),
                                 List.of()
                         )

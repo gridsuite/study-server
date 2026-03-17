@@ -48,10 +48,7 @@ import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
-import org.gridsuite.study.server.utils.wiremock.ReportServerStubs;
-import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
-import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
+import org.gridsuite.study.server.utils.wiremock.*;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -2097,7 +2094,7 @@ class NetworkModificationTest {
                 )
         );
 
-        UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/network-composite-modifications/groups/.*"))
+        wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/network-composite-modifications/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("INSERT"))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID(), UUID.randomUUID()), List.of(Optional.empty()))))
@@ -2123,7 +2120,7 @@ class NetworkModificationTest {
                 );
         String expectedBody = mapper.writeValueAsString(modificationBody);
         String url = "/v1/network-composite-modifications/groups/" + node1.getModificationGroupUuid();
-        WireMockUtils.verifyPutRequest(wireMockServer, groupStubId, url, true, Map.of(
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, url, false, Map.of(
                         "action", WireMock.equalTo("INSERT")),
                 expectedBody);
     }
