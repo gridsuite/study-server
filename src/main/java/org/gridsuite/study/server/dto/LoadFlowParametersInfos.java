@@ -8,6 +8,7 @@ package org.gridsuite.study.server.dto;
 
 import com.powsybl.loadflow.LoadFlowParameters;
 import lombok.*;
+import org.gridsuite.study.server.dto.securityanalysis.LimitReductionsByVoltageLevel;
 
 import java.util.List;
 import java.util.Map;

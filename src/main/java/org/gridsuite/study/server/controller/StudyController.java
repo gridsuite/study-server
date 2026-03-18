@@ -36,6 +36,7 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
+import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
@@ -2080,7 +2081,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters")})
     public ResponseEntity<String> getSecurityAnalysisParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
+            @RequestHeader(HEADER_USER_ID) String userId) throws JsonProcessingException {
         return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid, userId));
     }
 
@@ -2187,21 +2188,38 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
     @Operation(summary = "Get sensitivity analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters")})
-    public ResponseEntity<String> getSensitivityAnalysisParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParameters(studyUuid, userId));
+    public ResponseEntity<SensitivityAnalysisParametersInfos> getStudySensitivityAnalysisParameters(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParameters(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
     @Operation(summary = "set sensitivity analysis parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set"),
         @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
-    public ResponseEntity<Void> setSensitivityAnalysisParameters(
+    public ResponseEntity<Void> setStudySensitivityAnalysisParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String sensitivityAnalysisParameters,
+            @RequestBody(required = false) SensitivityAnalysisParametersInfos sensitivityAnalysisParameters,
             @RequestHeader(HEADER_USER_ID) String userId) {
         return studyService.setSensitivityAnalysisParameters(studyUuid, sensitivityAnalysisParameters, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/sensitivity-analysis/parameters/{parametersUuid}") // to move to explore-server?
+    @Operation(summary = "Get sensitivity analysis parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters")})
+    public ResponseEntity<SensitivityAnalysisParametersInfos> getSensitivityAnalysisParameters(
+            @PathVariable("parametersUuid") UUID parametersUuid) {
+        return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisParameters(parametersUuid));
+    }
+
+    @PostMapping(value = "/sensitivity-analysis/parameters/{parametersUuid}") // to move to explore-server?
+    @Operation(summary = "set sensitivity analysis parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set"), @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> setSensitivityAnalysisParameters(
+            @PathVariable("parametersUuid") UUID parametersUuid,
+            @RequestBody SensitivityAnalysisParametersInfos parameters) {
+        sensitivityAnalysisService.updateSensitivityAnalysisParameters(parametersUuid, parameters);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factor-count")

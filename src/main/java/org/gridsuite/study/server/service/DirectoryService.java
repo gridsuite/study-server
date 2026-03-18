@@ -12,6 +12,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ElementAttributes;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -23,6 +24,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -37,6 +40,7 @@ public class DirectoryService {
     public static final String PARAM_ACCESS_TYPE = "accessType";
     public static final String PARAM_TARGET_DIRECTORY_UUID = "targetDirectoryUuid";
     public static final String PARAM_RECURSIVE_CHECK = "recursiveCheck";
+    public static final String PARAM_STRICT_MODE = "strictMode";
 
     private final RestTemplate restTemplate;
 
@@ -54,6 +58,30 @@ public class DirectoryService {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements/{elementUuid}/name");
         String path = pathBuilder.buildAndExpand(elementUuid).toUriString();
         return restTemplate.getForObject(getDirectoryServerServerBaseUri() + path, String.class);
+    }
+
+    public Map<UUID, String> getElementNames(Set<UUID> elementUuids, boolean strictMode) {
+        // strictMode true => returns an error if at least one element is not found
+        if (elementUuids.isEmpty()) {
+            return Map.of();
+        }
+
+        String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/element-names")
+                .queryParam(PARAM_IDS, elementUuids)
+                .queryParam(PARAM_STRICT_MODE, strictMode)
+                .buildAndExpand()
+                .toUriString();
+
+        ResponseEntity<Map<UUID, String>> response =
+                restTemplate.exchange(
+                        getDirectoryServerServerBaseUri() + path,
+                        HttpMethod.GET,
+                        null,
+                        new ParameterizedTypeReference<>() {
+                        }
+                );
+
+        return response.getBody();
     }
 
     public boolean elementExists(UUID directoryUuid, String elementName, String type) {
