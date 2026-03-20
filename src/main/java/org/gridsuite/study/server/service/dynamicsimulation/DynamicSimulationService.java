@@ -16,7 +16,6 @@ import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.springframework.lang.NonNull;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,9 +27,9 @@ public interface DynamicSimulationService {
 
     // --- Parameters related methods --- //
 
-    String getProvider(@NonNull UUID parametersUuid);
+    String getProvider(UUID parametersUuid);
 
-    String getParameters(UUID parametersUuid, String userId);
+    String getParameters(UUID parametersUuid);
 
     UUID createParameters(String parameters);
 

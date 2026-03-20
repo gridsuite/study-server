@@ -62,10 +62,6 @@ class StudyServiceDynamicSimulationTest {
 
     private static final String VARIANT_1_ID = "variant_1";
 
-    private static final double START_TIME = 0.0;
-
-    private static final double STOP_TIME = 500.0;
-
     private static final UUID STUDY_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();

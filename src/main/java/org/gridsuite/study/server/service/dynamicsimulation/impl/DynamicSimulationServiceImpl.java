@@ -72,8 +72,8 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public String getParameters(UUID parametersUuid, String userId) {
-        return dynamicSimulationClient.getParameters(parametersUuid, userId);
+    public String getParameters(UUID parametersUuid) {
+        return dynamicSimulationClient.getParameters(parametersUuid);
     }
 
     @Override

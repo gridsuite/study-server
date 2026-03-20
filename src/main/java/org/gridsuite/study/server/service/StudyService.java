@@ -2869,10 +2869,10 @@ public class StudyService {
     }
 
     @Transactional
-    public String getDynamicSimulationParameters(UUID studyUuid, String userId) {
+    public String getDynamicSimulationParameters(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return dynamicSimulationService.getParameters(
-                dynamicSimulationService.getDynamicSimulationParametersUuidOrElseCreateDefault(studyEntity), userId);
+                dynamicSimulationService.getDynamicSimulationParametersUuidOrElseCreateDefault(studyEntity));
     }
 
     @Transactional
@@ -3196,14 +3196,14 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runDynamicMarginCalculation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) throws JsonProcessingException {
+    public UUID runDynamicMarginCalculation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
         return handleDynamicMarginCalculationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
     }
 
-    private UUID handleDynamicMarginCalculationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) throws JsonProcessingException {
+    private UUID handleDynamicMarginCalculationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
 
         // pre-condition check
         if (!rootNetworkNodeInfoService.isLoadflowConverged(nodeUuid, rootNetworkUuid)) {

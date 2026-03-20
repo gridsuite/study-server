@@ -33,7 +33,7 @@ public interface DynamicSimulationClient extends RestClient {
 
     String getProvider(@NonNull UUID parametersUuid);
 
-    String getParameters(@NonNull UUID parametersUuid, String userId);
+    String getParameters(@NonNull UUID parametersUuid);
 
     UUID createParameters(@NonNull String parametersInfos);
 

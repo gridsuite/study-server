@@ -367,9 +367,9 @@ class DynamicSimulationServiceTest {
 
     @Test
     void testGetParameters() {
-        given(dynamicSimulationClient.getParameters(PARAMETERS_UUID, "userId")).willReturn(PARAMETERS_JSON);
+        given(dynamicSimulationClient.getParameters(PARAMETERS_UUID)).willReturn(PARAMETERS_JSON);
 
-        String parametersJson = dynamicSimulationService.getParameters(PARAMETERS_UUID, "userId");
+        String parametersJson = dynamicSimulationService.getParameters(PARAMETERS_UUID);
 
         assertThat(parametersJson).isEqualTo(PARAMETERS_JSON);
     }

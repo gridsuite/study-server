@@ -1832,9 +1832,8 @@ public class StudyController {
     @Operation(summary = "Get dynamic simulation parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters")})
     public ResponseEntity<String> getDynamicSimulationParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.getDynamicSimulationParameters(studyUuid, userId));
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getDynamicSimulationParameters(studyUuid));
     }
 
     @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events")

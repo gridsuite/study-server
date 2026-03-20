@@ -130,7 +130,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        String resultParametersJson = dynamicSimulationClient.getParameters(PARAMETERS_UUID, "userId");
+        String resultParametersJson = dynamicSimulationClient.getParameters(PARAMETERS_UUID);
 
         // check result
         assertThat(resultParametersJson).isEqualTo(parametersJson);
@@ -143,7 +143,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicSimulationClient.getParameters(PARAMETERS_UUID, "userId")
+            () -> dynamicSimulationClient.getParameters(PARAMETERS_UUID)
         );
 
         // --- Error --- //
@@ -153,7 +153,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicSimulationClient.getParameters(PARAMETERS_UUID, "userId")
+            () -> dynamicSimulationClient.getParameters(PARAMETERS_UUID)
         );
     }
 

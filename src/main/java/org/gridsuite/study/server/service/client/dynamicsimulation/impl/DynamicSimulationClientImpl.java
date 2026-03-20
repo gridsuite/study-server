@@ -70,18 +70,12 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     @Override
-    public String getParameters(@NonNull UUID parametersUuid, String userId) {
+    public String getParameters(@NonNull UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
 
         String url = getParametersWithUuidUrl(parametersUuid);
 
-        HttpHeaders headers = new HttpHeaders();
-        if (StringUtils.isNotBlank(userId)) {
-            headers.set(HEADER_USER_ID, userId);
-        }
-
-        return getRestTemplate()
-                .exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
+        return getRestTemplate().getForObject(url, String.class);
     }
 
     @Override

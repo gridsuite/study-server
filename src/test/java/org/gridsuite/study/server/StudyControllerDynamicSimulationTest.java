@@ -693,7 +693,7 @@ class StudyControllerDynamicSimulationTest {
         doAnswer(invocation -> PARAMETERS_UUID)
                 .when(spyDynamicSimulationService).createParameters(any());
         doAnswer(invocation -> jsonParameters)
-                .when(spyDynamicSimulationService).getParameters(PARAMETERS_UUID, "userId");
+                .when(spyDynamicSimulationService).getParameters(PARAMETERS_UUID);
 
         MvcResult result;
 
