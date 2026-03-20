@@ -13,7 +13,6 @@ import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -115,20 +114,14 @@ class StudyServiceDynamicSimulationTest {
     @Test
     void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(any(), eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any(), eq(false))).willReturn(RESULT_UUID);
+        given(dynamicSimulationService.runDynamicSimulation(eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any(), any(), eq(false))).willReturn(RESULT_UUID);
         willDoNothing().given(dynamicSimulationService).deleteResults(anyList());
         given(rootNetworkNodeInfoService.isLoadflowConverged(NODE_UUID, ROOTNETWORK_UUID)).willReturn(true);
-
-        // init parameters
-        DynamicSimulationParametersInfos parameters = new DynamicSimulationParametersInfos();
-        parameters.setStartTime(START_TIME);
-        parameters.setStopTime(STOP_TIME);
-        parameters.setMapping(MAPPING_NAME_01);
 
         // call method to be tested
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, UUID.randomUUID(), "caseName", "", UUID.randomUUID());
         studyRepository.save(studyEntity);
-        UUID resultUuid = studyService.runDynamicSimulation(studyEntity.getId(), NODE_UUID, ROOTNETWORK_UUID, parameters, "testUserId", false);
+        UUID resultUuid = studyService.runDynamicSimulation(studyEntity.getId(), NODE_UUID, ROOTNETWORK_UUID, "testUserId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);

@@ -10,12 +10,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.service.client.dynamicsimulation.impl.DynamicSimulationClientImpl;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +46,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID REPORT_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
+    private static final UUID PARAMETERS_UUID = UUID.randomUUID();
 
     private static final String VARIANT_ID = "variantId";
     private static final String MAPPING_NAME_01 = "_01";
@@ -78,20 +78,17 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     void testRun() throws Exception {
 
         // prepare parameters
-        DynamicSimulationParametersInfos parameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
-        parameters.setStartTime(0.0);
-        parameters.setStopTime(500.0);
-        parameters.setMapping(MAPPING_NAME_01);
+        List<EventInfos> events = ParameterTestUtils.getEventInfosList();
 
         // configure mock server response for test case run - networks/{networkUuid}/run?
         String url = DYNAMIC_SIMUALTION_RUN_BASE_URL + DELIMITER + NETWORK_UUID + DELIMITER + "run";
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
                 .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo(VARIANT_ID))
-                .withQueryParam("provider", equalTo(DYNAWO_PROVIDER))
                 .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_SIMULATION.reportKey))
+                .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
                 .withHeader(HEADER_USER_ID, equalTo("userId"))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(RESULT_UUID))
@@ -99,8 +96,8 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
                 ));
 
         // call service to test
-        UUID resultUuid = dynamicSimulationClient.run(DYNAWO_PROVIDER, "receiver", NETWORK_UUID, VARIANT_ID,
-                new ReportInfos(REPORT_UUID, NODE_UUID), parameters, "userId", false);
+        UUID resultUuid = dynamicSimulationClient.run("receiver", NETWORK_UUID, VARIANT_ID,
+                new ReportInfos(REPORT_UUID, NODE_UUID), PARAMETERS_UUID, events, "userId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);
@@ -108,20 +105,20 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         // --- Error --- //
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
                 .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo("variantIdFailed"))
-                .withQueryParam("provider", equalTo("Dynawo"))
                 .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_SIMULATION.reportKey))
                 .withHeader(QUERY_PARAM_DEBUG, equalTo("true"))
+                .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
                 .withHeader(HEADER_USER_ID, equalTo("userId"))
                 .willReturn(WireMock.serverError()));
 
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicSimulationClient.run("Dynawo", "receiver", NETWORK_UUID, "variantIdFailed",
-                new ReportInfos(REPORT_UUID, NODE_UUID), parameters, "userId", true)
+            () -> dynamicSimulationClient.run("receiver", NETWORK_UUID, "variantIdFailed",
+                new ReportInfos(REPORT_UUID, NODE_UUID), PARAMETERS_UUID, events, "userId", true)
         );
     }
 

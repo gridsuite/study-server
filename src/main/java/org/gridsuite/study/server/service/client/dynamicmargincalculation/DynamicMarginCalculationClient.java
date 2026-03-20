@@ -151,9 +151,10 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
 
     // --- Related run computation methods --- //
 
-    public UUID run(String provider, @NonNull String receiver, @NonNull UUID networkUuid, String variantId,
-                    @NonNull ReportInfos reportInfos, @NonNull UUID dynamicSecurityAnalysisParametersUuid,
-                    @NonNull UUID parametersUuid, @NonNull String dynamicSimulationParametersJson, String userId, boolean debug) {
+    public UUID run(@NonNull String receiver, @NonNull UUID networkUuid, String variantId,
+                    @NonNull ReportInfos reportInfos, @NonNull UUID dynamicSimulationParametersUuid,
+                    @NonNull UUID dynamicSecurityAnalysisParametersUuid,
+                    @NonNull UUID parametersUuid, String userId, boolean debug) {
         Objects.requireNonNull(receiver);
         Objects.requireNonNull(networkUuid);
         Objects.requireNonNull(reportInfos);
@@ -166,13 +167,11 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
         if (StringUtils.isNotBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        if (StringUtils.isNotBlank(provider)) {
-            uriComponentsBuilder.queryParam("provider", provider);
-        }
         if (debug) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, true);
         }
         uriComponentsBuilder
+                .queryParam("dynamicSimulationParametersUuid", dynamicSimulationParametersUuid)
                 .queryParam("dynamicSecurityAnalysisParametersUuid", dynamicSecurityAnalysisParametersUuid)
                 .queryParam("parametersUuid", parametersUuid)
                 .queryParam(QUERY_PARAM_RECEIVER, receiver)
@@ -188,7 +187,7 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         // call dynamic-margin-calculation REST API
-        HttpEntity<?> httpEntity = new HttpEntity<>(dynamicSimulationParametersJson, headers);
+        HttpEntity<?> httpEntity = new HttpEntity<>(null, headers);
 
         return getRestTemplate().postForObject(url, httpEntity, UUID.class);
     }
