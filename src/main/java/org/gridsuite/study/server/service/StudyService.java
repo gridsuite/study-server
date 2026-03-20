@@ -1131,20 +1131,30 @@ public class StudyService {
         }
     }
 
-    @Transactional
-    public void assertCanUpdateModifications(UUID studyUuid, UUID nodeUuid) {
+    @Transactional(readOnly = true)
+    public void assertCanUpdateNodeInStudy(UUID studyUuid, UUID nodeUuid) {
         assertIsNodeNotReadOnly(nodeUuid);
-        assertNoBuildNoComputationForNode(studyUuid, nodeUuid);
+        List<UUID> nodesUuids = networkModificationTreeService.getNodeTreeUuids(nodeUuid);
+        getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
+            assertNoBuildNoComputationInTree(rootNetwork.getId(), nodesUuids)
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public void assertCanBuildNode(UUID rootNetworkUuid, UUID nodeUuid) {
+        List<UUID> nodesUuids = networkModificationTreeService.getNodeBranchUuids(nodeUuid);
+        rootNetworkNodeInfoService.assertNoBuildingNode(rootNetworkUuid, nodesUuids);
+    }
+
+    private void assertNoBuildNoComputationInTree(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        // TODO modify computations endpoints to test multiple uuids
+        nodesUuids.forEach(uuid -> rootNetworkNodeInfoService.assertComputationNotRunning(uuid, rootNetworkUuid));
+        rootNetworkNodeInfoService.assertNoBuildingNode(rootNetworkUuid, nodesUuids);
     }
 
     public void assertIsStudyAndNodeExist(UUID studyUuid, UUID nodeUuid) {
         assertIsStudyExist(studyUuid);
         assertIsNodeExist(studyUuid, nodeUuid);
-    }
-
-    public void assertNoBuildNoComputationForRootNetworkNode(UUID nodeUuid, UUID rootNetworkUuid) {
-        rootNetworkNodeInfoService.assertComputationNotRunning(nodeUuid, rootNetworkUuid);
-        rootNetworkNodeInfoService.assertNetworkNodeIsNotBuilding(rootNetworkUuid, nodeUuid);
     }
 
     @Transactional(readOnly = true)
@@ -1158,13 +1168,6 @@ public class StudyService {
         getStudyRootNetworks(studyUuid).stream().forEach(rootNetwork ->
             rootNetworkNodeInfoService.assertNoBlockedNode(rootNetwork.getId(), nodesUuids)
         );
-    }
-
-    public void assertNoBuildNoComputationForNode(UUID studyUuid, UUID nodeUuid) {
-        getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
-            rootNetworkNodeInfoService.assertComputationNotRunning(nodeUuid, rootNetwork.getId())
-        );
-        rootNetworkNodeInfoService.assertNoRootNetworkNodeIsBuilding(studyUuid);
     }
 
     public void assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
@@ -1812,7 +1815,7 @@ public class StudyService {
         if (networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()) {
             return;
         }
-        assertCanBuildNode(studyUuid, rootNetworkUuid, userId);
+        assertNoMaxBuilds(studyUuid, rootNetworkUuid, userId);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
 
         // Store all reports (inherited + new) for this node
@@ -1862,7 +1865,7 @@ public class StudyService {
         }).orElse(Long.MAX_VALUE);
     }
 
-    public void assertCanBuildNode(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+    public void assertNoMaxBuilds(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         // check restrictions on node builds number
         userAdminService.getUserMaxAllowedBuilds(userId).ifPresent(maxBuilds -> {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);

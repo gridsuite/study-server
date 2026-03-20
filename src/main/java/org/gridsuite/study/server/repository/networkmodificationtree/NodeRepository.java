@@ -62,6 +62,21 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
             "WHERE n.id_node IN (SELECT nh.id_node FROM NodeHierarchy nh) AND n.id_node != :nodeUuid")
     List<NodeEntity> findAllChildren(UUID nodeUuid);
 
+    @NativeQuery("WITH RECURSIVE NodeHierarchy (id_node, parent_node) AS ( " +
+        "    SELECT n0.id_node, n0.parent_node" +
+        "    FROM NODE n0 " +
+        "    WHERE n0.id_node = :nodeUuid " +
+
+        "    UNION ALL " +
+
+        "    SELECT n.id_node, n.parent_node " +
+        "    FROM NODE n " +
+        "    INNER JOIN NodeHierarchy nh ON n.id_node = nh.parent_node AND n.type != 'ROOT'" +
+        ") " +
+        "SELECT cast(nh.id_node AS VARCHAR) " +
+        "FROM NodeHierarchy nh where nh.id_node != :nodeUuid ")
+    List<UUID> findAllAncestorsUuids(UUID nodeUuid);
+
     @NativeQuery("WITH RECURSIVE ancestors (id_node, parent_node) AS ( " +
         "    SELECT n.id_node, n.parent_node " +
         "    FROM NODE n " +
