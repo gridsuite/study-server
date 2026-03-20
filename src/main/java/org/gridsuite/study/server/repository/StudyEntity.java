@@ -63,22 +63,14 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @Column(name = "sensitivityAnalysisProvider")
     private String sensitivityAnalysisProvider;
 
-    @Column(name = "dynamicSimulationProvider")
-    private String dynamicSimulationProvider;
-
     @Column(name = "loadFlowParametersUuid")
     private UUID loadFlowParametersUuid;
 
     @Column(name = "shortCircuitParametersUuid")
     private UUID shortCircuitParametersUuid;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "dynamicSimulationParametersEntity_id",
-        referencedColumnName = "id",
-        foreignKey = @ForeignKey(
-            name = "dynamicSimulationParameters_id_fk"
-        ))
-    private DynamicSimulationParametersEntity dynamicSimulationParameters;
+    @Column(name = "dynamicSimulationParametersUuid")
+    private UUID dynamicSimulationParametersUuid;
 
     @Column(name = "dynamicSecurityAnalysisParametersUuid")
     private UUID dynamicSecurityAnalysisParametersUuid;

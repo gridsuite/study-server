@@ -133,9 +133,6 @@ class StudyControllerDynamicMarginCalculationTest {
     private TestUtils studyTestUtils;
 
     @MockitoSpyBean
-    private StudyService studyService;
-
-    @MockitoSpyBean
     private RootNetworkNodeInfoRepository spyRootNetworkNodeInfoRepository;
 
     //output destinations
@@ -195,8 +192,8 @@ class StudyControllerDynamicMarginCalculationTest {
                 .nodeBuildStatus(NodeBuildStatus.from(buildStatus))
                 .children(Collections.emptyList()).build();
 
-        reset(studyService);
-        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+        reset(spyStudyService);
+        doNothing().when(spyStudyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
 
         studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
                         .content(objectMapper.writeValueAsString(modificationNode))
@@ -212,7 +209,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getOneRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
 
-        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+        verify(spyStudyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
 
         return modificationNode;
     }
@@ -232,7 +229,7 @@ class StudyControllerDynamicMarginCalculationTest {
         // setup DynamicMarginCalculationService spy
         doAnswer(invocation -> RESULT_UUID)
             .when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(
-                any(), eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
+                eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
                 any(), any(), any(), any(), any(), eq(true));
 
         // --- call endpoint to be tested --- //
@@ -336,7 +333,7 @@ class StudyControllerDynamicMarginCalculationTest {
         when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
 
         // setup DynamicMarginCalculationService mock
-        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(any(),
+        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(
             eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), any(), eq(false));
 
         MvcResult result;
@@ -412,7 +409,7 @@ class StudyControllerDynamicMarginCalculationTest {
         when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
 
         // setup DynamicMarginCalculationService mock
-        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(any(),
+        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(
             eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
@@ -485,7 +482,6 @@ class StudyControllerDynamicMarginCalculationTest {
         assertThat(statusResult).isEqualTo(statusExpected);
     }
 
-    // @Disabled("fix later")
     @Test
     void testSetAndGetDynamicMarginCalculationParameters() throws Exception {
         // create a node in the db

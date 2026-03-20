@@ -15,7 +15,10 @@ import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAna
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -47,8 +50,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
     private String getParametersWithUuidUrl(UUID parametersUuid) {
         String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
-        return UriComponentsBuilder
-                .fromHttpUrl(parametersBaseUrl + "/{uuid}")
+        return UriComponentsBuilder.fromUriString(parametersBaseUrl + "/{uuid}")
                 .buildAndExpand(parametersUuid)
                 .toUriString();
     }
@@ -58,8 +60,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         Objects.requireNonNull(parametersUuid);
         String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
-        String url = UriComponentsBuilder
-                .fromHttpUrl(parametersBaseUrl + "/{uuid}/provider")
+        String url = UriComponentsBuilder.fromUriString(parametersBaseUrl + "/{uuid}/provider")
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
@@ -79,8 +80,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
         String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
-        String url = UriComponentsBuilder
-                .fromHttpUrl(parametersBaseUrl)
+        String url = UriComponentsBuilder.fromUriString(parametersBaseUrl)
                 .buildAndExpand()
                 .toUriString();
 
@@ -111,8 +111,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
         String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
-        String url = UriComponentsBuilder
-                .fromHttpUrl(parametersBaseUrl)
+        String url = UriComponentsBuilder.fromUriString(parametersBaseUrl)
                 .queryParam("duplicateFrom", sourceParametersUuid)
                 .buildAndExpand()
                 .toUriString();
@@ -132,8 +131,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
     public UUID createDefaultParameters() {
         String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
-        String url = UriComponentsBuilder
-                .fromHttpUrl(parametersBaseUrl + "/default")
+        String url = UriComponentsBuilder.fromUriString(parametersBaseUrl + "/default")
                 .buildAndExpand()
                 .toUriString();
 
@@ -142,7 +140,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
     // --- Related run computation methods --- //
 
-    public UUID run(String provider, @NonNull String receiver, @NonNull UUID networkUuid, String variantId,
+    public UUID run(@NonNull String receiver, @NonNull UUID networkUuid, String variantId,
                     @NonNull ReportInfos reportInfos, @NonNull UUID dynamicSimulationResultUuid,
                     @NonNull UUID parametersUuid, String userId, boolean debug) {
         Objects.requireNonNull(receiver);
@@ -153,12 +151,9 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
         String runBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RUN);
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(runBaseUrl + "/{networkUuid}/run");
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(runBaseUrl + "/{networkUuid}/run");
         if (StringUtils.isNotBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-        if (StringUtils.isNotBlank(provider)) {
-            uriComponentsBuilder.queryParam("provider", provider);
         }
         if (debug) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, true);
@@ -191,8 +186,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
 
-        String url = UriComponentsBuilder
-                .fromHttpUrl(resultBaseUrl + "/{resultUuid}/status")
+        String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/{resultUuid}/status")
                 .buildAndExpand(resultUuid)
                 .toUriString();
 
@@ -207,8 +201,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
 
-        String url = UriComponentsBuilder
-                .fromHttpUrl(resultBaseUrl + "/invalidate-status")
+        String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/invalidate-status")
                 .queryParam("resultUuid", resultUuids)
                 .build()
                 .toUriString();
@@ -221,7 +214,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
             return;
         }
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(resultBaseUrl).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultUuids);
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(resultBaseUrl).queryParam(QUERY_PARAM_RESULTS_UUIDS, resultUuids);
         String path = uriComponentsBuilder.build().toUriString();
         // call dynamic-security-analysis REST API
         getRestTemplate().delete(path);
@@ -229,8 +222,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
     public Integer getResultsCount() {
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
-        String url = UriComponentsBuilder
-                .fromHttpUrl(resultBaseUrl)
+        String url = UriComponentsBuilder.fromUriString(resultBaseUrl)
                 .toUriString();
 
         // call dynamic-security-analysis REST API
