@@ -71,11 +71,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PccMinTest {
 
     private static final String PCC_MIN_URL_BASE = "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/";
+    private static final String COMPUTATION_URL_BASE = "/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computations/";
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String PCC_MIN_RESULT_UUID = "cf203721-6150-4203-8960-d61d815a9d16";
     private static final String PCC_MIN_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
     private static final UUID PCCMIN_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f2");
     private static final String PCC_MIN_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+    private static final String ALL_COMPUTATION_STATUS_JSON = "{\"pccMinStatus\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\",\"dynamicMarginCalculationStatus\":null,\"dynamicSecurityAnalysisStatus\":null,\"dynamicSimulationStatus\":null,\"stateEstimationStatus\":null,\"sensitivityAnalysisStatus\":null,\"loadFlowStatus\":null,\"securityAnalysisStatus\":null,\"oneBusShortCircuitStatus\":null,\"allBusShortCircuitStatus\":null,\"voltageInitStatus\":null}";
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -282,6 +284,12 @@ class PccMinTest {
         mockMvc.perform(get(PCC_MIN_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
             .andExpect(status().isOk())
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(PCC_MIN_STATUS_JSON));
+
+        computationServerStubs.verifyGetResultStatus(PCC_MIN_RESULT_UUID);
+
+        mockMvc.perform(get(COMPUTATION_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(ALL_COMPUTATION_STATUS_JSON));
 
         computationServerStubs.verifyGetResultStatus(PCC_MIN_RESULT_UUID);
     }
