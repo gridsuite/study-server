@@ -665,7 +665,7 @@ public class StudyController {
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
         switch (action) {
             case COPY:
-                handleDuplicateNetworkModifications(studyUuid, nodeUuid, originStudyUuid, modificationsToCopyUuidList, userId);
+                handleDuplicateNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
             case MOVE:
                 // we don't cut - paste modifications from different studies
@@ -707,11 +707,11 @@ public class StudyController {
         }
     }
 
-    private void handleDuplicateNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, UUID originStudyUuid, List<UUID> modificationsToCopyUuidList, String userId) {
+    private void handleDuplicateNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
         studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
         studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
         try {
-            studyService.duplicateNetworkModifications(targetStudyUuid, targetNodeUuid, originStudyUuid, modificationsToCopyUuidList, userId);
+            studyService.duplicateNetworkModifications(targetStudyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
         } finally {
             studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
         }
