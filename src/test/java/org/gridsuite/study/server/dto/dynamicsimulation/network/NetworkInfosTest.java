@@ -28,7 +28,7 @@ class NetworkInfosTest {
     void testToJsonParseJson() {
         NetworkInfos network = new NetworkInfos();
         network.setCapacitorNoReclosingDelay(300);
-        network.setDanglingLineCurrentLimitMaxTimeOperation(90);
+        network.setBoundaryLineCurrentLimitMaxTimeOperation(90);
         network.setLineCurrentLimitMaxTimeOperation(90);
         network.setLoadTp(90);
         network.setLoadTq(90);
