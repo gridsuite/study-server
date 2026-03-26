@@ -243,19 +243,14 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return studyEntity.getSensitivityAnalysisParametersUuid();
     }
 
-    public String getSensitivityAnalysisParameters(UUID parametersUuid, String userId) {
+    public String getSensitivityAnalysisParameters(UUID parametersUuid) {
 
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid)
             .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
-
-        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.GET, httpEntity, String.class).getBody();
+        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
     }
 
     public UUID createDefaultSensitivityAnalysisParameters() {
@@ -284,7 +279,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
     }
 
-    public UUID duplicateSensitivityAnalysisParameters(UUID sourceParametersUuid, String userId) {
+    public UUID duplicateSensitivityAnalysisParameters(UUID sourceParametersUuid) {
 
         Objects.requireNonNull(sourceParametersUuid);
 
@@ -294,12 +289,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
             .buildAndExpand()
             .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
-
-        return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
+        return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, null, UUID.class);
     }
 
     public void updateSensitivityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
