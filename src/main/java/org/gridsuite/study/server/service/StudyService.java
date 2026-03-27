@@ -79,6 +79,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -2423,11 +2424,38 @@ public class StudyService {
 
     @Transactional
     public void duplicateNetworkModifications(
-            UUID targetStudyUuid,
-            UUID targetNodeUuid,
-            UUID originNodeUuid,
-            List<UUID> modificationsUuids,
-            String userId) {
+        UUID targetStudyUuid,
+        UUID targetNodeUuid,
+        UUID originNodeUuid,
+        List<UUID> modificationsUuids,
+        String userId) {
+        duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
+            (groupUuid, modificationApplicationContexts) -> {
+                NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
+                copyModificationsToExclude(originNodeUuid, targetNodeUuid, modificationsUuids, networkModificationResults);
+                return networkModificationResults;
+            },
+            userId);
+    }
+
+    @Transactional
+    public void insertCompositeNetworkModifications(
+        UUID targetStudyUuid,
+        UUID targetNodeUuid,
+        List<Pair<UUID, String>> compositesInfos,
+        String userId,
+        StudyConstants.CompositeModificationsActionType action) {
+        duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
+            (groupUuid, modificationApplicationContexts) ->
+                networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(compositesInfos, modificationApplicationContexts)),
+            userId);
+    }
+
+    private void duplicateModificationsOrInsertComposites(
+        UUID targetStudyUuid,
+        UUID targetNodeUuid,
+        BiFunction<UUID, List<ModificationApplicationContext>, NetworkModificationsResult> handleModifications,
+        String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         notificationService.emitStartModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
@@ -2440,9 +2468,7 @@ public class StudyService {
                 .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
                 .toList();
 
-            NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
-
-            copyModificationsToExclude(originNodeUuid, targetNodeUuid, modificationsUuids, networkModificationResults);
+            NetworkModificationsResult networkModificationResults = handleModifications.apply(groupUuid, modificationApplicationContexts);
 
             sendImpactNotifications(targetStudyUuid, targetNodeUuid, networkModificationResults, studyRootNetworkEntities);
         } finally {
@@ -2462,34 +2488,6 @@ public class StudyService {
                 index++;
             }
         }
-    }
-
-    @Transactional
-    public void insertCompositeNetworkModifications(
-            UUID targetStudyUuid,
-            UUID targetNodeUuid,
-            List<Pair<UUID, String>> modifications,
-            String userId,
-            StudyConstants.CompositeModificationsActionType action) {
-        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
-        notificationService.emitStartModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
-        try {
-            checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
-
-            List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(targetStudyUuid);
-            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
-
-            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
-                .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
-                .toList();
-
-            NetworkModificationsResult networkModificationResults = networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(modifications, modificationApplicationContexts));
-
-            sendImpactNotifications(targetStudyUuid, targetNodeUuid, networkModificationResults, studyRootNetworkEntities);
-        } finally {
-            notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
-        }
-        notificationService.emitElementUpdated(targetStudyUuid, userId);
     }
 
     private void copyModificationsToExclude(UUID originNodeUuid,
