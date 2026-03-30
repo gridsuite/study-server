@@ -2171,8 +2171,9 @@ public class StudyService {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            modificationsUuids.addAll(networkModificationService.expandToLeafUuids(new ArrayList<>(modificationsUuids)));
-            rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkUuid, modificationsUuids, activated);
+            Set<UUID> modificationsToExclude = new HashSet<>(modificationsUuids);
+            modificationsToExclude.addAll(networkModificationService.expandToLeafUuids(new ArrayList<>(modificationsUuids)));
+            rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkUuid, modificationsToExclude, activated);
             invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, Optional.of(rootNetworkUuid), childrenUuids);
@@ -2400,13 +2401,17 @@ public class StudyService {
             @NonNull UUID modificationUuid,
             UUID beforeUuid,
             String userId) {
+
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
-        checkStudyContainsNode(studyUuid, nodeUuid);
-        UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-        networkModificationService.moveSubModification(
-                groupUuid, sourceCompositeUuid, targetCompositeUuid, modificationUuid, beforeUuid);
-        notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
+        try {
+            notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+            checkStudyContainsNode(studyUuid, nodeUuid);
+            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            networkModificationService.moveSubModification(
+                    groupUuid, sourceCompositeUuid, targetCompositeUuid, modificationUuid, beforeUuid);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
+        }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
