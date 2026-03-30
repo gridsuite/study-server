@@ -445,7 +445,7 @@ public class NetworkModificationService {
                 getNetworkModificationServerURI(false) + path,
                 HttpMethod.GET,
                 null,
-                new ParameterizedTypeReference<Set<UUID>>() {}
+                new ParameterizedTypeReference<Set<UUID>>() { }
         ).getBody();
     }
 }
