@@ -3103,8 +3103,8 @@ class NetworkModificationTest {
                 + "/sub-modifications/" + modificationUuid;
 
         // --- Case 1: move between two composites with a beforeUuid ---
-        UUID stubId = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveSubModifUrlPattern))
-                .willReturn(WireMock.ok())).getId();
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveSubModifUrlPattern))
+                .willReturn(WireMock.ok()));
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/composite-sub-modification/{modificationUuid}",
                         studyUuid, nodeUuid, modificationUuid)
@@ -3117,14 +3117,14 @@ class NetworkModificationTest {
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid);
         checkElementUpdatedMessageSent(studyUuid, userId);
-        WireMockUtils.verifyPutRequest(wireMockServer, stubId, moveSubModifUrlPattern, false, Map.of(
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveSubModifUrlPattern, false, Map.of(
                 "sourceCompositeUuid", WireMock.equalTo(sourceCompositeUuid.toString()),
                 "targetCompositeUuid", WireMock.equalTo(targetCompositeUuid.toString()),
                 "beforeUuid", WireMock.equalTo(beforeUuid.toString())), null);
 
         // --- Case 2: move from root level into a composite (no sourceCompositeUuid) ---
-        UUID stubId2 = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveSubModifUrlPattern))
-                .willReturn(WireMock.ok())).getId();
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveSubModifUrlPattern))
+                .willReturn(WireMock.ok()));
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/composite-sub-modification/{modificationUuid}",
                         studyUuid, nodeUuid, modificationUuid)
@@ -3135,12 +3135,12 @@ class NetworkModificationTest {
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid);
         checkElementUpdatedMessageSent(studyUuid, userId);
-        WireMockUtils.verifyPutRequest(wireMockServer, stubId2, moveSubModifUrlPattern, false, Map.of(
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveSubModifUrlPattern, false, Map.of(
                 "targetCompositeUuid", WireMock.equalTo(targetCompositeUuid.toString())), null);
 
         // --- Case 3: move from inside a composite to root level (no targetCompositeUuid) ---
-        UUID stubId3 = wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveSubModifUrlPattern))
-                .willReturn(WireMock.ok())).getId();
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveSubModifUrlPattern))
+                .willReturn(WireMock.ok()));
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/composite-sub-modification/{modificationUuid}",
                         studyUuid, nodeUuid, modificationUuid)
@@ -3151,7 +3151,7 @@ class NetworkModificationTest {
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid);
         checkElementUpdatedMessageSent(studyUuid, userId);
-        WireMockUtils.verifyPutRequest(wireMockServer, stubId3, moveSubModifUrlPattern, false, Map.of(
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveSubModifUrlPattern, false, Map.of(
                 "sourceCompositeUuid", WireMock.equalTo(sourceCompositeUuid.toString())), null);
     }
 
@@ -3172,16 +3172,16 @@ class NetworkModificationTest {
         Set<UUID> expandedLeafUuids = Set.of(leafUuid1, leafUuid2);
 
         // Stub verifyModifications
-        UUID verifyStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(
                         "/v1/groups/" + node.getModificationGroupUuid() + "/network-modifications/verify"))
-                .willReturn(WireMock.ok())).getId();
+                .willReturn(WireMock.ok()));
 
         // Stub expandToLeafUuids
-        UUID expandStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(
                         "/v1/network-composite-modifications/leaf-uuids"))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(expandedLeafUuids))
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
         // PUT .../network-modifications?activated=false&uuids=<compositeUuid>
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications",
@@ -3197,12 +3197,12 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyUuid, userId);
 
         // Verify that verifyModifications was called with the composite UUID
-        WireMockUtils.verifyGetRequest(wireMockServer, verifyStubId,
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer,
                 "/v1/groups/" + node.getModificationGroupUuid() + "/network-modifications/verify",
                 Map.of("uuids", WireMock.equalTo(compositeUuid.toString())));
 
         // Verify that expandToLeafUuids was called with the composite UUID
-        WireMockUtils.verifyGetRequest(wireMockServer, expandStubId,
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer,
                 "/v1/network-composite-modifications/leaf-uuids",
                 Map.of("uuids", WireMock.equalTo(compositeUuid.toString())));
 
