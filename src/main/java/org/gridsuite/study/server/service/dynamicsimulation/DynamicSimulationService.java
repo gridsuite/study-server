@@ -196,7 +196,7 @@ public interface DynamicSimulationService {
         // these parameters are taken from network.par file in dynamic simulation server
         NetworkInfos network = new NetworkInfos();
         network.setCapacitorNoReclosingDelay(300);
-        network.setDanglingLineCurrentLimitMaxTimeOperation(240);
+        network.setBoundaryLineCurrentLimitMaxTimeOperation(240);
         network.setLineCurrentLimitMaxTimeOperation(240);
         network.setLoadTp(90);
         network.setLoadTq(90);

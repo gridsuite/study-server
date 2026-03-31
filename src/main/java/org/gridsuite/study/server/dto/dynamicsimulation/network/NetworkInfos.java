@@ -28,7 +28,7 @@ public class NetworkInfos {
 
     private double capacitorNoReclosingDelay;
 
-    private double danglingLineCurrentLimitMaxTimeOperation;
+    private double boundaryLineCurrentLimitMaxTimeOperation;
 
     private double lineCurrentLimitMaxTimeOperation;
 

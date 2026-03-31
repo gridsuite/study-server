@@ -67,7 +67,7 @@ public class EquipmentInfosService {
             entry("BATTERY", 8),
             entry("LOAD", 7),
             entry("SHUNT_COMPENSATOR", 6),
-            entry("DANGLING_LINE", 5),
+            entry("BOUNDARY_LINE", 5),
             entry("STATIC_VAR_COMPENSATOR", 4),
             entry("HVDC_CONVERTER_STATION", 3),
             entry("BUSBAR_SECTION", 2),
