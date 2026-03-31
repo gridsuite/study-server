@@ -657,14 +657,14 @@ public class StudyController {
                                                          @RequestParam("action") ModificationsActionType action,
                                                          @RequestParam("originStudyUuid") UUID originStudyUuid,
                                                          @RequestParam("originNodeUuid") UUID originNodeUuid,
-                                                         @RequestBody List<ModificationsToCopyInfos> modificationsToCopyInfos,
+                                                         @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
         switch (action) {
-            case COPY, SPLIT_COMPOSITE, INSERT_COMPOSITE:
-                handleDuplicateOrInsertNetworkModifications(studyUuid, nodeUuid, originStudyUuid, originNodeUuid, modificationsToCopyInfos, userId, action);
+            case COPY:
+                handleDuplicateNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
             case MOVE:
                 // we don't cut - paste modifications from different studies
@@ -673,18 +673,44 @@ public class StudyController {
                 }
                 studyService.assertNoBlockedNodeInStudy(studyUuid, originNodeUuid);
                 studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-                List<UUID> modificationsToCopyInfosUuids = modificationsToCopyInfos.stream().map(ModificationsToCopyInfos::getUuid).toList();
-                rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyInfosUuids, userId);
+                rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
         }
         return ResponseEntity.ok().build();
     }
 
-    private void handleDuplicateOrInsertNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, UUID originStudyUuid, UUID originNodeUuid, List<ModificationsToCopyInfos> modificationsToCopy, String userId, ModificationsActionType action) {
+    /**
+     * @param modificationsToInsert pair of the composite uuid and its name
+     */
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-modifications", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "For a list of composite network modifications passed in body, insert them into the target node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The composite modification list has been inserted.")})
+    public ResponseEntity<Void> insertCompositeModifications(@PathVariable("studyUuid") UUID studyUuid,
+                                                         @PathVariable("nodeUuid") UUID nodeUuid,
+                                                         @RequestParam("action") CompositeModificationsActionType action,
+                                                         @RequestBody List<Pair<UUID, String>> modificationsToInsert,
+                                                         @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
+        handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, modificationsToInsert, userId, action);
+        return ResponseEntity.ok().build();
+    }
+
+    private void handleInsertCompositeNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, List<Pair<UUID, String>> modificationsToCopy, String userId, CompositeModificationsActionType action) {
         studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
         studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
         try {
-            studyService.duplicateOrInsertNetworkModifications(targetStudyUuid, targetNodeUuid, originStudyUuid, originNodeUuid, modificationsToCopy, userId, action);
+            studyService.insertCompositeNetworkModifications(targetStudyUuid, targetNodeUuid, modificationsToCopy, userId, action);
+        } finally {
+            studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
+        }
+    }
+
+    private void handleDuplicateNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
+        studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
+        studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
+        try {
+            studyService.duplicateNetworkModifications(targetStudyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
         } finally {
             studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
         }

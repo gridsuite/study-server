@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.studycontroller;
 
-import org.gridsuite.study.server.dto.ModificationsToCopyInfos;
 import org.gridsuite.study.server.service.RebuildNodeService;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.controller.StudyController;
@@ -84,11 +83,10 @@ class StudyControllerRebuildNodeTest {
 
     @Test
     void testMoveNetworkModifications() {
-        List<ModificationsToCopyInfos> modifications = List.of(ModificationsToCopyInfos.builder().uuid(UUID.randomUUID()).build());
+        List<UUID> modificationUuids = List.of(UUID.randomUUID());
         UUID originNodeUuid = UUID.randomUUID();
-        studyController.moveOrCopyModifications(studyUuid, nodeUuid, StudyConstants.ModificationsActionType.MOVE, studyUuid, originNodeUuid, modifications, userId);
+        studyController.moveOrCopyModifications(studyUuid, nodeUuid, StudyConstants.ModificationsActionType.MOVE, studyUuid, originNodeUuid, modificationUuids, userId);
 
-        List<UUID> modificationUuids = modifications.stream().map(ModificationsToCopyInfos::getUuid).toList();
         verify(rebuildNodeService, times(1)).moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationUuids, userId);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
