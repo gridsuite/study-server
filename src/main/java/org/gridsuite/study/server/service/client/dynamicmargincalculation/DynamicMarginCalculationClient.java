@@ -14,7 +14,6 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -221,7 +220,7 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
                 .build()
                 .toUriString();
 
-        getRestTemplate().exchange(url, HttpMethod.PUT, null, new ParameterizedTypeReference<List<UUID>>() { });
+        getRestTemplate().put(url, null);
     }
 
     public void deleteResults(List<UUID> resultUuids) {

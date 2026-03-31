@@ -14,10 +14,8 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
@@ -205,8 +203,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
                 .queryParam("resultUuid", resultUuids)
                 .build()
                 .toUriString();
-
-        getRestTemplate().exchange(url, HttpMethod.PUT, null, new ParameterizedTypeReference<List<UUID>>() { });
+        getRestTemplate().put(url, null);
     }
 
     public void deleteResults(List<UUID> resultUuids) {
