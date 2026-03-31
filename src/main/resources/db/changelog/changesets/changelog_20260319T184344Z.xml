@@ -8,7 +8,7 @@
         </addColumn>
     </changeSet>
     <changeSet author="phamquy (generated)" id="1773945844517-17">
-        <dropForeignKeyConstraint baseTableName="STUDY" constraintName="DYNAMICSIMULATIONPARAMETERS_ID_FK"/>
+        <dropForeignKeyConstraint baseTableName="STUDY" constraintName="dynamicSimulationParameters_id_fk"/>
     </changeSet>
     <changeSet author="phamquy (generated)" id="1773945844517-18">
         <dropTable tableName="DYNAMIC_SIMULATION_PARAMETERS"/>
