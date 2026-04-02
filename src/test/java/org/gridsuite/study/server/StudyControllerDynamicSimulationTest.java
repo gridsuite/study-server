@@ -658,29 +658,6 @@ class StudyControllerDynamicSimulationTest {
     }
 
     @Test
-    void testGetDynamicSimulationMappings() throws Exception {
-        // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> MAPPINGS).when(spyDynamicSimulationService).getMappings(STUDY_UUID);
-
-        // --- call endpoint to be tested --- //
-        // get all mapping infos
-        MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS, STUDY_UUID)
-                .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
-                .andExpect(status().isOk()).andReturn();
-        String content = result.getResponse().getContentAsString();
-
-        assertThat(content).isNotBlank();
-
-        List<MappingInfos> mappingInfos = objectMapper.readValue(content, new TypeReference<>() { });
-
-        // --- check result --- //
-        LOGGER.info("Mapping infos expected in Json = {}", objectMapper.writeValueAsString(MAPPINGS));
-        LOGGER.info("Mapping infos result in Json = {}", objectMapper.writeValueAsString(mappingInfos));
-        assertThat(mappingInfos).hasSameSizeAs(MAPPINGS);
-
-    }
-
-    @Test
     void testSetAndGetDynamicSimulationParameters() throws Exception {
         // create a node in the db
         StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
@@ -721,50 +698,6 @@ class StudyControllerDynamicSimulationTest {
         LOGGER.info("Parameters expected in Json = {}", jsonParameters);
         LOGGER.info("Parameters result in Json = {}", resultJson);
         assertThat(resultJson).isEqualTo(jsonParameters);
-
-    }
-
-    @Test
-    void testGetDynamicSimulationModels() throws Exception {
-        // create a node in the db
-        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
-        UUID studyUuid = studyEntity.getId();
-
-        // setup DynamicSimulationService mock with a given mapping
-        Mockito.doAnswer(invocation -> MODELS).when(spyDynamicSimulationService).getModels(MAPPING_NAME_01);
-
-        MvcResult result;
-        // --- call endpoint to be tested --- //
-        result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS, studyUuid)
-                        .queryParam("mapping", MAPPING_NAME_01)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk()).andReturn();
-
-        String resultJson = result.getResponse().getContentAsString();
-        String expectedJson = objectMapper.writeValueAsString(MODELS);
-
-        // result parameters must be identical to persisted parameters
-        LOGGER.info("Models expect in Json = {}", expectedJson);
-        LOGGER.info("Models result in Json = {}", resultJson);
-        assertThat(objectMapper.readTree(resultJson)).isEqualTo(objectMapper.readTree(expectedJson));
-    }
-
-    @Test
-    void testGetDynamicSimulationModelsGivenEmptyMapping() throws Exception {
-        // create a node in the db
-        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
-        UUID studyUuid = studyEntity.getId();
-
-        // setup DynamicSimulationService mock with a given mapping
-        Mockito.doAnswer(invocation -> null).when(spyDynamicSimulationService).getModels(null);
-
-        // --- call endpoint to be tested --- //
-        // must be no content status
-        studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS, studyUuid)
-                        .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNoContent()).andReturn();
 
     }
 

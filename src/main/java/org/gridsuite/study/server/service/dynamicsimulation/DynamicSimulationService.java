@@ -8,8 +8,6 @@
 package org.gridsuite.study.server.service.dynamicsimulation;
 
 import com.powsybl.timeseries.DoubleTimeSeries;
-import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
@@ -114,23 +112,9 @@ public interface DynamicSimulationService {
     void assertDynamicSimulationNotRunning(UUID resultUuid);
 
     /**
-     * Get mapping names
-     * @param studyUuid a given study UUID
-     * @return a list of mapping names
-     */
-    List<MappingInfos> getMappings(UUID studyUuid);
-
-    /**
      * Get list of time-series metadata
      * @param resultUuid a given result UUID
      * @return a list of time-series metadata
      */
     List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID resultUuid);
-
-    /**
-     * Get models used in the given mapping
-     * @param mapping name of given mapping
-     * @return a list of rich models (i.e. including parameter set with parameters)
-     */
-    List<ModelInfos> getModels(String mapping);
 }

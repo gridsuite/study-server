@@ -20,8 +20,6 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
-import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
@@ -2890,17 +2888,6 @@ public class StudyService {
     }
 
     // --- Dynamic Simulation service methods BEGIN --- //
-
-    public List<MappingInfos> getDynamicSimulationMappings(UUID studyUuid) {
-        // get mapping from study uuid
-        return dynamicSimulationService.getMappings(studyUuid);
-
-    }
-
-    public List<ModelInfos> getDynamicSimulationModels(UUID studyUuid, String mapping) {
-        // get model from mapping
-        return dynamicSimulationService.getModels(mapping);
-    }
 
     @Transactional
     public String getDynamicSimulationParameters(UUID studyUuid) {
