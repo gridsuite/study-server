@@ -179,19 +179,4 @@ class StudyServiceDynamicSimulationTest {
         LOGGER.info("Status result = {}", status);
         assertThat(status).isEqualTo(DynamicSimulationStatus.CONVERGED);
     }
-
-    @Test
-    void testGetDynamicSimulationMappings() throws Exception {
-        // setup
-        given(dynamicSimulationService.getMappings(STUDY_UUID)).willReturn(MAPPINGS);
-
-        // call method to be tested
-        List<MappingInfos> mappingInfos = studyService.getDynamicSimulationMappings(STUDY_UUID);
-
-        // --- check result --- //
-        // must return 2 mappings
-        LOGGER.info("Mapping infos expected in Json = {}", objectMapper.writeValueAsString(MAPPINGS));
-        LOGGER.info("Mapping infos result in Json = {}", objectMapper.writeValueAsString(mappingInfos));
-        assertThat(mappingInfos).hasSameSizeAs(MAPPINGS);
-    }
 }
