@@ -2105,9 +2105,8 @@ public class StudyController {
     @Operation(summary = "Get security analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters")})
     public ResponseEntity<String> getSecurityAnalysisParametersValues(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid, userId));
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
@@ -2214,9 +2213,8 @@ public class StudyController {
     @Operation(summary = "Get sensitivity analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters")})
     public ResponseEntity<String> getSensitivityAnalysisParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParameters(studyUuid, userId));
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParameters(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")

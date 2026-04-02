@@ -361,7 +361,7 @@ public class ConsumerService {
         if (userProfileInfos != null && userProfileInfos.getSensitivityAnalysisParameterId() != null) {
             // try to access/duplicate the user profile sensitivity analysis parameters
             try {
-                return sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId(), userId);
+                return sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId());
             } catch (Exception e) {
                 // TODO try to report a log in Root subreporter ?
                 LOGGER.error(String.format("Could not duplicate sensitivity analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
@@ -381,7 +381,7 @@ public class ConsumerService {
         if (userProfileInfos != null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
             // try to access/duplicate the user profile security analysis parameters
             try {
-                return securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId(), userId);
+                return securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId());
             } catch (Exception e) {
                 // TODO try to report a log in Root subreporter ?
                 LOGGER.error(String.format("Could not duplicate security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
