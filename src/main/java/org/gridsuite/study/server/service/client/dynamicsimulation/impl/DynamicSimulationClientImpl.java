@@ -131,7 +131,7 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
 
         String url = getParametersWithUuidUrl(parametersUuid);
 
-        // call dynamic-margin-calculation REST API
+        // call dynamic-simulation REST API
         getRestTemplate().delete(url);
     }
 
