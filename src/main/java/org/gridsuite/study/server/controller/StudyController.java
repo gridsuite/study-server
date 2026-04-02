@@ -26,7 +26,6 @@ import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
@@ -1836,8 +1835,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All models of dynamic simulation"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation models"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation models has not been found")})
-    public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid) {
-        List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid);
+    public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(
+            @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "mapping") @RequestParam(name = "mapping", required = false) String mapping) {
+        List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid, mapping);
         return models != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(models) :
                 ResponseEntity.noContent().build();
     }
@@ -1847,7 +1848,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters are set")})
     public ResponseEntity<Void> setDynamicSimulationParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) DynamicSimulationParametersInfos dsParameter,
+            @RequestBody(required = false) String dsParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setDynamicSimulationParameters(studyUuid, dsParameter, userId);
         return ResponseEntity.ok().build();
@@ -1856,7 +1857,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")
     @Operation(summary = "Get dynamic simulation parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters")})
-    public ResponseEntity<DynamicSimulationParametersInfos> getDynamicSimulationParameters(
+    public ResponseEntity<String> getDynamicSimulationParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getDynamicSimulationParameters(studyUuid));
     }
@@ -1934,11 +1935,10 @@ public class StudyController {
                                                      @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
-                                                     @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSimulationProvider);
-        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debug);
+        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 

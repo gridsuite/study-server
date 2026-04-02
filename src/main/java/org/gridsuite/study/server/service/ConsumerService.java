@@ -15,15 +15,14 @@ import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
+import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
@@ -74,6 +73,7 @@ public class ConsumerService {
     private final ShortCircuitService shortCircuitService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
+    private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
     private final StateEstimationService stateEstimationService;
@@ -92,6 +92,7 @@ public class ConsumerService {
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            VoltageInitService voltageInitService,
+                           DynamicSimulationService dynamicSimulationService,
                            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                            DynamicMarginCalculationService dynamicMarginCalculationService,
                            StateEstimationService stateEstimationService,
@@ -109,6 +110,7 @@ public class ConsumerService {
         this.shortCircuitService = shortCircuitService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;
+        this.dynamicSimulationService = dynamicSimulationService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.dynamicMarginCalculationService = dynamicMarginCalculationService;
         this.stateEstimationService = stateEstimationService;
@@ -293,13 +295,13 @@ public class ConsumerService {
                              Map<String, String> importParameters, UUID importReportUuid) {
         UserProfileInfos userProfileInfos = studyService.getUserProfile(userId);
 
-        DynamicSimulationParametersInfos dynamicSimulationParameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
         UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, userProfileInfos);
         UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters(userId, userProfileInfos);
         UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters(userId, userProfileInfos);
         UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters(userId, userProfileInfos);
         UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
         UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
+        UUID dynamicSimulationParametersUuid = createDefaultDynamicSimulationParameters(userId, userProfileInfos);
         UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
         UUID dynamicMarginCalculationParametersUuid = createDefaultDynamicMarginCalculationParameters(userId, userProfileInfos);
         UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
@@ -308,7 +310,7 @@ public class ConsumerService {
         UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
-            shortCircuitParametersUuid, DynamicSimulationService.toEntity(dynamicSimulationParameters, objectMapper),
+            shortCircuitParametersUuid, dynamicSimulationParametersUuid,
             voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
             networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, dynamicMarginCalculationParametersUuid,
             stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
@@ -431,6 +433,26 @@ public class ConsumerService {
             return studyConfigService.createDefaultNetworkVisualizationParameters();
         } catch (final Exception e) {
             LOGGER.error("Error while creating network visualization default parameters", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultDynamicSimulationParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getDynamicSimulationParameterId() != null) {
+            // try to access/duplicate the user profile Dynamic Simulation parameters
+            try {
+                return dynamicSimulationService.duplicateParameters(userProfileInfos.getDynamicSimulationParameterId());
+            } catch (Exception e) {
+                // TODO try to report a log in Root subreporter ?
+                LOGGER.error(String.format("Could not duplicate dynamic simulation parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                        userProfileInfos.getDynamicSimulationParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        // no profile, or no/bad dynamic simulation parameters in profile => use default values
+        try {
+            return dynamicSimulationService.createDefaultParameters();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default parameters for dynamic simulation", e);
             return null;
         }
     }
