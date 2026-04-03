@@ -37,7 +37,9 @@ import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
+import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -255,7 +257,13 @@ class StudyTestBase {
     protected ShortCircuitService shortCircuitService;
 
     @Autowired
+    protected DynamicSimulationClient dynamicSimulationClient;
+
+    @Autowired
     protected DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
+
+    @Autowired
+    protected DynamicMarginCalculationClient dynamicMarginCalculationClient;
 
     @Autowired
     protected StateEstimationService stateEstimationService;
@@ -369,7 +377,9 @@ class StudyTestBase {
         voltageInitService.setVoltageInitServerBaseUri(baseUrl);
         loadflowService.setLoadFlowServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
+        dynamicSimulationClient.setBaseUri(baseUrl);
         dynamicSecurityAnalysisClient.setBaseUri(baseUrl);
+        dynamicMarginCalculationClient.setBaseUri(baseUrl);
         stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
         pccMinService.setPccMinServerBaseUri(baseUrl);
         studyConfigService.setStudyConfigServerBaseUri(baseUrl);
@@ -393,7 +403,7 @@ class StudyTestBase {
         UUID studyUuid = createStudy(userId, caseUuid, networkInfos);
 
         createStudyStubs.verify(wireMockStubs);
-        verifyCreateParameters(1, 7, 1, 1, 1);
+        verifyCreateParameters(1, 9, 1, 1, 1);
 
         return studyUuid;
     }
