@@ -3183,7 +3183,6 @@ class NetworkModificationTest {
                         .withBody(mapper.writeValueAsString(expandedLeafUuids))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
-        // PUT .../network-modifications?activated=false&uuids=<compositeUuid>
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications",
                         studyUuid, rootNetworkUuid, nodeUuid)
                         .queryParam("activated", "false")

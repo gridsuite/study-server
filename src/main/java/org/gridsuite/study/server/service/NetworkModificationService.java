@@ -435,6 +435,9 @@ public class NetworkModificationService {
                 null);
     }
 
+    /**
+     * @return modificationUuids plus the uuids of all the modifications contained into the composite modifications that they reference
+     */
     public Set<UUID> expandToLeafUuids(List<UUID> modificationUuids) {
         var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "leaf-uuids")
                 .queryParam("uuids", modificationUuids)
