@@ -415,8 +415,7 @@ public class NetworkModificationService {
             UUID beforeUuid) {
 
         var path = UriComponentsBuilder.fromPath(
-                COMPOSITE_PATH + "groups" + DELIMITER
-                        + "{groupUuid}" + DELIMITER
+                COMPOSITE_PATH + GROUP_PATH + DELIMITER
                         + "sub-modifications" + DELIMITER
                         + "{modificationUuid}");
 
