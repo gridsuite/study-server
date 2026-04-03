@@ -406,4 +406,48 @@ public class NetworkModificationService {
                         }).getBody();
 
     }
+
+    public void moveSubModification(
+            UUID groupUuid,
+            UUID sourceCompositeUuid,
+            UUID targetCompositeUuid,
+            UUID modificationUuid,
+            UUID beforeUuid) {
+
+        var path = UriComponentsBuilder.fromPath(
+                COMPOSITE_PATH + GROUP_PATH + DELIMITER
+                        + "sub-modifications" + DELIMITER
+                        + "{modificationUuid}");
+
+        if (sourceCompositeUuid != null) {
+            path.queryParam("sourceCompositeUuid", sourceCompositeUuid);
+        }
+        if (targetCompositeUuid != null) {
+            path.queryParam("targetCompositeUuid", targetCompositeUuid);
+        }
+        if (beforeUuid != null) {
+            path.queryParam("beforeUuid", beforeUuid);
+        }
+
+        restTemplate.put(
+                getNetworkModificationServerURI(false)
+                        + path.buildAndExpand(groupUuid, modificationUuid).toUriString(),
+                null);
+    }
+
+    /**
+     * @return modificationUuids plus the uuids of all the modifications contained into the composite modifications that they reference
+     */
+    public Set<UUID> expandToLeafUuids(List<UUID> modificationUuids) {
+        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "leaf-uuids")
+                .queryParam("uuids", modificationUuids)
+                .toUriString();
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Set<UUID>>() { }
+        ).getBody();
+    }
 }
