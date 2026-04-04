@@ -102,6 +102,7 @@ class ShortCircuitTest implements WithAssertions {
     private static final byte[] SHORT_CIRCUIT_ANALYSIS_CSV_RESULT = {0x00, 0x11};
 
     private static final String SHORT_CIRCUIT_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+    private static final String ALL_COMPUTATIONS_STATUS_JSON = "{\"pccMinStatus\":null,\"dynamicMarginCalculationStatus\":null,\"dynamicSecurityAnalysisStatus\":null,\"dynamicSimulationStatus\":null,\"stateEstimationStatus\":null,\"sensitivityAnalysisStatus\":null,\"loadFlowStatus\":null,\"securityAnalysisStatus\":null,\"oneBusShortCircuitStatus\":null,\"allBusShortCircuitStatus\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\",\"voltageInitStatus\":null}";
 
     private static final String SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID = UUID.fromString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
@@ -275,6 +276,12 @@ class ShortCircuitTest implements WithAssertions {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON));
+        computationServerStubs.verifyGetResultStatus(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
+
+        // get all computing status and check shortcircuit status
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computations/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)).andExpectAll(
+                status().isOk(),
+                content().string(ALL_COMPUTATIONS_STATUS_JSON));
         computationServerStubs.verifyGetResultStatus(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
 
         // stop short circuit analysis
