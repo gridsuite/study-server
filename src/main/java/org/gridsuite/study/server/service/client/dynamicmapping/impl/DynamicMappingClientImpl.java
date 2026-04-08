@@ -38,7 +38,7 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
     public List<MappingInfos> getAllMappings() {
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
 
-        var uriBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + DELIMITER);
+        var uriBuilder = UriComponentsBuilder.fromUriString(endPointUrl + DELIMITER);
 
         return getRestTemplate().exchange(uriBuilder.toUriString(), HttpMethod.GET, null,
                     new ParameterizedTypeReference<List<MappingInfos>>() { })
@@ -53,7 +53,7 @@ public class DynamicMappingClientImpl extends AbstractRestClient implements Dyna
 
         String endPointUrl = buildEndPointUrl(getBaseUri(), API_VERSION, DYNAMIC_MAPPING_END_POINT_MAPPING);
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl + "/{mappingName}/models");
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(endPointUrl + "/{mappingName}/models");
 
         var uriComponent = uriComponentsBuilder.buildAndExpand(mapping);
 

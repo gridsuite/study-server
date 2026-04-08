@@ -13,16 +13,17 @@ import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
 import org.apache.commons.collections4.CollectionUtils;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
+import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
@@ -38,7 +39,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.TIME_SERIES_BAD_TYPE;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -65,8 +67,52 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
-    public UUID runDynamicSimulation(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId,
-                                     UUID reportUuid, DynamicSimulationParametersInfos parameters, String userId, boolean debug) {
+    public String getProvider(UUID parametersUuid) {
+        return dynamicSimulationClient.getProvider(parametersUuid);
+    }
+
+    @Override
+    public String getParameters(UUID parametersUuid) {
+        return dynamicSimulationClient.getParameters(parametersUuid);
+    }
+
+    @Override
+    public UUID createParameters(String parameters) {
+        return dynamicSimulationClient.createParameters(parameters);
+    }
+
+    @Override
+    public UUID createDefaultParameters() {
+        return dynamicSimulationClient.createDefaultParameters();
+    }
+
+    @Override
+    public void updateParameters(UUID parametersUuid, String parametersInfos) {
+        dynamicSimulationClient.updateParameters(parametersUuid, parametersInfos);
+    }
+
+    @Override
+    public UUID duplicateParameters(UUID sourceParameterId) {
+        return dynamicSimulationClient.duplicateParameters(sourceParameterId);
+    }
+
+    @Override
+    public void deleteParameters(UUID parametersUuid) {
+        dynamicSimulationClient.deleteParameters(parametersUuid);
+    }
+
+    @Override
+    public UUID getDynamicSimulationParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {
+        if (studyEntity.getDynamicSimulationParametersUuid() == null) {
+            // not supposed to happen because we create it as the study creation
+            studyEntity.setDynamicSimulationParametersUuid(dynamicSimulationClient.createDefaultParameters());
+        }
+        return studyEntity.getDynamicSimulationParametersUuid();
+    }
+
+    @Override
+    public UUID runDynamicSimulation(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId,
+                                     UUID reportUuid, UUID parametersUuid, List<EventInfos> events, String userId, boolean debug) {
 
         // create receiver for getting back the notification in rabbitmq
         String receiver;
@@ -77,7 +123,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             throw new UncheckedIOException(e);
         }
 
-        return dynamicSimulationClient.run(provider, receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), parameters, userId, debug);
+        return dynamicSimulationClient.run(receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), parametersUuid, events, userId, debug);
     }
 
     @Override

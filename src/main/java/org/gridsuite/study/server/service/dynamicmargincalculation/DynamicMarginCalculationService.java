@@ -66,8 +66,8 @@ public class DynamicMarginCalculationService {
         dynamicMarginCalculationClient.deleteParameters(parametersUuid);
     }
 
-    public UUID runDynamicMarginCalculation(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
-                                            String variantId, UUID reportUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID parametersUuid, String dynamicSimulationParametersJson, String userId, boolean debug) {
+    public UUID runDynamicMarginCalculation(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
+                                            String variantId, UUID reportUuid, UUID dynamicSimulationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID parametersUuid, String userId, boolean debug) {
 
         // create receiver for getting back the notification in rabbitmq
         String receiver;
@@ -79,7 +79,7 @@ public class DynamicMarginCalculationService {
             throw new UncheckedIOException(e);
         }
 
-        return dynamicMarginCalculationClient.run(provider, receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), dynamicSecurityAnalysisParametersUuid, parametersUuid, dynamicSimulationParametersJson, userId, debug);
+        return dynamicMarginCalculationClient.run(receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), dynamicSimulationParametersUuid, dynamicSecurityAnalysisParametersUuid, parametersUuid, userId, debug);
     }
 
     public DynamicMarginCalculationStatus getStatus(UUID resultUuid) {
