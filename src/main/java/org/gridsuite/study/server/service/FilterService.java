@@ -60,7 +60,7 @@ public class FilterService {
         Objects.requireNonNull(networkUuid);
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EVALUATE;
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(endPointUrl);
         uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
@@ -76,7 +76,7 @@ public class FilterService {
 
     public List<String> evaluateGlobalFilter(@NonNull final UUID networkUuid, @NonNull final String variantId,
                                              @NonNull final List<EquipmentType> equipmentTypes, @NonNull final GlobalFilter filter) {
-        final UriComponents uriComponent = UriComponentsBuilder.fromHttpUrl(getBaseUri())
+        final UriComponents uriComponent = UriComponentsBuilder.fromUriString(getBaseUri())
                 .pathSegment(FILTER_API_VERSION, "global-filter")
                 .queryParam(NETWORK_UUID, networkUuid)
                 .queryParam(QUERY_PARAM_VARIANT_ID, variantId)
@@ -97,7 +97,7 @@ public class FilterService {
         Objects.requireNonNull(filterUuid);
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EXPORT;
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(endPointUrl);
         uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand(filterUuid);
 
@@ -109,7 +109,7 @@ public class FilterService {
         Objects.requireNonNull(filtersUuid);
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTERS_END_POINT_EXPORT;
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(endPointUrl);
         uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
@@ -125,7 +125,7 @@ public class FilterService {
         Objects.requireNonNull(filters);
         String endPointUrl = getBaseUri() + DELIMITER + FILTER_API_VERSION + FILTER_END_POINT_EVALUATE_IDS;
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromHttpUrl(endPointUrl);
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(endPointUrl);
         uriComponentsBuilder.queryParam(NETWORK_UUID, networkUuid);
         var uriComponent = uriComponentsBuilder.buildAndExpand();
 

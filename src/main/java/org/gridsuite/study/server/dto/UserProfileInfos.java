@@ -35,6 +35,9 @@ public class UserProfileInfos {
     private UUID pccMinParameterId;
 
     // note: this parameter is not managed by user-admin-server yet
+    private UUID dynamicSimulationParameterId;
+
+    // note: this parameter is not managed by user-admin-server yet
     private UUID dynamicSecurityAnalysisParameterId;
 
     // note: this parameter is not managed by user-admin-server yet

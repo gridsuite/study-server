@@ -10,10 +10,10 @@ package org.gridsuite.study.server.service.dynamicsecurityanalysis;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections4.CollectionUtils;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.springframework.stereotype.Service;
@@ -66,7 +66,7 @@ public class DynamicSecurityAnalysisService {
         dynamicSecurityAnalysisClient.deleteParameters(parametersUuid);
     }
 
-    public UUID runDynamicSecurityAnalysis(String provider, UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
+    public UUID runDynamicSecurityAnalysis(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
         String variantId, UUID reportUuid, UUID dynamicSimulationResultUuid, UUID parametersUuid, String userId, boolean debug) {
 
         // create receiver for getting back the notification in rabbitmq
@@ -79,7 +79,7 @@ public class DynamicSecurityAnalysisService {
             throw new UncheckedIOException(e);
         }
 
-        return dynamicSecurityAnalysisClient.run(provider, receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), dynamicSimulationResultUuid, parametersUuid, userId, debug);
+        return dynamicSecurityAnalysisClient.run(receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), dynamicSimulationResultUuid, parametersUuid, userId, debug);
     }
 
     public DynamicSecurityAnalysisStatus getStatus(UUID resultUuid) {

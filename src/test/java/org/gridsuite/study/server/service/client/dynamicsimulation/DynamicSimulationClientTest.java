@@ -10,18 +10,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.service.client.dynamicsimulation.impl.DynamicSimulationClientImpl;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -37,19 +38,19 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-/**
- * @author Thang PHAM <quyet-thang.pham at rte-france.com>
- */
 class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
-    public static final String DYNAMIC_SIMUALTION_RUN_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
-    public static final String DYNAMIC_SIMULATION_RESULT_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID REPORT_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
+    private static final UUID PARAMETERS_UUID = UUID.randomUUID();
+
+    private static final String DYNAMIC_SIMUALTION_RUN_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RUN);
+    private static final String DYNAMIC_SIMULATION_RESULT_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+    private static final String PARAMETERS_BASE_URL = buildEndPointUrl("", DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_PARAMETER);
+    private static final String PARAMETERS_JSON = "parametersJson";
 
     private static final String VARIANT_ID = "variantId";
-    private static final String MAPPING_NAME_01 = "_01";
 
     private static final UUID TIME_SERIES_UUID = UUID.randomUUID();
     private static final UUID TIMELINE_UUID = UUID.randomUUID();
@@ -75,32 +76,258 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     }
 
     @Test
+    void testGetProvider() {
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + "/provider";
+
+        // --- Success --- //
+        String expectedProvider = DYNAWO_PROVIDER;
+
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.ok()
+                        .withBody(expectedProvider)
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE)
+                ));
+        // call service to test
+        String provider = dynamicSimulationClient.getProvider(PARAMETERS_UUID);
+
+        // check result
+        assertThat(provider).isEqualTo(expectedProvider);
+
+        // --- Not Found --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.notFound()));
+
+        // check result
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSimulationClient.getProvider(PARAMETERS_UUID)
+        );
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSimulationClient.getProvider(PARAMETERS_UUID)
+        );
+    }
+
+    @Test
+    void testGetParameters() {
+        String parametersJson = PARAMETERS_JSON;
+
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID;
+
+        // --- Success --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.ok()
+                        .withBody(parametersJson)
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                ));
+        // call service to test
+        String resultParametersJson = dynamicSimulationClient.getParameters(PARAMETERS_UUID);
+
+        // check result
+        assertThat(resultParametersJson).isEqualTo(parametersJson);
+
+        // --- Not Found --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.notFound()));
+
+        // check result
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSimulationClient.getParameters(PARAMETERS_UUID)
+        );
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSimulationClient.getParameters(PARAMETERS_UUID)
+        );
+    }
+
+    @Test
+    void testCreateParameters() throws Exception {
+        String parameterJson = PARAMETERS_JSON;
+
+        // --- Success --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(PARAMETERS_BASE_URL))
+                .withRequestBody(equalTo(parameterJson))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(PARAMETERS_UUID))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                ));
+        // call service to test
+        UUID resultParametersUuid = dynamicSimulationClient.createParameters(parameterJson);
+
+        // check result
+        assertThat(resultParametersUuid).isEqualTo(PARAMETERS_UUID);
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(PARAMETERS_BASE_URL))
+                .withRequestBody(equalTo(parameterJson))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSimulationClient.createParameters(parameterJson)
+        );
+    }
+
+    @Test
+    void testUpdateParameters() {
+        String parameterJson = PARAMETERS_JSON;
+
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID;
+
+        // --- Success --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
+                .withRequestBody(equalTo(parameterJson))
+                .willReturn(WireMock.ok()));
+        // call service to test
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicSimulationClient.updateParameters(PARAMETERS_UUID, parameterJson));
+
+        // --- Not Found --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
+                .withRequestBody(equalTo(parameterJson))
+                .willReturn(WireMock.notFound()));
+
+        // check result
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSimulationClient.updateParameters(PARAMETERS_UUID, parameterJson)
+        );
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.put(WireMock.urlEqualTo(url))
+                .withRequestBody(equalTo(parameterJson))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSimulationClient.updateParameters(PARAMETERS_UUID, parameterJson)
+        );
+    }
+
+    @Test
+    void testDuplicateParameters() throws Exception {
+        UUID newParameterUuid = UUID.randomUUID();
+
+        // --- Success --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL))
+                    .withQueryParam("duplicateFrom", equalTo(PARAMETERS_UUID.toString()))
+                    .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(newParameterUuid))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    ));
+        // call service to test
+        UUID resultParametersUuid = dynamicSimulationClient.duplicateParameters(PARAMETERS_UUID);
+
+        // check result
+        assertThat(resultParametersUuid).isEqualTo(newParameterUuid);
+
+        // --- Not Found --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL))
+                .withQueryParam("duplicateFrom", equalTo(PARAMETERS_UUID.toString()))
+                .willReturn(WireMock.notFound()));
+
+        // check result
+        assertThrows(
+            HttpClientErrorException.NotFound.class,
+            () -> dynamicSimulationClient.duplicateParameters(PARAMETERS_UUID)
+        );
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL))
+                .withQueryParam("duplicateFrom", equalTo(PARAMETERS_UUID.toString()))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSimulationClient.duplicateParameters(PARAMETERS_UUID)
+        );
+    }
+
+    @Test
+    void testDeleteParameters() {
+        // configure mock server response
+        String url = PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID;
+        wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.ok()));
+        // call service to test
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicSimulationClient.deleteParameters(PARAMETERS_UUID));
+    }
+
+    @Test
+    void testCreateDefaultParameters() throws Exception {
+        String url = PARAMETERS_BASE_URL + "/default";
+
+        // --- Success --- //
+        // configure mock server response
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.ok()
+                        .withBody(objectMapper.writeValueAsString(PARAMETERS_UUID))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                ));
+        // call service to test
+        UUID resultParametersUuid = dynamicSimulationClient.createDefaultParameters();
+
+        // check result
+        assertThat(resultParametersUuid).isEqualTo(PARAMETERS_UUID);
+
+        // --- Error --- //
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(url))
+                .willReturn(WireMock.serverError()));
+
+        // check result
+        assertThrows(
+            HttpServerErrorException.class,
+            () -> dynamicSimulationClient.createDefaultParameters()
+        );
+    }
+
+    @Test
     void testRun() throws Exception {
 
         // prepare parameters
-        DynamicSimulationParametersInfos parameters = DynamicSimulationService.getDefaultDynamicSimulationParameters();
-        parameters.setStartTime(0.0);
-        parameters.setStopTime(500.0);
-        parameters.setMapping(MAPPING_NAME_01);
+        List<EventInfos> events = ParameterTestUtils.getEventInfosList();
 
         // configure mock server response for test case run - networks/{networkUuid}/run?
         String url = DYNAMIC_SIMUALTION_RUN_BASE_URL + DELIMITER + NETWORK_UUID + DELIMITER + "run";
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
                 .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo(VARIANT_ID))
-                .withQueryParam("provider", equalTo(DYNAWO_PROVIDER))
                 .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_SIMULATION.reportKey))
+                .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
                 .withHeader(HEADER_USER_ID, equalTo("userId"))
                 .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(RESULT_UUID))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
-
         // call service to test
-        UUID resultUuid = dynamicSimulationClient.run(DYNAWO_PROVIDER, "receiver", NETWORK_UUID, VARIANT_ID,
-                new ReportInfos(REPORT_UUID, NODE_UUID), parameters, "userId", false);
+        UUID resultUuid = dynamicSimulationClient.run("receiver", NETWORK_UUID, VARIANT_ID,
+                new ReportInfos(REPORT_UUID, NODE_UUID), PARAMETERS_UUID, events, "userId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);
@@ -108,20 +335,20 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         // --- Error --- //
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
                 .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo("variantIdFailed"))
-                .withQueryParam("provider", equalTo("Dynawo"))
                 .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_SIMULATION.reportKey))
                 .withHeader(QUERY_PARAM_DEBUG, equalTo("true"))
+                .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
                 .withHeader(HEADER_USER_ID, equalTo("userId"))
                 .willReturn(WireMock.serverError()));
 
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicSimulationClient.run("Dynawo", "receiver", NETWORK_UUID, "variantIdFailed",
-                new ReportInfos(REPORT_UUID, NODE_UUID), parameters, "userId", true)
+            () -> dynamicSimulationClient.run("receiver", NETWORK_UUID, "variantIdFailed",
+                new ReportInfos(REPORT_UUID, NODE_UUID), PARAMETERS_UUID, events, "userId", true)
         );
     }
 

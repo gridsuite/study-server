@@ -8,9 +8,10 @@
 package org.gridsuite.study.server.service.client.dynamicsimulation;
 
 import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.service.client.RestClient;
+import org.springframework.lang.NonNull;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,12 +24,31 @@ import static org.gridsuite.study.server.StudyConstants.DYNAMIC_SIMULATION_API_V
 public interface DynamicSimulationClient extends RestClient {
     String API_VERSION = DYNAMIC_SIMULATION_API_VERSION;
     String DELIMITER = "/";
+    String DYNAMIC_SIMULATION_END_POINT_PARAMETER = "parameters";
     String DYNAMIC_SIMULATION_END_POINT_RUN = "networks";
     String DYNAMIC_SIMULATION_END_POINT_RESULT = "results";
     String DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT = "supervision/results-count";
 
-    UUID run(String provider, String receiver, UUID networkUuid, String variantId, ReportInfos reportInfos,
-             DynamicSimulationParametersInfos parameters, String userId, boolean debug);
+    // --- Parameters related methods --- //
+
+    String getProvider(@NonNull UUID parametersUuid);
+
+    String getParameters(@NonNull UUID parametersUuid);
+
+    UUID createParameters(@NonNull String parametersInfos);
+
+    void updateParameters(@NonNull UUID parametersUuid, @NonNull String parametersInfos);
+
+    UUID duplicateParameters(@NonNull UUID sourceParametersUuid);
+
+    void deleteParameters(@NonNull UUID parametersUuid);
+
+    UUID createDefaultParameters();
+
+    // --- Run computation related methods --- //
+
+    UUID run(String receiver, UUID networkUuid, String variantId, ReportInfos reportInfos,
+             UUID parametersUuid, List<EventInfos> events, String userId, boolean debug);
 
     UUID getTimeSeriesResult(UUID resultUuid);
 

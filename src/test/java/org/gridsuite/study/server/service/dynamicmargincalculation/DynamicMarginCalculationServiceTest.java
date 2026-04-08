@@ -43,6 +43,7 @@ class DynamicMarginCalculationServiceTest {
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
     private static final UUID ROOTNETWORK_UUID = UUID.randomUUID();
+    private static final UUID DYNAMIC_SIMULATION_PARAMETERS_UUID = UUID.randomUUID();
     private static final UUID DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID = UUID.randomUUID();
     private static final UUID PARAMETERS_UUID = UUID.randomUUID();
     private static final UUID DUPLICATED_PARAMETERS_UUID = UUID.randomUUID();
@@ -114,13 +115,13 @@ class DynamicMarginCalculationServiceTest {
     @Test
     void testRunDynamicSimulation() {
         // setup DynamicMarginCalculationClient mock
-        given(dynamicMarginCalculationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID),
-                eq(new ReportInfos(REPORT_UUID, NODE_UUID)), eq(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID), eq(PARAMETERS_UUID), any(), any(), eq(false)))
+        given(dynamicMarginCalculationClient.run(any(), eq(NETWORK_UUID), eq(VARIANT_1_ID),
+                eq(new ReportInfos(REPORT_UUID, NODE_UUID)), eq(DYNAMIC_SIMULATION_PARAMETERS_UUID), eq(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID), eq(PARAMETERS_UUID), any(), eq(false)))
                 .willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicMarginCalculationService.runDynamicMarginCalculation("", NODE_UUID, ROOTNETWORK_UUID,
-                NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID, PARAMETERS_UUID, "", "testUserId", false);
+        UUID resultUuid = dynamicMarginCalculationService.runDynamicMarginCalculation(NODE_UUID, ROOTNETWORK_UUID,
+                NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, DYNAMIC_SIMULATION_PARAMETERS_UUID, DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID, PARAMETERS_UUID, "testUserId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);
