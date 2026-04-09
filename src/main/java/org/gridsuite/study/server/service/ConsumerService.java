@@ -132,7 +132,7 @@ public class ConsumerService {
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     studyService.handleBuildSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), networkModificationResult);
                     handleBuildResultWorkflow(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message);
-                } catch (Exception e) {
+                } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
             }
