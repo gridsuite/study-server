@@ -26,7 +26,6 @@ import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationParametersInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
@@ -658,14 +657,14 @@ public class StudyController {
                                                          @RequestParam("action") ModificationsActionType action,
                                                          @RequestParam("originStudyUuid") UUID originStudyUuid,
                                                          @RequestParam("originNodeUuid") UUID originNodeUuid,
-                                                         @RequestBody List<ModificationsToCopyInfos> modificationsToCopyInfos,
+                                                         @RequestBody List<UUID> modificationsToCopyUuidList,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertIsStudyAndNodeExist(originStudyUuid, originNodeUuid);
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
         switch (action) {
-            case COPY, SPLIT_COMPOSITE, INSERT_COMPOSITE:
-                handleDuplicateOrInsertNetworkModifications(studyUuid, nodeUuid, originStudyUuid, originNodeUuid, modificationsToCopyInfos, userId, action);
+            case COPY:
+                handleDuplicateNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
             case MOVE:
                 // we don't cut - paste modifications from different studies
@@ -674,18 +673,44 @@ public class StudyController {
                 }
                 studyService.assertNoBlockedNodeInStudy(studyUuid, originNodeUuid);
                 studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-                List<UUID> modificationsToCopyInfosUuids = modificationsToCopyInfos.stream().map(ModificationsToCopyInfos::getUuid).toList();
-                rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyInfosUuids, userId);
+                rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
         }
         return ResponseEntity.ok().build();
     }
 
-    private void handleDuplicateOrInsertNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, UUID originStudyUuid, UUID originNodeUuid, List<ModificationsToCopyInfos> modificationsToCopy, String userId, ModificationsActionType action) {
+    /**
+     * @param modificationsToInsert pair of the composite uuid and its name
+     */
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-modifications", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "For a list of composite network modifications passed in body, insert them into the target node")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The composite modification list has been inserted.")})
+    public ResponseEntity<Void> insertCompositeModifications(@PathVariable("studyUuid") UUID studyUuid,
+                                                         @PathVariable("nodeUuid") UUID nodeUuid,
+                                                         @RequestParam("action") CompositeModificationsActionType action,
+                                                         @RequestBody List<Pair<UUID, String>> modificationsToInsert,
+                                                         @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
+        handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, modificationsToInsert, userId, action);
+        return ResponseEntity.ok().build();
+    }
+
+    private void handleInsertCompositeNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, List<Pair<UUID, String>> modificationsToCopy, String userId, CompositeModificationsActionType action) {
         studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
         studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
         try {
-            studyService.duplicateOrInsertNetworkModifications(targetStudyUuid, targetNodeUuid, originStudyUuid, originNodeUuid, modificationsToCopy, userId, action);
+            studyService.insertCompositeNetworkModifications(targetStudyUuid, targetNodeUuid, modificationsToCopy, userId, action);
+        } finally {
+            studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
+        }
+    }
+
+    private void handleDuplicateNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
+        studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
+        studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
+        try {
+            studyService.duplicateNetworkModifications(targetStudyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
         } finally {
             studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
         }
@@ -1810,8 +1835,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All models of dynamic simulation"),
         @ApiResponse(responseCode = "204", description = "No dynamic simulation models"),
         @ApiResponse(responseCode = "404", description = "The dynamic simulation models has not been found")})
-    public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid) {
-        List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid);
+    public ResponseEntity<List<ModelInfos>> getDynamicSimulationModels(
+            @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "mapping") @RequestParam(name = "mapping", required = false) String mapping) {
+        List<ModelInfos> models = studyService.getDynamicSimulationModels(studyUuid, mapping);
         return models != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(models) :
                 ResponseEntity.noContent().build();
     }
@@ -1821,7 +1848,7 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters are set")})
     public ResponseEntity<Void> setDynamicSimulationParameters(
             @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) DynamicSimulationParametersInfos dsParameter,
+            @RequestBody(required = false) String dsParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setDynamicSimulationParameters(studyUuid, dsParameter, userId);
         return ResponseEntity.ok().build();
@@ -1830,7 +1857,7 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")
     @Operation(summary = "Get dynamic simulation parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters")})
-    public ResponseEntity<DynamicSimulationParametersInfos> getDynamicSimulationParameters(
+    public ResponseEntity<String> getDynamicSimulationParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getDynamicSimulationParameters(studyUuid));
     }
@@ -1908,11 +1935,10 @@ public class StudyController {
                                                      @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                      @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
-                                                     @RequestBody(required = false) DynamicSimulationParametersInfos parameters,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSimulationProvider);
-        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, parameters, userId, debug);
+        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 

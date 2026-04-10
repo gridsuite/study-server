@@ -19,7 +19,7 @@
 
     <groupId>org.gridsuite</groupId>
     <artifactId>gridsuite-study-server</artifactId>
-    <version>2.32.0-SNAPSHOT</version>
+    <version>2.34.0-SNAPSHOT</version>
 
     <packaging>jar</packaging>
     <name>Study Server</name>
@@ -48,8 +48,6 @@
         <db-util.version>1.0.5</db-util.version>
         <sonar.organization>gridsuite</sonar.organization>
         <sonar.projectKey>org.gridsuite:study-server</sonar.projectKey>
-        <!-- FIXME to remove when powsybl-ws-dependencies upgrades to springboot 3.5.9 -->
-        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <build>
@@ -85,13 +83,6 @@
     <dependencyManagement>
         <dependencies>
             <!-- overrides of imports -->
-            <!-- FIXME to remove when powsybl-ws-dependencies upgrades to springboot 3.5.9 -->
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>testcontainers</artifactId>
-                <version>${testcontainers.version}</version>
-            </dependency>
-
             <dependency><!-- To remove when integrate in next release of gridsuite-dependencies or powsybl-ws-dependencies -->
                 <groupId>com.squareup.okhttp3</groupId>
                 <artifactId>okhttp-bom</artifactId>

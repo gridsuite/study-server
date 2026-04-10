@@ -304,7 +304,6 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         String url = RUN_BASE_URL + DELIMITER + NETWORK_UUID + DELIMITER + "run";
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
                 .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo("variantId"))
-                .withQueryParam("provider", equalTo(DYNAWO_PROVIDER))
                 .withQueryParam("dynamicSimulationResultUuid", equalTo(DYNAMIC_SIMULATION_RESULT_UUID.toString()))
                 .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
@@ -317,7 +316,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        UUID resultUuid = dynamicSecurityAnalysisClient.run(DYNAWO_PROVIDER, "receiver", NETWORK_UUID,
+        UUID resultUuid = dynamicSecurityAnalysisClient.run("receiver", NETWORK_UUID,
                "variantId", new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "userId", false);
 
         // check result
@@ -326,7 +325,6 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // --- Error --- //
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(url))
                 .withQueryParam(QUERY_PARAM_VARIANT_ID, absent())
-                .withQueryParam("provider", absent())
                 .withQueryParam("dynamicSimulationResultUuid", equalTo(DYNAMIC_SIMULATION_RESULT_UUID.toString()))
                 .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
@@ -340,7 +338,7 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicSecurityAnalysisClient.run(null, "receiver", NETWORK_UUID, null,
+            () -> dynamicSecurityAnalysisClient.run("receiver", NETWORK_UUID, null,
                 new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID,
                 "userId", true)
         );

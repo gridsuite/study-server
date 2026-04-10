@@ -10,9 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.timeseries.*;
-
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
@@ -24,6 +22,7 @@ import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
@@ -47,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.*;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -84,6 +84,7 @@ class DynamicSimulationServiceTest {
     );
 
     private static final String VARIANT_1_ID = "variant_1";
+    private static final String PARAMETERS_JSON = "parametersJson";
 
     private static final UUID STUDY_UUID = UUID.randomUUID();
 
@@ -91,7 +92,10 @@ class DynamicSimulationServiceTest {
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
     private static final UUID ROOTNETWORK_UUID = UUID.randomUUID();
+    private static final UUID PARAMETERS_UUID = UUID.randomUUID();
+    private static final UUID DUPLICATED_PARAMETERS_UUID = UUID.randomUUID();
     public static final UUID RESULT_UUID = UUID.randomUUID();
+    private static final UUID REPORT_UUID = UUID.randomUUID();
     private static final UUID TIME_SERIES_UUID = UUID.randomUUID();
     private static final UUID TIMELINE_UUID = UUID.randomUUID();
 
@@ -102,8 +106,6 @@ class DynamicSimulationServiceTest {
     private static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
     private static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
     private static final String TIMELINE_NAME = "Timeline";
-
-    private static final UUID REPORT_UUID = UUID.randomUUID();
 
     @MockitoBean
     private DynamicMappingClient dynamicMappingClient;
@@ -142,10 +144,10 @@ class DynamicSimulationServiceTest {
         given(networkModificationTreeService.getReportUuid(NODE_UUID, ROOTNETWORK_UUID)).willReturn(Optional.of(REPORT_UUID));
 
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.run(eq(""), any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, NODE_UUID)), any(), any(), eq(false))).willReturn(RESULT_UUID);
+        given(dynamicSimulationClient.run(any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, NODE_UUID)), any(), any(), any(), eq(false))).willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation("", NODE_UUID, ROOTNETWORK_UUID, NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, null, "testUserId", false);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(NODE_UUID, ROOTNETWORK_UUID, NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, PARAMETERS_UUID, null, "testUserId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);
@@ -361,5 +363,59 @@ class DynamicSimulationServiceTest {
         // check result
         // must return 2 models
         assertThat(modelInfosList).hasSameSizeAs(MODELS);
+    }
+
+    @Test
+    void testGetParameters() {
+        given(dynamicSimulationClient.getParameters(PARAMETERS_UUID)).willReturn(PARAMETERS_JSON);
+
+        String parametersJson = dynamicSimulationService.getParameters(PARAMETERS_UUID);
+
+        assertThat(parametersJson).isEqualTo(PARAMETERS_JSON);
+    }
+
+    @Test
+    void testCreateParameters() {
+        given(dynamicSimulationClient.createParameters(PARAMETERS_JSON)).willReturn(PARAMETERS_UUID);
+
+        UUID parametersUuid = dynamicSimulationService.createParameters(PARAMETERS_JSON);
+
+        assertThat(parametersUuid).isEqualTo(PARAMETERS_UUID);
+    }
+
+    @Test
+    void testCreateDefaultParameters() {
+        given(dynamicSimulationClient.createDefaultParameters()).willReturn(PARAMETERS_UUID);
+
+        UUID parametersUuid = dynamicSimulationService.createDefaultParameters();
+
+        assertThat(parametersUuid).isEqualTo(PARAMETERS_UUID);
+    }
+
+    @Test
+    void testUpdateParameters() {
+        doNothing().when(dynamicSimulationClient).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
+
+        dynamicSimulationService.updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
+
+        verify(dynamicSimulationClient, times(1)).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
+    }
+
+    @Test
+    void testDuplicateParameters() {
+        when(dynamicSimulationClient.duplicateParameters(PARAMETERS_UUID)).thenReturn(DUPLICATED_PARAMETERS_UUID);
+
+        UUID newParametersUuid = dynamicSimulationService.duplicateParameters(PARAMETERS_UUID);
+
+        assertThat(newParametersUuid).isEqualTo(DUPLICATED_PARAMETERS_UUID);
+    }
+
+    @Test
+    void testDeleteParameters() {
+        doNothing().when(dynamicSimulationClient).deleteParameters(PARAMETERS_UUID);
+
+        dynamicSimulationService.deleteParameters(PARAMETERS_UUID);
+
+        verify(dynamicSimulationClient, times(1)).deleteParameters(PARAMETERS_UUID);
     }
 }
