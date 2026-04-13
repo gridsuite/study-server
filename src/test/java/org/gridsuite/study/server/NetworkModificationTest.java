@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -92,7 +92,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -656,8 +655,6 @@ class NetworkModificationTest {
     void testNetworkModificationSwitch() throws Exception {
         reportServerStubs.stubDeleteReport();
 
-        MvcResult mvcResult;
-        String resultAsString;
         String userId = "userId";
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
@@ -699,12 +696,7 @@ class NetworkModificationTest {
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(bodyJson, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNode1Uuid, NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
-        mvcResult = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, userId)).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> csbiListResult = mapper.readValue(resultAsString, new TypeReference<>() { });
+        List<CreatedStudyBasicInfos> csbiListResult = studyService.getStudies();
 
         assertThat(csbiListResult.get(0), createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid));
 
@@ -759,8 +751,6 @@ class NetworkModificationTest {
 
     @Test
     void testNetworkModificationEquipment() throws Exception {
-        MvcResult mvcResult;
-        String resultAsString;
         String userId = "userId";
 
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
@@ -797,12 +787,7 @@ class NetworkModificationTest {
         Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(bodyJson, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, modificationNodeUuid, NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
-        mvcResult = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId").header(USER_ID_HEADER, "userId")).andExpectAll(
-                        status().isOk(),
-                        content().contentType(MediaType.APPLICATION_JSON))
-                .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
+        List<CreatedStudyBasicInfos> csbiListResponse = studyService.getStudies();
 
         assertThat(csbiListResponse.get(0), createMatcherCreatedStudyBasicInfos(studyNameUserIdUuid));
 
