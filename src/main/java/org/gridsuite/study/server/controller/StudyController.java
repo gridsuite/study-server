@@ -1668,7 +1668,7 @@ public class StudyController {
                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
-        rootNetworkNodeInfoService.assertNoBuildingNode(rootNetworkUuid, List.of(nodeUuid));
+        studyService.assertCanBuildNode(rootNetworkUuid, nodeUuid);
         studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid);
         return ResponseEntity.ok().build();
     }
