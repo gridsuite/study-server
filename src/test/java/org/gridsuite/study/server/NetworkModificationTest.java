@@ -3163,7 +3163,7 @@ class NetworkModificationTest {
 
         // Stub expandToLeafUuids
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo(
-                        "/v1/network-composite-modifications/leaf-uuids"))
+                        "/v1/network-composite-modifications/children-uuids"))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(expandedLeafUuids))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
@@ -3187,7 +3187,7 @@ class NetworkModificationTest {
 
         // Verify that expandToLeafUuids was called with the composite UUID
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer,
-                "/v1/network-composite-modifications/leaf-uuids",
+                "/v1/network-composite-modifications/children-uuids",
                 Map.of("uuids", WireMock.equalTo(compositeUuid.toString())));
 
         // Verify that the set passed to updateModificationsToExclude contains both
