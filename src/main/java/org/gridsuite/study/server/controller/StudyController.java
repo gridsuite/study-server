@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2021, RTE (http://www.rte-france.com)
+/**
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -119,13 +119,6 @@ public class StudyController {
         webdataBinder.registerCustomEditor(EquipmentInfosService.FieldSelector.class,
             new MyEnumConverter<>(EquipmentInfosService.FieldSelector.class));
         webdataBinder.registerCustomEditor(ModificationType.class, new MyModificationTypeConverter());
-    }
-
-    @GetMapping(value = "/studies")
-    @Operation(summary = "Get all studies")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The list of studies")})
-    public ResponseEntity<List<CreatedStudyBasicInfos>> getStudyList() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getStudies());
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/case/name")
@@ -647,6 +640,26 @@ public class StudyController {
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
         studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
         rebuildNodeService.moveNetworkModification(studyUuid, nodeUuid, modificationUuid, beforeUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-sub-modification/{modificationUuid}")
+    @Operation(summary = "Move a composite sub-modification within/between composites or to/from root level")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sub-modification order has been updated")})
+    public ResponseEntity<Void> moveSubModification(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @PathVariable("modificationUuid") UUID modificationUuid,
+            @Nullable @Parameter(description = "Source composite UUID; absent when moving from root level") @RequestParam(value = "sourceCompositeUuid", required = false) UUID sourceCompositeUuid,
+            @Nullable @Parameter(description = "Target composite UUID; absent when moving to root level") @RequestParam(value = "targetCompositeUuid", required = false) UUID targetCompositeUuid,
+            @Nullable @Parameter(description = "Insert before this UUID; absent means append at end") @RequestParam(value = "beforeUuid", required = false) UUID beforeUuid,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
+        rebuildNodeService.moveSubModification(
+                studyUuid, nodeUuid,
+                sourceCompositeUuid, targetCompositeUuid,
+                modificationUuid, beforeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
