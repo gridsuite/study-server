@@ -3925,7 +3925,7 @@ public class StudyService {
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid)
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
-        doUnbuildNodeTree(studyUuid, rootNetworkUuid, true);
+        doUnbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), true);
         rootNetworkService.deleteRootNetworkRemoteInfos(List.of(rootNetwork.toDto()), false);
         updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
 
