@@ -77,7 +77,7 @@ class PccMinTest {
     private static final String PCC_MIN_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
     private static final UUID PCCMIN_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f2");
     private static final String PCC_MIN_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-    private static final String ALL_COMPUTATION_STATUS_JSON = "{\"pccMinStatus\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\",\"dynamicMarginCalculationStatus\":null,\"dynamicSecurityAnalysisStatus\":null,\"dynamicSimulationStatus\":null,\"stateEstimationStatus\":null,\"sensitivityAnalysisStatus\":null,\"loadFlowStatus\":null,\"securityAnalysisStatus\":null,\"oneBusShortCircuitStatus\":null,\"allBusShortCircuitStatus\":null,\"voltageInitStatus\":null}";
+    private static final String ALL_COMPUTATION_STATUS_JSON = "{\"stateEstimation\":null,\"pccMin\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\",\"oneBusShortCircuit\":null,\"voltageInit\":null,\"dynamicSecurity\":null,\"dynamicMargin\":null,\"sensitivityAnalysis\":null,\"allBusesShortCircuit\":null,\"loadflow\":null,\"securityAnalysis\":null,\"dynamicSimulation\":null}";
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
