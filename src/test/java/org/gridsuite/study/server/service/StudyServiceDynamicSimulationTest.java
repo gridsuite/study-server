@@ -12,7 +12,6 @@ import com.powsybl.timeseries.IrregularTimeSeriesIndex;
 import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -50,15 +49,6 @@ import static org.mockito.BDDMockito.willDoNothing;
 @ContextConfigurationWithTestChannel
 class StudyServiceDynamicSimulationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyServiceDynamicSimulationTest.class);
-
-    private static final String MAPPING_NAME_01 = "_01";
-    private static final String MAPPING_NAME_02 = "_02";
-
-    // all mappings
-    private static final String[] MAPPING_NAMES = {MAPPING_NAME_01, MAPPING_NAME_02};
-
-    private static final List<MappingInfos> MAPPINGS = List.of(new MappingInfos(MAPPING_NAMES[0]),
-            new MappingInfos(MAPPING_NAMES[1]));
 
     private static final String VARIANT_1_ID = "variant_1";
 

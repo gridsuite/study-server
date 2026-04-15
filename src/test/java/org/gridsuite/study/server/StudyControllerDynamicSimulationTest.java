@@ -16,10 +16,6 @@ import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
-import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.VariablesSetInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventPropertyInfos;
@@ -93,9 +89,6 @@ class StudyControllerDynamicSimulationTest {
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_RESULT = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/result";
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_STATUS = "{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/status";
 
-    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MODELS = "{studyUuid}/dynamic-simulation/models";
-    private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_MAPPINGS = "{studyUuid}/dynamic-simulation/mappings";
-
     private static final String STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS = "{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events";
 
     private static final String HEADER_USER_ID_NAME = "userId";
@@ -104,31 +97,6 @@ class StudyControllerDynamicSimulationTest {
     private static final String PARAMETERS_JSON = "parametersJson";
 
     private static final String MAPPING_NAME_01 = "_01";
-    private static final String MAPPING_NAME_02 = "_02";
-
-    // all mappings
-    private static final String[] MAPPING_NAMES = {MAPPING_NAME_01, MAPPING_NAME_02};
-
-    private static final List<MappingInfos> MAPPINGS = Arrays.asList(new MappingInfos(MAPPING_NAMES[0]),
-            new MappingInfos(MAPPING_NAMES[1]));
-
-    private static final List<ModelInfos> MODELS = List.of(
-            // take from resources/data/loadAlphaBeta.json
-            new ModelInfos("LoadAlphaBeta", "LOAD", List.of(
-                    new ModelVariableDefinitionInfos("load_PPu", "MW"),
-                    new ModelVariableDefinitionInfos("load_QPu", "MW")
-            ), null),
-            // take from resources/data/generatorSynchronousThreeWindingsProportionalRegulations.json
-            new ModelInfos("GeneratorSynchronousThreeWindingsProportionalRegulations", "GENERATOR", null, List.of(
-                    new VariablesSetInfos("Generator", List.of(
-                            new ModelVariableDefinitionInfos("generator_omegaPu", "pu"),
-                            new ModelVariableDefinitionInfos("generator_PGen", "MW")
-                    )),
-                    new VariablesSetInfos("VoltageRegulator", List.of(
-                            new ModelVariableDefinitionInfos("voltageRegulator_EfdPu", "pu")
-                    ))
-            ))
-    );
 
     private static final int START_TIME = 0;
 
