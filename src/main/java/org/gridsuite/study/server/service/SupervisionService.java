@@ -13,6 +13,7 @@ import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -84,6 +85,10 @@ public class SupervisionService {
 
     private final RootNetworkService rootNetworkService;
 
+    private final NotificationService notificationService;
+
+    private static final String SUPERVISION_USER = "Supervision";
+
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
@@ -102,7 +107,8 @@ public class SupervisionService {
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
-                              StudyRepository studyRepository) {
+                              StudyRepository studyRepository,
+                              NotificationService notificationService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
@@ -122,6 +128,7 @@ public class SupervisionService {
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
         this.studyRepository = studyRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -361,6 +368,17 @@ public class SupervisionService {
         studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false);
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+    }
+
+    @Transactional
+    public void unmountStudy(UUID studyUuid) {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        studyService.getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
+                studyService.unmountStudyRootNetwork(studyUuid, rootNetwork.getId())
+        );
+        notificationService.emitElementUpdated(studyUuid, SUPERVISION_USER);
+        LOGGER.trace("Study {} nodes builds deleted and root node unmounted in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
     @Transactional

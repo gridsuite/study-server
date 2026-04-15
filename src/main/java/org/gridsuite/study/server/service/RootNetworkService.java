@@ -10,17 +10,17 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkAction;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +30,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAXIMUM_TAG_LENGTH_EXCEEDED;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWED;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
@@ -235,18 +238,28 @@ public class RootNetworkService {
     }
 
     public void deleteRootNetworks(StudyEntity studyEntity, List<RootNetworkInfos> rootNetworksInfos) {
-        deleteRootNetworkRemoteInfos(rootNetworksInfos);
+        deleteRootNetworkRemoteInfos(rootNetworksInfos, true);
 
         studyEntity.deleteRootNetworks(rootNetworksInfos.stream().map(RootNetworkInfos::getId).collect(Collectors.toSet()));
     }
 
-    public void deleteRootNetworkRemoteInfos(List<RootNetworkInfos> rootNetworkInfos) {
-        CompletableFuture.allOf(
-            // delete remote data ids set in root network
-            studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())),
-            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes)),
-            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)),
-            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getCaseInfos().getCaseUuid()).filter(Objects::nonNull).forEach(caseService::deleteCase))
+    public void deleteRootNetworkRemoteInfos(List<RootNetworkInfos> rootNetworkInfos, boolean deleteCase) {
+        // delete remote data ids set in root network
+        CompletableFuture.allOf(Stream.of(
+                                studyServerExecutionService.runAsync(() ->
+                                        reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())),
+                                studyServerExecutionService.runAsync(() ->
+                                        rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid())
+                                                .filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes)),
+                                studyServerExecutionService.runAsync(() ->
+                                        rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid())
+                                                .filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)),
+                                !deleteCase ? null : studyServerExecutionService.runAsync(() ->
+                                        rootNetworkInfos.stream().map(rni -> rni.getCaseInfos().getCaseUuid())
+                                                .filter(Objects::nonNull).forEach(caseService::deleteCase))
+                        )
+                        .filter(Objects::nonNull)
+                        .toArray(CompletableFuture[]::new)
         );
 
         // delete remote data ids set in root network node infos

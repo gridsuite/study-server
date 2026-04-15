@@ -610,7 +610,7 @@ public class StudyService {
             startTime.set(System.nanoTime());
 
             // delete all distant resources linked to rootNetworks
-            rootNetworkService.deleteRootNetworkRemoteInfos(deleteStudyInfos.getRootNetworkInfosList());
+            rootNetworkService.deleteRootNetworkRemoteInfos(deleteStudyInfos.getRootNetworkInfosList(), true);
 
             // delete all distant resources linked to nodes
             studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuids().stream().filter(Objects::nonNull).forEach(networkModificationService::deleteModifications));
@@ -3697,7 +3697,7 @@ public class StudyService {
         return newParentNode;
     }
 
-    private List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
+    public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return studyEntity.getRootNetworks();
     }
@@ -3911,5 +3911,19 @@ public class StudyService {
             .stream()
             .map(l -> new CurrentLimitViolationInfos(l.getSubjectId(), null))
             .toList();
+    }
+
+    @Transactional
+    public void unmountStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid) {
+        StudyEntity study = getStudy(studyUuid);
+        RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid)
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+
+        invalidateNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid),
+                rootNetworkUuid, InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES);
+        rootNetworkService.deleteRootNetworkRemoteInfos(List.of(rootNetwork.toDto()), false);
+        updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
+
+        notificationService.emitRootNetworksUpdated(studyUuid);
     }
 }
