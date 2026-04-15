@@ -3931,7 +3931,7 @@ public class StudyService {
             rootNetworkService.deleteRootNetworkRemoteInfos(List.of(rootNetwork.toDto()), false);
             updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
         } finally {
-            unblockNodeTree(studyUuid, rootNode);
+            networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNode);
         }
 
         notificationService.emitRootNetworksUpdated(studyUuid);
