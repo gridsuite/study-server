@@ -102,7 +102,7 @@ class ShortCircuitTest implements WithAssertions {
     private static final byte[] SHORT_CIRCUIT_ANALYSIS_CSV_RESULT = {0x00, 0x11};
 
     private static final String SHORT_CIRCUIT_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-    private static final String ALL_COMPUTATIONS_STATUS_JSON = "{\"stateEstimation\":null,\"pccMin\":null,\"oneBusShortCircuit\":null,\"voltageInit\":null,\"dynamicSecurity\":null,\"dynamicMargin\":null,\"sensitivityAnalysis\":null,\"allBusesShortCircuit\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\",\"loadflow\":null,\"securityAnalysis\":null,\"dynamicSimulation\":null}";
+    private static final String ALL_COMPUTATIONS_STATUS_JSON = "{\"LOAD_FLOW\":null,\"SECURITY_ANALYSIS\":null,\"SENSITIVITY_ANALYSIS\":null,\"SHORT_CIRCUIT\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\",\"SHORT_CIRCUIT_ONE_BUS\":null,\"VOLTAGE_INITIALIZATION\":null,\"DYNAMIC_SIMULATION\":null,\"DYNAMIC_SECURITY_ANALYSIS\":null,\"DYNAMIC_MARGIN_CALCULATION\":null,\"STATE_ESTIMATION\":null,\"PCC_MIN\":null}";
 
     private static final String SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID = UUID.fromString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
