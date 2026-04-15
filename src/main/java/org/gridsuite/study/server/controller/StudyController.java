@@ -66,7 +66,7 @@ import java.beans.PropertyEditorSupport;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
 
 /**
@@ -2539,26 +2539,26 @@ public class StudyController {
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computations/status")
     @Operation(summary = "Get all computation status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all status are returned")})
-    public ResponseEntity<Map<String, String>> getAllComputationsStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Map<ComputationType, String>> getAllComputationsStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                          @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        Map<String, String> allComputationStatus = new HashMap<>();
+        Map<ComputationType, String> allComputationStatus = new EnumMap<>(ComputationType.class);
         LoadFlowStatus loadFlowStatus = rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid);
-        allComputationStatus.put("loadflow", loadFlowStatus == null ? null : loadFlowStatus.name());
-        allComputationStatus.put("pccMin", rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(LOAD_FLOW, loadFlowStatus == null ? null : loadFlowStatus.name());
+        allComputationStatus.put(PCC_MIN, rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid));
         DynamicMarginCalculationStatus dynamicMarginCalculationStatus = rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid);
-        allComputationStatus.put("dynamicMargin", dynamicMarginCalculationStatus == null ? null : dynamicMarginCalculationStatus.name());
+        allComputationStatus.put(DYNAMIC_MARGIN_CALCULATION, dynamicMarginCalculationStatus == null ? null : dynamicMarginCalculationStatus.name());
         DynamicSecurityAnalysisStatus dynamicSecurityAnalysisStatus = rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
-        allComputationStatus.put("dynamicSecurity", dynamicSecurityAnalysisStatus == null ? null : dynamicSecurityAnalysisStatus.name());
+        allComputationStatus.put(DYNAMIC_SECURITY_ANALYSIS, dynamicSecurityAnalysisStatus == null ? null : dynamicSecurityAnalysisStatus.name());
         DynamicSimulationStatus dynamicSimulationStatus = rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid);
-        allComputationStatus.put("dynamicSimulation", dynamicSimulationStatus == null ? null : dynamicSimulationStatus.name());
-        allComputationStatus.put("stateEstimation", rootNetworkNodeInfoService.getStateEstimationStatus(nodeUuid, rootNetworkUuid));
-        allComputationStatus.put("sensitivityAnalysis", rootNetworkNodeInfoService.getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(DYNAMIC_SIMULATION, dynamicSimulationStatus == null ? null : dynamicSimulationStatus.name());
+        allComputationStatus.put(STATE_ESTIMATION, rootNetworkNodeInfoService.getStateEstimationStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(SENSITIVITY_ANALYSIS, rootNetworkNodeInfoService.getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid));
         SecurityAnalysisStatus securityAnalysisStatus = rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
-        allComputationStatus.put("securityAnalysis", securityAnalysisStatus == null ? null : securityAnalysisStatus.name());
-        allComputationStatus.put("oneBusShortCircuit", rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ONE_BUS));
-        allComputationStatus.put("allBusesShortCircuit", rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ALL_BUSES));
-        allComputationStatus.put("voltageInit", rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(SECURITY_ANALYSIS, securityAnalysisStatus == null ? null : securityAnalysisStatus.name());
+        allComputationStatus.put(SHORT_CIRCUIT_ONE_BUS, rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ONE_BUS));
+        allComputationStatus.put(SHORT_CIRCUIT, rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ALL_BUSES));
+        allComputationStatus.put(VOLTAGE_INITIALIZATION, rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(allComputationStatus);
     }
 }
