@@ -312,9 +312,14 @@ class SupervisionControllerTest {
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/unmount", STUDY_UUID))
                 .andExpect(status().isOk());
 
+        // Tree was unbuilt: variants dropped from network store
         Mockito.verify(networkService, Mockito.times(1)).deleteVariants(eq(NETWORK_UUID), any());
+
+        // Remote root-network data was deleted, but the case was preserved (deleteCase = false)
         Mockito.verify(rootNetworkService, Mockito.times(1))
                 .deleteRootNetworkRemoteInfos(any(), eq(false));
+
+        // Indexation flipped to NOT_INDEXED so the auto-detect path will reimport on reopen
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.NOT_INDEXED.name());
     }
 }
