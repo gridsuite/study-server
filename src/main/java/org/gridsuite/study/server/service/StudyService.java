@@ -1890,11 +1890,17 @@ public class StudyService {
 
     @Transactional
     public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes) {
-        InvalidateNodeTreeParameters invalidateNodeTreeParameters = withBlockNodes ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES : InvalidateNodeTreeParameters.ALL;
-        List<CompletableFuture<Void>> futures = getStudy(studyUuid).getRootNetworks().stream().map(rn ->
-            studyServerExecutionService.runAsync(() -> invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), invalidateNodeTreeParameters))
-        ).toList();
+        doUnbuildNodeTree(studyUuid, rootNodeUuid, withBlockNodes);
+    }
 
+    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes) {
+        InvalidateNodeTreeParameters params = withBlockNodes
+                ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES
+                : InvalidateNodeTreeParameters.ALL;
+        List<CompletableFuture<Void>> futures = getStudy(studyUuid).getRootNetworks().stream()
+                .map(rn -> studyServerExecutionService.runAsync(() ->
+                        invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), params)))
+                .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
     }
 
@@ -3919,8 +3925,7 @@ public class StudyService {
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid)
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
-        invalidateNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid),
-                rootNetworkUuid, InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES);
+        doUnbuildNodeTree(studyUuid, rootNetworkUuid, true);
         rootNetworkService.deleteRootNetworkRemoteInfos(List.of(rootNetwork.toDto()), false);
         updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
 
