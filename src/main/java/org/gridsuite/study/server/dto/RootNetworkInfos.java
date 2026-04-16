@@ -1,10 +1,13 @@
 package org.gridsuite.study.server.dto;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,7 +31,7 @@ public class RootNetworkInfos {
     // reportUuid of network import, root node one
     private UUID reportUuid;
 
-    private Map<String, String> importParameters;
+    private Map<String, Object> importParameters;
 
     private Map<String, Object> importParametersRaw;
 
@@ -46,7 +49,7 @@ public class RootNetworkInfos {
                 .caseName(caseInfos.getCaseName())
                 .caseFormat(caseInfos.getCaseFormat())
                 .reportUuid(reportUuid)
-                .importParameters(importParameters)
+                .importParameters(serializeImportParameters(importParameters))
                 .tag(tag);
 
         if (rootNetworkNodeInfos != null) {
@@ -55,4 +58,21 @@ public class RootNetworkInfos {
 
         return rootNetworkEntityBuilder.build();
     }
+
+    public static Map<String, String> serializeImportParameters(Map<String, Object> params) {
+        if (params == null) {
+            return null;
+        }
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, String> result = new HashMap<>();
+        params.forEach((key, value) -> {
+            try {
+                result.put(key, objectMapper.writeValueAsString(value));
+            } catch (JsonProcessingException e) {
+                result.put(key, String.valueOf(value));
+            }
+        });
+        return result;
+    }
+
 }

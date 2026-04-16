@@ -6,16 +6,15 @@
  */
 package org.gridsuite.study.server.repository.rootnetwork;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -93,7 +92,7 @@ public class RootNetworkEntity {
         rootNetworkInfosBuilder.id(this.id)
             .name(this.name)
             .networkInfos(new NetworkInfos(this.networkUuid, this.networkId))
-            .importParameters(this.importParameters)
+            .importParameters(deserializeImportParameters(this.importParameters))
             .caseInfos(new CaseInfos(this.caseUuid, this.originalCaseUuid, this.caseName, this.caseFormat))
             .reportUuid(this.reportUuid)
             .tag(tag)
@@ -106,5 +105,21 @@ public class RootNetworkEntity {
 
     public BasicRootNetworkInfos toBasicDto() {
         return new BasicRootNetworkInfos(getId(), getOriginalCaseUuid(), getName(), getTag(), getDescription(), false);
+    }
+
+    public static Map<String, Object> deserializeImportParameters(Map<String, String> rawParams) {
+        if (rawParams == null) {
+            return null;
+        }
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> result = new HashMap<>();
+        rawParams.forEach((key, value) -> {
+            try {
+                result.put(key, objectMapper.readValue(value, Object.class));
+            } catch (JsonProcessingException e) {
+                result.put(key, value);
+            }
+        });
+        return result;
     }
 }

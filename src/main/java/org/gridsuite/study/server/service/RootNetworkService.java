@@ -30,6 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.gridsuite.study.server.dto.RootNetworkInfos.serializeImportParameters;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
 /**
@@ -114,7 +115,7 @@ public class RootNetworkService {
 
             updateCaseInfos(rootNetworkEntity, rootNetworkInfos.getCaseInfos());
             updateNetworkInfos(rootNetworkEntity, rootNetworkInfos.getNetworkInfos());
-            rootNetworkEntity.setImportParameters(rootNetworkInfos.getImportParameters());
+            rootNetworkEntity.setImportParameters(serializeImportParameters(rootNetworkInfos.getImportParameters()));
             rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
         }
 
@@ -164,8 +165,8 @@ public class RootNetworkService {
         return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
 
-    public Map<String, String> getImportParameters(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+    public Map<String, Object> getImportParameters(UUID rootNetworkUuid) {
+        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).map(RootNetworkEntity::deserializeImportParameters).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
 
     public List<RootNetworkInfos> getRootNetworkInfosWithLinksInfos(UUID studyUuid) {
@@ -183,7 +184,7 @@ public class RootNetworkService {
                 UUID clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
 
                 UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
-                Map<String, String> newImportParameters = Map.copyOf(rootNetworkEntityToDuplicate.getImportParameters());
+                Map<String, Object> newImportParameters = Map.copyOf(rootNetworkEntityToDuplicate.getImportParameters());
 
                 UUID clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
 
