@@ -245,25 +245,28 @@ public class RootNetworkService {
 
     public void deleteRootNetworkRemoteInfos(List<RootNetworkInfos> rootNetworkInfos, boolean deleteCase) {
         // delete remote data ids set in root network
-        CompletableFuture.allOf(Stream.of(
-                                studyServerExecutionService.runAsync(() ->
-                                        reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())),
-                                studyServerExecutionService.runAsync(() ->
-                                        rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid())
-                                                .filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes)),
-                                studyServerExecutionService.runAsync(() ->
-                                        rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid())
-                                                .filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)),
-                                !deleteCase ? null : studyServerExecutionService.runAsync(() ->
-                                        rootNetworkInfos.stream().map(rni -> rni.getCaseInfos().getCaseUuid())
-                                                .filter(Objects::nonNull).forEach(caseService::deleteCase))
-                        )
-                        .filter(Objects::nonNull)
-                        .toArray(CompletableFuture[]::new)
-        );
+        List<CompletableFuture<?>> futures = new ArrayList<>();
+        futures.add(studyServerExecutionService.runAsync(() ->
+                reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())));
+        futures.add(studyServerExecutionService.runAsync(() ->
+                rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid())
+                        .filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes)));
+        futures.add(studyServerExecutionService.runAsync(() ->
+                rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid())
+                        .filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)));
+        if (deleteCase) {
+            futures.add(studyServerExecutionService.runAsync(() ->
+                    rootNetworkInfos.stream().map(rni -> rni.getCaseInfos().getCaseUuid())
+                            .filter(Objects::nonNull).forEach(caseService::deleteCase)));
+        }
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
 
         // delete remote data ids set in root network node infos
-        rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList());
+        rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream()
+                .map(RootNetworkInfos::getRootNetworkNodeInfos)
+                .filter(Objects::nonNull)
+                .flatMap(Collection::stream)
+                .toList());
     }
 
     public Optional<RootNetworkRequestEntity> getRootNetworkRequest(UUID rootNetworkUuid) {
