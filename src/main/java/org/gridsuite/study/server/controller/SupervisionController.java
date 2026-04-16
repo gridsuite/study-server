@@ -180,7 +180,7 @@ public class SupervisionController {
     }
 
     @DeleteMapping(value = "/studies/{studyUuid}/unmount")
-    @Operation(summary = "Invalidate nodes builds and delete root node network")
+    @Operation(summary = "Invalidate built nodes and delete root node network")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "study has been unmounted")})
     public ResponseEntity<Void> unmountStudy(@PathVariable("studyUuid") UUID studyUuid) {
         supervisionService.unmountStudy(studyUuid);
