@@ -13,10 +13,6 @@ import com.powsybl.timeseries.*;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.ModelVariableDefinitionInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.VariablesSetInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
@@ -26,7 +22,6 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
-import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -56,37 +51,8 @@ import static org.mockito.Mockito.*;
 @ContextConfigurationWithTestChannel
 class DynamicSimulationServiceTest {
 
-    private static final String MAPPING_NAME_01 = "_01";
-    private static final String MAPPING_NAME_02 = "_02";
-
-    // all mappings
-    private static final String[] MAPPING_NAMES = {MAPPING_NAME_01, MAPPING_NAME_02};
-
-    private static final List<MappingInfos> MAPPINGS = Arrays.asList(new MappingInfos(MAPPING_NAMES[0]),
-            new MappingInfos(MAPPING_NAMES[1]));
-
-    private static final List<ModelInfos> MODELS = List.of(
-            // take from resources/data/loadAlphaBeta.json
-            new ModelInfos("LoadAlphaBeta", "LOAD", List.of(
-                    new ModelVariableDefinitionInfos("load_PPu", "MW"),
-                    new ModelVariableDefinitionInfos("load_QPu", "MW")
-            ), null),
-            // take from resources/data/generatorSynchronousThreeWindingsProportionalRegulations.json
-            new ModelInfos("GeneratorSynchronousThreeWindingsProportionalRegulations", "GENERATOR", null, List.of(
-                    new VariablesSetInfos("Generator", List.of(
-                            new ModelVariableDefinitionInfos("generator_omegaPu", "pu"),
-                            new ModelVariableDefinitionInfos("generator_PGen", "MW")
-                    )),
-                    new VariablesSetInfos("VoltageRegulator", List.of(
-                            new ModelVariableDefinitionInfos("voltageRegulator_EfdPu", "pu")
-                    ))
-            ))
-    );
-
     private static final String VARIANT_1_ID = "variant_1";
     private static final String PARAMETERS_JSON = "parametersJson";
-
-    private static final UUID STUDY_UUID = UUID.randomUUID();
 
     // converged node
     private static final UUID NETWORK_UUID = UUID.randomUUID();
@@ -106,9 +72,6 @@ class DynamicSimulationServiceTest {
     private static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
     private static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
     private static final String TIMELINE_NAME = "Timeline";
-
-    @MockitoBean
-    private DynamicMappingClient dynamicMappingClient;
 
     @MockitoBean
     private DynamicSimulationClient dynamicSimulationClient;
@@ -337,32 +300,6 @@ class DynamicSimulationServiceTest {
 
         // test running
         assertThrows(StudyException.class, () -> dynamicSimulationService.assertDynamicSimulationNotRunning(RESULT_UUID_RUNNING));
-    }
-
-    @Test
-    void testGetMappings() {
-        // setup DynamicSimulationClient mock
-        given(dynamicMappingClient.getAllMappings()).willReturn(MAPPINGS);
-
-        // call method to be tested
-        List<MappingInfos> mappingInfos = dynamicSimulationService.getMappings(STUDY_UUID);
-
-        // check result
-        // must return 2 mappings
-        assertThat(mappingInfos).hasSameSizeAs(MAPPINGS);
-    }
-
-    @Test
-    void testGetModels() {
-        // setup DynamicSimulationClient mock
-        given(dynamicMappingClient.getModels(MAPPING_NAMES[0])).willReturn(MODELS);
-
-        // call method to be tested
-        List<ModelInfos> modelInfosList = dynamicSimulationService.getModels(MAPPING_NAMES[0]);
-
-        // check result
-        // must return 2 models
-        assertThat(modelInfosList).hasSameSizeAs(MODELS);
     }
 
     @Test

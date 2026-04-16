@@ -12,7 +12,6 @@ import com.powsybl.timeseries.IrregularTimeSeriesIndex;
 import com.powsybl.timeseries.TimeSeries;
 import com.powsybl.timeseries.TimeSeriesIndex;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -50,15 +49,6 @@ import static org.mockito.BDDMockito.willDoNothing;
 @ContextConfigurationWithTestChannel
 class StudyServiceDynamicSimulationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyServiceDynamicSimulationTest.class);
-
-    private static final String MAPPING_NAME_01 = "_01";
-    private static final String MAPPING_NAME_02 = "_02";
-
-    // all mappings
-    private static final String[] MAPPING_NAMES = {MAPPING_NAME_01, MAPPING_NAME_02};
-
-    private static final List<MappingInfos> MAPPINGS = List.of(new MappingInfos(MAPPING_NAMES[0]),
-            new MappingInfos(MAPPING_NAMES[1]));
 
     private static final String VARIANT_1_ID = "variant_1";
 
@@ -178,20 +168,5 @@ class StudyServiceDynamicSimulationTest {
         LOGGER.info("Status expected = {}", DynamicSimulationStatus.CONVERGED.name());
         LOGGER.info("Status result = {}", status);
         assertThat(status).isEqualTo(DynamicSimulationStatus.CONVERGED);
-    }
-
-    @Test
-    void testGetDynamicSimulationMappings() throws Exception {
-        // setup
-        given(dynamicSimulationService.getMappings(STUDY_UUID)).willReturn(MAPPINGS);
-
-        // call method to be tested
-        List<MappingInfos> mappingInfos = studyService.getDynamicSimulationMappings(STUDY_UUID);
-
-        // --- check result --- //
-        // must return 2 mappings
-        LOGGER.info("Mapping infos expected in Json = {}", objectMapper.writeValueAsString(MAPPINGS));
-        LOGGER.info("Mapping infos result in Json = {}", objectMapper.writeValueAsString(mappingInfos));
-        assertThat(mappingInfos).hasSameSizeAs(MAPPINGS);
     }
 }
