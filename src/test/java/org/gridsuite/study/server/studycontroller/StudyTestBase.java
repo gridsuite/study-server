@@ -116,9 +116,9 @@ class StudyTestBase {
     protected static final NetworkInfos NOT_EXISTING_NETWORK_INFOS = new NetworkInfos(NOT_EXISTING_NETWORK_UUID, "not_existing_network_id");
     protected static final UUID REPORT_UUID = UUID.randomUUID();
     protected static final Report REPORT_TEST = Report.builder().id(REPORT_UUID).message("test").severity(StudyConstants.Severity.WARN).build();
-    protected static final UUID REPORT_LOG_PARENT_UUID = UUID.randomUUID();
+    protected static final int REPORT_LOG_PARENT_ORDER = 0;
     protected static final UUID REPORT_ID = UUID.randomUUID();
-    protected static final List<ReportLog> REPORT_LOGS = List.of(new ReportLog("test", StudyConstants.Severity.WARN, 0, REPORT_LOG_PARENT_UUID));
+    protected static final List<ReportLog> REPORT_LOGS = List.of(new ReportLog("test", StudyConstants.Severity.WARN, 0, REPORT_LOG_PARENT_ORDER));
     protected static final ReportPage REPORT_PAGE = new ReportPage(0, REPORT_LOGS, 1, 1);
     protected static final String VARIANT_ID = "variant_1";
     protected static final String VARIANT_ID_2 = "variant_2";
