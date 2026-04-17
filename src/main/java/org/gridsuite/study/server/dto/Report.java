@@ -20,8 +20,9 @@ import java.util.UUID;
 @Builder
 public record Report(
         UUID id,
-        UUID parentId,
+        Integer parentOrder,
         String message,
         StudyConstants.Severity severity,
+        int order,
         List<Report> subReports
 ) { }
