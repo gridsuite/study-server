@@ -14,19 +14,18 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
+import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.SupervisionService;
-
-import java.util.List;
-import java.util.UUID;
-
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>
@@ -177,6 +176,14 @@ public class SupervisionController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all built nodes for the given study have been invalidated")})
     public ResponseEntity<Void> invalidateAllNodesBuilds(@PathVariable("studyUuid") UUID studyUuid) {
         supervisionService.unbuildAllNodes(studyUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping(value = "/studies/{studyUuid}/unmount")
+    @Operation(summary = "Invalidate built nodes and delete root node network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "study has been unmounted")})
+    public ResponseEntity<Void> unmountStudy(@PathVariable("studyUuid") UUID studyUuid) {
+        supervisionService.unmountStudy(studyUuid);
         return ResponseEntity.ok().build();
     }
 
