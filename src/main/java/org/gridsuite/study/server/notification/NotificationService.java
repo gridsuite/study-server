@@ -66,6 +66,9 @@ public class NotificationService {
     public static final String UPDATE_TYPE_SECURITY_ANALYSIS_FAILED = "securityAnalysis_failed";
     public static final String UPDATE_TYPE_SECURITY_ANALYSIS_RESULT = "securityAnalysisResult";
     public static final String UPDATE_TYPE_SECURITY_ANALYSIS_STATUS = "securityAnalysis_status";
+    public static final String UPDATE_TYPE_SECURITY_ANALYSIS_PROGRESS = "securityAnalysis_progress";
+    public static final String HEADER_SA_PROGRESS_CURRENT = "progressCurrent";
+    public static final String HEADER_SA_PROGRESS_TOTAL = "progressTotal";
     public static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_RESULT = "sensitivityAnalysisResult";
     public static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS = "sensitivityAnalysis_status";
     public static final String UPDATE_TYPE_SENSITIVITY_ANALYSIS_FAILED = "sensitivityAnalysis_failed";
@@ -492,6 +495,15 @@ public class NotificationService {
         } catch (JsonProcessingException e) {
             LOGGER.error("Unable to notify on study alert", e);
         }
+    }
+
+    public void emitSecurityAnalysisProgress(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, int current, int total) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_SECURITY_ANALYSIS_PROGRESS, MessageBuilder.withPayload("")
+                .setHeader(HEADER_NODE, nodeUuid)
+                .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
+                .setHeader(HEADER_SA_PROGRESS_CURRENT, current)
+                .setHeader(HEADER_SA_PROGRESS_TOTAL, total)
+        );
     }
 
     @PostCompletion
