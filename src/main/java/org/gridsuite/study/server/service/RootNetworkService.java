@@ -26,7 +26,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -245,21 +244,20 @@ public class RootNetworkService {
 
     public void deleteRootNetworkRemoteInfos(List<RootNetworkInfos> rootNetworkInfos, boolean deleteCase) {
         // delete remote data ids set in root network
-        List<CompletableFuture<?>> futures = new ArrayList<>();
-        futures.add(studyServerExecutionService.runAsync(() ->
-                reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())));
-        futures.add(studyServerExecutionService.runAsync(() ->
+        studyServerExecutionService.runAsync(() ->
+                reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList()));
+        studyServerExecutionService.runAsync(() ->
                 rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid())
-                        .filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes)));
-        futures.add(studyServerExecutionService.runAsync(() ->
+                        .filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes));
+        studyServerExecutionService.runAsync(() ->
                 rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid())
-                        .filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)));
+                        .filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork));
         if (deleteCase) {
-            futures.add(studyServerExecutionService.runAsync(() ->
+            studyServerExecutionService.runAsync(() ->
                     rootNetworkInfos.stream().map(rni -> rni.getCaseInfos().getCaseUuid())
-                            .filter(Objects::nonNull).forEach(caseService::deleteCase)));
+                            .filter(Objects::nonNull).forEach(caseService::deleteCase));
         }
-        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+
 
         // delete remote data ids set in root network node infos
         rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream()
