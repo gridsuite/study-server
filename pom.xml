@@ -42,7 +42,7 @@
     </developers>
 
     <properties>
-        <gridsuite-dependencies.version>50.0.0</gridsuite-dependencies.version>
+        <gridsuite-dependencies.version>49.1.0-SNAPSHOT</gridsuite-dependencies.version>
         <liquibase-hibernate-package>org.gridsuite.study.server</liquibase-hibernate-package>
         <mockwebserver3.version>5.0.0-alpha.14</mockwebserver3.version>
         <db-util.version>1.0.5</db-util.version>
@@ -130,6 +130,10 @@
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-sensitivity-analysis-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-security-analysis-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
