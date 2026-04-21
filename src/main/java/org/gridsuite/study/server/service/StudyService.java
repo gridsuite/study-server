@@ -20,8 +20,6 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
-import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
@@ -2167,7 +2165,9 @@ public class StudyService {
             if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
                 throw new StudyException(NOT_ALLOWED);
             }
-            rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkUuid, modificationsUuids, activated);
+            Set<UUID> modificationsToExclude = new HashSet<>(modificationsUuids);
+            modificationsToExclude.addAll(networkModificationService.expandToLeafUuids(new ArrayList<>(modificationsUuids)));
+            rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkUuid, modificationsToExclude, activated);
             invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, Optional.of(rootNetworkUuid), childrenUuids);
@@ -2383,6 +2383,28 @@ public class StudyService {
             if (isTargetDifferentNode) {
                 notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids);
             }
+        }
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    public void moveSubModification(
+            @NonNull UUID studyUuid,
+            @NonNull UUID nodeUuid,
+            UUID sourceCompositeUuid,
+            UUID targetCompositeUuid,
+            @NonNull UUID modificationUuid,
+            UUID beforeUuid,
+            String userId) {
+
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
+        try {
+            notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+            checkStudyContainsNode(studyUuid, nodeUuid);
+            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+            networkModificationService.moveSubModification(
+                    groupUuid, sourceCompositeUuid, targetCompositeUuid, modificationUuid, beforeUuid);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
@@ -2890,17 +2912,6 @@ public class StudyService {
     }
 
     // --- Dynamic Simulation service methods BEGIN --- //
-
-    public List<MappingInfos> getDynamicSimulationMappings(UUID studyUuid) {
-        // get mapping from study uuid
-        return dynamicSimulationService.getMappings(studyUuid);
-
-    }
-
-    public List<ModelInfos> getDynamicSimulationModels(UUID studyUuid, String mapping) {
-        // get model from mapping
-        return dynamicSimulationService.getModels(mapping);
-    }
 
     @Transactional
     public String getDynamicSimulationParameters(UUID studyUuid) {

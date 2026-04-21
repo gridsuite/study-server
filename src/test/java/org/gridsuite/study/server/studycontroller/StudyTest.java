@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -24,9 +24,11 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.service.DirectoryService;
 import org.gridsuite.study.server.service.StudyServerExecutionService;
+import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.MatcherReport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.data.util.Pair;
@@ -65,6 +67,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class StudyTest extends StudyTestBase {
 
+    @Autowired
+    StudyService studyService;
+
     @Test
     void test() throws Exception {
         MvcResult result;
@@ -72,8 +77,9 @@ class StudyTest extends StudyTestBase {
         String userId = "userId";
 
         //empty list
-        mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId")).andExpectAll(status().isOk(),
-            content().contentType(MediaType.APPLICATION_JSON), content().string("[]"));
+        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = studyService.getStudies();
+
+        assertTrue(createdStudyBasicInfosList.isEmpty());
 
         //empty list
         mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(status().isOk(),
@@ -102,11 +108,7 @@ class StudyTest extends StudyTestBase {
 
         wireMockStubs.caseServer.verifyCaseExists(stubCaseNotExistsId, NOT_EXISTING_CASE_UUID);
 
-        result = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId"))
-            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-
-        resultAsString = result.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
+        createdStudyBasicInfosList = studyService.getStudies();
 
         assertThat(createdStudyBasicInfosList.get(0), createMatcherCreatedStudyBasicInfos(studyUuid));
 
@@ -114,10 +116,7 @@ class StudyTest extends StudyTestBase {
         //even with the same name should work
         studyUuid = createStudyWithStubs("userId2", CASE_UUID);
 
-        resultAsString = mockMvc.perform(get("/v1/studies").header("userId", "userId2"))
-            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn().getResponse().getContentAsString();
-
-        createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
+        createdStudyBasicInfosList = studyService.getStudies();
 
         assertThat(createdStudyBasicInfosList.get(1),
             createMatcherCreatedStudyBasicInfos(studyUuid));
@@ -135,11 +134,7 @@ class StudyTest extends StudyTestBase {
 
         // expect only 1 study (public one) since the other is private and we use
         // another userId
-        result = mockMvc.perform(get("/v1/studies").header("userId", "a"))
-            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
-
-        resultAsString = result.getResponse().getContentAsString();
-        createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
+        createdStudyBasicInfosList = studyService.getStudies();
         assertEquals(2, createdStudyBasicInfosList.size());
 
         //get available export format
@@ -362,10 +357,10 @@ class StudyTest extends StudyTestBase {
         studyUuid = createStudyWithStubs("userId2", CASE_UUID);
 
         MvcResult mvcResult = mockMvc
-            .perform(get("/v1/studies/metadata?ids="
-                + Stream.of(oldStudyUuid, studyUuid).map(Object::toString).collect(Collectors.joining(",")))
-                .header(USER_ID_HEADER, "userId"))
-            .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
+                .perform(get("/v1/studies/metadata?ids="
+                        + Stream.of(oldStudyUuid, studyUuid).map(Object::toString).collect(Collectors.joining(",")))
+                        .header(USER_ID_HEADER, "userId"))
+                .andExpectAll(status().isOk(), content().contentType(MediaType.APPLICATION_JSON)).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<CreatedStudyBasicInfos> createdStudyBasicInfosList = mapper.readValue(resultAsString, new TypeReference<>() { });
 
@@ -375,9 +370,9 @@ class StudyTest extends StudyTestBase {
             Collections.reverse(createdStudyBasicInfosList);
         }
         assertTrue(createMatcherCreatedStudyBasicInfos(oldStudyUuid)
-            .matchesSafely(createdStudyBasicInfosList.get(0)));
+                .matchesSafely(createdStudyBasicInfosList.get(0)));
         assertTrue(createMatcherCreatedStudyBasicInfos(studyUuid)
-            .matchesSafely(createdStudyBasicInfosList.get(1)));
+                .matchesSafely(createdStudyBasicInfosList.get(1)));
     }
 
     @Test
@@ -607,13 +602,9 @@ class StudyTest extends StudyTestBase {
 
         assertEquals(List.of(), bsiListResult);
 
-        mvcResult = mockMvc.perform(get("/v1/studies").header(USER_ID_HEADER, "userId")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
+        List<CreatedStudyBasicInfos> csbiListResponse = studyService.getStudies();
 
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        List<CreatedStudyBasicInfos> csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
+        assertTrue(csbiListResponse.isEmpty());
 
         countDownLatch = new CountDownLatch(1);
 
@@ -660,13 +651,9 @@ class StudyTest extends StudyTestBase {
 
         assertEquals(List.of(), bsiListResult);
 
-        mvcResult = mockMvc.perform(get("/v1/studies")
-                .header(USER_ID_HEADER, "userId")).andExpectAll(
-                status().isOk(),
-                content().contentType(MediaType.APPLICATION_JSON))
-            .andReturn();
-        resultAsString = mvcResult.getResponse().getContentAsString();
-        csbiListResponse = mapper.readValue(resultAsString, new TypeReference<>() { });
+        csbiListResponse = studyService.getStudies();
+
+        assertFalse(csbiListResponse.isEmpty());
 
         // Verify HTTP requests were sent to remote services
         createStudyStubs.verify(wireMockStubs);
