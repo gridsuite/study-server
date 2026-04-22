@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -237,25 +238,30 @@ public class RootNetworkService {
     }
 
     public void deleteRootNetworks(StudyEntity studyEntity, List<RootNetworkInfos> rootNetworksInfos) {
-        deleteRootNetworkRemoteInfos(rootNetworksInfos, true);
+        deleteRootNetworkRemoteInfos(rootNetworksInfos, true, false);
 
         studyEntity.deleteRootNetworks(rootNetworksInfos.stream().map(RootNetworkInfos::getId).collect(Collectors.toSet()));
     }
 
-    public void deleteRootNetworkRemoteInfos(List<RootNetworkInfos> rootNetworkInfos, boolean deleteCase) {
+    public void deleteRootNetworkRemoteInfos(List<RootNetworkInfos> rootNetworkInfos, boolean deleteCase, boolean blocking) {
         // delete remote data ids set in root network
-        studyServerExecutionService.runAsync(() ->
-                reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList()));
-        studyServerExecutionService.runAsync(() ->
+        List<CompletableFuture<?>> futures = new ArrayList<>();
+        futures.add(studyServerExecutionService.runAsync(() ->
+                reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())));
+        futures.add(studyServerExecutionService.runAsync(() ->
                 rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid())
-                        .filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes));
-        studyServerExecutionService.runAsync(() ->
+                        .filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes)));
+        futures.add(studyServerExecutionService.runAsync(() ->
                 rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid())
-                        .filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork));
+                        .filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)));
         if (deleteCase) {
-            studyServerExecutionService.runAsync(() ->
+            futures.add(studyServerExecutionService.runAsync(() ->
                     rootNetworkInfos.stream().map(rni -> rni.getCaseInfos().getCaseUuid())
-                            .filter(Objects::nonNull).forEach(caseService::deleteCase));
+                            .filter(Objects::nonNull).forEach(caseService::deleteCase)));
+        }
+
+        if (blocking) {
+            CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
         }
 
 

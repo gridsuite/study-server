@@ -317,9 +317,10 @@ class SupervisionControllerTest {
 
         // Remote root-network data was deleted, but the case was preserved (deleteCase = false)
         Mockito.verify(rootNetworkService, Mockito.times(1))
-                .deleteRootNetworkRemoteInfos(any(), eq(false));
+                .deleteRootNetworkRemoteInfos(any(), eq(false), eq(true));
 
         // Indexation flipped to NOT_INDEXED so the auto-detect path will reimport on reopen
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.NOT_INDEXED.name());
+        assertIndexationCount(0, 0);
     }
 }
