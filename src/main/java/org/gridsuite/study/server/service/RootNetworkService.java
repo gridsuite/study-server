@@ -264,7 +264,6 @@ public class RootNetworkService {
             CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
         }
 
-
         // delete remote data ids set in root network node infos
         rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream()
                 .map(RootNetworkInfos::getRootNetworkNodeInfos)
