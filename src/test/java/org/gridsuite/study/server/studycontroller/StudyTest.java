@@ -481,7 +481,7 @@ class StudyTest extends StudyTestBase {
 
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATING, headers.get(HEADER_UPDATE_TYPE));
 
         MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
                 status().isOk(),
@@ -515,13 +515,13 @@ class StudyTest extends StudyTestBase {
         Message<byte[]> message = output.receive(TIMEOUT, "study.update");
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATING, headers.get(HEADER_UPDATE_TYPE));
 
         // checks that the error message has a default value set
         message = output.receive(TIMEOUT, "study.update");
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FAILED, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(DEFAULT_ERROR_MESSAGE, headers.get(NotificationService.HEADER_ERROR));
 
         wireMockStubs.caseServer.verifyCaseExists(stubCaseExistsId, CASE_UUID_CAUSING_CONVERSION_ERROR);
@@ -546,13 +546,13 @@ class StudyTest extends StudyTestBase {
         Message<byte[]> message = output.receive(TIMEOUT, "study.update");
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATING, headers.get(HEADER_UPDATE_TYPE));
 
         // study error message
         message = output.receive(TIMEOUT, "study.update");
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FAILED, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(STUDY_CREATION_ERROR_MESSAGE, headers.get(NotificationService.HEADER_ERROR));
 
         wireMockStubs.caseServer.verifyCaseExists(stubCaseExistsId, CASE_UUID_CAUSING_STUDY_CREATION_ERROR);

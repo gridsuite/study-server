@@ -491,15 +491,15 @@ class StudyTestBase {
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(StudyTest.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATING, headers.get(StudyTest.HEADER_UPDATE_TYPE));
 
-        // assert that the broker message has been sent a study creation message for creation
+        // assert that the broker message has been sent when the study is ready
         message = output.receive(StudyTest.TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(StudyTest.HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATED, headers.get(StudyTest.HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
     }
 
