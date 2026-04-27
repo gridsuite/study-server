@@ -320,7 +320,7 @@ class RootNetworkControllerTest {
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(USER_ID_HEADER));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATING, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a study creation message for creation
         message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
@@ -328,7 +328,7 @@ class RootNetworkControllerTest {
         headers = message.getHeaders();
         assertEquals(userId, headers.get(USER_ID_HEADER));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATED, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
 
         assertTrue(studyRepository.findById(studyUuid).isPresent());
