@@ -644,7 +644,7 @@ public class StudyService {
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
 
-        notificationService.emitStudiesChanged(studyUuid, userId);
+        notificationService.emitStudyCreated(studyUuid, userId);
 
         return createdStudyBasicInfos;
     }
@@ -707,7 +707,7 @@ public class StudyService {
 
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(newStudyEntity);
         studyInfosService.add(createdStudyBasicInfos);
-        notificationService.emitStudiesChanged(studyInfos.getId(), userId);
+        notificationService.emitStudyCreated(studyInfos.getId(), userId);
 
         return newStudyEntity;
     }
@@ -798,7 +798,7 @@ public class StudyService {
 
     private StudyCreationRequestEntity insertStudyCreationRequest(String userId, UUID studyUuid, String firstRootNetworkName) {
         StudyCreationRequestEntity newStudy = insertStudyCreationRequestEntity(studyUuid, firstRootNetworkName);
-        notificationService.emitStudiesChanged(newStudy.getId(), userId);
+        notificationService.emitStudyCreating(newStudy.getId(), userId);
         return newStudy;
     }
 
