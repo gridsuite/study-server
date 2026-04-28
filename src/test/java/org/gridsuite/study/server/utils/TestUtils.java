@@ -306,6 +306,6 @@ public final class TestUtils {
     }
 
     public static void checkUpdateStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, OutputDestination output) {
-       checkUpdateTypeMessageReceived(studyUuid, nodeUuid, UPDATE_TYPE_ALL_COMPUTATION_STATUS, output, STUDY_UPDATE_DESTINATION);
+        checkUpdateTypeMessageReceived(studyUuid, nodeUuid, UPDATE_TYPE_ALL_COMPUTATION_STATUS, output, STUDY_UPDATE_DESTINATION);
     }
 }
