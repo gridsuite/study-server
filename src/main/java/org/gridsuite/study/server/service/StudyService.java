@@ -1232,6 +1232,7 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
         createOrUpdateNetworkVisualizationParameters(studyEntity, parameters);
         notificationService.emitNetworkVisualizationParamsChanged(studyUuid);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void createOrUpdateNetworkVisualizationParameters(StudyEntity studyEntity, String parameters) {
