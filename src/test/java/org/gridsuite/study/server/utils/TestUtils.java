@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -305,6 +306,6 @@ public final class TestUtils {
     }
 
     public static void checkUpdateStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, OutputDestination output) {
-        ALL_COMPUTATION_STATUS.forEach(computationStatus -> checkUpdateTypeMessageReceived(studyUuid, nodeUuid, computationStatus, output, STUDY_UPDATE_DESTINATION));
+       checkUpdateTypeMessageReceived(studyUuid, nodeUuid, UPDATE_TYPE_ALL_COMPUTATION_STATUS, output, STUDY_UPDATE_DESTINATION);
     }
 }

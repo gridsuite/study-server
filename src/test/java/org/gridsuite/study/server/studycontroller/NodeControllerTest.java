@@ -402,28 +402,7 @@ class NodeControllerTest extends StudyTestBase {
         if (wasBuilt) {
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         }
-        //loadflow_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //securityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //sensitivityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //shortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //oneBusShortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicSimulation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicSecurityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicMarginCalculation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //voltageInit_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //stateEstimation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //pccMin_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        checkComputationStatusMessageReceived();
 
         if (!nodeHasModifications) {
             return;
@@ -437,28 +416,7 @@ class NodeControllerTest extends StudyTestBase {
             if (wasBuilt) {
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             }
-            //loadflow_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //securityAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //sensitivityAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //shortCircuitAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //oneBusShortCircuitAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //dynamicSimulation_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //dynamicSecurityAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //dynamicMarginCalculation_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //voltageInit_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //stateEstimation_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //pccMin_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            checkComputationStatusMessageReceived();
         });
 
         if (wasBuilt) {
@@ -946,27 +904,7 @@ class NodeControllerTest extends StudyTestBase {
     }
 
     protected void checkComputationStatusMessageReceived() {
-        //loadflow_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //securityAnalysis_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //sensitivityAnalysis_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //shortCircuitAnalysis_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //oneBusShortCircuitAnalysis_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //dynamicSimulation_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //dynamicSecurityAnalysis_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //dynamicMarginCalculation_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //voltageInit_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //stateEstimation_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //pccMin_status
+        // all_computation_status
         assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
     }
 

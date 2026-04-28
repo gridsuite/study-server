@@ -176,7 +176,7 @@ class LoadFLowUnitTest {
         // node invalidation
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters);
         verify(networkModificationService, times(1)).deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), networkUuid);
-        verify(notificationService, times(ALL_COMPUTATION_STATUS.size() - 1 /* except loadflow which is tested in PRESERVE_LOAD_FLOW_RESULTS mode */))
+        verify(notificationService, times(1 /* only all computation */))
             .emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
 
         // node build
