@@ -177,14 +177,14 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudyCreated(UUID studyUuid, String userId) {
+    public void emitStudyCreationFinished(UUID studyUuid, String userId) {
         sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_STUDY_CREATION_FINISHED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
         );
     }
 
     @PostCompletion
-    public void emitStudyCreating(UUID studyUuid, String userId) {
+    public void emitStudyCreationStarted(UUID studyUuid, String userId) {
         sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_STUDY_CREATION_STARTED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
         );
