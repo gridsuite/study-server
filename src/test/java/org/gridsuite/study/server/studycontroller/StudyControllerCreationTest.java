@@ -310,21 +310,20 @@ class StudyControllerCreationTest {
     }
 
     private void assertStudyCreationStartedMessageReceived(UUID studyUuid, String userId) {
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertEquals("", new String(message.getPayload()));
-        MessageHeaders headers = message.getHeaders();
-        assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(HEADER_UPDATE_TYPE));
+        assertStudyCreationMessageReceived(studyUuid, userId, NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED);
     }
 
     private void assertStudyCreationFinishedMessageReceived(UUID studyUuid, String userId) {
+        assertStudyCreationMessageReceived(studyUuid, userId, NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED);
+    }
+
+    private void assertStudyCreationMessageReceived(UUID studyUuid, String userId, String expectedUpdateType) {
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(expectedUpdateType, headers.get(HEADER_UPDATE_TYPE));
     }
 
     @AfterEach
