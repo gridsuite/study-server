@@ -306,7 +306,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void deleteRootNetworks(UUID studyUuid, List<UUID> rootNetworksUuids) {
+    public void deleteRootNetworks(UUID studyUuid, List<UUID> rootNetworksUuids, String userId) {
         assertIsStudyExist(studyUuid);
         StudyEntity studyEntity = getStudy(studyUuid);
         List<RootNetworkEntity> allRootNetworkEntities = getStudyRootNetworks(studyUuid);
@@ -321,6 +321,7 @@ public class StudyService {
         rootNetworkService.deleteRootNetworks(studyEntity, rootNetworksUuids.stream());
 
         notificationService.emitRootNetworksUpdated(studyUuid);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
@@ -388,6 +389,7 @@ public class StudyService {
         } else {
             updateRootNetworkBasicInfos(studyEntity.getId(), rootNetworkInfos, false);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     private void updateRootNetworkCaseInfos(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId, RootNetworkRequestEntity rootNetworkModificationRequestEntity) {
@@ -450,6 +452,7 @@ public class StudyService {
             : importParameters;
 
         persistNetwork(rootNetworkInfos, studyUuid, null, userId, importParametersToUse, CaseImportAction.NETWORK_RECREATION);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public UUID duplicateStudy(UUID sourceStudyUuid, String userId) {
@@ -2290,9 +2293,10 @@ public class StudyService {
         return networkModificationTreeService.getStashedNodes(studyId);
     }
 
-    public void restoreNodes(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId) {
+    public void restoreNodes(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId, String userId) {
         networkModificationTreeService.assertIsRootOrConstructionNode(anchorNodeId);
         networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId);
+        notificationService.emitElementUpdated(studyId, userId);
     }
 
     private void reindexRootNetwork(StudyEntity study, UUID rootNetworkUuid) {
@@ -3000,6 +3004,7 @@ public class StudyService {
             dynamicSimulationEventService.saveEvent(nodeUuid, event);
         } finally {
             notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+            notificationService.emitElementUpdated(studyUuid, userId);
         }
         postProcessEventCrud(studyUuid, nodeUuid);
     }
@@ -3012,6 +3017,7 @@ public class StudyService {
             dynamicSimulationEventService.saveEvent(nodeUuid, event);
         } finally {
             notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+            notificationService.emitElementUpdated(studyUuid, userId);
         }
         postProcessEventCrud(studyUuid, nodeUuid);
     }
@@ -3024,6 +3030,7 @@ public class StudyService {
             dynamicSimulationEventService.deleteEvents(eventUuids);
         } finally {
             notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+            notificationService.emitElementUpdated(studyUuid, userId);
         }
         postProcessEventCrud(studyUuid, nodeUuid);
     }
@@ -3733,7 +3740,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void updateNodeAliases(UUID studyUuid, List<NodeAlias> nodeAliases) {
+    public void updateNodeAliases(UUID studyUuid, List<NodeAlias> nodeAliases, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         //Reset alias values for given study to keep data in sync
         studyEntity.setNodeAliases(null);
@@ -3750,6 +3757,7 @@ public class StudyService {
             studyEntity.setNodeAliases(newNodeAliases);
         }
         notificationService.emitSpreadsheetNodeAliasesChanged(studyUuid);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public UUID createColumn(UUID studyUuid, UUID configUuid, String columnInfos) {
