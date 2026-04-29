@@ -385,6 +385,17 @@ class StudyTest extends StudyTestBase {
     }
 
     @Test
+    void testNotifyStudiesMetadataUpdated() throws Exception {
+        List<UUID> studiesUuid = Arrays.asList(UUID.randomUUID(), UUID.randomUUID());
+        mockMvc.perform(post("/v1/studies/notification")
+                        .header(USER_ID_HEADER, "userId")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(studiesUuid)))
+                .andExpect(status().isOk());
+        checkStudyMetadataUpdatedMessagesReceived(2);
+    }
+
+    @Test
     void testLogsReport() throws Exception {
         UUID studyUuid = createStudyWithStubs("userId", CASE_UUID);
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
@@ -668,6 +679,12 @@ class StudyTest extends StudyTestBase {
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_SPREADSHEET_NODE_ALIASES, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
+    }
+
+    private void checkStudyMetadataUpdatedMessagesReceived(int count) {
+        for (int i = 0; i < count; i++) {
+            checkStudyMetadataUpdatedMessagesReceived();
+        }
     }
 
     private void checkStudyMetadataUpdatedMessagesReceived() {

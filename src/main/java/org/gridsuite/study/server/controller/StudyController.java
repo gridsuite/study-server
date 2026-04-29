@@ -1735,6 +1735,16 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping(value = "/studies/notification")
+    @Operation(summary = "Create studies related notification")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "The notifications have been sent"),
+    })
+    public ResponseEntity<Void> notify(@RequestBody List<UUID> studiesUuid) {
+        studyService.notify(studiesUuid);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run")
     @Operation(summary = "run sensitivity analysis on study")
         @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started"), @ApiResponse(responseCode = "403", description = "The study node is not a model node")})

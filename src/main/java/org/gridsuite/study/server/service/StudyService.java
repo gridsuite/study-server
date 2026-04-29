@@ -2661,6 +2661,12 @@ public class StudyService {
         notificationService.emitStudyMetadataChanged(studyUuid);
     }
 
+    public void notify(List<UUID> studiesUuid) {
+        for (UUID studyUuid : studiesUuid) {
+            notify(studyUuid);
+        }
+    }
+
     @Transactional
     public UUID runSensitivityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
         StudyEntity study = getStudy(studyUuid);
