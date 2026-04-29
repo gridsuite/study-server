@@ -391,8 +391,8 @@ class SingleLineDiagramTest {
         //get the batteries map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "BATTERY", null, objectMapper.writeValueAsString(List.of()), "[]");
 
-        //get the dangling lines map data of a network
-        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "DANGLING_LINE", null, objectMapper.writeValueAsString(List.of()), "[]");
+        //get the boundary lines map data of a network
+        getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "BOUNDARY_LINE", null, objectMapper.writeValueAsString(List.of()), "[]");
 
         //get the hvdc lines map data of a network
         getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "HVDC_LINE", null, objectMapper.writeValueAsString(List.of()), "[]");
