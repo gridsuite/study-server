@@ -6,9 +6,6 @@ on:
       releaseVersion:
         description: Release version (vX.X)
         required: true
-      gitReference:
-        description: SHA of the commit from where to release or branch name
-        required: true
 
 jobs:
   run-release:
@@ -18,7 +15,6 @@ jobs:
       dockerImage: docker.io/gridsuite/study-server
       dockerUsername: gridsuiteci
       releaseVersion: ${{ github.event.inputs.releaseVersion }}
-      gitReference: ${{ github.event.inputs.gitReference }}
     secrets:
       VERSIONBUMP_GHAPP_PRIVATE_KEY: ${{ secrets.VERSIONBUMP_GHAPP_PRIVATE_KEY }}
       sonar-token: ${{ secrets.SONAR_TOKEN }}
