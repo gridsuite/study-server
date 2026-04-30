@@ -1152,8 +1152,7 @@ public class StudyService {
     }
 
     private void assertNoBuildNoComputationInTree(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        // TODO modify computations endpoints to test multiple uuids
-        nodesUuids.forEach(uuid -> rootNetworkNodeInfoService.assertComputationNotRunning(uuid, rootNetworkUuid));
+        rootNetworkNodeInfoService.assertComputationsNotRunning(nodesUuids, rootNetworkUuid);
         rootNetworkNodeInfoService.assertNoBuildingNode(rootNetworkUuid, nodesUuids);
     }
 

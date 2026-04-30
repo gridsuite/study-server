@@ -372,7 +372,7 @@ class NodeControllerTest extends StudyTestBase {
         boolean wasBuilt = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeToCopy.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid)).get().getNodeBuildStatus().toDto().isBuilt();
         UUID deleteModificationIndexStub = wireMockStubs.stubNetworkModificationDeleteIndex();
         output.receive(TIMEOUT, studyUpdateDestination);
-        doNothing().when(rootNetworkNodeInfoService).assertComputationNotRunning(any(), any());
+        doNothing().when(rootNetworkNodeInfoService).assertComputationsNotRunning(any(), any());
         mockMvc.perform(post(STUDIES_URL +
                     "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 studyUuid, nodeToCopy.getId(), referenceNodeUuid, insertMode)

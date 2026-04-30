@@ -49,6 +49,8 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
     @EntityGraph(attributePaths = {"rootNetwork"}, type = EntityGraph.EntityGraphType.LOAD)
     List<RootNetworkNodeInfoEntity> findAllWithRootNetworkByNodeInfoId(UUID nodeInfoId);
 
+    List<RootNetworkNodeInfoEntity> findAllByNodeInfoIdInAndRootNetworkId(List<UUID> nodeInfoIds, UUID rootNetworkUuid);
+
     Optional<RootNetworkNodeInfoEntity> findByNodeInfoIdAndRootNetworkId(UUID nodeInfoId, UUID rootNetworkUuid);
 
     @EntityGraph(attributePaths = {"modificationsUuidsToExclude"}, type = EntityGraph.EntityGraphType.LOAD)

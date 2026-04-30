@@ -28,6 +28,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -143,6 +144,22 @@ public class LoadFlowService extends AbstractComputationService {
         return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowStatus.class);
     }
 
+    public Map<UUID, LoadFlowStatus> getLoadFlowStatuses(List<UUID> resultUuids) {
+        if (resultUuids == null || resultUuids.isEmpty()) {
+            return null;
+        }
+
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/statuses");
+        String path = uriComponentsBuilder.toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
+
+        return restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, LoadFlowStatus>>() {
+        }).getBody();
+    }
+
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
@@ -194,6 +211,15 @@ public class LoadFlowService extends AbstractComputationService {
     public void assertLoadFlowNotRunning(UUID resultUuid) {
         LoadFlowStatus loadFlowStatus = getLoadFlowStatus(resultUuid);
         if (LoadFlowStatus.RUNNING.equals(loadFlowStatus)) {
+            throw new StudyException(COMPUTATION_RUNNING);
+        }
+    }
+
+    public void assertLoadFlowsNotRunning(List<UUID> resultUuids) {
+        Map<UUID, LoadFlowStatus> loadFlowStatuses = getLoadFlowStatuses(resultUuids);
+        // this is O(n) complexity, maybe we should adapt endoint to simply check LoadFlowsNotRunning
+        // for a list of resultUuids returning boolean if encounter one RUNNING computation ?
+        if (loadFlowStatuses != null && loadFlowStatuses.containsValue(LoadFlowStatus.RUNNING)) {
             throw new StudyException(COMPUTATION_RUNNING);
         }
     }

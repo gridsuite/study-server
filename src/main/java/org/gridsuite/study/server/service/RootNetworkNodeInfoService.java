@@ -449,6 +449,10 @@ public class RootNetworkNodeInfoService {
         return rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid);
     }
 
+    public List<RootNetworkNodeInfoEntity> getRootNetworkNodeInfos(List<UUID> nodeUuids, UUID rootNetworkUuid) {
+        return rootNetworkNodeInfoRepository.findAllByNodeInfoIdInAndRootNetworkId(nodeUuids, rootNetworkUuid);
+    }
+
     private static UUID getComputationResultUuid(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, ComputationType computationType) {
         return switch (computationType) {
             case LOAD_FLOW -> rootNetworkNodeInfoEntity.getLoadFlowResultUuid();
@@ -468,6 +472,14 @@ public class RootNetworkNodeInfoService {
     public UUID getComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType) {
         Optional<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntityOpt = getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
         return rootNetworkNodeInfoEntityOpt.map(rootNetworkNodeInfoEntity -> getComputationResultUuid(rootNetworkNodeInfoEntity, computationType)).orElse(null);
+    }
+
+    public List<UUID> getComputationResultUuids(List<UUID> nodeUuids, UUID rootNetworkUuid, ComputationType computationType) {
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = getRootNetworkNodeInfos(nodeUuids, rootNetworkUuid);
+        return rootNetworkNodeInfoEntities.stream()
+            .map(rootNetworkNodeInfoEntity -> getComputationResultUuid(rootNetworkNodeInfoEntity, computationType))
+            .filter(Objects::nonNull)
+            .toList();
     }
 
     public List<UUID> getComputationResultUuids(UUID studyUuid, ComputationType computationType) {
@@ -656,18 +668,22 @@ public class RootNetworkNodeInfoService {
             .toList();
     }
 
-    public void assertComputationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        loadFlowService.assertLoadFlowNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW));
-        securityAnalysisService.assertSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS));
-        dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
-        dynamicSecurityAnalysisService.assertDynamicSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS));
-        dynamicMarginCalculationService.assertDynamicMarginCalculationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION));
-        sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
-        shortCircuitService.assertShortCircuitAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT), getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT_ONE_BUS));
-        voltageInitService.assertVoltageInitNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION));
-        stateEstimationService.assertStateEstimationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION));
-        pccMinService.assertPccMinNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN));
+    public void assertComputationsNotRunning(List<UUID> nodeUuids, UUID rootNetworkUuid) {
+        nodeUuids.forEach(nodeUuid -> {
+            securityAnalysisService.assertSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS));
+            dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
+            dynamicSecurityAnalysisService.assertDynamicSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS));
+            dynamicMarginCalculationService.assertDynamicMarginCalculationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION));
+            sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
+            shortCircuitService.assertShortCircuitAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT), getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT_ONE_BUS));
+            voltageInitService.assertVoltageInitNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION));
+            stateEstimationService.assertStateEstimationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION));
+            pccMinService.assertPccMinNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN));
+        });
+        loadFlowService.assertLoadFlowsNotRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, LOAD_FLOW));
     }
+
+
 
     /***************************
      * GET COMPUTATION RESULTS *
