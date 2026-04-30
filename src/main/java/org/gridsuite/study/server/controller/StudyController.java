@@ -690,6 +690,26 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-modification", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "For a list of network modifications passed in body, merge them into a composite modification")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The composite modification has been created.")})
+    public ResponseEntity<Void> mergeModificationsIntoComposite(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "uuids of the merged modifications") @RequestParam(name = "modificationsUuids") List<UUID> modificationsUuids,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
+        studyService.invalidateNodeTreeWithLF(studyUuid, nodeUuid);
+        try {
+            studyService.mergeModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
+        } finally {
+            studyService.unblockNodeTree(studyUuid, nodeUuid);
+        }
+        return ResponseEntity.ok().build();
+    }
+
     /**
      * @param modificationsToInsert pair of the composite uuid and its name
      */

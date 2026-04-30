@@ -2438,6 +2438,37 @@ public class StudyService {
     }
 
     @Transactional
+    public void mergeModificationsIntoComposite(
+        UUID targetStudyUuid,
+        UUID targetNodeUuid,
+        List<UUID> modificationsUuids,
+        String userId) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        try {
+            checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
+
+            List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(targetStudyUuid);
+            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
+
+            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
+                    .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
+                    .toList();
+
+            NetworkModificationsResult networkModificationResults = networkModificationService.mergeModificationsIntoComposite(
+                    groupUuid,
+                    modificationsUuids,
+                    modificationApplicationContexts
+            );
+
+            sendImpactNotifications(targetStudyUuid, targetNodeUuid, networkModificationResults, studyRootNetworkEntities);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
+        }
+        notificationService.emitElementUpdated(targetStudyUuid, userId);
+    }
+
+    @Transactional
     public void insertCompositeNetworkModifications(
         UUID targetStudyUuid,
         UUID targetNodeUuid,

@@ -300,6 +300,24 @@ public class NetworkModificationService {
         ).getBody();
     }
 
+    public NetworkModificationsResult mergeModificationsIntoComposite(
+            UUID groupUuid,
+            List<UUID> modificationsUuids,
+            List<ModificationApplicationContext> modificationContexts) {
+        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + GROUP_PATH + DELIMITER + "composite-modification"); // TODO : comment différencier de l'autre endpoint ??
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Pair<List<UUID>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(Pair.of(modificationsUuids, modificationContexts), headers);
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
+                HttpMethod.PUT,
+                httpEntity,
+                NetworkModificationsResult.class
+        ).getBody();
+    }
+
     private NetworkModificationsResult handleModifications(UUID groupUuid, UUID originGroupUuid, ModificationsActionType action,
                                                            Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
