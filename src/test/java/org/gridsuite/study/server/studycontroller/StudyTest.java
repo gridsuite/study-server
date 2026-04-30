@@ -386,13 +386,13 @@ class StudyTest extends StudyTestBase {
 
     @Test
     void testNotifyStudiesMetadataUpdated() throws Exception {
-        List<UUID> studiesUuid = Arrays.asList(UUID.randomUUID(), UUID.randomUUID());
+        List<UUID> studyUuids = Arrays.asList(UUID.randomUUID(), UUID.randomUUID());
         mockMvc.perform(post("/v1/studies/notification")
                         .header(USER_ID_HEADER, "userId")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(studiesUuid)))
+                        .content(mapper.writeValueAsString(studyUuids)))
                 .andExpect(status().isOk());
-        checkStudyMetadataUpdatedMessagesReceived(2);
+        checkStudyMetadataUpdatedMessagesReceived(studyUuids.size());
     }
 
     @Test
