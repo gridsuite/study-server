@@ -158,7 +158,7 @@ class StudyControllerCreationTest {
         wireMockStubs.networkConversionServer.verifyImportNetwork(importCaseStub, duplicateCaseUuid.toString(), FIRST_VARIANT_ID);
 
         UUID newStudyCreationRequestId = studyCreationRequestRepository.findAll().getFirst().getId();
-        assertStudyUpdateMessageReceived(newStudyCreationRequestId, userId);
+        assertStudyCreationStartedMessageReceived(newStudyCreationRequestId, userId);
     }
 
     @Test
@@ -180,7 +180,7 @@ class StudyControllerCreationTest {
         wireMockStubs.networkConversionServer.verifyImportNetwork(importCaseStub, caseUuid.toString(), FIRST_VARIANT_ID, importParametersAsJson);
 
         UUID newStudyCreationRequestId = studyCreationRequestRepository.findAll().getFirst().getId();
-        assertStudyUpdateMessageReceived(newStudyCreationRequestId, userId);
+        assertStudyCreationStartedMessageReceived(newStudyCreationRequestId, userId);
     }
 
     @Test
@@ -211,7 +211,7 @@ class StudyControllerCreationTest {
         importParameters.forEach((key, value) -> expectedImportParameters.put(key, value.toString()));
         assertThat(rootNetworkService.getImportParameters(rootNetworkUUID)).usingRecursiveComparison().isEqualTo(expectedImportParameters);
 
-        assertStudyUpdateMessageReceived(studyUuid, userId);
+        assertStudyCreationFinishedMessageReceived(studyUuid, userId);
         assertTrue(studyRepository.findById(studyUuid).isPresent());
     }
 
@@ -309,14 +309,21 @@ class StudyControllerCreationTest {
         return importParameters;
     }
 
-    private void assertStudyUpdateMessageReceived(UUID studyUuid, String userId) {
-        // assert that the broker message has been sent a study creation request message
+    private void assertStudyCreationStartedMessageReceived(UUID studyUuid, String userId) {
+        assertStudyCreationMessageReceived(studyUuid, userId, NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED);
+    }
+
+    private void assertStudyCreationFinishedMessageReceived(UUID studyUuid, String userId) {
+        assertStudyCreationMessageReceived(studyUuid, userId, NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED);
+    }
+
+    private void assertStudyCreationMessageReceived(UUID studyUuid, String userId, String expectedUpdateType) {
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(expectedUpdateType, headers.get(HEADER_UPDATE_TYPE));
     }
 
     @AfterEach
