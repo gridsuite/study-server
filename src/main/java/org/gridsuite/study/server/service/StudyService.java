@@ -2503,7 +2503,7 @@ public class StudyService {
 
         List<UUID> originalChildren = networkModificationService.findAllChildrenUuids(modificationsUuids);
         List<UUID> copyChildren = networkModificationService.findAllChildrenUuids(copyUuids);
-        for (int i = 1; i < originalChildren.size(); i++) {
+        for (int i = 0; i < originalChildren.size(); i++) {
             mappingModificationsUuids.put(originalChildren.get(i), copyChildren.get(i));
         }
 
