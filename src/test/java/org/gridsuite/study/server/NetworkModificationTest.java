@@ -2228,6 +2228,7 @@ class NetworkModificationTest {
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/network-composite-modifications/children-uuids"))
                 .inScenario("childMapping")
                 .whenScenarioStateIs(Scenario.STARTED)
+                .withQueryParam("uuids", WireMock.equalTo(modification1.toString()))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(List.of(originalChild)))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
@@ -2235,6 +2236,7 @@ class NetworkModificationTest {
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/network-composite-modifications/children-uuids"))
                 .inScenario("childMapping")
                 .whenScenarioStateIs("secondCall")
+                .withQueryParam("uuids", WireMock.equalTo(copyUuid1.toString()))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(List.of(copyChild)))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
