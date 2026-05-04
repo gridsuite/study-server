@@ -2129,8 +2129,8 @@ class NetworkModificationTest {
         wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("COPY"))
                 .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(new NetworkModificationsResult(copyUuids, List.of())))
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+                    .withBody(mapper.writeValueAsString(new NetworkModificationsResult(copyUuids, List.of())))
+                    .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
         // uuids is sent as repeated params (?uuids=x&uuids=y) — match on path only, both calls return empty list
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/network-composite-modifications/children-uuids"))
@@ -2221,11 +2221,11 @@ class NetworkModificationTest {
 
         // Duplicate modification from node2 (study2) to node1 (study1)
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
-                        studyEntity1.getId(), node1.getId(), studyEntity2.getId(), node2.getId())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(modificationUuidListBody)
-                        .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isOk());
+                studyEntity1.getId(), node1.getId(), studyEntity2.getId(), node2.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(modificationUuidListBody)
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isOk());
         checkUpdateStatusMessagesReceived(studyEntity1.getId(), node1.getId(), output);
         checkEquipmentUpdatingMessagesReceived(studyEntity1.getId(), node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(studyEntity1.getId(), node1.getId());
@@ -2243,11 +2243,11 @@ class NetworkModificationTest {
 
         // Move modification between studies is forbidden
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
-                        studyEntity1.getId(), node1.getId(), studyEntity2.getId(), node2.getId())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(modificationUuidListBody)
-                        .header(USER_ID_HEADER, "userId"))
-                .andExpect(status().isForbidden());
+                studyEntity1.getId(), node1.getId(), studyEntity2.getId(), node2.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(modificationUuidListBody)
+                .header(USER_ID_HEADER, "userId"))
+            .andExpect(status().isForbidden());
     }
 
     @Test
