@@ -2501,11 +2501,9 @@ public class StudyService {
             mappingModificationsUuids.put(modificationsUuids.get(i), copyUuids.get(i));
         }
 
-        // Map all sub-modifications at any depth: findAllChildrenUuids returns descendants
-        // in the same traversal order for both originals and copies — zip positionally.
         List<UUID> originalChildren = networkModificationService.findAllChildrenUuids(modificationsUuids);
         List<UUID> copyChildren = networkModificationService.findAllChildrenUuids(copyUuids);
-        for (int i = 0; i < Math.min(originalChildren.size(), copyChildren.size()); i++) {
+        for (int i = 1; i < originalChildren.size(); i++) {
             mappingModificationsUuids.put(originalChildren.get(i), copyChildren.get(i));
         }
 
