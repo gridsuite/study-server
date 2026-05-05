@@ -1028,6 +1028,7 @@ public class StudyService {
             networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
             handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
         }
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
     }
 
     @Transactional
@@ -1080,6 +1081,7 @@ public class StudyService {
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
 
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
     }
 
     public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NodeExportInfos exportInfos, String format, String userId, String parametersJson) {
@@ -1385,6 +1387,7 @@ public class StudyService {
                 new ReportInfos(saReportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SECURITY_ANALYSIS);
         notificationService.emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitElementUpdated(study.getId(), userId);
         return result;
     }
 
@@ -2688,6 +2691,7 @@ public class StudyService {
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SENSITIVITY_ANALYSIS);
         notificationService.emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        notificationService.emitElementUpdated(study.getId(), userId);
         return result;
     }
 
@@ -2713,6 +2717,7 @@ public class StudyService {
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, computationType);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid,
                 busId.isEmpty() ? NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS : NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
         return result;
     }
 
@@ -2745,6 +2750,7 @@ public class StudyService {
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, VOLTAGE_INITIALIZATION);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
         return result;
     }
 
@@ -3073,6 +3079,7 @@ public class StudyService {
         // update result uuid and notification
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSimulationResultUuid, DYNAMIC_SIMULATION);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
 
         return dynamicSimulationResultUuid;
     }
@@ -3183,6 +3190,7 @@ public class StudyService {
         // update result uuid and notification
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSecurityAnalysisResultUuid, DYNAMIC_SECURITY_ANALYSIS);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
 
         return dynamicSecurityAnalysisResultUuid;
     }
@@ -3291,6 +3299,7 @@ public class StudyService {
         // update result uuid and notification
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicMarginCalculationResultUuid, DYNAMIC_MARGIN_CALCULATION);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
 
         return dynamicMarginCalculationResultUuid;
     }
@@ -3549,6 +3558,8 @@ public class StudyService {
         UUID result = stateEstimationService.runStateEstimation(networkUuid, variantId, studyEntity.getStateEstimationParametersUuid(), new ReportInfos(reportUuid, nodeUuid), receiver, userId, debug);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, STATE_ESTIMATION);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
+
         return result;
     }
 
@@ -3573,6 +3584,7 @@ public class StudyService {
         UUID result = pccMinService.runPccMin(networkUuid, variantId, runPccMinParametersInfos, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, PCC_MIN);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
         return result;
     }
 
