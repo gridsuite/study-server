@@ -690,13 +690,13 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-modification", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "For a list of network modifications passed in body, merge them into a composite modification")
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-modification", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "For a list of network modifications passed in body, merge them into a new composite modification")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The composite modification has been created.")})
-    public ResponseEntity<Void> mergeModificationsIntoComposite(
+    public ResponseEntity<Void> mergeModificationsIntoNewComposite(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "uuids of the merged modifications") @RequestParam(name = "modificationsUuids") List<UUID> modificationsUuids,
+            @RequestBody List<UUID> modificationsUuids,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);

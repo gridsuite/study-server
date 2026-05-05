@@ -308,11 +308,14 @@ public class NetworkModificationService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Pair<List<UUID>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(Pair.of(modificationsUuids, modificationContexts), headers);
+        HttpEntity<Pair<List<UUID>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(
+                Pair.of(modificationsUuids, modificationContexts),
+                headers
+        );
 
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
-                HttpMethod.PUT,
+                HttpMethod.POST,
                 httpEntity,
                 NetworkModificationsResult.class
         ).getBody();
