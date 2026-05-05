@@ -3010,9 +3010,9 @@ public class StudyService {
             dynamicSimulationEventService.saveEvent(nodeUuid, event);
         } finally {
             notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
-            notificationService.emitElementUpdated(studyUuid, userId);
         }
         postProcessEventCrud(studyUuid, nodeUuid);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
@@ -3023,9 +3023,9 @@ public class StudyService {
             dynamicSimulationEventService.saveEvent(nodeUuid, event);
         } finally {
             notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
-            notificationService.emitElementUpdated(studyUuid, userId);
         }
         postProcessEventCrud(studyUuid, nodeUuid);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
@@ -3036,9 +3036,9 @@ public class StudyService {
             dynamicSimulationEventService.deleteEvents(eventUuids);
         } finally {
             notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
-            notificationService.emitElementUpdated(studyUuid, userId);
         }
         postProcessEventCrud(studyUuid, nodeUuid);
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
