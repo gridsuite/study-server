@@ -974,8 +974,10 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", study1Uuid)
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectWriter.writeValueAsString(aliases))
+            .header(USER_ID_HEADER, userId)
         ).andExpect(status().isOk());
         checkNodeAliasUpdateMessageReceived(study1Uuid);
+        checkElementUpdatedMessageSent(study1Uuid, userId);
 
         // duplicate the study
         StudyEntity duplicatedStudy = duplicateStudy(study1Uuid, userId);
