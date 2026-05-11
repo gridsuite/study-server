@@ -222,11 +222,6 @@ public class ConsumerService {
             String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
             String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
             Map<String, Object> rawParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
-            // String longer than 1024 bytes are converted to com.rabbitmq.client.LongString (https://docs.spring.io/spring-amqp/docs/3.0.0/reference/html/#message-properties-converters)
-//            Map<String, String> importParameters = new HashMap<>();
-//            if (rawParameters != null) {
-//                rawParameters.forEach((key, value) -> importParameters.put(key, value.toString()));
-//            }
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
