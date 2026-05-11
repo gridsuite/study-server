@@ -341,6 +341,7 @@ public class StudyService {
         }
 
         notificationService.emitRootNetworksUpdated(studyUuid);
+        notificationService.emitElementUpdated(studyUuid, userId);
         return rootNetworkCreationRequestEntity.toDto();
     }
 
