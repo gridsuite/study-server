@@ -21,7 +21,10 @@ import org.springframework.stereotype.Service;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
@@ -83,7 +86,11 @@ public class DynamicMarginCalculationService {
     }
 
     public DynamicMarginCalculationStatus getStatus(UUID resultUuid) {
-        return resultUuid == null ? null : dynamicMarginCalculationClient.getStatus(resultUuid);
+        return getDynamicMarginCalculationStatuses(List.of(resultUuid)).get(resultUuid);
+    }
+
+    public Map<UUID, DynamicMarginCalculationStatus> getDynamicMarginCalculationStatuses(List<UUID> resultUuids) {
+        return dynamicMarginCalculationClient.getStatuses(resultUuids);
     }
 
     public void invalidateStatus(List<UUID> resultUuids) {
@@ -121,5 +128,13 @@ public class DynamicMarginCalculationService {
 
     public String getProvider(UUID parametersUuid) {
         return dynamicMarginCalculationClient.getProvider(parametersUuid);
+    }
+
+    public void assertNoDynamicMarginCalculationRunning(List<UUID> resultUuids) {
+        Map<UUID, DynamicMarginCalculationStatus> dynamicMarginCalculationStatuses = getDynamicMarginCalculationStatuses(resultUuids);
+        Set<DynamicMarginCalculationStatus> values = new HashSet<>(dynamicMarginCalculationStatuses.values());
+        if (values.contains(DynamicMarginCalculationStatus.RUNNING)) {
+            throw new StudyException(COMPUTATION_RUNNING);
+        }
     }
 }

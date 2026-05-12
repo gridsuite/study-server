@@ -10,6 +10,7 @@ import com.powsybl.timeseries.DoubleTimeSeries;
 import lombok.NonNull;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -669,18 +670,16 @@ public class RootNetworkNodeInfoService {
     }
 
     public void assertComputationsNotRunning(List<UUID> nodeUuids, UUID rootNetworkUuid) {
-        nodeUuids.forEach(nodeUuid -> {
-            securityAnalysisService.assertSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS));
-            dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
-            dynamicSecurityAnalysisService.assertDynamicSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS));
-            dynamicMarginCalculationService.assertDynamicMarginCalculationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION));
-            sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
-            shortCircuitService.assertShortCircuitAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT), getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT_ONE_BUS));
-            voltageInitService.assertVoltageInitNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION));
-            stateEstimationService.assertStateEstimationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION));
-            pccMinService.assertPccMinNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN));
-        });
-        loadFlowService.assertLoadFlowsNotRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, LOAD_FLOW));
+        loadFlowService.assertNoLoadFlowRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, LOAD_FLOW));
+        securityAnalysisService.assertNoSecurityAnalysisRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, SECURITY_ANALYSIS));
+        dynamicSimulationService.assertNoDynamicSimulationRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, DYNAMIC_SIMULATION));
+        dynamicSecurityAnalysisService.assertNoDynamicSecurityAnalysisRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS));
+        dynamicMarginCalculationService.assertNoDynamicMarginCalculationRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION));
+        sensitivityAnalysisService.assertNoSensitivityAnalysisRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, SENSITIVITY_ANALYSIS));
+        shortCircuitService.assertNoShortCircuitAnalysisRunning(Stream.concat(getComputationResultUuids(nodeUuids, rootNetworkUuid, SHORT_CIRCUIT).stream(), getComputationResultUuids(nodeUuids, rootNetworkUuid, SHORT_CIRCUIT_ONE_BUS).stream()).toList());
+        voltageInitService.assertNoVoltageInitRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, VOLTAGE_INITIALIZATION));
+        stateEstimationService.assertNoStateEstimationRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, STATE_ESTIMATION));
+        pccMinService.assertNoPccMinRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, PCC_MIN));
     }
 
 
@@ -873,32 +872,32 @@ public class RootNetworkNodeInfoService {
         return dynamicMarginCalculationService.getStatus(resultUuid);
     }
 
-    public String getSensitivityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public SensitivityAnalysisStatus getSensitivityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         return sensitivityAnalysisService.getSensitivityAnalysisStatus(resultUuid);
     }
 
     @Transactional(readOnly = true)
-    public String getShortCircuitAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type) {
+    public ShortCircuitAnalysisStatus getShortCircuitAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid,
             type == ShortcircuitAnalysisType.ALL_BUSES ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS);
         return shortCircuitService.getShortCircuitAnalysisStatus(resultUuid);
     }
 
     @Transactional(readOnly = true)
-    public String getVoltageInitStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public VoltageInitStatus getVoltageInitStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
         return voltageInitService.getVoltageInitStatus(resultUuid);
     }
 
     @Transactional(readOnly = true)
-    public String getStateEstimationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public StateEstimationStatus getStateEstimationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
         return stateEstimationService.getStateEstimationStatus(resultUuid);
     }
 
     @Transactional(readOnly = true)
-    public String getPccMinStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public PccMinStatus getPccMinStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
         return pccMinService.getPccMinStatus(resultUuid);
     }

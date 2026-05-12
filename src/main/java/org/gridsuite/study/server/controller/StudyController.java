@@ -20,6 +20,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.StudyConstants.CompositeModificationsActionType;
+import org.gridsuite.study.server.StudyConstants.ModificationsActionType;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
@@ -883,8 +885,8 @@ public class StudyController {
                                                                 @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                 @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                 @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type) {
-        String result = rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, type);
-        return result != null ? ResponseEntity.ok().body(result) :
+        ShortCircuitAnalysisStatus result = rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, type);
+        return result != null ? ResponseEntity.ok().body(result.name()) :
                 ResponseEntity.noContent().build();
     }
 
@@ -976,8 +978,8 @@ public class StudyController {
     public ResponseEntity<String> getVoltageInitStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().body(result) :
+        VoltageInitStatus result = rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid);
+        return result != null ? ResponseEntity.ok().body(result.name()) :
                 ResponseEntity.noContent().build();
     }
 
@@ -1814,8 +1816,8 @@ public class StudyController {
     public ResponseEntity<String> getSensitivityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().body(result) :
+        SensitivityAnalysisStatus result = rootNetworkNodeInfoService.getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid);
+        return result != null ? ResponseEntity.ok().body(result.name()) :
             ResponseEntity.noContent().build();
     }
 
@@ -2403,8 +2405,8 @@ public class StudyController {
     public ResponseEntity<String> getStateEstimationStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String status = rootNetworkNodeInfoService.getStateEstimationStatus(nodeUuid, rootNetworkUuid);
-        return status != null ? ResponseEntity.ok().body(status) : ResponseEntity.noContent().build();
+        StateEstimationStatus status = rootNetworkNodeInfoService.getStateEstimationStatus(nodeUuid, rootNetworkUuid);
+        return status != null ? ResponseEntity.ok().body(status.name()) : ResponseEntity.noContent().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min/status")
@@ -2415,8 +2417,8 @@ public class StudyController {
     public ResponseEntity<String> getPccMinStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                   @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String status = rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid);
-        return status != null ? ResponseEntity.ok().body(status) : ResponseEntity.noContent().build();
+        PccMinStatus status = rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid);
+        return status != null ? ResponseEntity.ok().body(status.name()) : ResponseEntity.noContent().build();
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/stop")

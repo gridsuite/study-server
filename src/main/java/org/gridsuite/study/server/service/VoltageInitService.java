@@ -9,6 +9,8 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
@@ -19,6 +21,7 @@ import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -28,8 +31,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -121,8 +127,22 @@ public class VoltageInitService extends AbstractComputationService {
         return getVoltageInitResultOrStatus(resultUuid, "", networkUuid, variantId, globalFilters);
     }
 
-    public String getVoltageInitStatus(UUID resultUuid) {
-        return getVoltageInitResultOrStatus(resultUuid, "/status", null, null, null);
+    public VoltageInitStatus getVoltageInitStatus(UUID resultUuid) {
+        return getVoltageInitStatuses(List.of(resultUuid)).get(resultUuid);
+    }
+
+    public Map<UUID, VoltageInitStatus> getVoltageInitStatuses(List<UUID> resultUuids) {
+        if (CollectionUtils.isEmpty(resultUuids)) {
+            return Map.of();
+        }
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/statuses").toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
+
+        return restTemplate.exchange(path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, VoltageInitStatus>>() {
+        }).getBody();
     }
 
     public VoltageInitParametersInfos getVoltageInitParameters(UUID parametersUuid) {
@@ -228,9 +248,10 @@ public class VoltageInitService extends AbstractComputationService {
         return restTemplate.getForObject(voltageInitServerBaseUri + path, Integer.class);
     }
 
-    public void assertVoltageInitNotRunning(UUID resultUuid) {
-        String scs = getVoltageInitStatus(resultUuid);
-        if (VoltageInitStatus.RUNNING.name().equals(scs)) {
+    public void assertNoVoltageInitRunning(List<UUID> resultUuids) {
+        Map<UUID, VoltageInitStatus> voltageInitStatuses = getVoltageInitStatuses(resultUuids);
+        Set<VoltageInitStatus> values = new HashSet<>(voltageInitStatuses.values());
+        if (values.contains(VoltageInitStatus.RUNNING)) {
             throw new StudyException(COMPUTATION_RUNNING);
         }
     }

@@ -16,7 +16,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.ShortCircuitStatus;
+import org.gridsuite.study.server.dto.ShortCircuitAnalysisStatus;
 import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
@@ -35,9 +35,11 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -193,15 +195,23 @@ public class ShortCircuitService extends AbstractComputationService {
         return getShortCircuitAnalysisResource(builder.build().encode().toUri()); // need to encode because of filter JSON array
     }
 
-    public String getShortCircuitAnalysisStatus(UUID resultUuid) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid);
-        if (resultPath == null) {
-            return null;
+    public ShortCircuitAnalysisStatus getShortCircuitAnalysisStatus(UUID resultUuid) {
+        return getShortCircuitAnalysisStatuses(List.of(resultUuid)).get(resultUuid);
+    }
+
+    public Map<UUID, ShortCircuitAnalysisStatus> getShortCircuitAnalysisStatuses(List<UUID> resultUuids) {
+        if (resultUuids.isEmpty()) {
+            return Map.of();
         }
+        String path = UriComponentsBuilder
+                .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/statuses")
+                .toUriString();
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath + "/status");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
-        return getShortCircuitAnalysisResource(builder.build().toUri());
+        return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, ShortCircuitAnalysisStatus>>() { }).getBody();
     }
 
     public String getShortCircuitAnalysisResource(URI resourcePath) {
@@ -248,10 +258,10 @@ public class ShortCircuitService extends AbstractComputationService {
         return restTemplate.getForObject(shortCircuitServerBaseUri + path, Integer.class);
     }
 
-    public void assertShortCircuitAnalysisNotRunning(UUID scsResultUuid, UUID oneBusScsResultUuid) {
-        String scs = getShortCircuitAnalysisStatus(scsResultUuid);
-        String oneBusScs = getShortCircuitAnalysisStatus(oneBusScsResultUuid);
-        if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(oneBusScs)) {
+    public void assertNoShortCircuitAnalysisRunning(List<UUID> resultUuids) {
+        Map<UUID, ShortCircuitAnalysisStatus> shortCircuitStatuses = getShortCircuitAnalysisStatuses(resultUuids);
+        Set<ShortCircuitAnalysisStatus> values = new HashSet<>(shortCircuitStatuses.values());
+        if (values.contains(ShortCircuitAnalysisStatus.RUNNING)) {
             throw new StudyException(COMPUTATION_RUNNING);
         }
     }

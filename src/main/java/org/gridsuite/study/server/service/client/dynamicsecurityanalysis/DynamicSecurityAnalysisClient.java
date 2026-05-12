@@ -14,8 +14,10 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -178,18 +181,27 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
     }
 
     // --- Related result methods --- //
-
     public DynamicSecurityAnalysisStatus getStatus(@NonNull UUID resultUuid) {
-        Objects.requireNonNull(resultUuid);
+        return getStatuses(List.of(resultUuid)).get(resultUuid);
+    }
+
+    public Map<UUID, DynamicSecurityAnalysisStatus> getStatuses(List<UUID> resultUuids) {
+        if (CollectionUtils.isEmpty(resultUuids)) {
+            return Map.of();
+        }
 
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
 
-        String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/{resultUuid}/status")
-                .buildAndExpand(resultUuid)
+        String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/statuses")
                 .toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
         // call dynamic-security-analysis REST API
-        return getRestTemplate().getForObject(url, DynamicSecurityAnalysisStatus.class);
+        return getRestTemplate().exchange(url, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, DynamicSecurityAnalysisStatus >>() {
+        }).getBody();
     }
 
     public void invalidateStatus(@NonNull List<UUID> resultUuids) {

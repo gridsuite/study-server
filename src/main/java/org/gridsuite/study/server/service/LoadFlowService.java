@@ -20,6 +20,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -27,9 +28,11 @@ import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -134,19 +137,12 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     public LoadFlowStatus getLoadFlowStatus(UUID resultUuid) {
-        if (resultUuid == null) {
-            return null;
-        }
-
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/status");
-        String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
-
-        return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowStatus.class);
+        return getLoadFlowStatuses(List.of(resultUuid)).get(resultUuid);
     }
 
     public Map<UUID, LoadFlowStatus> getLoadFlowStatuses(List<UUID> resultUuids) {
-        if (resultUuids == null || resultUuids.isEmpty()) {
-            return null;
+        if (CollectionUtils.isEmpty(resultUuids)) {
+            return Map.of();
         }
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/statuses");
@@ -208,18 +204,10 @@ public class LoadFlowService extends AbstractComputationService {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
     }
 
-    public void assertLoadFlowNotRunning(UUID resultUuid) {
-        LoadFlowStatus loadFlowStatus = getLoadFlowStatus(resultUuid);
-        if (LoadFlowStatus.RUNNING.equals(loadFlowStatus)) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
-    }
-
-    public void assertLoadFlowsNotRunning(List<UUID> resultUuids) {
+    public void assertNoLoadFlowRunning(List<UUID> resultUuids) {
         Map<UUID, LoadFlowStatus> loadFlowStatuses = getLoadFlowStatuses(resultUuids);
-        // this is O(n) complexity, maybe we should adapt endoint to simply check LoadFlowsNotRunning
-        // for a list of resultUuids returning boolean if encounter one RUNNING computation ?
-        if (loadFlowStatuses != null && loadFlowStatuses.containsValue(LoadFlowStatus.RUNNING)) {
+        Set<LoadFlowStatus> values = new HashSet<>(loadFlowStatuses.values());
+        if (values.contains(LoadFlowStatus.RUNNING)) {
             throw new StudyException(COMPUTATION_RUNNING);
         }
     }

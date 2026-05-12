@@ -14,6 +14,7 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -24,6 +25,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -192,19 +194,26 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
     }
 
     // --- Related result methods --- //
-
     public DynamicMarginCalculationStatus getStatus(@NonNull UUID resultUuid) {
-        Objects.requireNonNull(resultUuid);
+        return getStatuses(List.of(resultUuid)).get(resultUuid);
+    }
 
-        String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RESULT);
+    public Map<UUID, DynamicMarginCalculationStatus> getStatuses(List<UUID> resultUuids) {
+        if (CollectionUtils.isEmpty(resultUuids)) {
+            return Map.of();
+        }
 
-        String url = UriComponentsBuilder
-                .fromUriString(resultBaseUrl + "/{resultUuid}/status")
-                .buildAndExpand(resultUuid)
-                .toUriString();
+        String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RESULT);
 
-        // call dynamic-margin-calculation REST API
-        return getRestTemplate().getForObject(url, DynamicMarginCalculationStatus.class);
+        var uriComponents = UriComponentsBuilder.fromUriString(endPointUrl + "/statuses").buildAndExpand();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
+
+        return getRestTemplate().exchange(uriComponents.toUriString(), HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, DynamicMarginCalculationStatus>>() {
+        }).getBody();
     }
 
     public void invalidateStatus(@NonNull List<UUID> resultUuids) {

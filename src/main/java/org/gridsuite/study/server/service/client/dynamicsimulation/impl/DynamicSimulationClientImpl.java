@@ -16,8 +16,10 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -203,13 +206,26 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
 
     @Override
     public DynamicSimulationStatus getStatus(UUID resultUuid) {
-        Objects.requireNonNull(resultUuid);
+        return getStatuses(List.of(resultUuid)).get(resultUuid);
+    }
+
+    @Override
+    public Map<UUID, DynamicSimulationStatus> getStatuses(List<UUID> resultUuids) {
+        if (CollectionUtils.isEmpty(resultUuids)) {
+            return Map.of();
+        }
+
         String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
-        var uriComponents = UriComponentsBuilder.fromUriString(endPointUrl + "/{resultUuid}/status")
-                .buildAndExpand(resultUuid);
+        var uriComponents = UriComponentsBuilder.fromUriString(endPointUrl + "/statuses").buildAndExpand();
 
-        return getRestTemplate().getForObject(uriComponents.toUriString(), DynamicSimulationStatus.class);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
+
+        return getRestTemplate().exchange(uriComponents.toUriString(), HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, DynamicSimulationStatus>>() {
+        }).getBody();
     }
 
     @Override
