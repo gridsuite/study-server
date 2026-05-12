@@ -2503,8 +2503,17 @@ public class StudyService {
                                             List<UUID> modificationsUuids,
                                             NetworkModificationsResult networkModificationResults) {
         Map<UUID, UUID> mappingModificationsUuids = new HashMap<>();
+        List<UUID> copyUuids = networkModificationResults.modificationUuids();
+
+        // Map root-level modifications
         for (int i = 0; i < modificationsUuids.size(); i++) {
-            mappingModificationsUuids.put(modificationsUuids.get(i), networkModificationResults.modificationUuids().get(i));
+            mappingModificationsUuids.put(modificationsUuids.get(i), copyUuids.get(i));
+        }
+
+        List<UUID> originalChildren = networkModificationService.findAllChildrenUuids(modificationsUuids);
+        List<UUID> copyChildren = networkModificationService.findAllChildrenUuids(copyUuids);
+        for (int i = 0; i < originalChildren.size(); i++) {
+            mappingModificationsUuids.put(originalChildren.get(i), copyChildren.get(i));
         }
 
         rootNetworkNodeInfoService.copyModificationsToExcludeFromTags(originNodeUuid, targetNodeUuid, mappingModificationsUuids);
