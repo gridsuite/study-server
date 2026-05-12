@@ -998,6 +998,7 @@ class NetworkModificationTreeTest {
             var message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
             assertTrue(nodeIds.contains(message.getHeaders().get(HEADER_NEW_NODE)) || anchorNodeId.equals(message.getHeaders().get(HEADER_NEW_NODE)));
         }
+        checkElementUpdatedMessageSent(studyUuid, userId);
     }
 
     private static void assertChildrenEquals(Set<AbstractNode> original, List<AbstractNode> children) {
@@ -1690,8 +1691,10 @@ class NetworkModificationTreeTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectWriter.writeValueAsString(aliases))
+            .header("userId", userId)
         ).andExpect(status().isOk());
         checkNodeAliasUpdateMessageReceived(root.getStudyId());
+        checkElementUpdatedMessageSent(root.getStudyId(), userId);
 
         nodeAliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
             .getResponse()
@@ -1708,8 +1711,10 @@ class NetworkModificationTreeTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectWriter.writeValueAsString(aliases))
+            .header("userId", userId)
         ).andExpect(status().isOk());
         checkNodeAliasUpdateMessageReceived(root.getStudyId());
+        checkElementUpdatedMessageSent(root.getStudyId(), userId);
 
         nodeAliases = objectMapper.readValue(mockMvc.perform(get("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())).andExpect(status().isOk()).andReturn()
             .getResponse()
@@ -1742,8 +1747,10 @@ class NetworkModificationTreeTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/node-aliases", root.getStudyId())
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectWriter.writeValueAsString(aliases))
+            .header("userId", userId)
         ).andExpect(status().isOk());
         checkNodeAliasUpdateMessageReceived(root.getStudyId());
+        checkElementUpdatedMessageSent(root.getStudyId(), userId);
 
         // Stashing node3 (with stashChildren=true) should result in aliases no more associated to nodes node3, node4 and node5
         doNothing().when(rootNetworkNodeInfoService).assertComputationNotRunning(any(), any());
