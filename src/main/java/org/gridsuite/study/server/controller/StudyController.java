@@ -240,8 +240,9 @@ public class StudyController {
     @Operation(summary = "Delete root networks for study")
     @ApiResponse(responseCode = "200", description = "Root network deleted")
     public ResponseEntity<Void> deleteRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
-                                                    @RequestBody List<UUID> rootNetworksUuids) {
-        studyService.deleteRootNetworks(studyUuid, rootNetworksUuids);
+                                                    @RequestBody List<UUID> rootNetworksUuids,
+                                                    @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.deleteRootNetworks(studyUuid, rootNetworksUuids, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1570,8 +1571,9 @@ public class StudyController {
         @ApiResponse(responseCode = "200", description = "The list of nodes in the trash")})
     public ResponseEntity<Void> restoreNodes(@Parameter(description = "study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                             @Parameter(description = "ids of nodes to restore") @RequestParam("ids") List<UUID> nodeIds,
-                                            @Parameter(description = "id of node below which the node will be restored") @RequestParam("anchorNodeId") UUID anchorNodeId) {
-        studyService.restoreNodes(studyUuid, nodeIds, anchorNodeId);
+                                            @Parameter(description = "id of node below which the node will be restored") @RequestParam("anchorNodeId") UUID anchorNodeId,
+                                            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.restoreNodes(studyUuid, nodeIds, anchorNodeId, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -2092,9 +2094,8 @@ public class StudyController {
     @Operation(summary = "Get security analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters")})
     public ResponseEntity<String> getSecurityAnalysisParametersValues(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid, userId));
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
@@ -2201,9 +2202,8 @@ public class StudyController {
     @Operation(summary = "Get sensitivity analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters")})
     public ResponseEntity<String> getSensitivityAnalysisParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParameters(studyUuid, userId));
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParameters(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
@@ -2461,9 +2461,10 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Node aliases have been updated"), @ApiResponse(responseCode = "404", description = "Study doesn't exists")})
     public ResponseEntity<Void> setNodeAliases(
         @PathVariable("studyUuid") UUID studyUuid,
-        @RequestBody List<NodeAlias> nodeAliases) {
+        @RequestBody List<NodeAlias> nodeAliases,
+        @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyExist(studyUuid);
-        studyService.updateNodeAliases(studyUuid, nodeAliases);
+        studyService.updateNodeAliases(studyUuid, nodeAliases, userId);
         return ResponseEntity.ok().build();
     }
 
