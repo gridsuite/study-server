@@ -371,14 +371,14 @@ public class SupervisionService {
     }
 
     @Transactional
-    public void unmountStudy(UUID studyUuid) {
+    public void invalidateStudy(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         studyService.getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
-                studyService.unmountStudyRootNetwork(studyUuid, rootNetwork.getId())
+                studyService.invalidateStudyRootNetwork(studyUuid, rootNetwork.getId())
         );
         notificationService.emitElementUpdated(studyUuid, SUPERVISION_USER);
-        LOGGER.trace("Study {} nodes builds deleted and root node unmounted in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
 
     @Transactional

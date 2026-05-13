@@ -304,12 +304,12 @@ class SupervisionControllerTest {
     }
 
     @Test
-    void testUnmountStudy() throws Exception {
+    void testInvalidateStudy() throws Exception {
         initStudy();
 
         Mockito.doNothing().when(networkService).deleteVariants(eq(NETWORK_UUID), any());
 
-        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/unmount", STUDY_UUID))
+        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
                 .andExpect(status().isOk());
 
         // Tree was unbuilt: variants dropped from network store
