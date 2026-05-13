@@ -209,7 +209,7 @@ class NetworkModificationUnitTest {
         UUID modificationUuid = UUID.randomUUID();
         List<UUID> childrenNodes = List.of(node2Uuid, node4Uuid, node3Uuid);
 
-        NetworkModificationMetadata metadata = new NetworkModificationMetadata(null, "new description", null);
+        NetworkModificationMetadata metadata = new NetworkModificationMetadata(null, "new description", null, null);
         studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, List.of(modificationUuid), metadata, USER_ID_HEADER);
 
         checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
@@ -283,7 +283,7 @@ class NetworkModificationUnitTest {
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
-        NetworkModificationMetadata metadata = new NetworkModificationMetadata(activated, null, null);
+        NetworkModificationMetadata metadata = new NetworkModificationMetadata(activated, null, null, null);
         studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, networkModificationUuids, metadata, USER_ID_HEADER);
 
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
