@@ -129,10 +129,10 @@ public class EquipmentInfosService {
     }
 
     public void deleteVariants(@NonNull UUID networkUuid, List<String> variantIds) {
-        /*variantIds.forEach(variantId -> {
+        variantIds.forEach(variantId -> {
             equipmentInfosRepository.deleteAllByNetworkUuidAndVariantId(networkUuid, variantId);
             tombstonedEquipmentInfosRepository.deleteAllByNetworkUuidAndVariantId(networkUuid, variantId);
-        });*/
+        });
     }
 
     public long getEquipmentInfosCount() {

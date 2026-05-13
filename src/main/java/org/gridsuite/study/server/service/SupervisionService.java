@@ -378,7 +378,7 @@ public class SupervisionService {
                 studyService.invalidateStudyRootNetwork(studyUuid, rootNetwork.getId())
         );
         notificationService.emitElementUpdated(studyUuid, SUPERVISION_USER);
-        LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
     }
 
     @Transactional
