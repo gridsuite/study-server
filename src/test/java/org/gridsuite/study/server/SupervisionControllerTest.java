@@ -15,6 +15,7 @@ import com.powsybl.iidm.network.Identifiable;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
+import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
@@ -51,8 +52,13 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -101,6 +107,9 @@ class SupervisionControllerTest {
 
     @MockitoBean
     private NetworkService networkService;
+
+    @MockitoBean
+    private NetworkStoreService networkStoreService;
 
     @Autowired
     private StudyInfosService studyInfosService;
@@ -308,6 +317,7 @@ class SupervisionControllerTest {
         initStudy();
 
         Mockito.doNothing().when(networkService).deleteVariants(eq(NETWORK_UUID), any());
+        Mockito.doNothing().when(networkStoreService).deleteNetwork(eq(NETWORK_UUID));
 
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
                 .andExpect(status().isOk());
