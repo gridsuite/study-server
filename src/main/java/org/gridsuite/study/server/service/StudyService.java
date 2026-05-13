@@ -3939,6 +3939,7 @@ public class StudyService {
     @Transactional
     public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid) {
         StudyEntity study = getStudy(studyUuid);
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid)
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
