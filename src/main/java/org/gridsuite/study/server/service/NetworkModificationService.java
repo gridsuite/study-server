@@ -450,4 +450,20 @@ public class NetworkModificationService {
                 new ParameterizedTypeReference<Set<UUID>>() { }
         ).getBody();
     }
+
+    public List<UUID> findAllChildrenUuids(List<UUID> compositeUuids) {
+        if (compositeUuids.isEmpty()) {
+            return List.of();
+        }
+        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "children-uuids")
+                .queryParam("uuids", compositeUuids)
+                .toUriString();
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<UUID>>() { }
+        ).getBody();
+    }
 }
