@@ -317,7 +317,7 @@ class SupervisionControllerTest {
         initStudy();
 
         Mockito.doNothing().when(networkService).deleteVariants(eq(NETWORK_UUID), any());
-        Mockito.doNothing().when(networkStoreService).deleteNetwork(eq(NETWORK_UUID));
+        Mockito.doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
 
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
                 .andExpect(status().isOk());
