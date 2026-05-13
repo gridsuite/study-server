@@ -315,9 +315,9 @@ class SupervisionControllerTest {
         // Tree was unbuilt: variants dropped from network store
         Mockito.verify(networkService, Mockito.times(1)).deleteVariants(eq(NETWORK_UUID), any());
 
-        // Remote root-network data was deleted, but the case was preserved (deleteCase = false)
+        // Remote root-network data was deleted
         Mockito.verify(rootNetworkService, Mockito.times(1))
-                .deleteRootNetworkRemoteInfos(any());
+                .invalidateRootNetworkRemoteInfos(any(), eq(true));
 
         // Indexation flipped to NOT_INDEXED so the auto-detect path will reimport on reopen
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.NOT_INDEXED.name());

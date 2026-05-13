@@ -1896,16 +1896,16 @@ public class StudyService {
 
     @Transactional
     public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes) {
-        doUnbuildNodeTree(studyUuid, rootNodeUuid, withBlockNodes);
+        doUnbuildNodeTree(studyUuid, rootNodeUuid, withBlockNodes, false);
     }
 
-    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes) {
+    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, boolean blocking) {
         InvalidateNodeTreeParameters params = withBlockNodes
                 ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES
                 : InvalidateNodeTreeParameters.ALL;
         List<CompletableFuture<Void>> futures = getStudy(studyUuid).getRootNetworks().stream()
                 .map(rn -> studyServerExecutionService.runAsync(() ->
-                        invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), params)))
+                        invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), params, blocking)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
     }
@@ -3945,10 +3945,9 @@ public class StudyService {
         var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         try {
             // First we unbuild all nodes
-            doUnbuildNodeTree(studyUuid, rootNodeUuid, true);
-
+            doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true);
             // Then we erase data linked to root node on all root networks
-            rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetwork.toDto()));
+            rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetwork.toDto()), true);
             updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
         } finally {
             networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNodeUuid);

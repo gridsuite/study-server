@@ -257,13 +257,15 @@ public class RootNetworkService {
         rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList());
     }
 
-    public void invalidateRootNetworkRemoteInfos(List<RootNetworkInfos> rootNetworkInfos) {
-        CompletableFuture.allOf(
-                // delete remote data ids set in root network
-                studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())),
-                studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkUuid -> equipmentInfosService.deleteVariants(networkUuid, List.of(VariantManagerConstants.INITIAL_VARIANT_ID)))),
-                studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork))
-        ).join();
+    public void invalidateRootNetworkRemoteInfos(List<RootNetworkInfos> rootNetworkInfos, boolean blocking) {
+        ArrayList<CompletableFuture<Void>> futures = new ArrayList<>();
+        // delete remote data ids set in root network
+        futures.add(studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())));
+        futures.add(studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkUuid -> equipmentInfosService.deleteVariants(networkUuid, List.of(VariantManagerConstants.INITIAL_VARIANT_ID)))));
+        futures.add(studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)));
+        if (blocking) {
+            CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+        }
         // delete remote data ids set in root network node infos
         rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList());
     }
