@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import com.powsybl.iidm.network.Network;
+import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
@@ -252,6 +253,17 @@ public class RootNetworkService {
             studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getCaseInfos().getCaseUuid()).filter(Objects::nonNull).forEach(caseService::deleteCase))
         );
 
+        // delete remote data ids set in root network node infos
+        rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList());
+    }
+
+    public void invalidateRootNetworkRemoteInfos(List<RootNetworkInfos> rootNetworkInfos) {
+        CompletableFuture.allOf(
+                // delete remote data ids set in root network
+                studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())),
+                studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkUuid -> equipmentInfosService.deleteVariants(networkUuid, List.of(VariantManagerConstants.INITIAL_VARIANT_ID)))),
+                studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork))
+        ).join();
         // delete remote data ids set in root network node infos
         rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList());
     }
