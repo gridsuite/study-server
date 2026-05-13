@@ -2161,7 +2161,7 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.updateModificationsMetadata(groupId, modificationsUuids, metadata);
-            if (metadata.getActivated() != null) {
+            if (metadata.getActivated() != null || metadata.getName() != null) {
                 invalidateNodeTree(studyUuid, nodeUuid);
             }
         } finally {
