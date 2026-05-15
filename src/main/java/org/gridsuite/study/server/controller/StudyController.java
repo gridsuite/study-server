@@ -702,13 +702,7 @@ public class StudyController {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
         studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-        studyService.invalidateNodeTreeWithLF(studyUuid, nodeUuid);
-        UUID newCompositeUuid;
-        try {
-            newCompositeUuid = studyService.mergeModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
-        } finally {
-            studyService.unblockNodeTree(studyUuid, nodeUuid);
-        }
+        UUID newCompositeUuid = rebuildNodeService.mergeModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
         return ResponseEntity.ok().body(newCompositeUuid);
     }
 

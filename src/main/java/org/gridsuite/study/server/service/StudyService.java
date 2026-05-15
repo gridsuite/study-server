@@ -2457,22 +2457,7 @@ public class StudyService {
         notificationService.emitStartModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
-
-            List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(targetStudyUuid);
-            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
-
-            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
-                    .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
-                    .toList();
-
-            newCompositeUuid = networkModificationService.mergeModificationsIntoComposite(
-                    groupUuid,
-                    modificationsUuids,
-                    modificationApplicationContexts
-            );
-
-            // TODO : envoyer une notification pour tout le noeud ?? Mais il est déjà déréalisé
-            // sendImpactNotifications(targetStudyUuid, targetNodeUuid, networkModificationResults, studyRootNetworkEntities);
+            newCompositeUuid = networkModificationService.mergeModificationsIntoComposite(modificationsUuids);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
         }

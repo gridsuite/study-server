@@ -301,21 +301,18 @@ public class NetworkModificationService {
     }
 
     public UUID mergeModificationsIntoComposite(
-            UUID groupUuid,
-            List<UUID> modificationsUuids,
-            List<ModificationApplicationContext> modificationContexts) {
-        // TODO : comment différencier de l'autre endpoint ??
-        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + GROUP_PATH + DELIMITER + "composite-modification");
+            List<UUID> modificationsUuids) {
+        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + DELIMITER + "composite-modification");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Pair<List<UUID>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(
-                Pair.of(modificationsUuids, modificationContexts),
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(
+                modificationsUuids,
                 headers
         );
 
         return restTemplate.exchange(
-                getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
+                getNetworkModificationServerURI(false) + path.toUriString(),
                 HttpMethod.POST,
                 httpEntity,
                 UUID.class
