@@ -1897,7 +1897,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, String userId) {
+    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, @NonNull String userId) {
         InvalidateNodeTreeParameters invalidateNodeTreeParameters = withBlockNodes ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES : InvalidateNodeTreeParameters.ALL;
         List<CompletableFuture<Void>> futures = getStudy(studyUuid).getRootNetworks().stream().map(rn ->
             studyServerExecutionService.runAsync(() -> invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), invalidateNodeTreeParameters))
