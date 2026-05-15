@@ -300,11 +300,12 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public NetworkModificationsResult mergeModificationsIntoComposite(
+    public UUID mergeModificationsIntoComposite(
             UUID groupUuid,
             List<UUID> modificationsUuids,
             List<ModificationApplicationContext> modificationContexts) {
-        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + GROUP_PATH + DELIMITER + "composite-modification"); // TODO : comment différencier de l'autre endpoint ??
+        // TODO : comment différencier de l'autre endpoint ??
+        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + GROUP_PATH + DELIMITER + "composite-modification");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -317,7 +318,7 @@ public class NetworkModificationService {
                 getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
                 HttpMethod.POST,
                 httpEntity,
-                NetworkModificationsResult.class
+                UUID.class
         ).getBody();
     }
 

@@ -2447,11 +2447,12 @@ public class StudyService {
     }
 
     @Transactional
-    public void mergeModificationsIntoComposite(
+    public UUID mergeModificationsIntoComposite(
         UUID targetStudyUuid,
         UUID targetNodeUuid,
         List<UUID> modificationsUuids,
         String userId) {
+        UUID newCompositeUuid;
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         notificationService.emitStartModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
@@ -2464,17 +2465,19 @@ public class StudyService {
                     .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
                     .toList();
 
-            NetworkModificationsResult networkModificationResults = networkModificationService.mergeModificationsIntoComposite(
+            newCompositeUuid = networkModificationService.mergeModificationsIntoComposite(
                     groupUuid,
                     modificationsUuids,
                     modificationApplicationContexts
             );
 
-            sendImpactNotifications(targetStudyUuid, targetNodeUuid, networkModificationResults, studyRootNetworkEntities);
+            // TODO : envoyer une notification pour tout le noeud ?? Mais il est déjà déréalisé
+            // sendImpactNotifications(targetStudyUuid, targetNodeUuid, networkModificationResults, studyRootNetworkEntities);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(targetStudyUuid, userId);
+        return newCompositeUuid;
     }
 
     @Transactional
