@@ -1830,6 +1830,7 @@ public class StudyService {
             networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
             throw e;
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
@@ -1879,7 +1880,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void unbuildStudyNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
+    public void unbuildStudyNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         if (networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isNotBuilt()) {
             return;
         }
@@ -1892,16 +1893,18 @@ public class StudyService {
         } else {
             invalidateNode(studyUuid, nodeUuid, rootNetworkUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
-    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes) {
+    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, String userId) {
         InvalidateNodeTreeParameters invalidateNodeTreeParameters = withBlockNodes ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES : InvalidateNodeTreeParameters.ALL;
         List<CompletableFuture<Void>> futures = getStudy(studyUuid).getRootNetworks().stream().map(rn ->
             studyServerExecutionService.runAsync(() -> invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), invalidateNodeTreeParameters))
         ).toList();
 
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {
