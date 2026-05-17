@@ -713,8 +713,9 @@ public class StudyController {
         studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
         try {
             studyService.insertCompositeNetworkModifications(targetStudyUuid, targetNodeUuid, modificationsToCopy, userId, action);
-        } finally {
+        } catch (Exception e) {
             studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
+            throw e;
         }
     }
 
@@ -723,8 +724,9 @@ public class StudyController {
         studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
         try {
             studyService.duplicateNetworkModifications(targetStudyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
-        } finally {
+        } catch (Exception e) {
             studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
+            throw e;
         }
     }
 

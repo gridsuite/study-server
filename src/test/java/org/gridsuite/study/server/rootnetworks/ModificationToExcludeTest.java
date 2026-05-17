@@ -11,8 +11,6 @@ import com.google.common.collect.Sets;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.networkmodificationtree.dto.ExcludedNetworkModifications;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -521,14 +519,11 @@ class ModificationToExcludeTest {
         List<UUID> modifications = List.of(MODIFICATION_TO_EXCLUDE_1, MODIFICATION_TO_EXCLUDE_2);
 
         Mockito.doReturn(
-                        new NetworkModificationsResult(
-                                modifications.stream()
-                                        .map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get)
-                                        .toList(),
-                                List.of()
-                        )
-                ).when(networkModificationService)
-                .duplicateModifications(any(), any());
+                modifications.stream()
+                        .map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get)
+                        .toList()
+        ).when(networkModificationService)
+                .duplicateModifications(any(), any(), any());
         // -------- EXECUTE --------
         studyService.duplicateNetworkModifications(
                 study2.getId(),
@@ -601,8 +596,8 @@ class ModificationToExcludeTest {
         // mock duplicateModificationsGroup to return a mapping between origin modification uuid and their duplicate uuid
         List<UUID> modificationsToDuplicate = List.of(MODIFICATION_NEVER_EXCLUDED, MODIFICATION_TO_EXCLUDE_1, MODIFICATION_TO_EXCLUDE_2);
         Mockito.doReturn(
-                new NetworkModificationsResult(modificationsToDuplicate.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).toList(), List.of())
-        ).when(networkModificationService).duplicateModifications(any(), any());
+                modificationsToDuplicate.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).toList()
+        ).when(networkModificationService).duplicateModifications(any(), any(), any());
 
         // duplicate (excluded) modification uuids for RH1
         Set<UUID> modificationUuidsToDuplicate1 = Sets.intersection(MODIFICATIONS_TO_EXCLUDE_RN_1, new HashSet<>(modificationsToDuplicate));
@@ -782,7 +777,7 @@ class ModificationToExcludeTest {
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
 
         // try to execute modification move - if modification move fails, they should not be moved from a node to another in exludedModifications
-        Mockito.doThrow(new RuntimeException()).when(networkModificationService).moveModifications(any(), any(), any(), any(), eq(true));
+        Mockito.doThrow(new RuntimeException()).when(networkModificationService).moveModifications(any(), any(), any(), any(), any());
         List<UUID> modificationsToMove = List.of(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().findFirst().orElseThrow());
         assertThrows(RuntimeException.class, () -> studyService.moveNetworkModifications(studyUuid, firstNodeUuid, firstNodeUuid, modificationsToMove, null, false, USER_ID));
 
@@ -797,11 +792,7 @@ class ModificationToExcludeTest {
         assertThat(expectedExcludedModifications).usingRecursiveComparison().isEqualTo(excludedModifications);
 
         // if it returned OK, then they should be moved from one node to another's excluded modifications
-        Mockito.doReturn(new NetworkModificationsResult(modificationsToMove, List.of(Optional.of(NetworkModificationResult.builder()
-            .applicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK)
-            .lastGroupApplicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK)
-            .networkImpacts(List.of())
-            .build())))).when(networkModificationService).moveModifications(any(), any(), any(), any(), eq(true));
+        Mockito.doReturn(modificationsToMove).when(networkModificationService).moveModifications(any(), any(), any(), any(), any());
         studyService.moveNetworkModifications(studyUuid, secondNodeUuid, firstNodeUuid, modificationsToMove, null, true, USER_ID);
 
         // assert origin node still have all excluded modifications, except the moved one
