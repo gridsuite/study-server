@@ -102,17 +102,20 @@ public class RebuildNodeService {
     }
 
     public UUID mergeModificationsIntoComposite(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
-        return handleRebuildNodeSupply(studyUuid, nodeUuid, userId,
+        return handleRebuildNodeSupply(
+                studyUuid,
+                nodeUuid,
+                userId,
                 () -> {
                     studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
-                    UUID compositeUuid = null;
+                    UUID compositeUuid;
                     try {
                         compositeUuid = studyService.mergeModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
                     } finally {
                         studyService.unblockNodeTree(studyUuid, nodeUuid);
                     }
                     return compositeUuid;
-        });
+                });
     }
 
     private void handleMoveNetworkSubmodification(@NonNull UUID studyUuid,

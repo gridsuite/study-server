@@ -2117,6 +2117,53 @@ class NetworkModificationTest {
     }
 
     @Test
+    void testMergeModificationsIntoNewComposite() throws Exception {
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "New node 1", userId);
+        UUID nodeUuid1 = node1.getId();
+
+        UUID modification1 = UUID.randomUUID();
+        UUID modification2 = UUID.randomUUID();
+        List<UUID> modificationUuids = List.of(modification1, modification2);
+        String modificationsData = mapper.writeValueAsString(modificationUuids);
+
+        UUID newCompositeUuid = UUID.randomUUID();
+
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/network-composite-modifications/composite-modification"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(newCompositeUuid))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/composite-modification",
+                        studyUuid, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationsData)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        UUID resultUuid = mapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
+        assertEquals(newCompositeUuid, resultUuid);
+
+        checkUpdateStatusMessagesReceived(studyUuid, nodeUuid1, output);
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+        checkElementUpdatedMessageSent(studyUuid, userId);
+
+        WireMockUtilsCriteria.verifyPostRequest(
+                wireMockServer,
+                "/v1/network-composite-modifications/composite-modification",
+                Map.of(),
+                1
+        );
+    }
+
+    @Test
     void testDuplicateModification() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
