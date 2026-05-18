@@ -38,10 +38,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -524,14 +521,57 @@ public class StudyService {
         return networkModificationTreeService.getNetworkModificationsByNodeInfos(modificationsByGroup);
     }
 
-    @Transactional
-    public String getExportedNetworkModifications(UUID studyUuid, UUID nodeUuid) {
-        if (!networkModificationTreeService.getStudyUuidForNodeId(nodeUuid).equals(studyUuid)) {
-            throw new StudyException(NOT_ALLOWED);
-        }
-        UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+    @Transactional(readOnly = true)
+    public StudyExportInfos getStudyExport(UUID studyUuid) {
+        assertIsStudyExist(studyUuid);
 
-        return networkModificationService.getModificationsToExport(groupId);
+        List<RootNetworkExportInfos> rootNetworks = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid).stream()
+                .map(this::toRootNetworkExportInfos)
+                .toList();
+
+        RootNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, null);
+
+        List<UUID> groupUuids = new ArrayList<>();
+        collectGroupUuids(rootNode, groupUuids);
+
+        Map<UUID, Object> modificationsByGroup = networkModificationService.getModificationsInfosToExport(groupUuids);
+
+        return new StudyExportInfos(studyUuid, rootNetworks, toNodeExportInfos(rootNode, modificationsByGroup));
+    }
+
+    private RootNetworkExportInfos toRootNetworkExportInfos(RootNetworkInfos infos) {
+        CaseInfos caseInfos = infos.getCaseInfos();
+        Map<String, String> importParameters = infos.getImportParameters() != null
+                ? new LinkedHashMap<>(infos.getImportParameters())
+                : null;
+        return new RootNetworkExportInfos(
+                infos.getId(),
+                infos.getName(),
+                infos.getDescription(),
+                infos.getTag(),
+                caseInfos != null ? caseInfos.getCaseName() : null,
+                caseInfos != null ? caseInfos.getCaseFormat() : null,
+                importParameters);
+    }
+
+    private void collectGroupUuids(AbstractNode node, List<UUID> acc) {
+        if (node instanceof NetworkModificationNode nmNode && nmNode.getModificationGroupUuid() != null) {
+            acc.add(nmNode.getModificationGroupUuid());
+        }
+        node.getChildren().forEach(child -> collectGroupUuids(child, acc));
+    }
+
+    private StudyTreeNodeExportInfos toNodeExportInfos(AbstractNode node, Map<UUID, Object> modificationsByGroup) {
+        NetworkModificationNodeType nodeType = null;
+        Object modifications = null;
+        if (node instanceof NetworkModificationNode nmNode) {
+            nodeType = nmNode.getNodeType();
+            if (modificationsByGroup.get(nmNode.getModificationGroupUuid()) instanceof Map<?, ?> wrapper) {
+                modifications = wrapper.get("modifications");
+            }
+        }
+        List<StudyTreeNodeExportInfos> children = node.getChildren().stream().map(child -> toNodeExportInfos(child, modificationsByGroup)).toList();
+        return new StudyTreeNodeExportInfos(node.getId(), node.getName(), node.getType(), nodeType, modifications, children.isEmpty() ? null : children);
     }
 
     private Optional<DeleteStudyInfos> doDeleteStudyIfNotCreationInProgress(UUID studyUuid) {

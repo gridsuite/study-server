@@ -7,15 +7,14 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
-import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
-import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
+import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -93,14 +92,18 @@ public class NetworkModificationService {
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
     }
 
-    public String getModificationsToExport(UUID groupUUid) {
-        Objects.requireNonNull(groupUUid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "export")
-            .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
-            .buildAndExpand(groupUUid)
-            .toUriString();
+    public Map<UUID, Object> getModificationsInfosToExport(List<UUID> groupUuids) {
+        Objects.requireNonNull(groupUuids);
+        if (groupUuids.isEmpty()) {
+            return Map.of();
+        }
+        var path = UriComponentsBuilder.fromPath("groups" + DELIMITER + "modifications" + DELIMITER + "export")
+                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+                .toUriString();
 
-        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(groupUuids);
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, httpEntity,
+                new ParameterizedTypeReference<Map<UUID, Object>>() { }).getBody();
     }
 
     public Integer getModificationsCount(UUID groupUUid, boolean stashedModifications) {
@@ -448,6 +451,29 @@ public class NetworkModificationService {
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<Set<UUID>>() { }
+        ).getBody();
+    }
+
+    public Map<UUID, JsonNode> getModificationsToExportByGroups(List<UUID> groupUuids) {
+        Objects.requireNonNull(groupUuids);
+        if (groupUuids.isEmpty()) {
+            return Map.of();
+        }
+
+        var path = UriComponentsBuilder.fromPath("groups/modifications/export")
+                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+                .build()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<List<UUID>> entity = new HttpEntity<>(groupUuids, headers);
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path,
+                HttpMethod.POST,
+                entity,
+                new ParameterizedTypeReference<Map<UUID, JsonNode>>() { }
         ).getBody();
     }
 }
