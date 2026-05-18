@@ -300,9 +300,8 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public UUID mergeModificationsIntoComposite(
-            List<UUID> modificationsUuids) {
-        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + DELIMITER + "composite-modification");
+    public UUID mergeModificationsIntoComposite(@NonNull List<UUID> modificationsUuids) {
+        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "composite-modification");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
