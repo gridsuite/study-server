@@ -835,7 +835,7 @@ class RootNetworkTest {
         assertEquals("dummyRootNetwork2", result.get(2).name());
 
         // delete the 2nd root network
-        studyService.deleteRootNetworks(studyEntity.getId(), List.of(result.get(1).rootNetworkUuid()));
+        studyService.deleteRootNetworks(studyEntity.getId(), List.of(result.get(1).rootNetworkUuid()), USER_ID);
 
         // check "dummyRootNetwork2" root network order have been updated correctly
         List<BasicRootNetworkInfos> resultAfterDeletion = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());

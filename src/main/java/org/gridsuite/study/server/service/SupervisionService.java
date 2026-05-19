@@ -84,6 +84,8 @@ public class SupervisionService {
 
     private final RootNetworkService rootNetworkService;
 
+    private static final String SUPERVISION_USER = "Supervision";
+
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
@@ -358,7 +360,7 @@ public class SupervisionService {
     public void unbuildAllNodes(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false);
+        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false, SUPERVISION_USER);
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
