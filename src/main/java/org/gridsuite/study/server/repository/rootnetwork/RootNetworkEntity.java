@@ -73,7 +73,7 @@ public class RootNetworkEntity {
     @Column(name = "reportUuid")
     private UUID reportUuid;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection
     @CollectionTable(name = "importParameters",
         indexes = {@Index(name = "rootNetworkEntity_importParameters_idx1", columnList = "root_network_entity_id")},
         foreignKey = @ForeignKey(name = "rootNetworkEntity_importParameters_fk1"))
