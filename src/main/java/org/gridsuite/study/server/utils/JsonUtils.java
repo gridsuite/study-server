@@ -14,10 +14,15 @@ import com.fasterxml.jackson.databind.node.MissingNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.NonNull;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
+import org.gridsuite.study.server.error.StudyException;
 import org.springframework.data.util.Pair;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
+
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.UNPROCESSABLE_IMPORT_PARAMETER;
 
 public final class JsonUtils {
     private JsonUtils() {
@@ -64,5 +69,43 @@ public final class JsonUtils {
         } catch (JsonProcessingException | NoSuchFieldException e) {
             throw new IllegalStateException("Impossible to parse modification context", e);
         }
+    }
+
+    public static Map<String, Object> deserializeImportParameters(Map<String, String> rawParams) {
+        Map<String, Object> result = new HashMap<>();
+        if (rawParams == null) {
+            return result;
+        }
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        rawParams.forEach((key, value) -> {
+            if (value == null) {
+                result.put(key, null);
+                return;
+            }
+            try {
+                result.put(key, objectMapper.readValue(value, Object.class));
+            } catch (JsonProcessingException e) {
+                throw new StudyException(UNPROCESSABLE_IMPORT_PARAMETER, "Import parameter '" + key + " => " + value + "' is not valid JSON: " + e.getMessage());
+            }
+        });
+        return result;
+    }
+
+    public static Map<String, String> serializeImportParameters(Map<String, Object> params) {
+        Map<String, String> result = new HashMap<>();
+        if (params == null) {
+            return result;
+        }
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        params.forEach((key, value) -> {
+            try {
+                result.put(key, objectMapper.writeValueAsString(value));
+            } catch (JsonProcessingException e) {
+                result.put(key, String.valueOf(value));
+            }
+        });
+        return result;
     }
 }
