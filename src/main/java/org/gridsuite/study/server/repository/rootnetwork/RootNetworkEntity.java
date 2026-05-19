@@ -18,7 +18,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.UNPROCESSABLE_IMPORT_PARAMETER;
 
 /**
