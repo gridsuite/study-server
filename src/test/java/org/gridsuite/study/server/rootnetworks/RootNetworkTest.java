@@ -386,7 +386,8 @@ class RootNetworkTest {
         CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, CASE_UUID, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
         Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "value1");
-        importParameters.put("param2", "value2");
+        importParameters.put("param2", true);
+        importParameters.put("param3", null);
         Map<String, Object> headers = createConsumeCaseImportSucceededHeaders(NETWORK_UUID2.toString(), NETWORK_ID2, CASE_FORMAT2, CASE_NAME2, caseImportReceiver, importParameters);
 
         // send message to consumer
