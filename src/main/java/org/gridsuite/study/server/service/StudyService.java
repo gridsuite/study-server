@@ -1830,6 +1830,7 @@ public class StudyService {
             networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
             throw e;
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
@@ -1879,7 +1880,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void unbuildStudyNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
+    public void unbuildStudyNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         if (networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isNotBuilt()) {
             return;
         }
@@ -1892,14 +1893,15 @@ public class StudyService {
         } else {
             invalidateNode(studyUuid, nodeUuid, rootNetworkUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
-    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes) {
-        doUnbuildNodeTree(studyUuid, rootNodeUuid, withBlockNodes, false);
+    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, @NonNull String userId) {
+        doUnbuildNodeTree(studyUuid, rootNodeUuid, withBlockNodes, false, userId);
     }
 
-    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, boolean blocking) {
+    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, boolean blocking, @NonNull String userId) {
         InvalidateNodeTreeParameters params = withBlockNodes
                 ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES
                 : InvalidateNodeTreeParameters.ALL;
@@ -1908,6 +1910,7 @@ public class StudyService {
                         invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), params, blocking)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {
@@ -3376,14 +3379,9 @@ public class StudyService {
                 for (UUID otherRootNetwork : rootNetworkToDeactivateUuids) {
                     rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, otherRootNetwork, Set.of(networkModificationResults.modificationUuids().getFirst()), false);
                 }
-                int index = 0;
-                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
-                for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
-                    if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
-                        emitNetworkModificationImpacts(studyUuid, nodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
-                    }
-                    index++;
-                }
+                // The modification was applied only on rootNetworkUuid, so the single result must be attributed to it
+                networkModificationResults.modificationResults().getFirst()
+                    .ifPresent(result -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, result));
             }
 
             voltageInitService.resetModificationsGroupUuid(resultUuid);
@@ -3937,7 +3935,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid) {
+    public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId) {
         StudyEntity study = getStudy(studyUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid)
@@ -3946,7 +3944,7 @@ public class StudyService {
         var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         try {
             // First we unbuild all nodes
-            doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true);
+            doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId);
             // Then we erase data linked to root node on all root networks
             rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetwork.toDto()), true);
             updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);

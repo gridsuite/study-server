@@ -365,7 +365,7 @@ public class SupervisionService {
     public void unbuildAllNodes(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false);
+        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false, SUPERVISION_USER);
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
@@ -375,7 +375,7 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         studyService.getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
-                studyService.invalidateStudyRootNetwork(studyUuid, rootNetwork.getId())
+                studyService.invalidateStudyRootNetwork(studyUuid, rootNetwork.getId(), SUPERVISION_USER)
         );
         notificationService.emitElementUpdated(studyUuid, SUPERVISION_USER);
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
