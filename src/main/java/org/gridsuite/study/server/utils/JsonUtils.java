@@ -103,7 +103,7 @@ public final class JsonUtils {
             try {
                 result.put(key, objectMapper.writeValueAsString(value));
             } catch (JsonProcessingException e) {
-                result.put(key, String.valueOf(value));
+                throw new StudyException(UNPROCESSABLE_IMPORT_PARAMETER, "Import parameter '" + key + " => " + value + "' is not serializable: " + e.getMessage());
             }
         });
         return result;
