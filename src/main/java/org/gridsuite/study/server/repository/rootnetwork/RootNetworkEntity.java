@@ -11,11 +11,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.UNPROCESSABLE_IMPORT_PARAMETER;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
@@ -108,16 +112,21 @@ public class RootNetworkEntity {
     }
 
     public static Map<String, Object> deserializeImportParameters(Map<String, String> rawParams) {
-        if (rawParams == null) {
-            return null;
-        }
-        ObjectMapper objectMapper = new ObjectMapper();
         Map<String, Object> result = new HashMap<>();
+        if (rawParams == null) {
+            return result;
+        }
+
+        ObjectMapper objectMapper = new ObjectMapper();
         rawParams.forEach((key, value) -> {
+            if (value == null) {
+                result.put(key, null);
+                return;
+            }
             try {
                 result.put(key, objectMapper.readValue(value, Object.class));
             } catch (JsonProcessingException e) {
-                result.put(key, value);
+                throw new StudyException(UNPROCESSABLE_IMPORT_PARAMETER, "Import parameter '" + key + " => " + value + "' is not valid JSON: " + e.getMessage());
             }
         });
         return result;

@@ -208,7 +208,7 @@ class StudyControllerCreationTest {
         UUID rootNetworkUUID = testUtils.getOneRootNetworkUuid(studyEntity.getId());
 
         Map<String, Object> expectedImportParameters = new HashMap<>();
-        importParameters.forEach((key, value) -> expectedImportParameters.put(key, value));
+        importParameters.forEach(expectedImportParameters::put);
         assertThat(rootNetworkService.getImportParameters(rootNetworkUUID)).usingRecursiveComparison().isEqualTo(expectedImportParameters);
 
         assertStudyCreationFinishedMessageReceived(studyUuid, userId);

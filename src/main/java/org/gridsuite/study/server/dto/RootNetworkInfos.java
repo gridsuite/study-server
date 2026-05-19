@@ -60,11 +60,12 @@ public class RootNetworkInfos {
     }
 
     public static Map<String, String> serializeImportParameters(Map<String, Object> params) {
+        Map<String, String> result = new HashMap<>();
         if (params == null) {
             return null;
         }
+
         ObjectMapper objectMapper = new ObjectMapper();
-        Map<String, String> result = new HashMap<>();
         params.forEach((key, value) -> {
             try {
                 result.put(key, objectMapper.writeValueAsString(value));
