@@ -3946,7 +3946,7 @@ public class StudyService {
             // First we unbuild all nodes
             doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId);
             // Then we erase data linked to root node on all root networks
-            rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetwork.toDto()), true);
+            rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetwork.toDto()), false);
             updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
         } finally {
             networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNodeUuid);
