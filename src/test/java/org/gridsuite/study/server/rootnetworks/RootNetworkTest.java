@@ -201,7 +201,7 @@ class RootNetworkTest {
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
             .willReturn(WireMock.ok())).getId();
         Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(caseUuid, true);
-        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().name("rootNetworkName2").tag("rn2").caseInfos(new CaseInfos(null, caseUuid, null, caseFormat)).importParametersRaw(importParameters).build();
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().name("rootNetworkName2").tag("rn2").caseInfos(new CaseInfos(null, caseUuid, null, caseFormat)).importParameters(importParameters).build();
 
         // request execution - returns RootNetworkRequestInfos
         String response = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
@@ -678,7 +678,6 @@ class RootNetworkTest {
         // create a second root network
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(UUID.randomUUID()).tag("oldT").name("oldName")
                 .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), "oldCaseName", "oldCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "oldNetworkId"))
-                .importParametersRaw(Map.of("param1", "oldValue1", "param2", "oldValue2"))
                 .importParameters(Map.of("param1", "oldValue1", "param2", "oldValue2"))
                 .reportUuid(UUID.randomUUID())
                 .build();
@@ -694,7 +693,6 @@ class RootNetworkTest {
         final UUID newCaseUuid = UUID.randomUUID();
         RootNetworkInfos rootNetworkUpdateInfos = RootNetworkInfos.builder().id(rootNetworkInfos.getId()).name("newRootNetworkName").tag("newT")
             .caseInfos(new CaseInfos(null, newCaseUuid, "newCaseName", "newCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "newNetworkId"))
-            .importParametersRaw(Map.of("param1", "newValue1", "param2", "newValue2", "param3", "value3"))
             .importParameters(Map.of("param1", "newValue1", "param2", "newValue2", "param3", "value3"))
             .reportUuid(UUID.randomUUID())
             .build();
@@ -720,7 +718,7 @@ class RootNetworkTest {
                         "caseUuid", WireMock.equalTo(DUPLICATE_CASE_UUID.toString()),
                         "caseFormat", WireMock.equalTo(rootNetworkUpdateInfos.getCaseInfos().getCaseFormat())
                 ),
-                objectMapper.writeValueAsString(rootNetworkUpdateInfos.getImportParametersRaw())
+                objectMapper.writeValueAsString(rootNetworkUpdateInfos.getImportParameters())
         );
 
         // verify that the node is blocked
@@ -752,7 +750,7 @@ class RootNetworkTest {
         assertEquals(rootNetworkInfos.getCaseInfos().getCaseUuid(), rootNetworkEntity.getCaseUuid());
         assertEquals(rootNetworkInfos.getCaseInfos().getCaseFormat(), rootNetworkEntity.getCaseFormat());
         assertEquals(rootNetworkInfos.getReportUuid(), rootNetworkEntity.getReportUuid());
-        assertEquals(rootNetworkInfos.getImportParametersRaw(), rootNetworkService.getImportParameters(rootNetworkInfos.getId()));
+        assertEquals(rootNetworkInfos.getImportParameters(), rootNetworkService.getImportParameters(rootNetworkInfos.getId()));
     }
 
     @Test

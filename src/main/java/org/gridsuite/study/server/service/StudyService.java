@@ -334,7 +334,7 @@ public class StudyService {
         try {
             UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), true);
             rootNetworkInfos.getCaseInfos().setCaseUuid(clonedCaseUuid);
-            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParametersRaw(), CaseImportAction.ROOT_NETWORK_CREATION);
+            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParameters(), CaseImportAction.ROOT_NETWORK_CREATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntity);
             throw e;
@@ -397,7 +397,7 @@ public class StudyService {
         UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), true);
         rootNetworkInfos.getCaseInfos().setCaseUuid(clonedCaseUuid);
         try {
-            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParametersRaw(), CaseImportAction.ROOT_NETWORK_MODIFICATION);
+            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParameters(), CaseImportAction.ROOT_NETWORK_MODIFICATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkModificationRequestEntity);
             throw e;
