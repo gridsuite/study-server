@@ -79,7 +79,7 @@ public class NetworkModificationTreeService {
         this.reportService = reportService;
     }
 
-    private NodeEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
+    private NetworkModificationNodeInfoEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
         NodeEntity newNode = nodesRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null, new ArrayList<>()));
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
@@ -87,7 +87,7 @@ public class NetworkModificationTreeService {
         if (networkModificationNode.getNodeType() == null) {
             networkModificationNode.setNodeType(NetworkModificationNodeType.CONSTRUCTION);
         }
-        networkModificationNodeInfoRepository.save(
+        NetworkModificationNodeInfoEntity newNodeInfo = networkModificationNodeInfoRepository.save(
             NetworkModificationNodeInfoEntity.builder()
                 .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
                 .idNode(newNode.getIdNode())
@@ -96,7 +96,8 @@ public class NetworkModificationTreeService {
                 .nodeType(networkModificationNode.getNodeType())
                 .build()
         );
-        return newNode;
+        newNodeInfo.setNode(newNode);
+        return newNodeInfo;
     }
 
     public List<ModificationsSearchResultByNode> getNetworkModificationsByNodeInfos(
@@ -114,8 +115,7 @@ public class NetworkModificationTreeService {
                 .toList();
     }
 
-    // TODO test if studyUuid exist and have a node <nodeId>
-    private NetworkModificationNode createAndInsertNode(StudyEntity study, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
+    private NetworkModificationNode createAndInsertNode(StudyEntity study, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode) {
         NodeEntity reference = getNodeEntity(nodeId);
 
         assertNodeNameNotExist(study.getId(), nodeInfo.getName());
@@ -123,24 +123,45 @@ public class NetworkModificationTreeService {
         if (insertMode.equals(InsertMode.BEFORE) && reference.getType().equals(NodeType.ROOT)) {
             throw new StudyException(NOT_ALLOWED);
         }
-        NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ? reference.getParentNode() : reference;
-        NodeEntity node = createNetworkModificationNode(study, parent, nodeInfo);
-        nodeInfo.setId(node.getIdNode());
 
-        if (insertMode.equals(InsertMode.BEFORE)) {
-            reference.setParentNode(node);
-        } else if (insertMode.equals(InsertMode.AFTER)) {
-            getChildren(nodeId).stream()
-                .filter(n -> !n.getIdNode().equals(node.getIdNode()))
-                .forEach(child -> child.setParentNode(node));
+        // Create node
+        NetworkModificationNodeInfoEntity nodeInfoEntity = createNetworkModificationNode(study, insertMode.equals(InsertMode.BEFORE) ? reference.getParentNode() : reference, nodeInfo);
+        NodeEntity nodeEntity = nodeInfoEntity.getNode();
+        nodeInfo.setId(nodeInfoEntity.getIdNode());
+
+        // Set parent and position
+        switch (insertMode) {
+            case CHILD -> nodeInfoEntity.setColumnPosition(getNextColumnPosition(reference.getIdNode()));
+            case BEFORE -> {
+                AbstractNodeInfoEntity referenceNodeInfoEntity = getNodeInfoEntity(reference.getIdNode());
+                nodeInfoEntity.setColumnPosition(referenceNodeInfoEntity.getColumnPosition());
+                reference.setParentNode(nodeEntity);
+                referenceNodeInfoEntity.setColumnPosition(0);
+            }
+            case AFTER -> {
+                nodeInfoEntity.setColumnPosition(0);
+                getChildren(nodeId).stream()
+                    .filter(n -> !n.getIdNode().equals(nodeEntity.getIdNode()))
+                    .forEach(child -> child.setParentNode(nodeEntity));
+            }
         }
         return nodeInfo;
+    }
+
+    private int getNextColumnPosition(UUID parentNodeId) {
+        int val = networkModificationNodeInfoRepository.findColumnPositionsByUuidIn(nodesRepository.findChildrenUuids(parentNodeId))
+            .stream()
+            .filter(Objects::nonNull)
+            .mapToInt(i -> i)
+            .max()
+            .orElse(-1) + 1;
+        return val;
     }
 
     @Transactional
     public NetworkModificationNode createNode(@NonNull StudyEntity study, @NonNull UUID nodeId, @NonNull NetworkModificationNode nodeInfo, @NonNull InsertMode insertMode, String userId) {
         // create new node
-        NetworkModificationNode newNode = createAndInsertNode(study, nodeId, nodeInfo, insertMode, userId);
+        NetworkModificationNode newNode = createAndInsertNode(study, nodeId, nodeInfo, insertMode);
 
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         rootNetworkNodeInfoService.createNodeLinks(study, newNodeInfoEntity);
@@ -150,7 +171,7 @@ public class NetworkModificationTreeService {
 
     private NetworkModificationNode duplicateNode(@NonNull StudyEntity targetStudy, @NonNull UUID referenceNodeId, @NonNull NetworkModificationNode newNodeInfo, @NonNull UUID originNodeUuid, @NonNull InsertMode insertMode, Map<UUID, UUID> mappingModificationUuids) {
         // create new node
-        NetworkModificationNode newNode = createAndInsertNode(targetStudy, referenceNodeId, newNodeInfo, insertMode, null);
+        NetworkModificationNode newNode = createAndInsertNode(targetStudy, referenceNodeId, newNodeInfo, insertMode);
 
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         NetworkModificationNodeInfoEntity originNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(originNodeUuid);

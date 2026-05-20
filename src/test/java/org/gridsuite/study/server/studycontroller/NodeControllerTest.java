@@ -52,10 +52,13 @@ class NodeControllerTest extends StudyTestBase {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        assertEquals(0, rootNode.getChildren().get(0).getColumnPosition());
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
         NetworkModificationNode node2 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID_2, "node2", userId);
         NetworkModificationNode emptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", userId);
-
+        assertEquals(0, node1.getColumnPosition());
+        assertEquals(1, node2.getColumnPosition());
+        assertEquals(1, emptyNode.getColumnPosition());
         /*
          *              rootNode
          *              /      \
@@ -109,7 +112,10 @@ class NodeControllerTest extends StudyTestBase {
 
         // cut the node1 and paste it after node2
         cutAndPasteNode(study1Uuid, node1, node2.getId(), InsertMode.AFTER, 0, userId);
-
+        allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
+        Map<UUID, AbstractNode> allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
         /*
          *              rootNode
          *              /      \
@@ -121,7 +127,6 @@ class NodeControllerTest extends StudyTestBase {
          */
 
         //node2 should now have 1 child : node 1
-        allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
         assertEquals(List.of(node1.getId()), allNodes.stream()
             .filter(nodeEntity ->
                 nodeEntity.getParentNode() != null
@@ -140,7 +145,11 @@ class NodeControllerTest extends StudyTestBase {
         // cut and paste the node2 before emptyNode
         cutAndPasteNode(study1Uuid, node2, emptyNode.getId(), InsertMode.BEFORE, 1, userId);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
-
+        allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(emptyNode.getId()).getColumnPosition());
         /*
          *              rootNode
          *              /      \
@@ -176,7 +185,11 @@ class NodeControllerTest extends StudyTestBase {
         //cut and paste node2 in a new branch starting from modificationNode
         cutAndPasteNode(study1Uuid, node2, modificationNodeUuid, InsertMode.CHILD, 1, userId);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
-
+        allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(emptyNode.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
         /*
          *              rootNode
          *              /      \
@@ -323,9 +336,20 @@ class NodeControllerTest extends StudyTestBase {
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
-
         NetworkModificationNode emptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", BuildStatus.BUILT, userId);
         NetworkModificationNode emptyNodeChild = createNetworkModificationNode(study1Uuid, emptyNode.getId(), UUID.randomUUID(), VARIANT_ID_3, "emptyNodeChild", BuildStatus.BUILT, userId);
+
+        assertEquals(0, rootNode.getChildren().get(0).getColumnPosition());
+        assertEquals(1, emptyNode.getColumnPosition());
+        assertEquals(0, node1.getColumnPosition());
+        assertEquals(0, emptyNodeChild.getColumnPosition());
+        /*
+         *              rootNode
+         *              /      \
+         * modificationNode   emptyNode
+         *     /                    \
+         *  node1              emptyNodeChild
+         */
 
         mockMvc.perform(post(STUDIES_URL +
                     "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
@@ -342,6 +366,23 @@ class NodeControllerTest extends StudyTestBase {
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
         wireMockStubs.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
+
+        Map<UUID, AbstractNode> allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(emptyNode.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(emptyNodeChild.getId()).getColumnPosition());
+        /*
+         *              rootNode
+         *              /
+         * modificationNode
+         *     /
+         *  node1
+         *    /
+         *  emptyNode
+         *    /
+         *  emptyNodeChild
+         */
 
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(emptyNode.getId(), emptyNodeChild.getId()));
         checkComputationStatusMessageReceived();
@@ -478,6 +519,18 @@ class NodeControllerTest extends StudyTestBase {
         NetworkModificationNode node3 = createNetworkModificationNode(study1Uuid, rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node3", BuildStatus.BUILT, userId);
         NetworkModificationNode emptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", userId);
 
+        assertEquals(0, rootNode.getChildren().get(0).getColumnPosition());
+        assertEquals(1, node3.getColumnPosition());
+        assertEquals(0, node1.getColumnPosition());
+        assertEquals(1, node2.getColumnPosition());
+        /*
+         *              rootNode
+         *              /      \
+         * modificationNode   node3
+         *     /        \
+         *  node1      node2
+         */
+
         // add modification on node "node1"
         String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
@@ -524,6 +577,22 @@ class NodeControllerTest extends StudyTestBase {
         // duplicate the node1 after node2
         UUID duplicatedNodeUuid = duplicateNode(study1Uuid, study1Uuid, node1, node2.getId(), InsertMode.AFTER, true, userId);
 
+        Map<UUID, AbstractNode> allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node3.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(duplicatedNodeUuid).getColumnPosition());
+        /*
+         *              rootNode
+         *              /      \
+         * modificationNode   node3
+         *     /        \
+         *  node1      node2
+         *              \
+         *              duplicatedNode
+         */
+
         //node2 should now have 1 child
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
         assertEquals(1, allNodes.stream()
@@ -542,6 +611,23 @@ class NodeControllerTest extends StudyTestBase {
             .count());
 
         //now the tree looks like root -> modificationNode -> duplicatedNode2 -> node1 -> node2 -> duplicatedNode1
+        allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node3.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(duplicatedNodeUuid2).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(duplicatedNodeUuid).getColumnPosition());
+        /*
+         *              rootNode
+         *              /      \
+         * modificationNode   node3
+         *     /                \
+         *  duplicatedNode2      node2
+         *     /                  \
+         *   node1                duplicatedNode
+         */
+
         //duplicate node1 in a new branch starting from duplicatedNode2
         UUID duplicatedNodeUuid3 = duplicateNode(study1Uuid, study1Uuid, node1, duplicatedNodeUuid2, InsertMode.CHILD, true, userId);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
@@ -553,6 +639,24 @@ class NodeControllerTest extends StudyTestBase {
             .count());
         //and expect that no other node has the new branch create node as parent
         assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(duplicatedNodeUuid3)).count());
+
+        allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node3.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(duplicatedNodeUuid2).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(duplicatedNodeUuid3).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(duplicatedNodeUuid).getColumnPosition());
+        /*
+         *                 rootNode
+         *              /           \
+         * modificationNode         node3
+         *     /                        \
+         *  duplicatedNode2             node2
+         *     /        \                   \
+         *   node1  duplicatedNodeUuid3    duplicatedNode
+         */
 
         //try copy non-existing node and expect not found
         mockMvc.perform(post(STUDIES_URL +
@@ -594,13 +698,21 @@ class NodeControllerTest extends StudyTestBase {
         NetworkModificationNode node3 = createNetworkModificationNode(study1Uuid, node2.getId(), UUID.randomUUID(), VARIANT_ID, "node3", BuildStatus.BUILT, userId);
         NetworkModificationNode node4 = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", userId);
 
-        /*tree state
-            root
-            ├── root children
-            │   └── node 1
-            │       └── node 2
-            │           └── node 3
-            └── node 4
+        assertEquals(0, rootNode.getChildren().get(0).getColumnPosition());
+        assertEquals(1, node4.getColumnPosition());
+        assertEquals(0, node1.getColumnPosition());
+        assertEquals(0, node2.getColumnPosition());
+        assertEquals(0, node3.getColumnPosition());
+        /*
+         *              rootNode
+         *              /      \
+         * modificationNode   node4
+         *      /
+         *  node1
+         *     /
+         *  node2
+         *     /
+         *   node3
          */
 
         // add modification on node "node1" (not built) -> invalidation of node 3
@@ -676,16 +788,20 @@ class NodeControllerTest extends StudyTestBase {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateUuid, 3);
 
-        /*tree state
-            root
-            ├── root children
-            │   └── node 1
-            │       └── node 2
-            │           └── node 3
-            └── node 4
-                └── node 1 duplicated
-                    └── node 2 duplicated
-                        └── node 3 duplicated
+        Map<UUID, AbstractNode> allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        networkModificationTreeService.getAllChildrenUuids(node4.getId()).forEach(childUuid ->
+            assertEquals(0, allNodesInfos.get(childUuid).getColumnPosition())
+        );
+        /*
+         *              rootNode
+         *              /      \
+         * modificationNode   node4
+         *      /               \
+         *  node1               duplicate node1
+         *     /                    \
+         *  node2               duplicate node2
+         *     /                    \
+         *   node3              duplicate node3
          */
 
         mockMvc.perform(get(STUDIES_URL +

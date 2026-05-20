@@ -9,6 +9,7 @@ package org.gridsuite.study.server.repository.networkmodificationtree;
 
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,4 +21,7 @@ public interface NetworkModificationNodeInfoRepository extends NodeInfoRepositor
     List<AbstractNodeInfoEntity> findAllByNodeStudyIdAndName(UUID studyUuid, String name);
 
     List<NetworkModificationNodeInfoEntity> findByModificationGroupUuidIn(List<UUID> modificationGroupUuid);
+
+    @Query("select n.columnPosition from NetworkModificationNodeInfoEntity n where n.idNode in :uuids")
+    List<Integer> findColumnPositionsByUuidIn(List<UUID> uuids);
 }
