@@ -2257,6 +2257,8 @@ public class StudyService {
 
     private CompletableFuture<Void> deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos, boolean skipDeleteVariants) {
         List<CompletableFuture<?>> futures = new ArrayList<>();
+
+        // We might want to skip variant deletion in a study invalidation scenario when a network is wholly deleted at the end of the process
         if (!skipDeleteVariants) {
             futures.add(studyServerExecutionService.runAsync(() ->
                     networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(),
