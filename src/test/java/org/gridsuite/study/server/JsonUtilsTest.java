@@ -52,10 +52,10 @@ class JsonUtilsTest {
     @Test
     void testNonSerializableParameter() {
         class NonSerializable {
-            private final String hidden = "hidden";
         }
 
-        StudyException exception = assertThrows(StudyException.class, () -> JsonUtils.serializeImportParameters(Map.of("nonSerializable", new NonSerializable())));
+        Map<String, Object> nonSerializableParams = Map.of("nonSerializable", new NonSerializable());
+        StudyException exception = assertThrows(StudyException.class, () -> JsonUtils.serializeImportParameters(nonSerializableParams));
         assertEquals(StudyBusinessErrorCode.UNPROCESSABLE_IMPORT_PARAMETER, exception.getBusinessErrorCode());
         assertTrue(exception.getMessage().contains("Import parameter 'nonSerializable =>"));
     }
