@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class JsonUtilsTest {
 
     @Test
-    void shouldSerializeImportParameters() {
+    void testSerializeImportParameters() {
         Map<String, Object> params = new HashMap<>();
         params.put("string", "value");
         params.put("int", 123);
@@ -43,14 +43,25 @@ class JsonUtilsTest {
     }
 
     @Test
-    void shouldReturnEmptyMapWhenSerializeNull() {
+    void testSerializeNull() {
         Map<String, String> result = JsonUtils.serializeImportParameters(null);
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }
 
     @Test
-    void shouldDeserializeImportParameters() {
+    void testNonSerializableParameter() {
+        class NonSerializable {
+            private final String hidden = "hidden";
+        }
+
+        StudyException exception = assertThrows(StudyException.class, () -> JsonUtils.serializeImportParameters(Map.of("nonSerializable", new NonSerializable())));
+        assertEquals(StudyBusinessErrorCode.UNPROCESSABLE_IMPORT_PARAMETER, exception.getBusinessErrorCode());
+        assertTrue(exception.getMessage().contains("Import parameter 'nonSerializable =>"));
+    }
+
+    @Test
+    void testDeserializeImportParameters() {
         Map<String, String> rawParams = new HashMap<>();
         rawParams.put("string", "\"value\"");
         rawParams.put("int", "123");
@@ -72,14 +83,14 @@ class JsonUtilsTest {
     }
 
     @Test
-    void shouldReturnEmptyMapWhenDeserializeNull() {
+    void testDeserializeNull() {
         Map<String, Object> result = JsonUtils.deserializeImportParameters(null);
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }
 
     @Test
-    void shouldThrowExceptionWhenDeserializeInvalidJson() {
+    void testDeserializeInvalidJson() {
         Map<String, String> rawParams = Map.of("invalid", "{notJson}");
         StudyException exception = assertThrows(StudyException.class, () -> JsonUtils.deserializeImportParameters(rawParams));
         assertEquals(StudyBusinessErrorCode.UNPROCESSABLE_IMPORT_PARAMETER, exception.getBusinessErrorCode());
