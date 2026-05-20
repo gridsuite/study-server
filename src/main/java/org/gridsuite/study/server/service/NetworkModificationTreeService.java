@@ -149,13 +149,12 @@ public class NetworkModificationTreeService {
     }
 
     private int getNextColumnPosition(UUID parentNodeId) {
-        int val = networkModificationNodeInfoRepository.findColumnPositionsByUuidIn(nodesRepository.findChildrenUuids(parentNodeId))
+        return networkModificationNodeInfoRepository.findColumnPositionsByUuidIn(nodesRepository.findChildrenUuids(parentNodeId))
             .stream()
             .filter(Objects::nonNull)
             .mapToInt(i -> i)
             .max()
             .orElse(-1) + 1;
-        return val;
     }
 
     @Transactional
