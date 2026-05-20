@@ -315,19 +315,15 @@ class SupervisionControllerTest {
     @Test
     void testInvalidateStudy() throws Exception {
         initStudy();
-
-        Mockito.doNothing().when(networkService).deleteVariants(eq(NETWORK_UUID), any());
         Mockito.doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
 
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
                 .andExpect(status().isOk());
 
-        // Tree was unbuilt: variants dropped from network store
-        Mockito.verify(networkService, Mockito.times(1)).deleteVariants(eq(NETWORK_UUID), any());
-
         // Remote root-network data was deleted
         Mockito.verify(rootNetworkService, Mockito.times(1))
                 .invalidateRootNetworkRemoteInfos(any(), eq(true));
+        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(eq(NETWORK_UUID));
 
         // Indexation flipped to NOT_INDEXED so the auto-detect path will reimport on reopen
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.NOT_INDEXED.name());
