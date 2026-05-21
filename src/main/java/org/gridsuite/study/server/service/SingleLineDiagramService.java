@@ -14,12 +14,12 @@ package org.gridsuite.study.server.service;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
@@ -30,13 +30,6 @@ import static org.gridsuite.study.server.StudyConstants.*;
 
 @Service
 public class SingleLineDiagramService {
-
-    static final String QUERY_PARAM_DEPTH = "depth";
-    static final String QUERY_PARAM_INIT_WITH_GEO_DATA = "withGeoData";
-    static final String QUERY_PARAM_ELEMENT_PARAMS = "elementParams";
-    static final String NOT_FOUND = " not found";
-    static final String VOLTAGE_LEVEL = "Voltage level ";
-    static final String ELEMENT = "Element";
 
     private final RestTemplate restTemplate;
 
@@ -154,28 +147,5 @@ public class SingleLineDiagramService {
 
     public void setSingleLineDiagramServerBaseUri(String singleLineDiagramServerBaseUri) {
         this.singleLineDiagramServerBaseUri = singleLineDiagramServerBaseUri;
-    }
-
-    public void addParameters(UriComponentsBuilder uriComponentsBuilder, String variantId) {
-        if (!StringUtils.isBlank(variantId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-        }
-    }
-
-    public void createNadPositionsConfigFromCsv(MultipartFile file) {
-        var path = UriComponentsBuilder.fromPath(DELIMITER + SINGLE_LINE_DIAGRAM_API_VERSION +
-                "/network-area-diagram/config/positions").buildAndExpand()
-            .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-
-        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("file_name", file.getOriginalFilename());
-        body.add("file", file.getResource());
-
-        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-
-        restTemplate.exchange(singleLineDiagramServerBaseUri + path, HttpMethod.POST, requestEntity, Void.class);
     }
 }
