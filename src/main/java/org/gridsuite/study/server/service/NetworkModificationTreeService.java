@@ -581,7 +581,6 @@ public class NetworkModificationTreeService {
         return node;
     }
 
-    @Transactional(readOnly = true)
     public UUID getStudyRootNodeUuid(UUID studyId) {
         return nodesRepository.findByStudyIdAndType(studyId, NodeType.ROOT).orElseThrow(() -> new StudyException(NOT_FOUND, "Root node not found")).getIdNode();
     }
