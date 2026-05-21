@@ -632,10 +632,15 @@ public class RootNetworkNodeInfoService {
         return infos;
     }
 
-    public void deleteRootNetworkNodeRemoteInfos(List<RootNetworkNodeInfo> rootNetworkNodeInfos) {
-        if (rootNetworkNodeInfos == null || rootNetworkNodeInfos.isEmpty()) {
+    @Transactional(readOnly = true)
+    public void deleteRootNetworkNodeRemoteInfos(List<UUID> rootNetworkUuids) {
+        if (rootNetworkUuids == null || rootNetworkUuids.isEmpty()) {
             return;
         }
+        List<RootNetworkNodeInfo> rootNetworkNodeInfos = rootNetworkUuids.stream()
+                .flatMap(rnUuid -> rootNetworkNodeInfoRepository.findAllByRootNetworkId(rnUuid).stream())
+                .map(RootNetworkNodeInfoEntity::toDto)
+                .toList();
         // Do not wait completion and do not throw exception
         CompletableFuture.allOf(getRemoteDeletions(getRemoteDeletionInfos(rootNetworkNodeInfos)).toArray(CompletableFuture[]::new));
     }
