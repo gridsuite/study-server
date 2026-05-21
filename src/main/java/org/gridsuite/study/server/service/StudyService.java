@@ -1906,7 +1906,7 @@ public class StudyService {
                 : InvalidateNodeTreeParameters.ALL;
         List<CompletableFuture<Void>> futures = getStudy(studyUuid).getRootNetworks().stream()
                 .map(rn -> studyServerExecutionService.runAsync(() ->
-                        invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), invalidateNodeTreeParameters, false, skipDeleteVariants)))
+                        invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), invalidateNodeTreeParameters, skipDeleteVariants)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -2086,19 +2086,16 @@ public class StudyService {
     }
 
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
-        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters, false, false);
+        invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters, false);
     }
 
-    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters, boolean blocking, boolean skipDeleteVariants) {
+    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters, boolean skipDeleteVariants) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
 
         InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.invalidateNodeTree(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
         invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
-        CompletableFuture<Void> cf = deleteInvalidationInfos(invalidateNodeInfos, skipDeleteVariants);
-        if (blocking) {
-            cf.join();
-        }
+        deleteInvalidationInfos(invalidateNodeInfos, skipDeleteVariants);
 
         if (!networkModificationTreeService.isRootNode(nodeUuid)) {
             emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
@@ -3941,7 +3938,6 @@ public class StudyService {
             .toList();
     }
 
-    @Transactional
     public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId) {
         StudyEntity study = getStudy(studyUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
@@ -3953,7 +3949,7 @@ public class StudyService {
             // First we unbuild all nodes
             doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId);
             // Then we erase data linked to root node on all root networks
-            rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetwork.toDto()), true);
+            rootNetworkService.deleteRootNetworkRemoteInfos(List.of(rootNetwork.toDto()), true, true);
             updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
         } finally {
             networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNodeUuid);
