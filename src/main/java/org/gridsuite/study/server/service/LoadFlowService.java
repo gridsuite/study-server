@@ -15,6 +15,7 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
@@ -38,7 +39,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATIO
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class LoadFlowService extends AbstractComputationService {
+public class LoadFlowService extends AbstractComputationService implements ComputationParameters {
     private static final String QUERY_PARAM_APPLY_SOLVED_VALUES = "applySolvedValues";
     private static final String RESULT_UUID = "resultUuid";
 
@@ -254,8 +255,8 @@ public class LoadFlowService extends AbstractComputationService {
         return restTemplate.postForObject(loadFlowServerBaseUri + path, httpEntity, UUID.class);
     }
 
-    public UUID duplicateLoadFlowParameters(UUID sourceParametersUuid) {
-
+    @Override
+    public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
 
         var path = UriComponentsBuilder
@@ -280,10 +281,11 @@ public class LoadFlowService extends AbstractComputationService {
         restTemplate.put(loadFlowServerBaseUri + path, httpEntity);
     }
 
-    public void deleteLoadFlowParameters(UUID uuid) {
-        Objects.requireNonNull(uuid);
+    @Override
+    public void deleteParameters(UUID parametersUuid) {
+        Objects.requireNonNull(parametersUuid);
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
-                .buildAndExpand(uuid)
+                .buildAndExpand(parametersUuid)
                 .toUriString();
 
         restTemplate.delete(loadFlowServerBaseUri + path);

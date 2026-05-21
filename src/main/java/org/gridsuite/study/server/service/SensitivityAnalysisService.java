@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class SensitivityAnalysisService extends AbstractComputationService {
+public class SensitivityAnalysisService extends AbstractComputationService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
     private static final String RESULTS = "results";
@@ -279,7 +280,8 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
     }
 
-    public UUID duplicateSensitivityAnalysisParameters(UUID sourceParametersUuid) {
+    @Override
+    public UUID duplicateParameters(UUID sourceParametersUuid) {
 
         Objects.requireNonNull(sourceParametersUuid);
 
@@ -306,8 +308,8 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         restTemplate.put(sensitivityAnalysisServerBaseUri + path, httpEntity);
     }
 
-    public void deleteSensitivityAnalysisParameters(UUID uuid) {
-
+    @Override
+    public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
 
         String path = UriComponentsBuilder

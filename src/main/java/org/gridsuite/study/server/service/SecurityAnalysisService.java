@@ -18,6 +18,7 @@ import org.gridsuite.study.server.dto.RunSecurityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
@@ -42,7 +43,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class SecurityAnalysisService extends AbstractComputationService {
+public class SecurityAnalysisService extends AbstractComputationService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -236,7 +237,8 @@ public class SecurityAnalysisService extends AbstractComputationService {
         restTemplate.put(securityAnalysisServerBaseUri + path, httpEntity);
     }
 
-    public UUID duplicateSecurityAnalysisParameters(UUID sourceParametersUuid) {
+    @Override
+    public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
 
         var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
@@ -266,7 +268,8 @@ public class SecurityAnalysisService extends AbstractComputationService {
         return studyEntity.getSecurityAnalysisParametersUuid();
     }
 
-    public void deleteSecurityAnalysisParameters(UUID uuid) {
+    @Override
+    public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(uuid)
