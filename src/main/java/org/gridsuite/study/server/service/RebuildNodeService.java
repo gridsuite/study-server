@@ -36,8 +36,9 @@ public class RebuildNodeService {
         studyService.invalidateNodeTreeWithLF(studyUuid, nodeUuid);
         try {
             studyService.createNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
-        } finally {
+        } catch (Exception e) {
             studyService.unblockNodeTree(studyUuid, nodeUuid);
+            throw e;
         }
     }
 
@@ -121,11 +122,12 @@ public class RebuildNodeService {
         boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
         try {
             studyService.moveNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, null, isTargetInDifferentNodeTree, userId);
-        } finally {
+        } catch (Exception e) {
             studyService.unblockNodeTree(studyUuid, originNodeUuid);
             if (isTargetInDifferentNodeTree) {
                 studyService.unblockNodeTree(studyUuid, targetNodeUuid);
             }
+            throw e;
         }
     }
 

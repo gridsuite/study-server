@@ -73,7 +73,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -1730,28 +1729,13 @@ public class StudyService {
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_CREATING_IN_PROGRESS);
         try {
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(studyUuid);
-
-            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
-                .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), nodeUuid, rootNetworkEntity.getNetworkUuid()))
-                .toList();
-
-            NetworkModificationsResult networkModificationResults = networkModificationService.createModification(groupUuid, Pair.of(createModificationAttributes, modificationApplicationContexts));
-
-            if (networkModificationResults != null && networkModificationResults.modificationResults() != null) {
-                int index = 0;
-                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
-                for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
-                    if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
-                        emitNetworkModificationImpacts(studyUuid, nodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
-                    }
-                    index++;
-                }
-            }
-        } finally {
+            ModificationApplicationRequest appRequest = buildModificationApplicationRequest(studyUuid, nodeUuid);
+            networkModificationService.createModification(groupUuid, appRequest.receiver(), Pair.of(createModificationAttributes, appRequest.contexts()));
+            notificationService.emitElementUpdated(studyUuid, userId);
+        } catch (Exception e) {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
+            throw e;
         }
-        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
@@ -2378,24 +2362,33 @@ public class StudyService {
             UUID originGroupUuid = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
             UUID targetGroupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
 
-            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
-                .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
-                .toList();
+            List<ModificationApplicationContext> modificationApplicationContexts = isTargetInDifferentNodeTree
+                ? studyRootNetworkEntities.stream()
+                    .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
+                    .toList()
+                : List.of();
 
-            NetworkModificationsResult networkModificationsResult = networkModificationService.moveModifications(originGroupUuid, targetGroupUuid, beforeUuid, Pair.of(modificationUuidList, modificationApplicationContexts), isTargetInDifferentNodeTree);
-            rootNetworkNodeInfoService.moveModificationsToExclude(originNodeUuid, targetNodeUuid, networkModificationsResult.modificationUuids());
+            UUID originNodeForReceiver = isTargetDifferentNode ? originNodeUuid : null;
+            ModificationReceiver receiver = isTargetInDifferentNodeTree
+                ? new ModificationReceiver(studyUuid, targetNodeUuid, originNodeForReceiver,
+                    studyRootNetworkEntities.stream().map(RootNetworkEntity::getId).toList())
+                : null;
 
-            // Target node
-            if (isTargetInDifferentNodeTree) {
-                emitNetworkModificationImpactsForAllRootNetworks(networkModificationsResult.modificationResults(), studyEntity, targetNodeUuid);
+            List<UUID> savedUuids = networkModificationService.moveModifications(originGroupUuid, targetGroupUuid, beforeUuid, receiver, Pair.of(modificationUuidList, modificationApplicationContexts));
+            rootNetworkNodeInfoService.moveModificationsToExclude(originNodeUuid, targetNodeUuid, savedUuids);
+            notificationService.emitElementUpdated(studyUuid, userId);
+
+            if (receiver == null) {
+                // same group reorder or same subtree move: no async apply
+                notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
             }
-        } finally {
+        } catch (Exception e) {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
             if (isTargetDifferentNode) {
                 notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids);
             }
+            throw e;
         }
-        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void moveSubModification(
@@ -2420,16 +2413,50 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    private void emitNetworkModificationImpactsForAllRootNetworks(List<Optional<NetworkModificationResult>> modificationResults, StudyEntity studyEntity, UUID impactedNode) {
-        int index = 0;
-        List<RootNetworkEntity> rootNetworkEntities = studyEntity.getRootNetworks();
-        // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
-        for (Optional<NetworkModificationResult> modificationResultOpt : modificationResults) {
-            if (modificationResultOpt.isPresent() && rootNetworkEntities.get(index) != null) {
-                emitNetworkModificationImpacts(studyEntity.getId(), impactedNode, rootNetworkEntities.get(index).getId(), modificationResultOpt.get());
+    private record ModificationApplicationRequest(
+        List<ModificationApplicationContext> contexts,
+        ModificationReceiver receiver) { }
+
+    private ModificationApplicationRequest buildModificationApplicationRequest(UUID studyUuid, UUID nodeUuid) {
+        List<RootNetworkEntity> rootNetworks = getStudyRootNetworks(studyUuid);
+        List<ModificationApplicationContext> contexts = rootNetworks.stream()
+            .map(rn -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rn.getId(), nodeUuid, rn.getNetworkUuid()))
+            .toList();
+        ModificationReceiver receiver = new ModificationReceiver(studyUuid, nodeUuid, null,
+            rootNetworks.stream().map(RootNetworkEntity::getId).toList());
+        return new ModificationApplicationRequest(contexts, receiver);
+    }
+
+    private void emitApplicationEnd(ModificationReceiver receiver) {
+        UUID nodeUuid = receiver.nodeUuid();
+        try {
+            List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
+            notificationService.emitEndModificationEquipmentNotification(receiver.studyUuid(), nodeUuid, childrenUuids);
+            if (receiver.originNodeUuid() != null) {
+                List<UUID> originChildrenUuids = networkModificationTreeService.getChildrenUuids(receiver.originNodeUuid());
+                notificationService.emitEndModificationEquipmentNotification(receiver.studyUuid(), receiver.originNodeUuid(), originChildrenUuids);
             }
-            index++;
+        } finally {
+            receiver.rootNetworkUuids().forEach(rn -> networkModificationTreeService.unblockNodeTree(rn, nodeUuid));
         }
+    }
+
+    public void handleApplicationResult(ModificationReceiver receiver, NetworkModificationsResult result) {
+        try {
+            List<Optional<NetworkModificationResult>> modificationResults = result.modificationResults();
+            List<UUID> rootNetworkUuids = receiver.rootNetworkUuids();
+            for (int i = 0; i < modificationResults.size(); i++) {
+                final int index = i;
+                modificationResults.get(i).ifPresent(
+                    r -> emitNetworkModificationImpacts(receiver.studyUuid(), receiver.nodeUuid(), rootNetworkUuids.get(index), r));
+            }
+        } finally {
+            emitApplicationEnd(receiver);
+        }
+    }
+
+    public void handleApplicationFailed(ModificationReceiver receiver) {
+        emitApplicationEnd(receiver);
     }
 
     @Transactional
@@ -2439,13 +2466,19 @@ public class StudyService {
         UUID originNodeUuid,
         List<UUID> modificationsUuids,
         String userId) {
-        duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
-            (groupUuid, modificationApplicationContexts) -> {
-                NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
-                copyModificationsToExclude(originNodeUuid, targetNodeUuid, modificationsUuids, networkModificationResults);
-                return networkModificationResults;
-            },
-            userId);
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        try {
+            checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
+            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
+            ModificationApplicationRequest appRequest = buildModificationApplicationRequest(targetStudyUuid, targetNodeUuid);
+            List<UUID> savedUuids = networkModificationService.duplicateModifications(groupUuid, appRequest.receiver(), Pair.of(modificationsUuids, appRequest.contexts()));
+            copyModificationsToExclude(originNodeUuid, targetNodeUuid, modificationsUuids, savedUuids);
+            notificationService.emitElementUpdated(targetStudyUuid, userId);
+        } catch (Exception e) {
+            notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
+            throw e;
+        }
     }
 
     @Transactional
@@ -2455,65 +2488,33 @@ public class StudyService {
         List<Pair<UUID, String>> compositesInfos,
         String userId,
         StudyConstants.CompositeModificationsActionType action) {
-        duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
-            (groupUuid, modificationApplicationContexts) ->
-                networkModificationService.insertCompositeModifications(groupUuid, action, Pair.of(compositesInfos, modificationApplicationContexts)),
-            userId);
-    }
-
-    private void duplicateModificationsOrInsertComposites(
-        UUID targetStudyUuid,
-        UUID targetNodeUuid,
-        BiFunction<UUID, List<ModificationApplicationContext>, NetworkModificationsResult> handleModifications,
-        String userId) {
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         notificationService.emitStartModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
-
-            List<RootNetworkEntity> studyRootNetworkEntities = getStudyRootNetworks(targetStudyUuid);
             UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
-
-            List<ModificationApplicationContext> modificationApplicationContexts = studyRootNetworkEntities.stream()
-                .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
-                .toList();
-
-            NetworkModificationsResult networkModificationResults = handleModifications.apply(groupUuid, modificationApplicationContexts);
-
-            sendImpactNotifications(targetStudyUuid, targetNodeUuid, networkModificationResults, studyRootNetworkEntities);
-        } finally {
+            ModificationApplicationRequest appRequest = buildModificationApplicationRequest(targetStudyUuid, targetNodeUuid);
+            networkModificationService.insertCompositeModifications(groupUuid, action, appRequest.receiver(), Pair.of(compositesInfos, appRequest.contexts()));
+            notificationService.emitElementUpdated(targetStudyUuid, userId);
+        } catch (Exception e) {
             notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
-        }
-        notificationService.emitElementUpdated(targetStudyUuid, userId);
-    }
-
-    private void sendImpactNotifications(UUID targetStudyUuid, UUID targetNodeUuid, NetworkModificationsResult networkModificationResults, List<RootNetworkEntity> studyRootNetworkEntities) {
-        if (networkModificationResults != null) {
-            int index = 0;
-            // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
-            for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
-                if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
-                    emitNetworkModificationImpacts(targetStudyUuid, targetNodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
-                }
-                index++;
-            }
+            throw e;
         }
     }
 
     private void copyModificationsToExclude(UUID originNodeUuid,
                                             UUID targetNodeUuid,
                                             List<UUID> modificationsUuids,
-                                            NetworkModificationsResult networkModificationResults) {
+                                            List<UUID> savedUuids) {
         Map<UUID, UUID> mappingModificationsUuids = new HashMap<>();
-        List<UUID> copyUuids = networkModificationResults.modificationUuids();
 
         // Map root-level modifications
         for (int i = 0; i < modificationsUuids.size(); i++) {
-            mappingModificationsUuids.put(modificationsUuids.get(i), copyUuids.get(i));
+            mappingModificationsUuids.put(modificationsUuids.get(i), savedUuids.get(i));
         }
 
         List<UUID> originalChildren = networkModificationService.findAllChildrenUuids(modificationsUuids);
-        List<UUID> copyChildren = networkModificationService.findAllChildrenUuids(copyUuids);
+        List<UUID> copyChildren = networkModificationService.findAllChildrenUuids(savedUuids);
         for (int i = 0; i < originalChildren.size(); i++) {
             mappingModificationsUuids.put(originalChildren.get(i), copyChildren.get(i));
         }
@@ -3365,27 +3366,28 @@ public class StudyService {
                 }
             });
             // duplicate the modification created by voltageInit server into the current node
-            NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModificationsFromGroup(networkModificationTreeService.getModificationGroupUuid(nodeUuid), voltageInitModificationsGroupUuid, Pair.of(List.of(), modificationApplicationContexts));
+            List<UUID> savedUuids = networkModificationService.duplicateModificationsFromGroup(
+                networkModificationTreeService.getModificationGroupUuid(nodeUuid), voltageInitModificationsGroupUuid,
+                new ModificationReceiver(studyUuid, nodeUuid, null, List.of(rootNetworkUuid)),
+                Pair.of(List.of(), modificationApplicationContexts));
 
-            // We expect a single voltageInit modification in the result list
-            if (networkModificationResults != null && networkModificationResults.modificationUuids().size() == 1) {
+            // We expect a single voltageInit modification, deactivate it for all other root networks synchronously
+            if (savedUuids.size() == 1) {
                 for (UUID otherRootNetwork : rootNetworkToDeactivateUuids) {
-                    rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, otherRootNetwork, Set.of(networkModificationResults.modificationUuids().getFirst()), false);
+                    rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, otherRootNetwork, Set.of(savedUuids.getFirst()), false);
                 }
-                // The modification was applied only on rootNetworkUuid, so the single result must be attributed to it
-                networkModificationResults.modificationResults().getFirst()
-                    .ifPresent(result -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, result));
             }
 
             voltageInitService.resetModificationsGroupUuid(resultUuid);
 
             // send notification voltage init result has changed
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
-        } finally {
-            networkModificationTreeService.unblockNodeTree(rootNetworkUuid, nodeUuid);
+            notificationService.emitElementUpdated(studyUuid, userId);
+        } catch (Exception e) {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
+            networkModificationTreeService.unblockNodeTree(rootNetworkUuid, nodeUuid);
+            throw e;
         }
-        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional

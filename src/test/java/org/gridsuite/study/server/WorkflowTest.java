@@ -9,7 +9,9 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.modification.ModificationReceiver;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -25,7 +27,9 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -109,5 +113,33 @@ class WorkflowTest {
         // check loadflow is actually ran after build is completed
         verify(notificationService, times(1)).emitNodeBuildFailed(studyUuid, nodeUuid, rootNetworkUuid, errorMessage);
         verify(studyService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid);
+    }
+
+    @Test
+    void testConsumeApplicationResult() throws JsonProcessingException {
+        NetworkModificationsResult result = new NetworkModificationsResult(
+            List.of(UUID.randomUUID()), List.of(Optional.empty()));
+        ModificationReceiver receiver = new ModificationReceiver(studyUuid, nodeUuid, null, List.of(rootNetworkUuid));
+
+        Map<String, Object> headers = new HashMap<>();
+        headers.put(HEADER_RECEIVER, objectMapper.writeValueAsString(receiver));
+        MessageHeaders messageHeaders = new MessageHeaders(headers);
+
+        consumerService.consumeApplicationResult().accept(MessageBuilder.createMessage(result, messageHeaders));
+
+        verify(studyService, times(1)).handleApplicationResult(receiver, result);
+    }
+
+    @Test
+    void testConsumeApplicationFailed() throws JsonProcessingException {
+        ModificationReceiver receiver = new ModificationReceiver(studyUuid, nodeUuid, null, List.of(rootNetworkUuid));
+
+        Map<String, Object> headers = new HashMap<>();
+        headers.put(HEADER_RECEIVER, objectMapper.writeValueAsString(receiver));
+        MessageHeaders messageHeaders = new MessageHeaders(headers);
+
+        consumerService.consumeApplicationFailed().accept(MessageBuilder.createMessage("", messageHeaders));
+
+        verify(studyService, times(1)).handleApplicationFailed(receiver);
     }
 }

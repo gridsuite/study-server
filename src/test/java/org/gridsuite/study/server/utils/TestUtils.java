@@ -6,6 +6,8 @@
  */
 package org.gridsuite.study.server.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.google.common.io.ByteStreams;
@@ -19,6 +21,8 @@ import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.error.StudyBusinessErrorCode;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.dto.modification.ModificationReceiver;
+import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -28,12 +32,16 @@ import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.utils.assertions.Assertions;
 import org.junit.platform.commons.util.StringUtils;
 import org.mockito.stubbing.Answer;
+import org.springframework.cloud.stream.binder.test.InputDestination;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -42,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -90,13 +99,54 @@ public final class TestUtils {
         }""";
 
     private final RootNetworkRepository rootNetworkRepository;
+    private InputDestination input;
+    private ObjectMapper objectMapper;
 
     public TestUtils(RootNetworkRepository rootNetworkRepository) {
         this.rootNetworkRepository = rootNetworkRepository;
     }
 
+    @Autowired
+    void setObjectMapper(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
+    @Autowired(required = false)
+    void setInput(InputDestination input) {
+        this.input = input;
+    }
+
     public UUID getOneRootNetworkUuid(UUID studyUuid) {
         return getOneRootNetwork(studyUuid).getId();
+    }
+
+    public void sendApplicationResult(UUID studyUuid, UUID nodeUuid) {
+        sendApplicationResult(studyUuid, nodeUuid, (UUID) null);
+    }
+
+    public void sendApplicationResult(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid) {
+        sendApplicationResult(studyUuid, nodeUuid, originNodeUuid, new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty())));
+    }
+
+    public void sendApplicationResult(UUID studyUuid, UUID nodeUuid, NetworkModificationsResult result) {
+        sendApplicationResult(studyUuid, nodeUuid, null, result);
+    }
+
+    public void sendApplicationResult(UUID studyUuid, UUID nodeUuid, UUID originNodeUuid, NetworkModificationsResult result) {
+        sendApplicationResult(studyUuid, nodeUuid, getOneRootNetworkUuid(studyUuid), originNodeUuid, result);
+    }
+
+    public void sendApplicationResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID originNodeUuid, NetworkModificationsResult result) {
+        Objects.requireNonNull(input, "InputDestination is not available - ensure @ContextConfigurationWithTestChannel is on the test class");
+        ModificationReceiver receiver = new ModificationReceiver(studyUuid, nodeUuid, originNodeUuid, List.of(rootNetworkUuid));
+        try {
+            String receiverEncoded = URLEncoder.encode(objectMapper.writeValueAsString(receiver), StandardCharsets.UTF_8);
+            input.send(MessageBuilder.withPayload(result)
+                .setHeader(HEADER_RECEIVER, receiverEncoded)
+                .build(), "modification.result");
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public RootNetworkEntity getOneRootNetwork(UUID studyUuid) {
