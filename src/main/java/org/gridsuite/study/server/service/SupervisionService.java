@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2023, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -84,6 +84,8 @@ public class SupervisionService {
 
     private final RootNetworkService rootNetworkService;
 
+    private static final String SUPERVISION_USER = "Supervision";
+
     public SupervisionService(StudyService studyService,
                               NetworkModificationTreeService networkModificationTreeService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
@@ -129,19 +131,19 @@ public class SupervisionService {
         return switch (computationType) {
             case LOAD_FLOW -> dryRun ? loadFlowService.getLoadFlowResultsCount() : deleteLoadflowResults();
             case DYNAMIC_SIMULATION ->
-                    dryRun ? dynamicSimulationService.getResultsCount() : deleteDynamicSimulationResults();
+                dryRun ? dynamicSimulationService.getResultsCount() : deleteDynamicSimulationResults();
             case DYNAMIC_SECURITY_ANALYSIS ->
-                    dryRun ? dynamicSecurityAnalysisService.getResultsCount() : deleteDynamicSecurityAnalysisResults();
+                dryRun ? dynamicSecurityAnalysisService.getResultsCount() : deleteDynamicSecurityAnalysisResults();
             case DYNAMIC_MARGIN_CALCULATION ->
-                    dryRun ? dynamicMarginCalculationService.getResultsCount() : deleteDynamicMarginCalculationResults();
+                dryRun ? dynamicMarginCalculationService.getResultsCount() : deleteDynamicMarginCalculationResults();
             case SECURITY_ANALYSIS ->
-                    dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
+                dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
             case SENSITIVITY_ANALYSIS ->
-                    dryRun ? sensitivityAnalysisService.getSensitivityAnalysisResultsCount() : deleteSensitivityAnalysisResults();
+                dryRun ? sensitivityAnalysisService.getSensitivityAnalysisResultsCount() : deleteSensitivityAnalysisResults();
             case SHORT_CIRCUIT, SHORT_CIRCUIT_ONE_BUS ->
-                    dryRun ? shortCircuitService.getShortCircuitResultsCount() : deleteShortcircuitResults();
+                dryRun ? shortCircuitService.getShortCircuitResultsCount() : deleteShortcircuitResults();
             case VOLTAGE_INITIALIZATION ->
-                    dryRun ? voltageInitService.getVoltageInitResultsCount() : deleteVoltageInitResults();
+                dryRun ? voltageInitService.getVoltageInitResultsCount() : deleteVoltageInitResults();
             case STATE_ESTIMATION ->
                 dryRun ? stateEstimationService.getStateEstimationResultsCount() : deleteStateEstimationResults();
             case PCC_MIN ->
@@ -358,7 +360,7 @@ public class SupervisionService {
     public void unbuildAllNodes(UUID studyUuid) {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
-        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false);
+        studyService.unbuildNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), false, SUPERVISION_USER);
 
         LOGGER.trace("Nodes builds deletion for study {} in : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
     }
