@@ -632,8 +632,17 @@ public class RootNetworkNodeInfoService {
         return infos;
     }
 
+    public void deleteRootNetworkNodeRemoteInfos(List<RootNetworkNodeInfo> rootNetworkNodeInfos) {
+        if (rootNetworkNodeInfos == null || rootNetworkNodeInfos.isEmpty()) {
+            return;
+        }
+        // Do not wait completion and do not throw exception
+        CompletableFuture.allOf(getRemoteDeletions(getRemoteDeletionInfos(rootNetworkNodeInfos)).toArray(CompletableFuture[]::new));
+    }
+
+    // New method specifically for the supervision/invalidate path
     @Transactional(readOnly = true)
-    public void deleteRootNetworkNodeRemoteInfos(List<UUID> rootNetworkUuids) {
+    public void deleteRootNetworkNodeRemoteInfosByUuids(List<UUID> rootNetworkUuids) {
         if (rootNetworkUuids == null || rootNetworkUuids.isEmpty()) {
             return;
         }
