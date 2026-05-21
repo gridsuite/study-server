@@ -13,5 +13,5 @@ public enum SecurityAnalysisResultType {
     N,
     NMK_CONTINGENCIES,
     NMK_LIMIT_VIOLATIONS,
-    NMK_POWER_CUT_OFF
+    NMK_CUT_OFF_POWER
 }
