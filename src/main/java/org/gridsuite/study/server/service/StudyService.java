@@ -1904,9 +1904,10 @@ public class StudyService {
         InvalidateNodeTreeParameters invalidateNodeTreeParameters = withBlockNodes
                 ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES
                 : InvalidateNodeTreeParameters.ALL;
-        List<CompletableFuture<Void>> futures = getStudy(studyUuid).getRootNetworks().stream()
-                .map(rn -> studyServerExecutionService.runAsync(() ->
-                        invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), invalidateNodeTreeParameters, skipDeleteVariants)))
+        List<UUID> rootNetworkIds = rootNetworkService.getStudyRootNetworkIds(studyUuid);
+        List<CompletableFuture<Void>> futures = rootNetworkIds.stream()
+                .map(rnId -> studyServerExecutionService.runAsync(() ->
+                        invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -3728,7 +3729,7 @@ public class StudyService {
 
     public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        return studyEntity.getRootNetworks();
+        return rootNetworkService.getStudyRootNetwork(studyEntity);
     }
 
     private List<RootNetworkInfos> getStudyRootNetworksInfos(UUID studyUuid) {
@@ -3939,18 +3940,14 @@ public class StudyService {
     }
 
     public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId) {
-        StudyEntity study = getStudy(studyUuid);
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
-        RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid)
-                .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-
         var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         try {
             // First we unbuild all nodes
             doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId);
             // Then we erase data linked to root node on all root networks
-            rootNetworkService.deleteRootNetworkRemoteInfos(List.of(rootNetwork.toDto()), true, true);
-            updateRootNetworkIndexationStatus(study, rootNetwork, RootNetworkIndexationStatus.NOT_INDEXED);
+            rootNetworkService.deleteRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, true);
+            rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
         } finally {
             networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNodeUuid);
         }

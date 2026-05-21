@@ -10,12 +10,10 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
-import org.gridsuite.study.server.dto.CaseInfos;
-import org.gridsuite.study.server.dto.NetworkInfos;
-import org.gridsuite.study.server.dto.RootNetworkAction;
-import org.gridsuite.study.server.dto.RootNetworkInfos;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
@@ -54,6 +52,7 @@ public class RootNetworkService {
     private final StudyServerExecutionService studyServerExecutionService;
     private final EquipmentInfosService equipmentInfosService;
     private final NetworkStoreService networkStoreService;
+    private final NotificationService notificationService;
 
     @Value("${study.max-root-network-by-study}")
     private int maximumRootNetworkByStudy = 4;
@@ -66,7 +65,8 @@ public class RootNetworkService {
                               StudyServerExecutionService studyServerExecutionService,
                               ReportService reportService,
                               EquipmentInfosService equipmentInfosService,
-                              NetworkStoreService networkStoreService) {
+                              NetworkStoreService networkStoreService,
+                              NotificationService notificationService) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkService = networkService;
@@ -76,6 +76,7 @@ public class RootNetworkService {
         this.studyServerExecutionService = studyServerExecutionService;
         this.equipmentInfosService = equipmentInfosService;
         this.networkStoreService = networkStoreService;
+        this.notificationService = notificationService;
     }
 
     public UUID getNetworkUuid(UUID rootNetworkUuid) {
@@ -344,5 +345,32 @@ public class RootNetworkService {
     public boolean isRootNetworkTagExistsInStudy(UUID studyUuid, String rootNetworkTag) {
         return rootNetworkRepository.findByTagAndStudyId(rootNetworkTag, studyUuid).isPresent() ||
                 rootNetworkRequestRepository.findByTagAndStudyUuid(rootNetworkTag, studyUuid).isPresent();
+    }
+
+    @Transactional(readOnly = true)
+    public List<RootNetworkEntity> getStudyRootNetwork(StudyEntity study) {
+        return study.getRootNetworks();
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getStudyRootNetworkIds(UUID studyUuid) {
+        return rootNetworkRepository.findAllByStudyId(studyUuid).stream()
+                .map(RootNetworkEntity::getId)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public RootNetworkInfos getRootNetworkInfos(UUID rootNetworkUuid) {
+        return getRootNetwork(rootNetworkUuid)
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"))
+                .toDto();
+    }
+
+    @Transactional
+    public void updateRootNetworkIndexationStatus(UUID studyUuid, UUID rootNetworkUuid, RootNetworkIndexationStatus indexationStatus) {
+        RootNetworkEntity rootNetwork = getRootNetwork(rootNetworkUuid)
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        rootNetwork.setIndexationStatus(indexationStatus);
+        notificationService.emitRootNetworkIndexationStatusChanged(studyUuid, rootNetworkUuid, indexationStatus);
     }
 }
