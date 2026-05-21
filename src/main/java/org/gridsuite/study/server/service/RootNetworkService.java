@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.service;
 
 import com.powsybl.iidm.network.Network;
-import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
@@ -252,9 +251,7 @@ public class RootNetworkService {
         ArrayList<CompletableFuture<Void>> futures = new ArrayList<>();
         // delete remote data ids set in root network
         futures.add(studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())));
-        futures.add(studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(invalidate
-                ? networkUuid -> equipmentInfosService.deleteVariants(networkUuid, List.of(VariantManagerConstants.INITIAL_VARIANT_ID))
-                : equipmentInfosService::deleteEquipmentIndexes)));
+        futures.add(studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes)));
         futures.add(studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)));
         if (!invalidate) {
             futures.add(studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getCaseInfos().getCaseUuid()).filter(Objects::nonNull).forEach(caseService::deleteCase)));

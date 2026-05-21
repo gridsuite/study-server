@@ -322,7 +322,7 @@ class SupervisionControllerTest {
 
         // Remote root-network data was deleted
         Mockito.verify(rootNetworkService, Mockito.times(1))
-                .invalidateRootNetworkRemoteInfos(any(), eq(true));
+                .deleteRootNetworkRemoteInfos(any(), true, true);
         Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID);
 
         // Indexation flipped to NOT_INDEXED so the auto-detect path will reimport on reopen
