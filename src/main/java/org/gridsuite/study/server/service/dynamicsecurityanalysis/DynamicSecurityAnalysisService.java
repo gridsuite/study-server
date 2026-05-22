@@ -98,7 +98,7 @@ public class DynamicSecurityAnalysisService {
     }
 
     public void invalidateStatus(List<UUID> resultUuids) {
-        if (CollectionUtils.isNotEmpty(resultUuids)) {
+        if (!CollectionUtils.isEmpty(resultUuids)) {
             dynamicSecurityAnalysisClient.invalidateStatus(resultUuids);
         }
     }

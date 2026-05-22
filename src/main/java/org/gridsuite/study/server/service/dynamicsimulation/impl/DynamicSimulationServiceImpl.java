@@ -214,7 +214,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public void invalidateStatus(List<UUID> resultUuids) {
-        if (CollectionUtils.isNotEmpty(resultUuids)) {
+        if (!CollectionUtils.isEmpty(resultUuids)) {
             dynamicSimulationClient.invalidateStatus(resultUuids);
         }
     }
