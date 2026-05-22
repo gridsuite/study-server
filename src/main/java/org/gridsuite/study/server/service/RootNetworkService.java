@@ -369,7 +369,7 @@ public class RootNetworkService {
 
     @Transactional(readOnly = true)
     public RootNetworkInfos getRootNetworkInfos(UUID rootNetworkUuid) {
-        return getRootNetwork(rootNetworkUuid)
+        return rootNetworkRepository.findWithRootNetworkNodeInfosAndReportsById(rootNetworkUuid)
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"))
                 .toDto();
     }
