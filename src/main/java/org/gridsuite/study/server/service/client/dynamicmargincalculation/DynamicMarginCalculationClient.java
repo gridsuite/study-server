@@ -205,7 +205,7 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
 
         String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RESULT);
 
-        var uriComponents = UriComponentsBuilder.fromUriString(endPointUrl + "/statuses").buildAndExpand();
+        var uriComponents = UriComponentsBuilder.fromUriString(endPointUrl + "/statuses").build();
         String path = uriComponents.toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
