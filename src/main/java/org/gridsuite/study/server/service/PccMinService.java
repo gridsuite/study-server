@@ -139,8 +139,14 @@ public class PccMinService extends AbstractComputationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
-        return restTemplate.exchange(path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, PccMinStatus>>() {
-        }).getBody();
+        Map<UUID, PccMinStatus> statuses = restTemplate.exchange(
+            path,
+            HttpMethod.POST,
+            httpEntity,
+            new ParameterizedTypeReference<Map<UUID, PccMinStatus>>() {
+            }
+        ).getBody();
+        return statuses != null ? statuses : Map.of();
     }
 
     public void deletePccMinResults(List<UUID> resultsUuids) {

@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
+import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
@@ -141,8 +142,14 @@ public class VoltageInitService extends AbstractComputationService {
 
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
-        return restTemplate.exchange(path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, VoltageInitStatus>>() {
-        }).getBody();
+        Map<UUID, VoltageInitStatus> statuses = restTemplate.exchange(
+            path,
+            HttpMethod.POST,
+            httpEntity,
+            new ParameterizedTypeReference<Map<UUID, VoltageInitStatus>>() {
+            }
+        ).getBody();
+        return statuses != null ? statuses : Map.of();
     }
 
     public VoltageInitParametersInfos getVoltageInitParameters(UUID parametersUuid) {

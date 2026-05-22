@@ -152,8 +152,14 @@ public class LoadFlowService extends AbstractComputationService {
 
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
-        return restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, LoadFlowStatus>>() {
-        }).getBody();
+        Map<UUID, LoadFlowStatus> statuses = restTemplate.exchange(
+            path,
+            HttpMethod.POST,
+            httpEntity,
+            new ParameterizedTypeReference<Map<UUID, LoadFlowStatus>>() {
+            }
+        ).getBody();
+        return statuses != null ? statuses : Map.of();
     }
 
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {

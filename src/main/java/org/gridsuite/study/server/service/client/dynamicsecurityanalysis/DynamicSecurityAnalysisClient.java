@@ -11,6 +11,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ReportInfos;
+import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
@@ -192,7 +193,7 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
         String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_RESULT);
 
-        String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/statuses")
+        String path = UriComponentsBuilder.fromUriString(resultBaseUrl + "/statuses")
                 .toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -200,8 +201,14 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
         // call dynamic-security-analysis REST API
-        return getRestTemplate().exchange(url, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, DynamicSecurityAnalysisStatus >>() {
-        }).getBody();
+        Map<UUID, DynamicSecurityAnalysisStatus> statuses = getRestTemplate().exchange(
+            path,
+            HttpMethod.POST,
+            httpEntity,
+            new ParameterizedTypeReference<Map<UUID, DynamicSecurityAnalysisStatus>>() {
+            }
+        ).getBody();
+        return statuses != null ? statuses : Map.of();
     }
 
     public void invalidateStatus(@NonNull List<UUID> resultUuids) {

@@ -11,6 +11,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ReportInfos;
+import org.gridsuite.study.server.dto.ShortCircuitAnalysisStatus;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
@@ -206,14 +207,20 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
         String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RESULT);
 
         var uriComponents = UriComponentsBuilder.fromUriString(endPointUrl + "/statuses").buildAndExpand();
-
+        String path = uriComponents.toUriString()
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
-        return getRestTemplate().exchange(uriComponents.toUriString(), HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, DynamicMarginCalculationStatus>>() {
-        }).getBody();
+        Map<UUID, DynamicMarginCalculationStatus> statuses = getRestTemplate().exchange(
+            path,
+            HttpMethod.POST,
+            httpEntity,
+            new ParameterizedTypeReference<Map<UUID, DynamicMarginCalculationStatus>>() {
+            }
+        ).getBody();
+        return statuses != null ? statuses : Map.of();
     }
 
     public void invalidateStatus(@NonNull List<UUID> resultUuids) {

@@ -12,6 +12,7 @@ import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.dto.LoadFlowStatus;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.StateEstimationStatus;
@@ -142,8 +143,14 @@ public class StateEstimationService extends AbstractComputationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
-        return restTemplate.exchange(path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, StateEstimationStatus>>() {
-        }).getBody();
+        Map<UUID, StateEstimationStatus> statuses = restTemplate.exchange(
+            path,
+            HttpMethod.POST,
+            httpEntity,
+            new ParameterizedTypeReference<Map<UUID, StateEstimationStatus>>() {
+            }
+        ).getBody();
+        return statuses != null ? statuses : Map.of();
     }
 
     public void deleteStateEstimationResults(List<UUID> resultsUuids) {

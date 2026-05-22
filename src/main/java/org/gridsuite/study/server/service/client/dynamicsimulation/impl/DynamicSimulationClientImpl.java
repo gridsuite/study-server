@@ -11,6 +11,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ReportInfos;
+import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.service.StudyService;
@@ -218,14 +219,20 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
 
         var uriComponents = UriComponentsBuilder.fromUriString(endPointUrl + "/statuses").buildAndExpand();
-
+        String path = uriComponents.toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
-        return getRestTemplate().exchange(uriComponents.toUriString(), HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, DynamicSimulationStatus>>() {
-        }).getBody();
+        Map<UUID, DynamicSimulationStatus> statuses = getRestTemplate().exchange(
+            path,
+            HttpMethod.POST,
+            httpEntity,
+            new ParameterizedTypeReference<Map<UUID, DynamicSimulationStatus>>() {
+            }
+        ).getBody();
+        return statuses != null ? statuses : Map.of();
     }
 
     @Override

@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.PccMinStatus;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.RunSecurityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
@@ -202,8 +203,14 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
-        return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<Map<UUID, SecurityAnalysisStatus>>() {
-        }).getBody();
+        Map<UUID, SecurityAnalysisStatus> statuses = restTemplate.exchange(
+            path,
+            HttpMethod.POST,
+            httpEntity,
+            new ParameterizedTypeReference<Map<UUID, SecurityAnalysisStatus>>() {
+            }
+        ).getBody();
+        return statuses != null ? statuses : Map.of();
     }
 
     public void deleteSecurityAnalysisResults(List<UUID> resultsUuids) {
