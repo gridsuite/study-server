@@ -640,15 +640,6 @@ public class RootNetworkNodeInfoService {
         CompletableFuture.allOf(getRemoteDeletions(getRemoteDeletionInfos(rootNetworkNodeInfos)).toArray(CompletableFuture[]::new));
     }
 
-//    // New method specifically for the supervision/invalidate path
-//    public void deleteRootNetworkNodeRemoteInfosByUuids(List<UUID> rootNetworkUuids, List<RootNetworkNodeInfo> rootNetworkNodeInfos) {
-//        if (rootNetworkUuids == null || rootNetworkUuids.isEmpty()) {
-//            return;
-//        }
-//        // Do not wait completion and do not throw exception
-//        CompletableFuture.allOf(getRemoteDeletions(getRemoteDeletionInfos(rootNetworkNodeInfos)).toArray(CompletableFuture[]::new));
-//    }
-
     @Transactional
     public ModificationApplicationContext getNetworkModificationApplicationContext(UUID rootNetworkUuid, UUID nodeUuid, UUID networkUuid) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
