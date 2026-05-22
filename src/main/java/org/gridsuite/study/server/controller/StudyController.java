@@ -60,7 +60,6 @@ import org.springframework.lang.NonNull;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.beans.PropertyEditorSupport;
 import java.util.*;
@@ -1688,9 +1687,10 @@ public class StudyController {
         @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
     public ResponseEntity<Void> unbuildNode(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
                                           @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
-        studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid);
+        studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1698,11 +1698,12 @@ public class StudyController {
     @Operation(summary = "unbuild all study nodes in all root networks")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All study nodes has been unbuilt in all root networks"),
         @ApiResponse(responseCode = "404", description = "The study or node doesn't exist")})
-    public ResponseEntity<Void> unbuildAllNodes(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid) {
+    public ResponseEntity<Void> unbuildAllNodes(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                                @RequestHeader(HEADER_USER_ID) String userId) {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         try {
             studyService.assertNoBlockedNodeInStudy(studyUuid, rootNodeUuid);
-            studyService.unbuildNodeTree(studyUuid, rootNodeUuid, true);
+            studyService.unbuildNodeTree(studyUuid, rootNodeUuid, true, userId);
         } finally {
             studyService.unblockNodeTree(studyUuid, rootNodeUuid);
         }
@@ -2096,9 +2097,8 @@ public class StudyController {
     @Operation(summary = "Get security analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters")})
     public ResponseEntity<String> getSecurityAnalysisParametersValues(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid, userId));
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
@@ -2155,14 +2155,6 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/network-visualizations/nad-positions-config", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "create a nad positions configuration using data from a csv")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The nad positions configuration created")})
-    public ResponseEntity<Void> createNadPositionsConfigFromCsv(@RequestParam("file") MultipartFile file) {
-        studyService.createNadPositionsConfigFromCsv(file);
-        return ResponseEntity.ok().build();
-    }
-
     @GetMapping(value = "/optional-services")
     @Operation(summary = "Get all the optional services and their status")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of optional services")})
@@ -2205,9 +2197,8 @@ public class StudyController {
     @Operation(summary = "Get sensitivity analysis parameters on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters")})
     public ResponseEntity<String> getSensitivityAnalysisParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParameters(studyUuid, userId));
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParameters(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
