@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
-import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
@@ -26,6 +25,7 @@ import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimula
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;

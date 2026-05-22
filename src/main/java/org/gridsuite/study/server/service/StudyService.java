@@ -12,7 +12,6 @@ import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
 import io.micrometer.common.util.StringUtils;
 import lombok.NonNull;
-import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyConstants;
@@ -64,6 +63,7 @@ import org.springframework.data.util.Pair;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.util.UriUtils;
 
 import java.io.UncheckedIOException;

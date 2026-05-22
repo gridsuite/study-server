@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service.dynamicmargincalculation;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
@@ -17,6 +16,7 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
@@ -94,7 +94,7 @@ public class DynamicMarginCalculationService {
     }
 
     public void invalidateStatus(List<UUID> resultUuids) {
-        if (CollectionUtils.isNotEmpty(resultUuids)) {
+        if (!CollectionUtils.isEmpty(resultUuids)) {
             dynamicMarginCalculationClient.invalidateStatus(resultUuids);
         }
     }

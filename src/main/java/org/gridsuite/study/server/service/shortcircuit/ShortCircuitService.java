@@ -28,6 +28,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -200,7 +201,7 @@ public class ShortCircuitService extends AbstractComputationService {
     }
 
     public Map<UUID, ShortCircuitAnalysisStatus> getShortCircuitAnalysisStatuses(List<UUID> resultUuids) {
-        if (resultUuids.isEmpty()) {
+        if (CollectionUtils.isEmpty(resultUuids)) {
             return Map.of();
         }
         String path = UriComponentsBuilder

@@ -10,7 +10,6 @@ package org.gridsuite.study.server.service.dynamicsecurityanalysis;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -18,6 +17,7 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
