@@ -26,9 +26,7 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
@@ -67,7 +65,8 @@ public class SensitivityAnalysisService extends AbstractComputationService {
                                        UUID reportUuid,
                                        String userId,
                                        UUID parametersUuid,
-                                       UUID loadFlowParametersUuid) {
+                                       UUID loadFlowParametersUuid,
+                                       Map<UUID, String> elementNamesMap) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
@@ -88,8 +87,10 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
+        // add query param Map container ids -> container names
         var path = uriComponentsBuilder
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
+            .queryParam("elementNamesMap", elementNamesMap)
             .buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
@@ -337,5 +338,8 @@ public class SensitivityAnalysisService extends AbstractComputationService {
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
         return List.of();
+    }
+
+    public List<UUID> getContainerIds(UUID sensiParamsUuid) {
     }
 }
