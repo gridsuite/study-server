@@ -17,7 +17,6 @@ import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;

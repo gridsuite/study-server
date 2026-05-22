@@ -11,7 +11,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
