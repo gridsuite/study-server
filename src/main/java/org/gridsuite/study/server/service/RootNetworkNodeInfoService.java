@@ -640,19 +640,14 @@ public class RootNetworkNodeInfoService {
         CompletableFuture.allOf(getRemoteDeletions(getRemoteDeletionInfos(rootNetworkNodeInfos)).toArray(CompletableFuture[]::new));
     }
 
-    // New method specifically for the supervision/invalidate path
-    @Transactional(readOnly = true)
-    public void deleteRootNetworkNodeRemoteInfosByUuids(List<UUID> rootNetworkUuids) {
-        if (rootNetworkUuids == null || rootNetworkUuids.isEmpty()) {
-            return;
-        }
-        List<RootNetworkNodeInfo> rootNetworkNodeInfos = rootNetworkUuids.stream()
-                .flatMap(rnUuid -> rootNetworkNodeInfoRepository.findAllByRootNetworkId(rnUuid).stream())
-                .map(RootNetworkNodeInfoEntity::toDto)
-                .toList();
-        // Do not wait completion and do not throw exception
-        CompletableFuture.allOf(getRemoteDeletions(getRemoteDeletionInfos(rootNetworkNodeInfos)).toArray(CompletableFuture[]::new));
-    }
+//    // New method specifically for the supervision/invalidate path
+//    public void deleteRootNetworkNodeRemoteInfosByUuids(List<UUID> rootNetworkUuids, List<RootNetworkNodeInfo> rootNetworkNodeInfos) {
+//        if (rootNetworkUuids == null || rootNetworkUuids.isEmpty()) {
+//            return;
+//        }
+//        // Do not wait completion and do not throw exception
+//        CompletableFuture.allOf(getRemoteDeletions(getRemoteDeletionInfos(rootNetworkNodeInfos)).toArray(CompletableFuture[]::new));
+//    }
 
     @Transactional
     public ModificationApplicationContext getNetworkModificationApplicationContext(UUID rootNetworkUuid, UUID nodeUuid, UUID networkUuid) {
