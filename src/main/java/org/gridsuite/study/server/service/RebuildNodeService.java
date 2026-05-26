@@ -102,7 +102,7 @@ public class RebuildNodeService {
     }
 
     public UUID mergeModificationsIntoComposite(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
-        return handleRebuildNodeSupply(
+        return handleRebuildNodeWithReturn(
                 studyUuid,
                 nodeUuid,
                 userId,
@@ -151,18 +151,18 @@ public class RebuildNodeService {
         handleRebuildNode(studyUuid, nodeUuid, nodeUuid, userId, action);
     }
 
-    private <T> T handleRebuildNodeSupply(UUID studyUuid, UUID nodeUuid, String userId, Supplier<T> action) {
-        return handleRebuildNodeSupply(studyUuid, nodeUuid, nodeUuid, userId, action);
+    private <T> T handleRebuildNodeWithReturn(UUID studyUuid, UUID nodeUuid, String userId, Supplier<T> action) {
+        return handleRebuildNodeWithReturn(studyUuid, nodeUuid, nodeUuid, userId, action);
     }
 
     private void handleRebuildNode(UUID studyUuid, UUID node1Uuid, UUID node2Uuid, String userId, Runnable action) {
-        handleRebuildNodeSupply(studyUuid, node1Uuid, node2Uuid, userId, () -> {
+        handleRebuildNodeWithReturn(studyUuid, node1Uuid, node2Uuid, userId, () -> {
             action.run();
             return null;
         });
     }
 
-    private <T> T handleRebuildNodeSupply(UUID studyUuid, UUID node1Uuid, UUID node2Uuid, String userId, Supplier<T> action) {
+    private <T> T handleRebuildNodeWithReturn(UUID studyUuid, UUID node1Uuid, UUID node2Uuid, String userId, Supplier<T> action) {
         // if node 1 and 2 are in the same "subtree", rebuild only the highest one - otherwise, rebuild both
         List<UUID> nodesToReBuild = networkModificationTreeService.getHighestNodeUuids(node1Uuid, node2Uuid).stream()
             .filter(Predicate.not(networkModificationTreeService::isRootOrConstructionNode)).toList();
