@@ -58,6 +58,7 @@ public class NotificationService {
     public static final String NETWORK_EXPORT_FINISHED = "networkExportFinished";
 
     public static final String UPDATE_TYPE_ALL_COMPUTATION_STATUS = "all_computation_status";
+    public static final String UPDATE_TYPE_ALL_COMPUTATION_STATUS_WITHOUT_LOADFLOW = "all_computation_status_without_loadflow";
     public static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
     public static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
     public static final String UPDATE_TYPE_BUILD_FAILED = "buildFailed";
