@@ -175,8 +175,8 @@ class LoadFLowUnitTest {
         // node invalidation
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters);
         verify(networkModificationService, times(1)).deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), networkUuid);
-        verify(notificationService, times(1 /* only all computation */))
-            .emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
+        verify(notificationService, times(1 /* only all computation without lf */))
+            .emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), eq("all_computation_status_without_loadflow"));
 
         // node build
         ArgumentCaptor<RerunLoadFlowInfos> rerunLoadFlowWorkflowInfosArgumentCaptor = ArgumentCaptor.forClass(RerunLoadFlowInfos.class);
