@@ -203,7 +203,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
         Map<UUID, SecurityAnalysisStatus> statuses = restTemplate.exchange(
-            path,
+            securityAnalysisServerBaseUri + path,
             HttpMethod.POST,
             httpEntity,
             new ParameterizedTypeReference<Map<UUID, SecurityAnalysisStatus>>() {

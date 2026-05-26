@@ -153,7 +153,7 @@ public class LoadFlowService extends AbstractComputationService {
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
         Map<UUID, LoadFlowStatus> statuses = restTemplate.exchange(
-            path,
+            loadFlowServerBaseUri + path,
             HttpMethod.POST,
             httpEntity,
             new ParameterizedTypeReference<Map<UUID, LoadFlowStatus>>() {

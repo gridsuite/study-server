@@ -213,7 +213,7 @@ public class ShortCircuitService extends AbstractComputationService {
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
         Map<UUID, ShortCircuitAnalysisStatus> statuses = restTemplate.exchange(
-            path,
+            shortCircuitServerBaseUri + path,
             HttpMethod.POST,
             httpEntity,
             new ParameterizedTypeReference<Map<UUID, ShortCircuitAnalysisStatus>>() {

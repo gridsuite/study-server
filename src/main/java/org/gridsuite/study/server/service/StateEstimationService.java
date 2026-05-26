@@ -143,7 +143,7 @@ public class StateEstimationService extends AbstractComputationService {
 
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
         Map<UUID, StateEstimationStatus> statuses = restTemplate.exchange(
-            path,
+            stateEstimationServerServerBaseUri + path,
             HttpMethod.POST,
             httpEntity,
             new ParameterizedTypeReference<Map<UUID, StateEstimationStatus>>() {

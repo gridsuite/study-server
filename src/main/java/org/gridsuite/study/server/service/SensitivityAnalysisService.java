@@ -189,7 +189,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
         Map<UUID, SensitivityAnalysisStatus> statuses = restTemplate.exchange(
-            path,
+            sensitivityAnalysisServerBaseUri + path,
             HttpMethod.POST,
             httpEntity,
             new ParameterizedTypeReference<Map<UUID, SensitivityAnalysisStatus>>() {

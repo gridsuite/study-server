@@ -142,7 +142,7 @@ public class VoltageInitService extends AbstractComputationService {
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
 
         Map<UUID, VoltageInitStatus> statuses = restTemplate.exchange(
-            path,
+            voltageInitServerBaseUri + path,
             HttpMethod.POST,
             httpEntity,
             new ParameterizedTypeReference<Map<UUID, VoltageInitStatus>>() {
