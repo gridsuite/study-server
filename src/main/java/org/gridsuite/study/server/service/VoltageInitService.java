@@ -146,6 +146,11 @@ public class VoltageInitService extends AbstractComputationService implements Co
         return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
+    @Override
+    public UUID createDefaultParameters() {
+        return createVoltageInitParameters(null);
+    }
+
     public void updateVoltageInitParameters(UUID parametersUuid, @Nullable VoltageInitParametersInfos parameters) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)

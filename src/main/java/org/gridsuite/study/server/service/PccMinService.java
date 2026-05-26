@@ -218,12 +218,13 @@ public class PccMinService extends AbstractComputationService implements Computa
 
     public UUID getPccMinParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
         if (studyEntity.getPccMinParametersUuid() == null) {
-            studyEntity.setPccMinParametersUuid(createDefaultPccMinParameters());
+            studyEntity.setPccMinParametersUuid(createDefaultParameters());
         }
         return studyEntity.getPccMinParametersUuid();
     }
 
-    public UUID createDefaultPccMinParameters() {
+    @Override
+    public UUID createDefaultParameters() {
         var path = UriComponentsBuilder
             .fromPath(PARAMETERS_URI + DELIMITER + "default")
             .buildAndExpand()

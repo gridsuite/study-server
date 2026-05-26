@@ -51,6 +51,7 @@ public class DynamicSecurityAnalysisService implements ComputationParameters {
         return dynamicSecurityAnalysisClient.createParameters(parameters);
     }
 
+    @Override
     public UUID createDefaultParameters() {
         return dynamicSecurityAnalysisClient.createDefaultParameters();
     }

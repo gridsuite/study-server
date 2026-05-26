@@ -20,7 +20,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
-import org.gridsuite.study.server.dto.computation.ComputationsParameters;
+import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
@@ -50,6 +50,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
@@ -165,43 +166,43 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-            StudyRepository studyRepository,
-            StudyCreationRequestRepository studyCreationRequestRepository,
-            NetworkService networkStoreService,
-            NetworkModificationService networkModificationService,
-            ReportService reportService,
-            UserAdminService userAdminService,
-            StudyInfosService studyInfosService,
-            EquipmentInfosService equipmentInfosService,
-            NetworkModificationTreeService networkModificationTreeService,
-            ObjectMapper objectMapper,
-            StudyServerExecutionService studyServerExecutionService,
-            NotificationService notificationService,
-            LoadFlowService loadflowService,
-            ShortCircuitService shortCircuitService,
-            SingleLineDiagramService singleLineDiagramService,
-            NetworkConversionService networkConversionService,
-            GeoDataService geoDataService,
-            NetworkMapService networkMapService,
-            SecurityAnalysisService securityAnalysisService,
-            ActionsService actionsService,
-            CaseService caseService,
-            SensitivityAnalysisService sensitivityAnalysisService,
-            DynamicSimulationService dynamicSimulationService,
-            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-            DynamicMarginCalculationService dynamicMarginCalculationService,
-            VoltageInitService voltageInitService,
-            DynamicSimulationEventService dynamicSimulationEventService,
-            StudyConfigService studyConfigService,
-            NadConfigService nadConfigService,
-            FilterService filterService,
-            StateEstimationService stateEstimationService,
-            PccMinService pccMinService,
-            @Lazy StudyService studyService,
-            RootNetworkService rootNetworkService,
-            RootNetworkNodeInfoService rootNetworkNodeInfoService,
-            DirectoryService directoryService,
-            ComputationParametersService computationParametersService) {
+        StudyRepository studyRepository,
+        StudyCreationRequestRepository studyCreationRequestRepository,
+        NetworkService networkStoreService,
+        NetworkModificationService networkModificationService,
+        ReportService reportService,
+        UserAdminService userAdminService,
+        StudyInfosService studyInfosService,
+        EquipmentInfosService equipmentInfosService,
+        NetworkModificationTreeService networkModificationTreeService,
+        ObjectMapper objectMapper,
+        StudyServerExecutionService studyServerExecutionService,
+        NotificationService notificationService,
+        LoadFlowService loadflowService,
+        ShortCircuitService shortCircuitService,
+        SingleLineDiagramService singleLineDiagramService,
+        NetworkConversionService networkConversionService,
+        GeoDataService geoDataService,
+        NetworkMapService networkMapService,
+        SecurityAnalysisService securityAnalysisService,
+        ActionsService actionsService,
+        CaseService caseService,
+        SensitivityAnalysisService sensitivityAnalysisService,
+        DynamicSimulationService dynamicSimulationService,
+        DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+        DynamicMarginCalculationService dynamicMarginCalculationService,
+        VoltageInitService voltageInitService,
+        DynamicSimulationEventService dynamicSimulationEventService,
+        StudyConfigService studyConfigService,
+        NadConfigService nadConfigService,
+        FilterService filterService,
+        StateEstimationService stateEstimationService,
+        PccMinService pccMinService,
+        @Lazy StudyService studyService,
+        RootNetworkService rootNetworkService,
+        RootNetworkNodeInfoService rootNetworkNodeInfoService,
+        DirectoryService directoryService,
+        ComputationParametersService computationParametersService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -552,20 +553,7 @@ public class StudyService {
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
                 studyInfosService.deleteByUuid(studyUuid);
-                computationParametersService.deleteComputationsParameters(
-                        ComputationsParameters.builder()
-                                .loadFlowParametersUuid(s.getLoadFlowParametersUuid())
-                                .shortCircuitParametersUuid(s.getShortCircuitParametersUuid())
-                                .dynamicSimulationParametersUuid(s.getDynamicSimulationParametersUuid())
-                                .voltageInitParametersUuid(s.getVoltageInitParametersUuid())
-                                .securityAnalysisParametersUuid(s.getSecurityAnalysisParametersUuid())
-                                .sensitivityAnalysisParametersUuid(s.getSensitivityAnalysisParametersUuid())
-                                .dynamicSecurityAnalysisParametersUuid(s.getDynamicSecurityAnalysisParametersUuid())
-                                .dynamicMarginCalculationParametersUuid(s.getDynamicMarginCalculationParametersUuid())
-                                .stateEstimationParametersUuid(s.getStateEstimationParametersUuid())
-                                .pccMinParametersUuid(s.getPccMinParametersUuid())
-                                .build()
-                );
+                computationParametersService.deleteComputationsParameters(s);
                 removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
                 removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
                 removeWorkspacesConfig(s.getWorkspacesConfigUuid());
@@ -614,7 +602,7 @@ public class StudyService {
 
     @Transactional
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos,
-                                              ComputationsParameters computationsParameters, UUID networkVisualizationParametersUuid,
+                                              ComputationParameterUUIDs computationParameterUUIDs, UUID networkVisualizationParametersUuid,
                                               UUID spreadsheetConfigCollectionUuid, UUID workspacesConfigUuid,
                                               Map<String, String> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
@@ -626,7 +614,7 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = saveStudyThenCreateBasicTree(studyUuid, networkInfos,
-                caseInfos, computationsParameters, networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid, importParameters, importReportUuid);
+                caseInfos, computationParameterUUIDs, networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid, importParameters, importReportUuid);
 
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
@@ -716,20 +704,20 @@ public class StudyService {
             copiedWorkspacesConfigUuid = studyConfigService.duplicateWorkspacesConfig(sourceStudyEntity.getWorkspacesConfigUuid());
         }
 
-        ComputationsParameters duplicatedComputationsParameters = computationParametersService.duplicateParameters(sourceStudyEntity);
+        ComputationParameterUUIDs duplicatedComputationParameterUUIDs = computationParametersService.duplicateParameters(sourceStudyEntity);
 
         return studyRepository.save(StudyEntity.builder()
             .id(newStudyId)
-            .loadFlowParametersUuid(duplicatedComputationsParameters.loadFlowParametersUuid())
-            .securityAnalysisParametersUuid(duplicatedComputationsParameters.securityAnalysisParametersUuid())
-            .dynamicSimulationParametersUuid(duplicatedComputationsParameters.dynamicSimulationParametersUuid())
-            .dynamicSecurityAnalysisParametersUuid(duplicatedComputationsParameters.dynamicSecurityAnalysisParametersUuid())
-            .dynamicMarginCalculationParametersUuid(duplicatedComputationsParameters.dynamicMarginCalculationParametersUuid())
-            .shortCircuitParametersUuid(duplicatedComputationsParameters.shortCircuitParametersUuid())
-            .voltageInitParametersUuid(duplicatedComputationsParameters.voltageInitParametersUuid())
-            .sensitivityAnalysisParametersUuid(duplicatedComputationsParameters.sensitivityAnalysisParametersUuid())
-            .stateEstimationParametersUuid(duplicatedComputationsParameters.stateEstimationParametersUuid())
-            .pccMinParametersUuid(duplicatedComputationsParameters.pccMinParametersUuid())
+            .loadFlowParametersUuid(duplicatedComputationParameterUUIDs.loadFlowParametersUuid())
+            .securityAnalysisParametersUuid(duplicatedComputationParameterUUIDs.securityAnalysisParametersUuid())
+            .dynamicSimulationParametersUuid(duplicatedComputationParameterUUIDs.dynamicSimulationParametersUuid())
+            .dynamicSecurityAnalysisParametersUuid(duplicatedComputationParameterUUIDs.dynamicSecurityAnalysisParametersUuid())
+            .dynamicMarginCalculationParametersUuid(duplicatedComputationParameterUUIDs.dynamicMarginCalculationParametersUuid())
+            .shortCircuitParametersUuid(duplicatedComputationParameterUUIDs.shortCircuitParametersUuid())
+            .voltageInitParametersUuid(duplicatedComputationParameterUUIDs.voltageInitParametersUuid())
+            .sensitivityAnalysisParametersUuid(duplicatedComputationParameterUUIDs.sensitivityAnalysisParametersUuid())
+            .stateEstimationParametersUuid(duplicatedComputationParameterUUIDs.stateEstimationParametersUuid())
+            .pccMinParametersUuid(duplicatedComputationParameterUUIDs.pccMinParametersUuid())
             .networkVisualizationParametersUuid(copiedNetworkVisualizationParametersUuid)
             .spreadsheetConfigCollectionUuid(copiedSpreadsheetConfigCollectionUuid)
             .workspacesConfigUuid(copiedWorkspacesConfigUuid)
@@ -1509,24 +1497,24 @@ public class StudyService {
     }
 
     private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
-                                                    CaseInfos caseInfos, ComputationsParameters computationsParameters,
+                                                    CaseInfos caseInfos, ComputationParameterUUIDs computationParameterUUIDs,
                                                     UUID networkVisualizationParametersUuid, UUID spreadsheetConfigCollectionUuid,
                                                      UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
-                .loadFlowParametersUuid(computationsParameters.loadFlowParametersUuid())
-                .shortCircuitParametersUuid(computationsParameters.shortCircuitParametersUuid())
-                .voltageInitParametersUuid(computationsParameters.voltageInitParametersUuid())
-                .securityAnalysisParametersUuid(computationsParameters.securityAnalysisParametersUuid())
-                .sensitivityAnalysisParametersUuid(computationsParameters.sensitivityAnalysisParametersUuid())
+                .loadFlowParametersUuid(computationParameterUUIDs.loadFlowParametersUuid())
+                .shortCircuitParametersUuid(computationParameterUUIDs.shortCircuitParametersUuid())
+                .voltageInitParametersUuid(computationParameterUUIDs.voltageInitParametersUuid())
+                .securityAnalysisParametersUuid(computationParameterUUIDs.securityAnalysisParametersUuid())
+                .sensitivityAnalysisParametersUuid(computationParameterUUIDs.sensitivityAnalysisParametersUuid())
                 .voltageInitParameters(new StudyVoltageInitParametersEntity())
                 .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
-                .dynamicSimulationParametersUuid(computationsParameters.dynamicSimulationParametersUuid())
-                .dynamicSecurityAnalysisParametersUuid(computationsParameters.dynamicSecurityAnalysisParametersUuid())
-                .dynamicMarginCalculationParametersUuid(computationsParameters.dynamicMarginCalculationParametersUuid())
-                .stateEstimationParametersUuid(computationsParameters.stateEstimationParametersUuid())
-                .pccMinParametersUuid(computationsParameters.pccMinParametersUuid())
+                .dynamicSimulationParametersUuid(computationParameterUUIDs.dynamicSimulationParametersUuid())
+                .dynamicSecurityAnalysisParametersUuid(computationParameterUUIDs.dynamicSecurityAnalysisParametersUuid())
+                .dynamicMarginCalculationParametersUuid(computationParameterUUIDs.dynamicMarginCalculationParametersUuid())
+                .stateEstimationParametersUuid(computationParameterUUIDs.stateEstimationParametersUuid())
+                .pccMinParametersUuid(computationParameterUUIDs.pccMinParametersUuid())
                 .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
                 .workspacesConfigUuid(workspacesConfigUuid)
                 .monoRoot(true)
@@ -1581,7 +1569,7 @@ public class StudyService {
             try {
                 UUID voltageInitParametersFromProfileUuid = voltageInitService.duplicateParameters(userProfileInfos.getVoltageInitParameterId());
                 studyEntity.setVoltageInitParametersUuid(voltageInitParametersFromProfileUuid);
-                computationParametersService.deleteComputationParameters(existingVoltageInitParametersUuid, voltageInitService, VOLTAGE_INITIALIZATION.getLabel());
+                voltageInitService.doDeleteComputationParameters(existingVoltageInitParametersUuid, VOLTAGE_INITIALIZATION.getLabel(), LOGGER);
                 return userProfileIssue;
             } catch (Exception e) {
                 userProfileIssue = true;
@@ -2609,6 +2597,7 @@ public class StudyService {
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, computationType);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid,
                 busId.isEmpty() ? NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS : NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
         return result;
     }
 
@@ -3340,6 +3329,7 @@ public class StudyService {
         UUID result = pccMinService.runPccMin(networkUuid, variantId, runPccMinParametersInfos, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, PCC_MIN);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
         return result;
     }
 
@@ -3393,7 +3383,7 @@ public class StudyService {
             try {
                 UUID pccMinParametersFromProfileUuid = pccMinService.duplicateParameters(userProfileInfos.getPccMinParameterId());
                 studyEntity.setPccMinParametersUuid(pccMinParametersFromProfileUuid);
-                removePccMinParameters(existingPccMinParametersUuid);
+                pccMinService.doDeleteComputationParameters(existingPccMinParametersUuid, PCC_MIN.getLabel(), LOGGER);
                 return userProfileIssue;
             } catch (Exception e) {
                 userProfileIssue = true;
@@ -3409,16 +3399,6 @@ public class StudyService {
             pccMinService.updatePccMinParameters(existingPccMinParametersUuid, parameters);
         }
         return userProfileIssue;
-    }
-
-    private void removePccMinParameters(@Nullable UUID uuid) {
-        if (uuid != null) {
-            try {
-                pccMinService.deleteParameters(uuid);
-            } catch (Exception e) {
-                LOGGER.error("Could not delete pcc min parameters with uuid:" + uuid, e);
-            }
-        }
     }
 
     @Transactional

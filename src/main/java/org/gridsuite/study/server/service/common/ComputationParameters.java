@@ -6,6 +6,8 @@
  */
 package org.gridsuite.study.server.service.common;
 
+import org.slf4j.Logger;
+
 import java.util.UUID;
 
 /**
@@ -17,4 +19,15 @@ public interface ComputationParameters {
 
     void deleteParameters(UUID parametersUuid);
 
+    default void doDeleteComputationParameters(UUID parametersUuid, String computationType, Logger logger) {
+        if (parametersUuid != null) {
+            try {
+                deleteParameters(parametersUuid);
+            } catch (Exception e) {
+                logger.error("Could not remove {} parameters with uuid: {}", computationType, parametersUuid, e);
+            }
+        }
+    }
+
+    UUID createDefaultParameters();
 }

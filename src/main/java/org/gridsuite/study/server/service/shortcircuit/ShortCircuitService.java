@@ -288,6 +288,11 @@ public class ShortCircuitService extends AbstractComputationService implements C
         }
     }
 
+    @Override
+    public UUID createDefaultParameters() {
+        return createParameters(null);
+    }
+
     public void updateParameters(final UUID parametersUuid, @Nullable final String parametersInfos) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

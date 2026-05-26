@@ -251,13 +251,13 @@ class StudyControllerCreationTest {
 
     private void verifyMockCallsAfterStudyCreation() {
         verify(reportService, Mockito.times(1)).sendReport(any(UUID.class), any(ReportNode.class));
-        verify(loadFlowService, Mockito.times(1)).createDefaultLoadFlowParameters();
-        verify(shortCircuitService, Mockito.times(1)).createParameters(null);
-        verify(securityAnalysisService, Mockito.times(1)).createDefaultSecurityAnalysisParameters();
-        verify(sensitivityAnalysisService, Mockito.times(1)).createDefaultSensitivityAnalysisParameters();
-        verify(voltageInitService, Mockito.times(1)).createVoltageInitParameters(null);
+        verify(loadFlowService, Mockito.times(1)).createDefaultParameters();
+        verify(shortCircuitService, Mockito.times(1)).createDefaultParameters();
+        verify(securityAnalysisService, Mockito.times(1)).createDefaultParameters();
+        verify(sensitivityAnalysisService, Mockito.times(1)).createDefaultParameters();
+        verify(voltageInitService, Mockito.times(1)).createDefaultParameters();
         verify(dynamicSecurityAnalysisService, Mockito.times(1)).createDefaultParameters();
-        verify(stateEstimationService, Mockito.times(1)).createDefaultStateEstimationParameters();
+        verify(stateEstimationService, Mockito.times(1)).createDefaultParameters();
         verify(studyConfigService, Mockito.times(1)).createDefaultSpreadsheetConfigCollection();
     }
 

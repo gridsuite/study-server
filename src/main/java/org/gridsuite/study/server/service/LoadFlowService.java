@@ -291,7 +291,8 @@ public class LoadFlowService extends AbstractComputationService implements Compu
         restTemplate.delete(loadFlowServerBaseUri + path);
     }
 
-    public UUID createDefaultLoadFlowParameters() {
+    @Override
+    public UUID createDefaultParameters() {
 
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/default")
@@ -303,7 +304,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
 
     public UUID getLoadFlowParametersOrDefaultsUuid(StudyEntity studyEntity) {
         if (studyEntity.getLoadFlowParametersUuid() == null) {
-            studyEntity.setLoadFlowParametersUuid(createDefaultLoadFlowParameters());
+            studyEntity.setLoadFlowParametersUuid(createDefaultParameters());
         }
         return studyEntity.getLoadFlowParametersUuid();
     }

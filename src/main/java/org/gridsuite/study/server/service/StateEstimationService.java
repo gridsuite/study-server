@@ -156,12 +156,13 @@ public class StateEstimationService extends AbstractComputationService implement
 
     public UUID getStateEstimationParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
         if (studyEntity.getStateEstimationParametersUuid() == null) {
-            studyEntity.setStateEstimationParametersUuid(createDefaultStateEstimationParameters());
+            studyEntity.setStateEstimationParametersUuid(createDefaultParameters());
         }
         return studyEntity.getStateEstimationParametersUuid();
     }
 
-    public UUID createDefaultStateEstimationParameters() {
+    @Override
+    public UUID createDefaultParameters() {
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/parameters/default")
             .buildAndExpand()

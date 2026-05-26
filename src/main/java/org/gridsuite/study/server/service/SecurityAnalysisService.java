@@ -262,7 +262,7 @@ public class SecurityAnalysisService extends AbstractComputationService implemen
 
     public UUID getSecurityAnalysisParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
         if (studyEntity.getSecurityAnalysisParametersUuid() == null) {
-            studyEntity.setSecurityAnalysisParametersUuid(createDefaultSecurityAnalysisParameters());
+            studyEntity.setSecurityAnalysisParametersUuid(createDefaultParameters());
 
         }
         return studyEntity.getSecurityAnalysisParametersUuid();
@@ -278,7 +278,8 @@ public class SecurityAnalysisService extends AbstractComputationService implemen
         restTemplate.delete(securityAnalysisServerBaseUri + path);
     }
 
-    public UUID createDefaultSecurityAnalysisParameters() {
+    @Override
+    public UUID createDefaultParameters() {
 
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default")

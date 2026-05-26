@@ -239,7 +239,7 @@ public class SensitivityAnalysisService extends AbstractComputationService imple
     public UUID getSensitivityAnalysisParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {
         if (studyEntity.getSensitivityAnalysisParametersUuid() == null) {
             // not supposed to happen because we create it as the study creation
-            studyEntity.setSensitivityAnalysisParametersUuid(createDefaultSensitivityAnalysisParameters());
+            studyEntity.setSensitivityAnalysisParametersUuid(createDefaultParameters());
         }
         return studyEntity.getSensitivityAnalysisParametersUuid();
     }
@@ -254,7 +254,8 @@ public class SensitivityAnalysisService extends AbstractComputationService imple
         return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
     }
 
-    public UUID createDefaultSensitivityAnalysisParameters() {
+    @Override
+    public UUID createDefaultParameters() {
 
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/default")

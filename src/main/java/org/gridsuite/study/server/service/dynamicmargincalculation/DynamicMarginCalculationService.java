@@ -51,6 +51,7 @@ public class DynamicMarginCalculationService implements ComputationParameters {
         return dynamicMarginCalculationClient.createParameters(parameters);
     }
 
+    @Override
     public UUID createDefaultParameters() {
         return dynamicMarginCalculationClient.createDefaultParameters();
     }

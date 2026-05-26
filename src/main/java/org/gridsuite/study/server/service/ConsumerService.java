@@ -15,7 +15,7 @@ import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
-import org.gridsuite.study.server.dto.computation.ComputationsParameters;
+import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
@@ -25,6 +25,7 @@ import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -267,12 +268,12 @@ public class ConsumerService {
                              Map<String, String> importParameters, UUID importReportUuid) {
         UserProfileInfos userProfileInfos = studyService.getUserProfile(userId);
 
-        ComputationsParameters computationsParameters = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
+        ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
         UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
         UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
 
-        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, computationsParameters,
+        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, computationParameterUUIDs,
             networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
             importParameters, importReportUuid);
     }
