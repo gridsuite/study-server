@@ -2134,7 +2134,7 @@ class NetworkModificationTest {
 
         UUID newCompositeUuid = UUID.randomUUID();
 
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/network-composite-modifications/composite-modification"))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/network-composite-modifications/"))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(newCompositeUuid))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
@@ -2157,7 +2157,7 @@ class NetworkModificationTest {
 
         WireMockUtilsCriteria.verifyPostRequest(
                 wireMockServer,
-                "/v1/network-composite-modifications/composite-modification",
+                "/v1/network-composite-modifications/",
                 Map.of(),
                 1
         );
