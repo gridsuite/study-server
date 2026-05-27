@@ -14,7 +14,6 @@ import com.powsybl.commons.report.ReportNode;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.ElementAttributes;
-import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
@@ -49,7 +48,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.*;
-import java.util.function.Function;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -253,13 +251,13 @@ class StudyControllerCreationTest {
 
     private void verifyMockCallsAfterStudyCreation() {
         verify(reportService, Mockito.times(1)).sendReport(any(UUID.class), any(ReportNode.class));
-        verify(loadFlowService, Mockito.times(1)).doCreateDefaultParameters(any(String.class), any(UserProfileInfos.class), any(Function.class), any(String.class), any(Logger.class));
-        verify(shortCircuitService, Mockito.times(1)).doCreateDefaultParameters(any(String.class), any(UserProfileInfos.class), any(Function.class), any(String.class), any(Logger.class));
-        verify(securityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(String.class), any(UserProfileInfos.class), any(Function.class), any(String.class), any(Logger.class));
-        verify(sensitivityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(String.class), any(UserProfileInfos.class), any(Function.class), any(String.class), any(Logger.class));
-        verify(voltageInitService, Mockito.times(1)).doCreateDefaultParameters(any(String.class), any(UserProfileInfos.class), any(Function.class), any(String.class), any(Logger.class));
-        verify(dynamicSecurityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(String.class), any(UserProfileInfos.class), any(Function.class), any(String.class), any(Logger.class));
-        verify(stateEstimationService, Mockito.times(1)).doCreateDefaultParameters(any(String.class), any(UserProfileInfos.class), any(Function.class), any(String.class), any(Logger.class));
+        verify(loadFlowService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(shortCircuitService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(securityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(sensitivityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(voltageInitService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(dynamicSecurityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(stateEstimationService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(studyConfigService, Mockito.times(1)).createDefaultSpreadsheetConfigCollection();
     }
 
