@@ -89,10 +89,9 @@ public class DirectoryServerStubs {
     }
 
     public void stubGetElementNames(String responseBody) {
-        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath("/v1/elements/names");
-        pathBuilder.queryParam("strictMode", "false");
-
-        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo(pathBuilder.buildAndExpand().toUriString()))
+        wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/elements/names"))
+            .withQueryParam(PARAM_IDS, WireMock.matching(".*"))
+            .withQueryParam("strictMode", WireMock.equalTo("false"))
             .willReturn(WireMock.aResponse()
                 .withStatus(HttpStatus.OK.value())
                 .withHeader("Content-Type", "application/json")
