@@ -188,6 +188,9 @@ public class SecurityAnalysisService extends AbstractComputationService implemen
     }
 
     public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
         return getSecurityAnalysisStatuses(List.of(resultUuid)).get(resultUuid);
     }
 

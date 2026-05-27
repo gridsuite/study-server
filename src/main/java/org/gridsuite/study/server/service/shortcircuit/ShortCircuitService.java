@@ -198,6 +198,9 @@ public class ShortCircuitService extends AbstractComputationService implements C
     }
 
     public ShortCircuitAnalysisStatus getShortCircuitAnalysisStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
         return getShortCircuitAnalysisStatuses(List.of(resultUuid)).get(resultUuid);
     }
 

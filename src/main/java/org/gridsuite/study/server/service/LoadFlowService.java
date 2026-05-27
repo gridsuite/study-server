@@ -138,6 +138,9 @@ public class LoadFlowService extends AbstractComputationService implements Compu
     }
 
     public LoadFlowStatus getLoadFlowStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
         return getLoadFlowStatuses(List.of(resultUuid)).get(resultUuid);
     }
 

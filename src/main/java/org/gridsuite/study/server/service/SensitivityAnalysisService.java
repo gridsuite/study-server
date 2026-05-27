@@ -174,6 +174,9 @@ public class SensitivityAnalysisService extends AbstractComputationService imple
     }
 
     public SensitivityAnalysisStatus getSensitivityAnalysisStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
         return getSensitivityAnalysisStatuses(List.of(resultUuid)).get(resultUuid);
     }
 

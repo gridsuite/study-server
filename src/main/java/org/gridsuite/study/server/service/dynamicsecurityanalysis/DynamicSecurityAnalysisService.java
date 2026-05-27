@@ -90,6 +90,9 @@ public class DynamicSecurityAnalysisService implements ComputationParameters {
     }
 
     public DynamicSecurityAnalysisStatus getStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
         return getDynamicSecurityAnalysisStatuses(List.of(resultUuid)).get(resultUuid);
     }
 

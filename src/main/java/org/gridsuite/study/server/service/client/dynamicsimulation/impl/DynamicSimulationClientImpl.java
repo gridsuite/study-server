@@ -206,6 +206,9 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
 
     @Override
     public DynamicSimulationStatus getStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
         return getStatuses(List.of(resultUuid)).get(resultUuid);
     }
 

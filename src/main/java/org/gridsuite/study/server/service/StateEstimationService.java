@@ -129,6 +129,9 @@ public class StateEstimationService extends AbstractComputationService implement
     }
 
     public StateEstimationStatus getStateEstimationStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
         return getStateEstimationStatuses(List.of(resultUuid)).get(resultUuid);
     }
 

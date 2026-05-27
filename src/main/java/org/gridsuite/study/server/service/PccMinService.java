@@ -125,6 +125,9 @@ public class PccMinService extends AbstractComputationService implements Computa
     }
 
     public PccMinStatus getPccMinStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
         return getPccMinStatuses(List.of(resultUuid)).get(resultUuid);
     }
 

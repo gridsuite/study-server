@@ -89,6 +89,9 @@ public class DynamicMarginCalculationService implements ComputationParameters {
     }
 
     public DynamicMarginCalculationStatus getStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
         return getDynamicMarginCalculationStatuses(List.of(resultUuid)).get(resultUuid);
     }
 

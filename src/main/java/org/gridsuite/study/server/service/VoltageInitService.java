@@ -129,6 +129,9 @@ public class VoltageInitService extends AbstractComputationService implements Co
     }
 
     public VoltageInitStatus getVoltageInitStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
         return getVoltageInitStatuses(List.of(resultUuid)).get(resultUuid);
     }
 

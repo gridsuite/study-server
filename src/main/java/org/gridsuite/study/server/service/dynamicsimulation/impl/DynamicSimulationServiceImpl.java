@@ -204,6 +204,9 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public DynamicSimulationStatus getStatus(UUID resultUuid) {
+        if (resultUuid == null) {
+            return null;
+        }
         return getDynamicSimulationStatuses(List.of(resultUuid)).get(resultUuid);
     }
 
