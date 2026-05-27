@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.utils.wiremock;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.MappingBuilder;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -62,7 +61,7 @@ public class WireMockStubs {
         this.loadflowServer = new LoadflowServerStubs(wireMock);
         this.networkConversionServer = new NetworkConversionServerStubs(wireMock);
         this.reportServer = new ReportServerStubs(wireMock);
-        this.directoryServer = new DirectoryServerStubs(wireMock, new ObjectMapper());
+        this.directoryServer = new DirectoryServerStubs(wireMock);
         this.computationServer = new ComputationServerStubs(wireMock);
         this.userAdminServer = new UserAdminServerStubs(wireMock);
     }

@@ -7,8 +7,6 @@
 
 package org.gridsuite.study.server.utils.wiremock;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
@@ -32,11 +30,9 @@ import static org.gridsuite.study.server.service.DirectoryService.*;
 public class DirectoryServerStubs {
     private final WireMockServer wireMock;
     private static final String DIRECTORY_URI = "/v1/directories";
-    private final ObjectMapper objectMapper;
 
-    public DirectoryServerStubs(WireMockServer wireMock, ObjectMapper objectMapper) {
+    public DirectoryServerStubs(WireMockServer wireMock) {
         this.wireMock = wireMock;
-        this.objectMapper = objectMapper;
     }
 
     public void stubElementExists(UUID directoryUuid, String elementName, String type, int status) {
@@ -92,23 +88,15 @@ public class DirectoryServerStubs {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, pathBuilder.buildAndExpand().toUriString(), Map.of());
     }
 
-    public void stubGetElementNames(Map<UUID, String> returnedElementsIdNameMap) throws JsonProcessingException {
-        /*UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath("/v1/elements/names");
+    public void stubGetElementNames(String responseBody) {
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath("/v1/elements/names");
         pathBuilder.queryParam("strictMode", "false");
 
         wireMock.stubFor(WireMock.get(WireMock.urlEqualTo(pathBuilder.buildAndExpand().toUriString()))
             .willReturn(WireMock.aResponse()
                 .withStatus(HttpStatus.OK.value())
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(returnedElementsIdNameMap))));*/
-
-        wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/elements/names"))
-            /*.withQueryParam(PARAM_IDS, WireMock.matching(".*"))
-            .withQueryParam("strictMode", WireMock.equalTo("false"))*/
-            .willReturn(WireMock.aResponse()
-                .withStatus(HttpStatus.OK.value())
-                .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(returnedElementsIdNameMap))));
+                .withBody(responseBody)));
     }
 
     public void verifyGetElementNames(Set<UUID> givenElementUuids) {

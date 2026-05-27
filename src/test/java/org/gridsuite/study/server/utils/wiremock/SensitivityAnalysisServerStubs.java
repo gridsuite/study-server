@@ -7,34 +7,28 @@
 
 package org.gridsuite.study.server.utils.wiremock;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.springframework.http.HttpStatus;
 
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * @author Caroline JEANDAT <caroline.jeandat at rte-france.com>
  */
 public class SensitivityAnalysisServerStubs {
     private final WireMockServer wireMock;
-    private final ObjectMapper objectMapper;
 
-    public SensitivityAnalysisServerStubs(WireMockServer wireMock, ObjectMapper objectMapper) {
+    public SensitivityAnalysisServerStubs(WireMockServer wireMock) {
         this.wireMock = wireMock;
-        this.objectMapper = objectMapper;
     }
 
-    public void stubGetElementIds(List<UUID> elementUuids) throws JsonProcessingException {
+    public void stubGetElementIds(String responseBody) {
         wireMock.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/parameters/.*/contingency-lists-and-filters"))
             .willReturn(WireMock.aResponse()
                 .withStatus(HttpStatus.OK.value())
                 .withHeader("Content-Type", "application/json")
-                .withBody(objectMapper.writeValueAsString(elementUuids))));
+                .withBody(responseBody)));
     }
 
     public void verifyGetElementIds() {

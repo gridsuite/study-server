@@ -100,12 +100,9 @@ class SensitivityAnalysisTest {
     private static final String VARIANT_ID_3 = "variant_3";
 
     private static final UUID ELEMENTS_1_UUID = UUID.randomUUID();
-    private static final UUID ELEMENTS_2_UUID = UUID.randomUUID();
     private static final String ELEMENTS_1_NAME = "element1";
-    private static final String ELEMENTS_2_NAME = "element2";
     private static final Map<UUID, String> ELEMENTS_ID_NAME_MAP = Map.of(
-        ELEMENTS_1_UUID, ELEMENTS_1_NAME,
-        ELEMENTS_2_UUID, ELEMENTS_2_NAME
+        ELEMENTS_1_UUID, ELEMENTS_1_NAME
     );
 
     private static final String SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
@@ -192,6 +189,8 @@ class SensitivityAnalysisTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
     private TestUtils studyTestUtils;
+    @Autowired
+    private DirectoryService directoryService;
 
     @BeforeEach
     void setup() {
@@ -200,14 +199,15 @@ class SensitivityAnalysisTest {
         computationServerStubs = new ComputationServerStubs(wireMockServer);
         reportServerStubs = new ReportServerStubs(wireMockServer);
         userAdminServerStubs = new UserAdminServerStubs(wireMockServer);
-        directoryServerStubs = new DirectoryServerStubs(wireMockServer, objectMapper);
-        sensitivityAnalysisStubs = new SensitivityAnalysisServerStubs(wireMockServer,objectMapper);
+        directoryServerStubs = new DirectoryServerStubs(wireMockServer);
+        sensitivityAnalysisStubs = new SensitivityAnalysisServerStubs(wireMockServer);
 
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(wireMockServer.baseUrl());
         actionsService.setActionsServerBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
+        directoryService.setDirectoryServerServerBaseUri(wireMockServer.baseUrl());
 
         loadFlowService.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
@@ -269,7 +269,11 @@ class SensitivityAnalysisTest {
 
     @Test
     void testSensitivityAnalysis() throws Exception {
-        //insert a study
+        // Stub: retrieve sensi parameters' filter names
+        sensitivityAnalysisStubs.stubGetElementIds(objectMapper.writeValueAsString(List.of(ELEMENTS_1_UUID)));
+        directoryServerStubs.stubGetElementNames(objectMapper.writeValueAsString(ELEMENTS_ID_NAME_MAP));
+
+        // insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
@@ -315,6 +319,8 @@ class SensitivityAnalysisTest {
 
         consumeSensitivityAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid, SENSITIVITY_ANALYSIS_RESULT_UUID);
         computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("receiver", WireMock.matching(".*")));
+        sensitivityAnalysisStubs.verifyGetElementIds();
+        directoryServerStubs.verifyGetElementNames(Set.of(ELEMENTS_1_UUID));
 
         // --- 3. Test result count (dryRun) ---
         computationServerStubs.stubResultsCount(1);
@@ -358,8 +364,6 @@ class SensitivityAnalysisTest {
 
         // --- 2. Run sensitivity analysis ---
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, resultUuid);
-        sensitivityAnalysisStubs.stubGetElementIds(List.of(ELEMENTS_1_UUID, ELEMENTS_2_UUID));
-        directoryServerStubs.stubGetElementNames(ELEMENTS_ID_NAME_MAP);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run",
                 studyUuid, rootNetworkUuid, nodeUuid)
@@ -367,12 +371,12 @@ class SensitivityAnalysisTest {
             .andExpect(status().isOk());
 
         consumeSensitivityAnalysisResult(studyUuid, rootNetworkUuid, nodeUuid, resultUuid);
+        sensitivityAnalysisStubs.verifyGetElementIds();
+        directoryServerStubs.verifyGetElementNames(Set.of(ELEMENTS_1_UUID));
         computationServerStubs.verifyComputationRun(
             NETWORK_UUID_STRING,
             Map.of("receiver", WireMock.matching(".*")),
             objectMapper.writeValueAsString(ELEMENTS_ID_NAME_MAP));
-        sensitivityAnalysisStubs.verifyGetElementIds();
-        directoryServerStubs.verifyGetElementNames(Set.of(ELEMENTS_1_UUID, ELEMENTS_2_UUID));
 
         // --- 3. GET sensitivity analysis result ---
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + resultUuid + ".*"))
