@@ -3458,6 +3458,7 @@ public class StudyService {
 
     private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode computationsInvalidationMode) {
         if (InvalidateNodeTreeParameters.ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
+            // use for security node, when reruning loadflow, there is a modification due to the first lf and the node is unbuild when a modification is deleted and we want to keep the results
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS_WITHOUT_LOADFLOW);
         } else {
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS);
