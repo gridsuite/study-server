@@ -43,8 +43,7 @@ public class ComputationParametersService {
             Function<UserProfileInfos, UUID> profileParameterGetter,
             ComputationParameters service,
             BiConsumer<ComputationParameterUUIDs.ComputationParameterUUIDsBuilder, UUID> parametersSetter,
-            Function<ComputationParameterUUIDs, UUID> parametersGetter,
-            String defaultErrorLabel
+            Function<ComputationParameterUUIDs, UUID> parametersGetter
     ) {
     }
 
@@ -68,87 +67,86 @@ public class ComputationParametersService {
                         UserProfileInfos::getLoadFlowParameterId,
                         loadFlowService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::loadFlowParametersUuid,
-                        ComputationParameterUUIDs::loadFlowParametersUuid,
-                        "LoadFlow analysis"),
+                        ComputationParameterUUIDs::loadFlowParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.SHORT_CIRCUIT,
                         StudyEntity::getShortCircuitParametersUuid,
                         UserProfileInfos::getShortcircuitParameterId,
                         shortCircuitService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::shortCircuitParametersUuid,
-                        ComputationParameterUUIDs::shortCircuitParametersUuid,
-                        "ShortCircuit analysis"),
+                        ComputationParameterUUIDs::shortCircuitParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_SIMULATION,
                         StudyEntity::getDynamicSimulationParametersUuid,
                         UserProfileInfos::getDynamicSimulationParameterId,
                         dynamicSimulationService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicSimulationParametersUuid,
-                        ComputationParameterUUIDs::dynamicSimulationParametersUuid,
-                        "dynamic simulation"),
+                        ComputationParameterUUIDs::dynamicSimulationParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.VOLTAGE_INITIALIZATION,
                         StudyEntity::getVoltageInitParametersUuid,
                         UserProfileInfos::getVoltageInitParameterId,
                         voltageInitService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::voltageInitParametersUuid,
-                        ComputationParameterUUIDs::voltageInitParametersUuid,
-                        "voltage init"),
+                        ComputationParameterUUIDs::voltageInitParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.SECURITY_ANALYSIS,
                         StudyEntity::getSecurityAnalysisParametersUuid,
                         UserProfileInfos::getSecurityAnalysisParameterId,
                         securityAnalysisService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::securityAnalysisParametersUuid,
-                        ComputationParameterUUIDs::securityAnalysisParametersUuid,
-                        "Security analysis"),
+                        ComputationParameterUUIDs::securityAnalysisParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.SENSITIVITY_ANALYSIS,
                         StudyEntity::getSensitivityAnalysisParametersUuid,
                         UserProfileInfos::getSensitivityAnalysisParameterId,
                         sensitivityAnalysisService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::sensitivityAnalysisParametersUuid,
-                        ComputationParameterUUIDs::sensitivityAnalysisParametersUuid,
-                        "Sensitivity analysis"),
+                        ComputationParameterUUIDs::sensitivityAnalysisParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_SECURITY_ANALYSIS,
                         StudyEntity::getDynamicSecurityAnalysisParametersUuid,
                         UserProfileInfos::getDynamicSecurityAnalysisParameterId,
                         dynamicSecurityAnalysisService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicSecurityAnalysisParametersUuid,
-                        ComputationParameterUUIDs::dynamicSecurityAnalysisParametersUuid,
-                        "dynamic security analysis"),
+                        ComputationParameterUUIDs::dynamicSecurityAnalysisParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_MARGIN_CALCULATION,
                         StudyEntity::getDynamicMarginCalculationParametersUuid,
                         UserProfileInfos::getDynamicMarginCalculationParameterId,
                         dynamicMarginCalculationService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicMarginCalculationParametersUuid,
-                        ComputationParameterUUIDs::dynamicMarginCalculationParametersUuid,
-                        "dynamic margin calculation"),
+                        ComputationParameterUUIDs::dynamicMarginCalculationParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.STATE_ESTIMATION,
                         StudyEntity::getStateEstimationParametersUuid,
                         userProfileInfos -> null,
                         stateEstimationService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::stateEstimationParametersUuid,
-                        ComputationParameterUUIDs::stateEstimationParametersUuid,
-                        "state estimation"),
+                        ComputationParameterUUIDs::stateEstimationParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.PCC_MIN,
                         StudyEntity::getPccMinParametersUuid,
                         UserProfileInfos::getPccMinParameterId,
                         pccMinService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::pccMinParametersUuid,
-                        ComputationParameterUUIDs::pccMinParametersUuid,
-                        "pcc min")
+                        ComputationParameterUUIDs::pccMinParametersUuid)
         );
     }
 
     public ComputationParameterUUIDs createDefaultComputationParameters(String userId, UserProfileInfos userProfileInfos) {
         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder parametersBuilder = ComputationParameterUUIDs.builder();
         computationParametersDefinitions.forEach(definition ->
-                definition.parametersSetter().accept(parametersBuilder, createDefaultParameters(userId, userProfileInfos, definition)));
+                definition.parametersSetter().accept(parametersBuilder,
+                        definition.service.doCreateDefaultParameters(
+                                userId,
+                                userProfileInfos,
+                                definition.profileParameterGetter,
+                                definition.type().getLabel(),
+                                LOGGER
+                        )
+                )
+        );
         return parametersBuilder.build();
     }
 
@@ -236,28 +234,6 @@ public class ComputationParametersService {
             studyParameterSetter.accept(studyEntity, newParametersUuid);
         } else {
             updateParameters.accept(existingParametersUuid, parameters);
-        }
-    }
-
-    private UUID createDefaultParameters(String userId, UserProfileInfos userProfileInfos, ComputationParametersDefinition definition) {
-        UUID profileParameterId = userProfileInfos == null ?
-                null :
-                definition.profileParameterGetter().apply(userProfileInfos);
-
-        if (profileParameterId != null) {
-            try {
-                return definition.service().duplicateParameters(profileParameterId);
-            } catch (Exception e) {
-                LOGGER.error("Could not duplicate {} parameters with id '{}' from user/profile '{}/{}'. Using default parameters",
-                        definition.type().getLabel(), profileParameterId, userId, userProfileInfos.getName(), e);
-            }
-        }
-
-        try {
-            return definition.service().createDefaultParameters();
-        } catch (Exception e) {
-            LOGGER.error("Error while creating default parameters for {}", definition.defaultErrorLabel(), e);
-            return null;
         }
     }
 
