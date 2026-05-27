@@ -240,19 +240,16 @@ public class ComputationParametersService {
     }
 
     private UUID createDefaultParameters(String userId, UserProfileInfos userProfileInfos, ComputationParametersDefinition definition) {
-        // Only STATE_ESTIMATION doesn't go through duplication process if with user profile
-        if (definition.type != ComputationType.STATE_ESTIMATION) {
-            UUID profileParameterId = userProfileInfos == null ?
-                    null :
-                    definition.profileParameterGetter().apply(userProfileInfos);
+        UUID profileParameterId = userProfileInfos == null ?
+                null :
+                definition.profileParameterGetter().apply(userProfileInfos);
 
-            if (profileParameterId != null) {
-                try {
-                    return definition.service().duplicateParameters(profileParameterId);
-                } catch (Exception e) {
-                    LOGGER.error("Could not duplicate {} parameters with id '{}' from user/profile '{}/{}'. Using default parameters",
-                            definition.type().getLabel(), profileParameterId, userId, userProfileInfos.getName(), e);
-                }
+        if (profileParameterId != null) {
+            try {
+                return definition.service().duplicateParameters(profileParameterId);
+            } catch (Exception e) {
+                LOGGER.error("Could not duplicate {} parameters with id '{}' from user/profile '{}/{}'. Using default parameters",
+                        definition.type().getLabel(), profileParameterId, userId, userProfileInfos.getName(), e);
             }
         }
 
