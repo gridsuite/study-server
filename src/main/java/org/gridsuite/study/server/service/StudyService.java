@@ -65,7 +65,6 @@ import org.springframework.data.util.Pair;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
 
 import java.io.UncheckedIOException;
@@ -1831,6 +1830,7 @@ public class StudyService {
             networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
             throw e;
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
@@ -1880,7 +1880,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void unbuildStudyNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid) {
+    public void unbuildStudyNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
         if (networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isNotBuilt()) {
             return;
         }
@@ -1893,16 +1893,18 @@ public class StudyService {
         } else {
             invalidateNode(studyUuid, nodeUuid, rootNetworkUuid);
         }
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     @Transactional
-    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes) {
+    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, @NonNull String userId) {
         InvalidateNodeTreeParameters invalidateNodeTreeParameters = withBlockNodes ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES : InvalidateNodeTreeParameters.ALL;
         List<CompletableFuture<Void>> futures = getStudy(studyUuid).getRootNetworks().stream().map(rn ->
             studyServerExecutionService.runAsync(() -> invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), invalidateNodeTreeParameters))
         ).toList();
 
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+        notificationService.emitElementUpdated(studyUuid, userId);
     }
 
     public void stopBuild(@NonNull UUID nodeUuid, UUID rootNetworkUuid) {
@@ -2156,7 +2158,7 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.updateModificationsMetadata(groupId, modificationsUuids, metadata);
-            if (metadata.getActivated() != null) {
+            if (metadata.getActivated() != null || metadata.getName() != null) {
                 invalidateNodeTree(studyUuid, nodeUuid);
             }
         } finally {
@@ -3371,14 +3373,9 @@ public class StudyService {
                 for (UUID otherRootNetwork : rootNetworkToDeactivateUuids) {
                     rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, otherRootNetwork, Set.of(networkModificationResults.modificationUuids().getFirst()), false);
                 }
-                int index = 0;
-                // for each NetworkModificationResult, send an impact notification - studyRootNetworkEntities are ordered in the same way as networkModificationResults
-                for (Optional<NetworkModificationResult> modificationResultOpt : networkModificationResults.modificationResults()) {
-                    if (modificationResultOpt.isPresent() && studyRootNetworkEntities.get(index) != null) {
-                        emitNetworkModificationImpacts(studyUuid, nodeUuid, studyRootNetworkEntities.get(index).getId(), modificationResultOpt.get());
-                    }
-                    index++;
-                }
+                // The modification was applied only on rootNetworkUuid, so the single result must be attributed to it
+                networkModificationResults.modificationResults().getFirst()
+                    .ifPresent(result -> emitNetworkModificationImpacts(studyUuid, nodeUuid, rootNetworkUuid, result));
             }
 
             voltageInitService.resetModificationsGroupUuid(resultUuid);
@@ -3906,11 +3903,6 @@ public class StudyService {
             }
         });
         return studyEntity.isPresent();
-    }
-
-    @Transactional
-    public void createNadPositionsConfigFromCsv(MultipartFile file) {
-        singleLineDiagramService.createNadPositionsConfigFromCsv(file);
     }
 
     private List<CurrentLimitViolationInfos> getCurrentLimitViolations(UUID nodeUuid, UUID rootNetworkUuid) {

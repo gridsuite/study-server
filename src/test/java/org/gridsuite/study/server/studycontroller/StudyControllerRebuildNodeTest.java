@@ -121,7 +121,7 @@ class StudyControllerRebuildNodeTest {
     @Test
     void updateNetworkModificationMetadata() {
         List<UUID> modificationUuids = List.of(UUID.randomUUID());
-        NetworkModificationMetadata networkModificationMetadata = new NetworkModificationMetadata(true, "description", "type");
+        NetworkModificationMetadata networkModificationMetadata = new NetworkModificationMetadata(true, "description", "type", null);
         studyController.updateNetworkModificationsMetadata(studyUuid, nodeUuid, modificationUuids, networkModificationMetadata, userId);
 
         verify(rebuildNodeService, times(1)).updateNetworkModificationsMetadata(studyUuid, nodeUuid, modificationUuids, userId, networkModificationMetadata);
