@@ -256,15 +256,14 @@ public class RootNetworkService {
         rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList());
     }
 
-    public void invalidateRootNetworkRemoteInfos(List<RootNetworkInfos> rootNetworkInfos, boolean blocking) {
+    public void invalidateRootNetworkRemoteInfos(List<RootNetworkInfos> rootNetworkInfos) {
         ArrayList<CompletableFuture<Void>> futures = new ArrayList<>();
         // delete remote data ids set in root network
         futures.add(studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())));
         futures.add(studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes)));
         futures.add(studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)));
-        if (blocking) {
-            CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
-        }
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+
         // delete remote data ids set in root network node infos
         rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfosByUuids(
                 rootNetworkInfos.stream().map(RootNetworkInfos::getId).toList()
@@ -354,12 +353,10 @@ public class RootNetworkService {
                 rootNetworkRequestRepository.findByTagAndStudyUuid(rootNetworkTag, studyUuid).isPresent();
     }
 
-    @Transactional(readOnly = true)
     public List<RootNetworkEntity> getStudyRootNetwork(StudyEntity study) {
         return study.getRootNetworks();
     }
 
-    @Transactional(readOnly = true)
     public List<UUID> getStudyRootNetworkIds(UUID studyUuid) {
         return rootNetworkRepository.findAllByStudyId(studyUuid).stream()
                 .map(RootNetworkEntity::getId)
