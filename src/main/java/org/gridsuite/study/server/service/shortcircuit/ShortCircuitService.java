@@ -20,6 +20,7 @@ import org.gridsuite.study.server.dto.ShortCircuitAnalysisStatus;
 import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -52,7 +53,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.*;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 @Service
-public class ShortCircuitService extends AbstractComputationService {
+public class ShortCircuitService extends AbstractComputationService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -305,6 +306,11 @@ public class ShortCircuitService extends AbstractComputationService {
         }
     }
 
+    @Override
+    public UUID createDefaultParameters() {
+        return createParameters(null);
+    }
+
     public void updateParameters(final UUID parametersUuid, @Nullable final String parametersInfos) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -323,6 +329,7 @@ public class ShortCircuitService extends AbstractComputationService {
             .toUri(), HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
     }
 
+    @Override
     public UUID duplicateParameters(UUID parametersUuid) {
         HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
@@ -332,7 +339,8 @@ public class ShortCircuitService extends AbstractComputationService {
             .toUri(), new HttpEntity<>(headers), UUID.class);
     }
 
-    public void deleteShortcircuitParameters(UUID uuid) {
+    @Override
+    public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
         String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(uuid)

@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalc
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -33,7 +34,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATIO
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @Service
-public class DynamicMarginCalculationService {
+public class DynamicMarginCalculationService implements ComputationParameters {
 
     private final ObjectMapper objectMapper;
 
@@ -53,6 +54,7 @@ public class DynamicMarginCalculationService {
         return dynamicMarginCalculationClient.createParameters(parameters);
     }
 
+    @Override
     public UUID createDefaultParameters() {
         return dynamicMarginCalculationClient.createDefaultParameters();
     }
@@ -61,6 +63,7 @@ public class DynamicMarginCalculationService {
         dynamicMarginCalculationClient.updateParameters(parametersUuid, parametersInfos);
     }
 
+    @Override
     public UUID duplicateParameters(UUID sourceParameterId) {
         return dynamicMarginCalculationClient.duplicateParameters(sourceParameterId);
     }

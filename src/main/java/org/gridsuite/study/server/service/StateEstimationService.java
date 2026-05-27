@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.StateEstimationStatus;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -46,7 +47,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATIO
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class StateEstimationService extends AbstractComputationService {
+public class StateEstimationService extends AbstractComputationService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -176,12 +177,13 @@ public class StateEstimationService extends AbstractComputationService {
 
     public UUID getStateEstimationParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
         if (studyEntity.getStateEstimationParametersUuid() == null) {
-            studyEntity.setStateEstimationParametersUuid(createDefaultStateEstimationParameters());
+            studyEntity.setStateEstimationParametersUuid(createDefaultParameters());
         }
         return studyEntity.getStateEstimationParametersUuid();
     }
 
-    public UUID createDefaultStateEstimationParameters() {
+    @Override
+    public UUID createDefaultParameters() {
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/parameters/default")
             .buildAndExpand()
@@ -223,7 +225,8 @@ public class StateEstimationService extends AbstractComputationService {
         return restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
     }
 
-    public UUID duplicateStateEstimationParameters(UUID sourceParametersUuid) {
+    @Override
+    public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
 
         String path = UriComponentsBuilder
@@ -239,7 +242,8 @@ public class StateEstimationService extends AbstractComputationService {
         return restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void deleteStateEstimationParameters(UUID uuid) {
+    @Override
+    public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
 
         String path = UriComponentsBuilder

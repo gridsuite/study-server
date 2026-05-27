@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
@@ -42,7 +43,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class SensitivityAnalysisService extends AbstractComputationService {
+public class SensitivityAnalysisService extends AbstractComputationService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
     private static final String RESULTS = "results";
@@ -259,7 +260,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
     public UUID getSensitivityAnalysisParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {
         if (studyEntity.getSensitivityAnalysisParametersUuid() == null) {
             // not supposed to happen because we create it as the study creation
-            studyEntity.setSensitivityAnalysisParametersUuid(createDefaultSensitivityAnalysisParameters());
+            studyEntity.setSensitivityAnalysisParametersUuid(createDefaultParameters());
         }
         return studyEntity.getSensitivityAnalysisParametersUuid();
     }
@@ -274,7 +275,8 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
     }
 
-    public UUID createDefaultSensitivityAnalysisParameters() {
+    @Override
+    public UUID createDefaultParameters() {
 
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/default")
@@ -300,7 +302,8 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
     }
 
-    public UUID duplicateSensitivityAnalysisParameters(UUID sourceParametersUuid) {
+    @Override
+    public UUID duplicateParameters(UUID sourceParametersUuid) {
 
         Objects.requireNonNull(sourceParametersUuid);
 
@@ -327,8 +330,8 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         restTemplate.put(sensitivityAnalysisServerBaseUri + path, httpEntity);
     }
 
-    public void deleteSensitivityAnalysisParameters(UUID uuid) {
-
+    @Override
+    public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
 
         String path = UriComponentsBuilder

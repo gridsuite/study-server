@@ -20,6 +20,7 @@ import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
@@ -45,7 +46,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
 @Service
-public class VoltageInitService extends AbstractComputationService {
+public class VoltageInitService extends AbstractComputationService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
     static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
@@ -171,6 +172,11 @@ public class VoltageInitService extends AbstractComputationService {
         return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
+    @Override
+    public UUID createDefaultParameters() {
+        return createVoltageInitParameters(null);
+    }
+
     public void updateVoltageInitParameters(UUID parametersUuid, @Nullable VoltageInitParametersInfos parameters) {
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
@@ -185,8 +191,8 @@ public class VoltageInitService extends AbstractComputationService {
         restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.PUT, httpEntity, UUID.class);
     }
 
-    public UUID duplicateVoltageInitParameters(UUID sourceParametersUuid) {
-
+    @Override
+    public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
 
         String path = UriComponentsBuilder
@@ -202,7 +208,8 @@ public class VoltageInitService extends AbstractComputationService {
         return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void deleteVoltageInitParameters(UUID parametersUuid) {
+    @Override
+    public void deleteParameters(UUID parametersUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid).toUriString();
 

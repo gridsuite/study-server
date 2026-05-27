@@ -14,6 +14,7 @@ import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 
 import java.util.List;
 import java.util.Map;
@@ -22,7 +23,7 @@ import java.util.UUID;
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-public interface DynamicSimulationService {
+public interface DynamicSimulationService extends ComputationParameters {
 
     // --- Parameters related methods --- //
 

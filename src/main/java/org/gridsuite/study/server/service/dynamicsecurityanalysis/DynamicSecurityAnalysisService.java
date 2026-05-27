@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAna
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -34,7 +35,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATIO
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @Service
-public class DynamicSecurityAnalysisService {
+public class DynamicSecurityAnalysisService implements ComputationParameters {
 
     private final ObjectMapper objectMapper;
 
@@ -54,6 +55,7 @@ public class DynamicSecurityAnalysisService {
         return dynamicSecurityAnalysisClient.createParameters(parameters);
     }
 
+    @Override
     public UUID createDefaultParameters() {
         return dynamicSecurityAnalysisClient.createDefaultParameters();
     }
@@ -62,6 +64,7 @@ public class DynamicSecurityAnalysisService {
         dynamicSecurityAnalysisClient.updateParameters(parametersUuid, parametersInfos);
     }
 
+    @Override
     public UUID duplicateParameters(UUID sourceParameterId) {
         return dynamicSecurityAnalysisClient.duplicateParameters(sourceParameterId);
     }
