@@ -2703,10 +2703,10 @@ public class StudyService {
 
         // fetch the filters and contingencyLists contained in sensi parameters
         // and retrieve their names, as they are needed in the results
-        List<UUID> elementIds = sensitivityAnalysisService.getContainerIds(sensiParamsUuid);
-        Map<UUID, String> elementNamesMap = directoryService.getElementNames(new HashSet<>(elementIds));
+        List<UUID> elementIds = sensitivityAnalysisService.getElementIds(sensiParamsUuid);
+        Map<UUID, String> elementsIdNameMap = directoryService.getElementNames(new HashSet<>(elementIds));
 
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, rootNetworkUuid, networkUuid, variantId, sensiReportUuid, userId, sensiParamsUuid, study.getLoadFlowParametersUuid(), elementNamesMap);
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, rootNetworkUuid, networkUuid, variantId, sensiReportUuid, userId, sensiParamsUuid, study.getLoadFlowParametersUuid(), elementsIdNameMap);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SENSITIVITY_ANALYSIS);
         notificationService.emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);

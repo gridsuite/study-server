@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -66,7 +67,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
                                        String userId,
                                        UUID parametersUuid,
                                        UUID loadFlowParametersUuid,
-                                       Map<UUID, String> elementNamesMap) {
+                                       Map<UUID, String> elementsIdNameMap) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
@@ -87,17 +88,15 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }
-        // add query param Map container ids -> container names
         var path = uriComponentsBuilder
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
-            .queryParam("elementNamesMap", elementNamesMap)
             .buildAndExpand(networkUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
+        HttpEntity<Map<UUID, String>> httpEntity = new HttpEntity<>(elementsIdNameMap, headers);
 
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
@@ -340,6 +339,18 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return List.of();
     }
 
-    public List<UUID> getContainerIds(UUID sensiParamsUuid) {
+    public List<UUID> getElementIds(UUID parametersUuid) {
+
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI + "/contingency-lists-and-filters")
+            .buildAndExpand(parametersUuid)
+            .toUriString();
+
+        return restTemplate.exchange(
+            sensitivityAnalysisServerBaseUri + path,
+            HttpMethod.GET,
+            null,
+            new ParameterizedTypeReference<List<UUID>>() { }
+        ).getBody();
     }
 }
