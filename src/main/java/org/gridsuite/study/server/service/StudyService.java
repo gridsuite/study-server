@@ -590,7 +590,7 @@ public class StudyService {
             startTime.set(System.nanoTime());
 
             // delete all distant resources linked to rootNetworks
-            rootNetworkService.deleteRootNetworkRemoteInfos(deleteStudyInfos.getRootNetworkInfosList());
+            rootNetworkService.invalidateRootNetworkRemoteInfos(deleteStudyInfos.getRootNetworkInfosList(), false, true);
 
             // delete all distant resources linked to nodes
             studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuids().stream().filter(Objects::nonNull).forEach(networkModificationService::deleteModifications));
@@ -3681,7 +3681,7 @@ public class StudyService {
             // First we unbuild all nodes
             doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId);
             // Then we erase data linked to root node on all root networks
-            rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)));
+            rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
             rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
         } finally {
             networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNodeUuid);
