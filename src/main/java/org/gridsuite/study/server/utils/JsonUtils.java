@@ -78,12 +78,8 @@ public final class JsonUtils {
         }
 
         rawParams.forEach((key, value) -> {
-            if (value == null) {
-                result.put(key, null);
-                return;
-            }
             try {
-                result.put(key, objectMapper.readValue(value, Object.class));
+                result.put(key, value == null ? null : objectMapper.readValue(value, Object.class));
             } catch (JsonProcessingException e) {
                 throw new StudyException(UNPROCESSABLE_IMPORT_PARAMETER, "Import parameter '" + key + " => " + value + "' is not valid JSON: " + e.getMessage());
             }
