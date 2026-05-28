@@ -2243,12 +2243,10 @@ public class StudyService {
         try {
             List<ModificationApplicationContext> applicationContexts = List.of();
             StudyEntity studyEntity = getStudy(studyUuid);
-            if (targetNodeUuid != null) {
-                checkStudyContainsNode(studyUuid, targetNodeUuid);
-                applicationContexts = studyEntity.getRootNetworks().stream()
-                        .map(rn -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rn.getId(), targetNodeUuid, rn.getNetworkUuid()))
-                        .toList();
-            }
+            checkStudyContainsNode(studyUuid, targetNodeUuid);
+            applicationContexts = studyEntity.getRootNetworks().stream()
+                    .map(rn -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rn.getId(), targetNodeUuid, rn.getNetworkUuid()))
+                    .toList();
 
             NetworkModificationsResult result = networkModificationService.moveModifications(
                     sourceContainerId,
@@ -2257,19 +2255,18 @@ public class StudyService {
                     Pair.of(modificationUuidList, applicationContexts),
                     isTargetInDifferentNodeTree);
 
-            if (originNodeUuid != null && targetNodeUuid != null) {
+            if (originNodeUuid != null) {
                 rootNetworkNodeInfoService.moveModificationsToExclude(originNodeUuid, targetNodeUuid, result.modificationUuids());
             }
             if (isTargetInDifferentNodeTree) {
                 emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
             }
         } finally {
-            if(targetNodeUuid != null) {
-                notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
-                if (originNodeUuid != null && !originNodeUuid.equals(targetNodeUuid)) {
-                    notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids);
-                }
+            notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
+            if (originNodeUuid != null && !originNodeUuid.equals(targetNodeUuid)) {
+                notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids);
             }
+
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
