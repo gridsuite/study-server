@@ -65,20 +65,6 @@ public class RebuildNodeService {
             () -> studyService.restoreNetworkModifications(studyUuid, nodeUuid, modificationsUuids, userId));
     }
 
-    public void moveNetworkModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid, String userId) {
-        handleRebuildNode(studyUuid, nodeUuid, userId,
-            () -> handleMoveNetworkModification(studyUuid, nodeUuid, modificationUuid, beforeUuid, userId));
-    }
-
-    private void handleMoveNetworkModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid, String userId) {
-        studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
-        try {
-            studyService.moveNetworkModifications(studyUuid, nodeUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, false, userId);
-        } finally {
-            studyService.unblockNodeTree(studyUuid, nodeUuid);
-        }
-    }
-
     public void moveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
         handleRebuildNode(studyUuid, targetNodeUuid, originNodeUuid, userId,
                 () -> handleMoveNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId));
