@@ -2317,17 +2317,17 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID mergeModificationsIntoComposite(
-        UUID targetStudyUuid,
-        UUID targetNodeUuid,
-        List<UUID> modificationsUuids,
-        String userId) {
+    public UUID assembleModificationsIntoComposite(
+            UUID targetStudyUuid,
+            UUID targetNodeUuid,
+            List<UUID> modificationsUuids,
+            String userId) {
         UUID newCompositeUuid;
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         notificationService.emitStartModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         try {
             checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
-            newCompositeUuid = networkModificationService.mergeModificationsIntoComposite(modificationsUuids);
+            newCompositeUuid = networkModificationService.assembleModificationsIntoComposite(modificationsUuids);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
         }

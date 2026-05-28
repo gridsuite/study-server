@@ -2117,7 +2117,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testMergeModificationsIntoNewComposite() throws Exception {
+    void testAssembleModificationsIntoNewComposite() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
