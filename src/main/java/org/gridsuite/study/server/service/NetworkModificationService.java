@@ -46,7 +46,8 @@ public class NetworkModificationService {
 
     private static final String DELIMITER = "/";
     private static final String COMPOSITE_PATH = "network-composite-modifications" + DELIMITER;
-    private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
+    private static final String GROUPS = "groups";
+    private static final String GROUP_PATH = GROUPS + DELIMITER + "{groupUuid}";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String QUERY_PARAM_ACTION = "action";
@@ -98,7 +99,7 @@ public class NetworkModificationService {
         if (groupUuids.isEmpty()) {
             return Map.of();
         }
-        var path = UriComponentsBuilder.fromPath("groups" + DELIMITER + "modifications" + DELIMITER + "export")
+        var path = UriComponentsBuilder.fromPath(GROUPS + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "export")
                 .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
                 .toUriString();
 
