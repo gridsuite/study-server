@@ -1,5 +1,6 @@
 package org.gridsuite.study.server.dto;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -34,7 +35,7 @@ public class RootNetworkInfos {
 
     private String tag;
 
-    public RootNetworkEntity toEntity() {
+    public RootNetworkEntity toEntity(ObjectMapper objectMapper) {
         RootNetworkEntity.RootNetworkEntityBuilder rootNetworkEntityBuilder = RootNetworkEntity.builder()
                 .id(id)
                 .name(name)
@@ -46,7 +47,7 @@ public class RootNetworkInfos {
                 .caseName(caseInfos.getCaseName())
                 .caseFormat(caseInfos.getCaseFormat())
                 .reportUuid(reportUuid)
-                .importParameters(serializeImportParameters(importParameters))
+                .importParameters(serializeImportParameters(importParameters, objectMapper))
                 .tag(tag);
 
         if (rootNetworkNodeInfos != null) {

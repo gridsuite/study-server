@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.repository.rootnetwork;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.*;
@@ -87,12 +88,12 @@ public class RootNetworkEntity {
         rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);
     }
 
-    public RootNetworkInfos toDto() {
+    public RootNetworkInfos toDto(ObjectMapper objectMapper) {
         RootNetworkInfos.RootNetworkInfosBuilder rootNetworkInfosBuilder = RootNetworkInfos.builder();
         rootNetworkInfosBuilder.id(this.id)
             .name(this.name)
             .networkInfos(new NetworkInfos(this.networkUuid, this.networkId))
-            .importParameters(deserializeImportParameters(this.importParameters))
+            .importParameters(deserializeImportParameters(this.importParameters, objectMapper))
             .caseInfos(new CaseInfos(this.caseUuid, this.originalCaseUuid, this.caseName, this.caseFormat))
             .reportUuid(this.reportUuid)
             .tag(tag)

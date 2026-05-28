@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
@@ -53,6 +54,8 @@ public class RootNetworkService {
     private final EquipmentInfosService equipmentInfosService;
     private final NetworkStoreService networkStoreService;
 
+    private final ObjectMapper objectMapper;
+
     @Value("${study.max-root-network-by-study}")
     private int maximumRootNetworkByStudy = 4;
 
@@ -64,7 +67,8 @@ public class RootNetworkService {
                               StudyServerExecutionService studyServerExecutionService,
                               ReportService reportService,
                               EquipmentInfosService equipmentInfosService,
-                              NetworkStoreService networkStoreService) {
+                              NetworkStoreService networkStoreService,
+                              ObjectMapper objectMapper) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkService = networkService;
@@ -74,6 +78,7 @@ public class RootNetworkService {
         this.studyServerExecutionService = studyServerExecutionService;
         this.equipmentInfosService = equipmentInfosService;
         this.networkStoreService = networkStoreService;
+        this.objectMapper = objectMapper;
     }
 
     public UUID getNetworkUuid(UUID rootNetworkUuid) {
@@ -115,7 +120,7 @@ public class RootNetworkService {
 
             updateCaseInfos(rootNetworkEntity, rootNetworkInfos.getCaseInfos());
             updateNetworkInfos(rootNetworkEntity, rootNetworkInfos.getNetworkInfos());
-            rootNetworkEntity.setImportParameters(JsonUtils.serializeImportParameters(rootNetworkInfos.getImportParameters()));
+            rootNetworkEntity.setImportParameters(JsonUtils.serializeImportParameters(rootNetworkInfos.getImportParameters(), objectMapper));
             rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
         }
 
@@ -141,7 +146,7 @@ public class RootNetworkService {
     }
 
     public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity(objectMapper));
         studyEntity.addRootNetwork(rootNetworkEntity);
 
         rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
@@ -166,11 +171,11 @@ public class RootNetworkService {
     }
 
     public Map<String, Object> getImportParameters(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).map(JsonUtils::deserializeImportParameters).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).map(params -> JsonUtils.deserializeImportParameters(params, objectMapper)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
 
     public List<RootNetworkInfos> getRootNetworkInfosWithLinksInfos(UUID studyUuid) {
-        return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(RootNetworkEntity::toDto).toList();
+        return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(rootNetworkEntity -> rootNetworkEntity.toDto(objectMapper)).toList();
     }
 
     @Transactional
@@ -184,7 +189,7 @@ public class RootNetworkService {
                 UUID clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
 
                 UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
-                Map<String, Object> newImportParameters = JsonUtils.deserializeImportParameters(rootNetworkEntityToDuplicate.getImportParameters());
+                Map<String, Object> newImportParameters = JsonUtils.deserializeImportParameters(rootNetworkEntityToDuplicate.getImportParameters(), objectMapper);
 
                 UUID clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
 
@@ -229,7 +234,7 @@ public class RootNetworkService {
     public void deleteRootNetworks(StudyEntity studyEntity, Stream<UUID> rootNetworksUuids) {
         List<RootNetworkInfos> rootNetworksInfos = rootNetworksUuids.map(rootNetworkRepository::findWithRootNetworkNodeInfosById)
             .map(o -> o.orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")))
-            .map(RootNetworkEntity::toDto)
+            .map(rootNetworkEntity -> rootNetworkEntity.toDto(objectMapper))
             .toList();
 
         deleteRootNetworks(studyEntity, rootNetworksInfos);

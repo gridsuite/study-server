@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.error.StudyBusinessErrorCode;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.utils.JsonUtils;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * @author Etienne HOMER <etiennehomer@gmail.com>
  */
 class JsonUtilsTest {
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
     void testSerializeImportParameters() {
@@ -32,7 +34,7 @@ class JsonUtilsTest {
         params.put("map", Map.of("k", "v"));
         params.put("null", null);
 
-        Map<String, String> result = JsonUtils.serializeImportParameters(params);
+        Map<String, String> result = JsonUtils.serializeImportParameters(params, MAPPER);
 
         assertEquals("\"value\"", result.get("string"));
         assertEquals("123", result.get("int"));
@@ -44,7 +46,7 @@ class JsonUtilsTest {
 
     @Test
     void testSerializeNull() {
-        Map<String, String> result = JsonUtils.serializeImportParameters(null);
+        Map<String, String> result = JsonUtils.serializeImportParameters(null, MAPPER);
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }
@@ -55,7 +57,7 @@ class JsonUtilsTest {
         }
 
         Map<String, Object> nonSerializableParams = Map.of("nonSerializable", new NonSerializable());
-        StudyException exception = assertThrows(StudyException.class, () -> JsonUtils.serializeImportParameters(nonSerializableParams));
+        StudyException exception = assertThrows(StudyException.class, () -> JsonUtils.serializeImportParameters(nonSerializableParams, MAPPER));
         assertEquals(StudyBusinessErrorCode.UNPROCESSABLE_IMPORT_PARAMETER, exception.getBusinessErrorCode());
         assertTrue(exception.getMessage().contains("Import parameter 'nonSerializable =>"));
     }
@@ -71,7 +73,7 @@ class JsonUtilsTest {
         rawParams.put("null", "null");
         rawParams.put("realNull", null);
 
-        Map<String, Object> result = JsonUtils.deserializeImportParameters(rawParams);
+        Map<String, Object> result = JsonUtils.deserializeImportParameters(rawParams, MAPPER);
 
         assertEquals("value", result.get("string"));
         assertEquals(123, result.get("int"));
@@ -84,7 +86,7 @@ class JsonUtilsTest {
 
     @Test
     void testDeserializeNull() {
-        Map<String, Object> result = JsonUtils.deserializeImportParameters(null);
+        Map<String, Object> result = JsonUtils.deserializeImportParameters(null, MAPPER);
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }
@@ -92,7 +94,7 @@ class JsonUtilsTest {
     @Test
     void testDeserializeInvalidJson() {
         Map<String, String> rawParams = Map.of("invalid", "{notJson}");
-        StudyException exception = assertThrows(StudyException.class, () -> JsonUtils.deserializeImportParameters(rawParams));
+        StudyException exception = assertThrows(StudyException.class, () -> JsonUtils.deserializeImportParameters(rawParams, MAPPER));
         assertEquals(StudyBusinessErrorCode.UNPROCESSABLE_IMPORT_PARAMETER, exception.getBusinessErrorCode());
         assertTrue(exception.getMessage().contains("Import parameter 'invalid => {notJson}' is not valid JSON"));
     }

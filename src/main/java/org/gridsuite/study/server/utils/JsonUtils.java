@@ -25,8 +25,6 @@ import java.util.function.Predicate;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.UNPROCESSABLE_IMPORT_PARAMETER;
 
 public final class JsonUtils {
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-
     private JsonUtils() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
@@ -62,10 +60,10 @@ public final class JsonUtils {
         return nodeAt(node, jsonNode -> !jsonNode.isMissingNode(), pointers);
     }
 
-    public static String getModificationContextJsonString(Pair<String, List<ModificationApplicationContext>> modificationContextInfos) {
+    public static String getModificationContextJsonString(ObjectMapper objectMapper, Pair<String, List<ModificationApplicationContext>> modificationContextInfos) {
         try {
-            ObjectNode modificationJson = (ObjectNode) MAPPER.readTree(modificationContextInfos.getFirst());
-            ObjectNode modificationContextJson = MAPPER.valueToTree(modificationContextInfos);
+            ObjectNode modificationJson = (ObjectNode) objectMapper.readTree(modificationContextInfos.getFirst());
+            ObjectNode modificationContextJson = objectMapper.valueToTree(modificationContextInfos);
             modificationContextJson.set(Pair.class.getDeclaredField("first").getName(), modificationJson);
             return modificationContextJson.toString();
         } catch (JsonProcessingException | NoSuchFieldException e) {
@@ -73,7 +71,7 @@ public final class JsonUtils {
         }
     }
 
-    public static Map<String, Object> deserializeImportParameters(Map<String, String> rawParams) {
+    public static Map<String, Object> deserializeImportParameters(Map<String, String> rawParams, ObjectMapper objectMapper) {
         Map<String, Object> result = new HashMap<>();
         if (rawParams == null) {
             return result;
@@ -85,7 +83,7 @@ public final class JsonUtils {
                 return;
             }
             try {
-                result.put(key, MAPPER.readValue(value, Object.class));
+                result.put(key, objectMapper.readValue(value, Object.class));
             } catch (JsonProcessingException e) {
                 throw new StudyException(UNPROCESSABLE_IMPORT_PARAMETER, "Import parameter '" + key + " => " + value + "' is not valid JSON: " + e.getMessage());
             }
@@ -93,7 +91,7 @@ public final class JsonUtils {
         return result;
     }
 
-    public static Map<String, String> serializeImportParameters(Map<String, Object> params) {
+    public static Map<String, String> serializeImportParameters(Map<String, Object> params, ObjectMapper objectMapper) {
         Map<String, String> result = new HashMap<>();
         if (params == null) {
             return result;
@@ -101,7 +99,7 @@ public final class JsonUtils {
 
         params.forEach((key, value) -> {
             try {
-                result.put(key, MAPPER.writeValueAsString(value));
+                result.put(key, objectMapper.writeValueAsString(value));
             } catch (JsonProcessingException e) {
                 throw new StudyException(UNPROCESSABLE_IMPORT_PARAMETER, "Import parameter '" + key + " => " + value + "' is not serializable: " + e.getMessage());
             }

@@ -3720,7 +3720,7 @@ public class StudyService {
         // using the Hibernate First-Level Cache or Persistence Context
         // cf.https://vladmihalcea.com/spring-data-jpa-multiplebagfetchexception/
         rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
-        return rootNetworkEntities.stream().map(RootNetworkEntity::toDto).toList();
+        return rootNetworkEntities.stream().map(rootNetworkEntity -> rootNetworkEntity.toDto(objectMapper)).toList();
     }
 
     @Transactional(readOnly = true)

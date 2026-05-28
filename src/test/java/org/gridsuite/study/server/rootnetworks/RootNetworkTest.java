@@ -881,7 +881,7 @@ class RootNetworkTest {
     }
 
     private void createDummyRootNetwork(StudyEntity studyEntity, RootNetworkInfos rootNetworkInfos) {
-        studyEntity.addRootNetwork(rootNetworkInfos.toEntity());
+        studyEntity.addRootNetwork(rootNetworkInfos.toEntity(objectMapper));
     }
 
     private void createDummyRootNetwork(StudyEntity studyEntity, String name) {
@@ -892,7 +892,7 @@ class RootNetworkTest {
             .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
             .reportUuid(UUID.randomUUID())
             .tag("dum")
-            .build().toEntity();
+            .build().toEntity(objectMapper);
         studyEntity.addRootNetwork(rootNetworkEntity);
     }
 
