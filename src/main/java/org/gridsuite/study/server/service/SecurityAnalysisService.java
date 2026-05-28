@@ -21,19 +21,24 @@ import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -183,16 +188,32 @@ public class SecurityAnalysisService extends AbstractComputationService implemen
     }
 
     public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID resultUuid) {
-
         if (resultUuid == null) {
             return null;
         }
+        return getSecurityAnalysisStatuses(List.of(resultUuid)).get(resultUuid);
+    }
 
-        String path = UriComponentsBuilder
-            .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
-            .buildAndExpand(resultUuid).toUriString();
+    public Map<UUID, SecurityAnalysisStatus> getSecurityAnalysisStatuses(List<UUID> resultUuids) {
+        if (CollectionUtils.isEmpty(resultUuids)) {
+            return Map.of();
+        }
 
-        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, SecurityAnalysisStatus.class);
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/results/statuses");
+        String path = uriComponentsBuilder.toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
+
+        Map<UUID, SecurityAnalysisStatus> statuses = restTemplate.exchange(
+            securityAnalysisServerBaseUri + path,
+            HttpMethod.POST,
+            httpEntity,
+            new ParameterizedTypeReference<Map<UUID, SecurityAnalysisStatus>>() {
+            }
+        ).getBody();
+        return statuses != null ? statuses : Map.of();
     }
 
     public void deleteSecurityAnalysisResults(List<UUID> resultsUuids) {
@@ -219,9 +240,10 @@ public class SecurityAnalysisService extends AbstractComputationService implemen
         }
     }
 
-    public void assertSecurityAnalysisNotRunning(UUID resultUuid) {
-        SecurityAnalysisStatus sas = getSecurityAnalysisStatus(resultUuid);
-        if (sas == SecurityAnalysisStatus.RUNNING) {
+    public void assertNoSecurityAnalysisRunning(List<UUID> resultUuids) {
+        Map<UUID, SecurityAnalysisStatus> securityAnalysisStatuses = getSecurityAnalysisStatuses(resultUuids);
+        Set<SecurityAnalysisStatus> values = new HashSet<>(securityAnalysisStatuses.values());
+        if (values.contains(SecurityAnalysisStatus.RUNNING)) {
             throw new StudyException(COMPUTATION_RUNNING);
         }
     }

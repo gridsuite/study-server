@@ -19,10 +19,12 @@ import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -30,8 +32,11 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.domain.Pageable;
@@ -119,14 +124,33 @@ public class PccMinService extends AbstractComputationService implements Computa
         restTemplate.put(pccMinServerBaseUri + path, Void.class);
     }
 
-    public String getPccMinStatus(UUID resultUuid) {
+    public PccMinStatus getPccMinStatus(UUID resultUuid) {
         if (resultUuid == null) {
             return null;
         }
+        return getPccMinStatuses(List.of(resultUuid)).get(resultUuid);
+    }
+
+    public Map<UUID, PccMinStatus> getPccMinStatuses(List<UUID> resultUuids) {
+        if (CollectionUtils.isEmpty(resultUuids)) {
+            return Map.of();
+        }
         String path = UriComponentsBuilder
-            .fromPath(PCC_MIN_URI + DELIMITER + "results/{resultUuid}/status")
-            .buildAndExpand(resultUuid).toUriString();
-        return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
+            .fromPath(PCC_MIN_URI + DELIMITER + "results/statuses")
+            .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
+        Map<UUID, PccMinStatus> statuses = restTemplate.exchange(
+            path,
+            HttpMethod.POST,
+            httpEntity,
+            new ParameterizedTypeReference<Map<UUID, PccMinStatus>>() {
+            }
+        ).getBody();
+        return statuses != null ? statuses : Map.of();
     }
 
     public void deletePccMinResults(List<UUID> resultsUuids) {
@@ -143,9 +167,10 @@ public class PccMinService extends AbstractComputationService implements Computa
         return restTemplate.getForObject(pccMinServerBaseUri + path, Integer.class);
     }
 
-    public void assertPccMinNotRunning(UUID resultUuid) {
-        String status = getPccMinStatus(resultUuid);
-        if (PccMinStatus.RUNNING.name().equals(status)) {
+    public void assertNoPccMinRunning(List<UUID> resultUuids) {
+        Map<UUID, PccMinStatus> pccMinStatuses = getPccMinStatuses(resultUuids);
+        Set<PccMinStatus> values = new HashSet<>(pccMinStatuses.values());
+        if (values.contains(PccMinStatus.RUNNING)) {
             throw new StudyException(COMPUTATION_RUNNING);
         }
     }

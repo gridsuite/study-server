@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service.dynamicmargincalculation;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
@@ -18,11 +17,15 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
@@ -86,11 +89,18 @@ public class DynamicMarginCalculationService implements ComputationParameters {
     }
 
     public DynamicMarginCalculationStatus getStatus(UUID resultUuid) {
-        return resultUuid == null ? null : dynamicMarginCalculationClient.getStatus(resultUuid);
+        if (resultUuid == null) {
+            return null;
+        }
+        return getDynamicMarginCalculationStatuses(List.of(resultUuid)).get(resultUuid);
+    }
+
+    public Map<UUID, DynamicMarginCalculationStatus> getDynamicMarginCalculationStatuses(List<UUID> resultUuids) {
+        return dynamicMarginCalculationClient.getStatuses(resultUuids);
     }
 
     public void invalidateStatus(List<UUID> resultUuids) {
-        if (CollectionUtils.isNotEmpty(resultUuids)) {
+        if (!CollectionUtils.isEmpty(resultUuids)) {
             dynamicMarginCalculationClient.invalidateStatus(resultUuids);
         }
     }
@@ -124,5 +134,13 @@ public class DynamicMarginCalculationService implements ComputationParameters {
 
     public String getProvider(UUID parametersUuid) {
         return dynamicMarginCalculationClient.getProvider(parametersUuid);
+    }
+
+    public void assertNoDynamicMarginCalculationRunning(List<UUID> resultUuids) {
+        Map<UUID, DynamicMarginCalculationStatus> dynamicMarginCalculationStatuses = getDynamicMarginCalculationStatuses(resultUuids);
+        Set<DynamicMarginCalculationStatus> values = new HashSet<>(dynamicMarginCalculationStatuses.values());
+        if (values.contains(DynamicMarginCalculationStatus.RUNNING)) {
+            throw new StudyException(COMPUTATION_RUNNING);
+        }
     }
 }

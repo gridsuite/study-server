@@ -9,7 +9,7 @@ package org.gridsuite.study.server.service.dynamicsecurityanalysis;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.collections4.CollectionUtils;
+
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
@@ -18,11 +18,15 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
@@ -86,11 +90,21 @@ public class DynamicSecurityAnalysisService implements ComputationParameters {
     }
 
     public DynamicSecurityAnalysisStatus getStatus(UUID resultUuid) {
-        return resultUuid == null ? null : dynamicSecurityAnalysisClient.getStatus(resultUuid);
+        if (resultUuid == null) {
+            return null;
+        }
+        return getDynamicSecurityAnalysisStatuses(List.of(resultUuid)).get(resultUuid);
+    }
+
+    public Map<UUID, DynamicSecurityAnalysisStatus> getDynamicSecurityAnalysisStatuses(List<UUID> resultUuids) {
+        if (CollectionUtils.isEmpty(resultUuids)) {
+            return Map.of();
+        }
+        return dynamicSecurityAnalysisClient.getStatuses(resultUuids);
     }
 
     public void invalidateStatus(List<UUID> resultUuids) {
-        if (CollectionUtils.isNotEmpty(resultUuids)) {
+        if (!CollectionUtils.isEmpty(resultUuids)) {
             dynamicSecurityAnalysisClient.invalidateStatus(resultUuids);
         }
     }
@@ -124,5 +138,13 @@ public class DynamicSecurityAnalysisService implements ComputationParameters {
 
     public String getProvider(UUID parametersUuid) {
         return dynamicSecurityAnalysisClient.getProvider(parametersUuid);
+    }
+
+    public void assertNoDynamicSecurityAnalysisRunning(List<UUID> resultUuids) {
+        Map<UUID, DynamicSecurityAnalysisStatus> dynamicSecurityAnalysisStatuses = getDynamicSecurityAnalysisStatuses(resultUuids);
+        Set<DynamicSecurityAnalysisStatus> values = new HashSet<>(dynamicSecurityAnalysisStatuses.values());
+        if (values.contains(DynamicSecurityAnalysisStatus.RUNNING)) {
+            throw new StudyException(COMPUTATION_RUNNING);
+        }
     }
 }
