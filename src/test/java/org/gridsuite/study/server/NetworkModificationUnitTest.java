@@ -57,6 +57,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_INFOS;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_TYPE;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.utils.TestUtils.ELEMENT_UPDATE_DESTINATION;
 import static org.gridsuite.study.server.utils.TestUtils.checkUpdateStatusMessagesReceived;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -161,7 +162,7 @@ class NetworkModificationUnitTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         // Unbuild security node without LF -> no children invalidation
-        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node1Uuid);
+        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node1Uuid, USER_ID_HEADER);
         /*       rootNode
          *          |
          *        node1
@@ -176,11 +177,12 @@ class NetworkModificationUnitTest {
         assertNodeBuildStatus(node4Uuid, BuildStatus.BUILT);
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid));
         checkUpdateStatusMessagesReceived(studyUuid, node1Uuid, output);
+        checkElementUpdatedMessageSent(studyUuid, USER_ID_HEADER);
         Mockito.verify(networkService).deleteVariants(NETWORK_UUID, List.of(VARIANT_1));
 
         // Unbuild security node with LF -> children invalidation
         when(rootNetworkNodeInfoService.isLoadflowDone(node2Uuid, firstRootNetworkUuid)).thenReturn(true);
-        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node2Uuid);
+        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node2Uuid, USER_ID_HEADER);
         /*       rootNode
          *          |
          *        node1
@@ -195,6 +197,7 @@ class NetworkModificationUnitTest {
         assertNodeBuildStatus(node4Uuid, BuildStatus.NOT_BUILT);
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node2Uuid, node4Uuid));
         checkUpdateStatusMessagesReceived(studyUuid, node2Uuid, output);
+        checkElementUpdatedMessageSent(studyUuid, USER_ID_HEADER);
         Mockito.verify(networkService).deleteVariants(NETWORK_UUID, List.of(VARIANT_4, VARIANT_2));
     }
 
@@ -209,7 +212,7 @@ class NetworkModificationUnitTest {
         UUID modificationUuid = UUID.randomUUID();
         List<UUID> childrenNodes = List.of(node2Uuid, node4Uuid, node3Uuid);
 
-        NetworkModificationMetadata metadata = new NetworkModificationMetadata(null, "new description", null);
+        NetworkModificationMetadata metadata = new NetworkModificationMetadata(null, "new description", null, null);
         studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, List.of(modificationUuid), metadata, USER_ID_HEADER);
 
         checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
@@ -271,7 +274,7 @@ class NetworkModificationUnitTest {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         List<UUID> rootNetworkUuids = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid).stream().map(RootNetworkInfos::getId).toList();
 
-        studyController.unbuildAllNodes(studyUuid);
+        studyController.unbuildAllNodes(studyUuid, USER_ID_HEADER);
 
         ArgumentCaptor<UUID> rootNetworkUuidCaptor = ArgumentCaptor.forClass(UUID.class);
         verify(networkModificationTreeService, times(2)).invalidateNodeTree(eq(rootNodeUuid), rootNetworkUuidCaptor.capture(), eq(InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES));
@@ -280,10 +283,11 @@ class NetworkModificationUnitTest {
         // one for each root network
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));
+        checkElementUpdatedMessageSent(studyUuid, USER_ID_HEADER);
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
-        NetworkModificationMetadata metadata = new NetworkModificationMetadata(activated, null, null);
+        NetworkModificationMetadata metadata = new NetworkModificationMetadata(activated, null, null, null);
         studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, networkModificationUuids, metadata, USER_ID_HEADER);
 
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
@@ -435,6 +439,12 @@ class NetworkModificationUnitTest {
         node2Uuid = node2.getIdNode();
         node3Uuid = node3.getIdNode();
         node4Uuid = node4.getIdNode();
+    }
+
+    private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
+        Message<byte[]> message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
+        assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+        assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
     }
 
     @AfterEach

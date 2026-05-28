@@ -18,6 +18,7 @@ import org.gridsuite.study.server.dto.RunSecurityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
@@ -42,7 +43,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class SecurityAnalysisService extends AbstractComputationService {
+public class SecurityAnalysisService extends AbstractComputationService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -236,7 +237,8 @@ public class SecurityAnalysisService extends AbstractComputationService {
         restTemplate.put(securityAnalysisServerBaseUri + path, httpEntity);
     }
 
-    public UUID duplicateSecurityAnalysisParameters(UUID sourceParametersUuid, String userId) {
+    @Override
+    public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
 
         var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
@@ -244,34 +246,30 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 .buildAndExpand().toUriString();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(null, headers), UUID.class).getBody();
     }
 
-    public String getSecurityAnalysisParameters(UUID parametersUuid, String userId) {
+    public String getSecurityAnalysisParameters(UUID parametersUuid) {
         Objects.requireNonNull(parametersUuid);
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid).toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        return restTemplate.exchange(securityAnalysisServerBaseUri + path, HttpMethod.GET, new HttpEntity<>(null, headers), String.class).getBody();
+        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
     }
 
     public UUID getSecurityAnalysisParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
         if (studyEntity.getSecurityAnalysisParametersUuid() == null) {
-            studyEntity.setSecurityAnalysisParametersUuid(createDefaultSecurityAnalysisParameters());
+            studyEntity.setSecurityAnalysisParametersUuid(createDefaultParameters());
 
         }
         return studyEntity.getSecurityAnalysisParametersUuid();
     }
 
-    public void deleteSecurityAnalysisParameters(UUID uuid) {
+    @Override
+    public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(uuid)
@@ -280,7 +278,8 @@ public class SecurityAnalysisService extends AbstractComputationService {
         restTemplate.delete(securityAnalysisServerBaseUri + path);
     }
 
-    public UUID createDefaultSecurityAnalysisParameters() {
+    @Override
+    public UUID createDefaultParameters() {
 
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default")

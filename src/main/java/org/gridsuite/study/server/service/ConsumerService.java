@@ -15,6 +15,7 @@ import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
+import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
@@ -24,10 +25,7 @@ import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -64,58 +62,34 @@ public class ConsumerService {
 
     private final NotificationService notificationService;
     private final StudyService studyService;
-    private final SecurityAnalysisService securityAnalysisService;
-    private final SensitivityAnalysisService sensitivityAnalysisService;
     private final CaseService caseService;
     private final LoadFlowService loadFlowService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyConfigService studyConfigService;
-    private final ShortCircuitService shortCircuitService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    private final VoltageInitService voltageInitService;
-    private final DynamicSimulationService dynamicSimulationService;
-    private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
-    private final DynamicMarginCalculationService dynamicMarginCalculationService;
-    private final StateEstimationService stateEstimationService;
-    private final PccMinService pccMinService;
     private final DirectoryService directoryService;
+    private final ComputationParametersService computationParametersService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
                            StudyService studyService,
-                           SecurityAnalysisService securityAnalysisService,
                            CaseService caseService,
                            LoadFlowService loadFlowService,
-                           ShortCircuitService shortCircuitService,
                            NetworkModificationTreeService networkModificationTreeService,
-                           SensitivityAnalysisService sensitivityAnalysisService,
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                           VoltageInitService voltageInitService,
-                           DynamicSimulationService dynamicSimulationService,
-                           DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                           DynamicMarginCalculationService dynamicMarginCalculationService,
-                           StateEstimationService stateEstimationService,
-                           PccMinService pccMinService,
-                           DirectoryService directoryService) {
+                           DirectoryService directoryService,
+                           ComputationParametersService computationParametersService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
-        this.securityAnalysisService = securityAnalysisService;
         this.caseService = caseService;
         this.loadFlowService = loadFlowService;
         this.networkModificationTreeService = networkModificationTreeService;
-        this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.studyConfigService = studyConfigService;
-        this.shortCircuitService = shortCircuitService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
-        this.voltageInitService = voltageInitService;
-        this.dynamicSimulationService = dynamicSimulationService;
-        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
-        this.dynamicMarginCalculationService = dynamicMarginCalculationService;
-        this.stateEstimationService = stateEstimationService;
-        this.pccMinService = pccMinService;
         this.directoryService = directoryService;
+        this.computationParametersService = computationParametersService;
     }
 
     @Bean
@@ -294,126 +268,14 @@ public class ConsumerService {
                              Map<String, String> importParameters, UUID importReportUuid) {
         UserProfileInfos userProfileInfos = studyService.getUserProfile(userId);
 
-        UUID loadFlowParametersUuid = createDefaultLoadFlowParameters(userId, userProfileInfos);
-        UUID shortCircuitParametersUuid = createDefaultShortCircuitAnalysisParameters(userId, userProfileInfos);
-        UUID securityAnalysisParametersUuid = createDefaultSecurityAnalysisParameters(userId, userProfileInfos);
-        UUID sensitivityAnalysisParametersUuid = createDefaultSensitivityAnalysisParameters(userId, userProfileInfos);
+        ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
         UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
-        UUID voltageInitParametersUuid = createDefaultVoltageInitParameters(userId, userProfileInfos);
-        UUID dynamicSimulationParametersUuid = createDefaultDynamicSimulationParameters(userId, userProfileInfos);
-        UUID dynamicSecurityAnalysisParametersUuid = createDefaultDynamicSecurityAnalysisParameters(userId, userProfileInfos);
-        UUID dynamicMarginCalculationParametersUuid = createDefaultDynamicMarginCalculationParameters(userId, userProfileInfos);
-        UUID stateEstimationParametersUuid = createDefaultStateEstimationParameters();
-        UUID pccMinParametersUuid = createDefaultPccMinParameters(userId, userProfileInfos);
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
         UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
 
-        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, loadFlowParametersUuid,
-            shortCircuitParametersUuid, dynamicSimulationParametersUuid,
-            voltageInitParametersUuid, securityAnalysisParametersUuid, sensitivityAnalysisParametersUuid,
-            networkVisualizationParametersUuid, dynamicSecurityAnalysisParametersUuid, dynamicMarginCalculationParametersUuid,
-            stateEstimationParametersUuid, pccMinParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
+        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, computationParameterUUIDs,
+            networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
             importParameters, importReportUuid);
-    }
-
-    private UUID createDefaultLoadFlowParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getLoadFlowParameterId() != null) {
-            // try to access/duplicate the user profile LF parameters
-            try {
-                return loadFlowService.duplicateLoadFlowParameters(userProfileInfos.getLoadFlowParameterId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate loadflow parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getLoadFlowParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad LF parameters in profile => use default values
-        try {
-            return loadFlowService.createDefaultLoadFlowParameters();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default parameters for LoadFlow analysis", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultShortCircuitAnalysisParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getShortcircuitParameterId() != null) {
-            // try to access/duplicate the user profile shortcircuit parameters
-            try {
-                return shortCircuitService.duplicateParameters(userProfileInfos.getShortcircuitParameterId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate shortcircuit parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getShortcircuitParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad shortcircuit parameters in profile => use default values
-        try {
-            return shortCircuitService.createParameters(null);
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default parameters for ShortCircuit analysis", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultSensitivityAnalysisParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getSensitivityAnalysisParameterId() != null) {
-            // try to access/duplicate the user profile sensitivity analysis parameters
-            try {
-                return sensitivityAnalysisService.duplicateSensitivityAnalysisParameters(userProfileInfos.getSensitivityAnalysisParameterId(), userId);
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate sensitivity analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getSensitivityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad sensitivity analysis parameters in profile => use default values
-        try {
-            return sensitivityAnalysisService.createDefaultSensitivityAnalysisParameters();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default parameters for Sensitivity analysis", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultSecurityAnalysisParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getSecurityAnalysisParameterId() != null) {
-            // try to access/duplicate the user profile security analysis parameters
-            try {
-                return securityAnalysisService.duplicateSecurityAnalysisParameters(userProfileInfos.getSecurityAnalysisParameterId(), userId);
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad security analysis parameters in profile => use default values
-        try {
-            return securityAnalysisService.createDefaultSecurityAnalysisParameters();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default parameters for Security analysis", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultVoltageInitParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getVoltageInitParameterId() != null) {
-            // try to access/duplicate the user profile voltage init parameters
-            try {
-                return voltageInitService.duplicateVoltageInitParameters(userProfileInfos.getVoltageInitParameterId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate voltage init parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getVoltageInitParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad voltage init parameters in profile => use default values
-        try {
-            return voltageInitService.createVoltageInitParameters(null);
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default parameters for voltage init", e);
-            return null;
-        }
     }
 
     private UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
@@ -432,95 +294,6 @@ public class ConsumerService {
             return studyConfigService.createDefaultNetworkVisualizationParameters();
         } catch (final Exception e) {
             LOGGER.error("Error while creating network visualization default parameters", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultDynamicSimulationParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getDynamicSimulationParameterId() != null) {
-            // try to access/duplicate the user profile Dynamic Simulation parameters
-            try {
-                return dynamicSimulationService.duplicateParameters(userProfileInfos.getDynamicSimulationParameterId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate dynamic simulation parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                        userProfileInfos.getDynamicSimulationParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad dynamic simulation parameters in profile => use default values
-        try {
-            return dynamicSimulationService.createDefaultParameters();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default parameters for dynamic simulation", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultDynamicSecurityAnalysisParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getDynamicSecurityAnalysisParameterId() != null) {
-            // try to access/duplicate the user profile Dynamic Security Analysis parameters
-            try {
-                return dynamicSecurityAnalysisService.duplicateParameters(userProfileInfos.getDynamicSecurityAnalysisParameterId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate dynamic security analysis parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                        userProfileInfos.getDynamicSecurityAnalysisParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad dynamic security analysis parameters in profile => use default values
-        try {
-            return dynamicSecurityAnalysisService.createDefaultParameters();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default parameters for dynamic security analysis", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultDynamicMarginCalculationParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getDynamicMarginCalculationParameterId() != null) {
-            // try to access/duplicate the user profile Dynamic Margin Calculation parameters
-            try {
-                return dynamicMarginCalculationService.duplicateParameters(userProfileInfos.getDynamicMarginCalculationParameterId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate dynamic margin calculation parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                        userProfileInfos.getDynamicMarginCalculationParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad dynamic margin calculation parameters in profile => use default values
-        try {
-            return dynamicMarginCalculationService.createDefaultParameters();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default parameters for dynamic margin calculation", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultStateEstimationParameters() {
-        try {
-            return stateEstimationService.createDefaultStateEstimationParameters();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating state estimation default parameters", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultPccMinParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getPccMinParameterId() != null) {
-            // try to access/duplicate the user profile pccmin parameters
-            try {
-                return pccMinService.duplicatePccMinParameters(userProfileInfos.getPccMinParameterId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate pccmin parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getPccMinParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad pcc min parameters in profile => use default values
-        try {
-            return pccMinService.createDefaultPccMinParameters();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating pcc min default parameters", e);
             return null;
         }
     }

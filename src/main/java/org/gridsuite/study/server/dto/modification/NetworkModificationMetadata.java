@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.dto.modification;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -29,4 +30,7 @@ public class NetworkModificationMetadata {
     String description;
     @Schema(description = "Modification type")
     String type;
+    @Schema(description = "Modification name (only present for composite modifications)")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    String name;
 }

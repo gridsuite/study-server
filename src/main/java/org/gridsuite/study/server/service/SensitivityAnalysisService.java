@@ -16,6 +16,7 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class SensitivityAnalysisService extends AbstractComputationService {
+public class SensitivityAnalysisService extends AbstractComputationService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
     private static final String RESULTS = "results";
@@ -238,27 +239,23 @@ public class SensitivityAnalysisService extends AbstractComputationService {
     public UUID getSensitivityAnalysisParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {
         if (studyEntity.getSensitivityAnalysisParametersUuid() == null) {
             // not supposed to happen because we create it as the study creation
-            studyEntity.setSensitivityAnalysisParametersUuid(createDefaultSensitivityAnalysisParameters());
+            studyEntity.setSensitivityAnalysisParametersUuid(createDefaultParameters());
         }
         return studyEntity.getSensitivityAnalysisParametersUuid();
     }
 
-    public String getSensitivityAnalysisParameters(UUID parametersUuid, String userId) {
+    public String getSensitivityAnalysisParameters(UUID parametersUuid) {
 
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI)
             .buildAndExpand(parametersUuid)
             .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
-
-        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.GET, httpEntity, String.class).getBody();
+        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
     }
 
-    public UUID createDefaultSensitivityAnalysisParameters() {
+    @Override
+    public UUID createDefaultParameters() {
 
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/default")
@@ -284,7 +281,8 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
     }
 
-    public UUID duplicateSensitivityAnalysisParameters(UUID sourceParametersUuid, String userId) {
+    @Override
+    public UUID duplicateParameters(UUID sourceParametersUuid) {
 
         Objects.requireNonNull(sourceParametersUuid);
 
@@ -294,12 +292,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
             .buildAndExpand()
             .toUriString();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-
-        HttpEntity<String> httpEntity = new HttpEntity<>(headers);
-
-        return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
+        return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, null, UUID.class);
     }
 
     public void updateSensitivityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
@@ -316,8 +309,8 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         restTemplate.put(sensitivityAnalysisServerBaseUri + path, httpEntity);
     }
 
-    public void deleteSensitivityAnalysisParameters(UUID uuid) {
-
+    @Override
+    public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
 
         String path = UriComponentsBuilder
