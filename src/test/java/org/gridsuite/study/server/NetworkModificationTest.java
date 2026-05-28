@@ -2008,7 +2008,8 @@ class NetworkModificationTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
         // switch the 2 modifications order (modification1 is set at the end, after modification2)
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
+        // Same-container reorder: no source/target params -> controller resolves both to the node's group.
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/modification/{modificationID}",
                 studyNameUserIdUuid, modificationNodeUuid, modification1).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkUpdateStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, output);
@@ -2026,8 +2027,10 @@ class NetworkModificationTest {
                 expectedBodyStr);
 
         // switch back the 2 modifications order (modification1 is set before modification2)
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}?beforeUuid={modificationID2}",
-                studyNameUserIdUuid, modificationNodeUuid, modification1, modification2).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/modification/{modificationID}",
+                        studyNameUserIdUuid, modificationNodeUuid, modification1)
+                        .queryParam("beforeUuid", modification2.toString())
+                        .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkUpdateStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, output);
         checkEquipmentUpdatingMessagesReceived(studyNameUserIdUuid, modificationNodeUuid);
@@ -3162,7 +3165,7 @@ class NetworkModificationTest {
     }
 
     @Test
-    void testMoveSubModification() throws Exception {
+    void testMoveCompositeSubmodification() throws Exception {
         String userId = "userId";
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
         UUID studyUuid = studyEntity.getId();
@@ -3170,23 +3173,29 @@ class NetworkModificationTest {
         NetworkModificationNode node = createNetworkModificationNode(studyUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "node 1", userId);
         UUID nodeUuid = node.getId();
+        UUID nodeGroupUuid = node.getModificationGroupUuid();
 
         UUID modificationUuid = UUID.randomUUID();
-        UUID sourceCompositeUuid = UUID.randomUUID();
-        UUID targetCompositeUuid = UUID.randomUUID();
+        UUID sourceContainerId = UUID.randomUUID();
+        UUID targetContainerId = UUID.randomUUID();
         UUID beforeUuid = UUID.randomUUID();
 
-        String moveSubModifUrlPattern = "/v1/network-composite-modifications/groups/" + node.getModificationGroupUuid()
-                + "/sub-modifications/" + modificationUuid;
+        // The study-server now forwards every move to the modification-server's group endpoint:
+        //   PUT /v1/groups/{targetContainerId}?action=MOVE&originGroupUuid={source}&build={bool}[&before={before}]
+        // The target container is carried in the PATH (GROUP_PATH = "groups/{groupUuid}", no suffix);
+        // action / originGroupUuid / build / before are query params.
 
-        // --- Case 1: move between two composites with a beforeUuid ---
-        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveSubModifUrlPattern))
-                .willReturn(WireMock.ok()));
+        // --- Case 1: move between two explicit containers, with a beforeUuid ---
+        String moveUrlCase1 = "/v1/groups/" + targetContainerId;
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveUrlCase1))
+                .willReturn(WireMock.ok()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"modificationUuids\":[],\"modificationResults\":[]}")));
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/composite-sub-modification/{modificationUuid}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/modification/{modificationUuid}",
                         studyUuid, nodeUuid, modificationUuid)
-                        .queryParam("sourceCompositeUuid", sourceCompositeUuid.toString())
-                        .queryParam("targetCompositeUuid", targetCompositeUuid.toString())
+                        .queryParam("sourceContainerId", sourceContainerId.toString())
+                        .queryParam("targetContainerId", targetContainerId.toString())
                         .queryParam("beforeUuid", beforeUuid.toString())
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
@@ -3194,42 +3203,51 @@ class NetworkModificationTest {
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid);
         checkElementUpdatedMessageSent(studyUuid, userId);
-        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveSubModifUrlPattern, false, Map.of(
-                "sourceCompositeUuid", WireMock.equalTo(sourceCompositeUuid.toString()),
-                "targetCompositeUuid", WireMock.equalTo(targetCompositeUuid.toString()),
-                "beforeUuid", WireMock.equalTo(beforeUuid.toString())), null);
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveUrlCase1, false, Map.of(
+                "action", WireMock.equalTo(StudyConstants.ModificationsActionType.MOVE.name()),
+                "originGroupUuid", WireMock.equalTo(sourceContainerId.toString()),
+                "before", WireMock.equalTo(beforeUuid.toString())), null);
 
-        // --- Case 2: move from root level into a composite (no sourceCompositeUuid) ---
-        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveSubModifUrlPattern))
-                .willReturn(WireMock.ok()));
+        // --- Case 2: target container omitted -> controller resolves it to the node's group ---
+        // Target is in the path, so the downstream URL now targets the node's group.
+        String moveUrlNodeGroup = "/v1/groups/" + nodeGroupUuid;
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveUrlNodeGroup))
+                .willReturn(WireMock.ok()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"modificationUuids\":[],\"modificationResults\":[]}")));
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/composite-sub-modification/{modificationUuid}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/modification/{modificationUuid}",
                         studyUuid, nodeUuid, modificationUuid)
-                        .queryParam("targetCompositeUuid", targetCompositeUuid.toString())
+                        .queryParam("sourceContainerId", sourceContainerId.toString())
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkUpdateStatusMessagesReceived(studyUuid, nodeUuid, output);
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid);
         checkElementUpdatedMessageSent(studyUuid, userId);
-        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveSubModifUrlPattern, false, Map.of(
-                "targetCompositeUuid", WireMock.equalTo(targetCompositeUuid.toString())), null);
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveUrlNodeGroup, false, Map.of(
+                "action", WireMock.equalTo(StudyConstants.ModificationsActionType.MOVE.name()),
+                "originGroupUuid", WireMock.equalTo(sourceContainerId.toString())), null);
 
-        // --- Case 3: move from inside a composite to root level (no targetCompositeUuid) ---
-        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveSubModifUrlPattern))
-                .willReturn(WireMock.ok()));
+        // --- Case 3: source container omitted -> controller resolves originGroupUuid to the node's group ---
+        String moveUrlCase3 = "/v1/groups/" + targetContainerId;
+        wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveUrlCase3))
+                .willReturn(WireMock.ok()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"modificationUuids\":[],\"modificationResults\":[]}")));
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/composite-sub-modification/{modificationUuid}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/modification/{modificationUuid}",
                         studyUuid, nodeUuid, modificationUuid)
-                        .queryParam("sourceCompositeUuid", sourceCompositeUuid.toString())
+                        .queryParam("targetContainerId", targetContainerId.toString())
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         checkUpdateStatusMessagesReceived(studyUuid, nodeUuid, output);
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid);
         checkElementUpdatedMessageSent(studyUuid, userId);
-        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveSubModifUrlPattern, false, Map.of(
-                "sourceCompositeUuid", WireMock.equalTo(sourceCompositeUuid.toString())), null);
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveUrlCase3, false, Map.of(
+                "action", WireMock.equalTo(StudyConstants.ModificationsActionType.MOVE.name()),
+                "originGroupUuid", WireMock.equalTo(nodeGroupUuid.toString())), null);
     }
 
     @Test
