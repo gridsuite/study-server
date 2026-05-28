@@ -46,7 +46,8 @@ public class NetworkModificationService {
 
     private static final String DELIMITER = "/";
     private static final String COMPOSITE_PATH = "network-composite-modifications" + DELIMITER;
-    private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
+    private static final String GROUPS = "groups";
+    private static final String GROUP_PATH = GROUPS + DELIMITER + "{groupUuid}";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String QUERY_PARAM_ACTION = "action";
@@ -93,14 +94,18 @@ public class NetworkModificationService {
         return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
     }
 
-    public String getModificationsToExport(UUID groupUUid) {
-        Objects.requireNonNull(groupUUid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "export")
-            .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
-            .buildAndExpand(groupUUid)
-            .toUriString();
+    public Map<UUID, Object> getModificationsInfosToExport(List<UUID> groupUuids) {
+        Objects.requireNonNull(groupUuids);
+        if (groupUuids.isEmpty()) {
+            return Map.of();
+        }
+        var path = UriComponentsBuilder.fromPath(GROUPS + DELIMITER + NETWORK_MODIFICATIONS_PATH + DELIMITER + "export")
+                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+                .toUriString();
 
-        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.GET, null, String.class).getBody();
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(groupUuids);
+        return restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.POST, httpEntity,
+                new ParameterizedTypeReference<Map<UUID, Object>>() { }).getBody();
     }
 
     public Integer getModificationsCount(UUID groupUUid, boolean stashedModifications) {
