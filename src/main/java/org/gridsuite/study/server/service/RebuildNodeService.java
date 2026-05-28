@@ -67,7 +67,7 @@ public class RebuildNodeService {
 
     public void moveNetworkModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid, String userId) {
         handleRebuildNode(studyUuid, nodeUuid, userId,
-                () -> handleMoveNetworkModification(studyUuid, nodeUuid, modificationUuid, beforeUuid, userId));
+            () -> handleMoveNetworkModification(studyUuid, nodeUuid, modificationUuid, beforeUuid, userId));
     }
 
     private void handleMoveNetworkModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid, String userId) {
