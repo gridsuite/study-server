@@ -2221,6 +2221,13 @@ public class StudyService {
     }
 
     @Transactional
+    public void moveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, boolean isTargetInDifferentNodeTree, String userId) {
+        UUID sourceContainerId = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
+        UUID targetContainerId = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
+        moveNetworkModifications(studyUuid, targetNodeUuid, targetContainerId, sourceContainerId, modificationsToCopyUuidList, null, isTargetInDifferentNodeTree, userId);
+    }
+
+    @Transactional
     public void moveNetworkModifications(
             @NonNull UUID studyUuid,
             @NonNull UUID targetNodeUuid,
