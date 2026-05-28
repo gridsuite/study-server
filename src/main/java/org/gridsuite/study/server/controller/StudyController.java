@@ -645,6 +645,7 @@ public class StudyController {
                 ? networkModificationTreeService.getModificationGroupUuid(nodeUuid) : targetContainerId;
         rebuildNodeService.moveNetworkModification(
                 studyUuid,
+                nodeUuid,
                 resolvedTargetId,
                 resolvedSourceId,
                 modificationUuid, beforeUuid, userId);

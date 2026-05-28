@@ -2223,25 +2223,21 @@ public class StudyService {
     @Transactional
     public void moveNetworkModifications(
             @NonNull UUID studyUuid,
+            @NonNull UUID targetNodeUuid,
             @NonNull UUID targetContainerId,
             @NonNull UUID sourceContainerId,
             List<UUID> modificationUuidList,
             UUID beforeUuid,
             boolean isTargetInDifferentNodeTree,
             String userId) {
-        UUID targetNodeUuid = networkModificationTreeService.getNodeUuidByModificationGroup(targetContainerId);
         UUID originNodeUuid = networkModificationTreeService.getNodeUuidByModificationGroup(sourceContainerId);
 
-        List<UUID> childrenUuids = List.of();
         List<UUID> originNodeChildrenUuids = List.of();
-        if(targetNodeUuid != null) {
-            childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
-
-            notificationService.emitStartModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
-            if (originNodeUuid != null && !originNodeUuid.equals(targetNodeUuid)) {
-                originNodeChildrenUuids = networkModificationTreeService.getChildrenUuids(originNodeUuid);
-                notificationService.emitStartModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
-            }
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        if (isTargetInDifferentNodeTree) {
+            originNodeChildrenUuids = networkModificationTreeService.getChildrenUuids(originNodeUuid);
+            notificationService.emitStartModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         }
 
         try {
@@ -2274,28 +2270,6 @@ public class StudyService {
                     notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids);
                 }
             }
-        }
-        notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    public void moveSubModification(
-            @NonNull UUID studyUuid,
-            @NonNull UUID nodeUuid,
-            UUID sourceCompositeUuid,
-            UUID targetCompositeUuid,
-            @NonNull UUID modificationUuid,
-            UUID beforeUuid,
-            String userId) {
-
-        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
-        try {
-            notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
-            checkStudyContainsNode(studyUuid, nodeUuid);
-            UUID groupUuid = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.moveSubModification(
-                    groupUuid, sourceCompositeUuid, targetCompositeUuid, modificationUuid, beforeUuid);
-        } finally {
-            notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
     }
