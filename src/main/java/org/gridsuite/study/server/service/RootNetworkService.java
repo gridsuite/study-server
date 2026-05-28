@@ -260,7 +260,6 @@ public class RootNetworkService {
         rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList());
     }
 
-
     public Optional<RootNetworkRequestEntity> getRootNetworkRequest(UUID rootNetworkUuid) {
         return rootNetworkRequestRepository.findById(rootNetworkUuid);
     }
