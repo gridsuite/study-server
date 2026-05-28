@@ -675,7 +675,7 @@ public class StudyController {
                 }
                 studyService.assertNoBlockedNodeInStudy(studyUuid, originNodeUuid);
                 studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-                //rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
+                rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
                 break;
         }
         return ResponseEntity.ok().build();

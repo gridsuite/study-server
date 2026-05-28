@@ -65,6 +65,25 @@ public class RebuildNodeService {
             () -> studyService.restoreNetworkModifications(studyUuid, nodeUuid, modificationsUuids, userId));
     }
 
+    public void moveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
+        handleRebuildNode(studyUuid, targetNodeUuid, originNodeUuid, userId,
+                () -> handleMoveNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId));
+    }
+
+    private void handleMoveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
+        boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
+        try {
+            UUID sourceContainerId = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
+            UUID targetContainerId = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
+            studyService.moveNetworkModifications(studyUuid, targetContainerId, sourceContainerId, modificationsToCopyUuidList, null, isTargetInDifferentNodeTree, userId);
+        } finally {
+            studyService.unblockNodeTree(studyUuid, originNodeUuid);
+            if (isTargetInDifferentNodeTree) {
+                studyService.unblockNodeTree(studyUuid, targetNodeUuid);
+            }
+        }
+    }
+
     public void moveNetworkModification(
             UUID studyUuid,
             UUID targetContainerId,
