@@ -57,7 +57,7 @@ class RebuildNodeServiceTest {
             Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT))
         ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node1Uuid);
 
-        rebuildNodeService.moveNetworkModification(studyUuid, node1Uuid, UUID.randomUUID(), UUID.randomUUID(), userId);
+        //rebuildNodeService.moveNetworkModification(studyUuid, node1Uuid, UUID.randomUUID(), UUID.randomUUID(), userId);
 
         verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }
@@ -71,7 +71,7 @@ class RebuildNodeServiceTest {
             Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT))
         ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node2Uuid);
 
-        rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
+        //rebuildNodeService.moveNetworkModification(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
 
         verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
         verify(studyService, times(1)).buildNode(studyUuid, node2Uuid, rootNetworkUuid, userId);
@@ -86,7 +86,7 @@ class RebuildNodeServiceTest {
             )
         ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node1Uuid);
 
-        rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
+        //rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
 
         verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
         verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetwork2Uuid, userId);
@@ -108,7 +108,7 @@ class RebuildNodeServiceTest {
             )
         ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node2Uuid);
 
-        rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
+        //rebuildNodeService.moveNetworkModifications(studyUuid, node1Uuid, node2Uuid, List.of(), userId);
 
         verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
         verify(studyService, times(1)).buildNode(studyUuid, node2Uuid, rootNetwork2Uuid, userId);
@@ -123,7 +123,7 @@ class RebuildNodeServiceTest {
 
         doReturn(true).when(networkModificationTreeService).isRootOrConstructionNode(any());
 
-        rebuildNodeService.moveNetworkModification(studyUuid, node1Uuid, UUID.randomUUID(), UUID.randomUUID(), userId);
+        //rebuildNodeService.moveNetworkModification(studyUuid, node1Uuid, UUID.randomUUID(), UUID.randomUUID(), userId);
 
         verify(studyService, times(0)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }

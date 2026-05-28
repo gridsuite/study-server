@@ -1294,4 +1294,10 @@ public class NetworkModificationTreeService {
                 .map(ExportNetworkStatus::valueOf)
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "No export found for exportUuid=" + exportUuid));
     }
+
+    @Transactional(readOnly = true)
+    public UUID getNodeUuidByModificationGroup(UUID groupUuid) {
+        var node = networkModificationNodeInfoRepository.findByModificationGroupUuidIn(List.of(groupUuid));
+        return node.isEmpty() ? null : node.getFirst().getIdNode();
+    }
 }
