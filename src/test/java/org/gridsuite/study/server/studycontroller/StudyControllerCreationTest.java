@@ -251,13 +251,13 @@ class StudyControllerCreationTest {
 
     private void verifyMockCallsAfterStudyCreation() {
         verify(reportService, Mockito.times(1)).sendReport(any(UUID.class), any(ReportNode.class));
-        verify(loadFlowService, Mockito.times(1)).createDefaultLoadFlowParameters();
-        verify(shortCircuitService, Mockito.times(1)).createParameters(null);
-        verify(securityAnalysisService, Mockito.times(1)).createDefaultSecurityAnalysisParameters();
-        verify(sensitivityAnalysisService, Mockito.times(1)).createDefaultSensitivityAnalysisParameters();
-        verify(voltageInitService, Mockito.times(1)).createVoltageInitParameters(null);
-        verify(dynamicSecurityAnalysisService, Mockito.times(1)).createDefaultParameters();
-        verify(stateEstimationService, Mockito.times(1)).createDefaultStateEstimationParameters();
+        verify(loadFlowService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(shortCircuitService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(securityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(sensitivityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(voltageInitService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(dynamicSecurityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(stateEstimationService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(studyConfigService, Mockito.times(1)).createDefaultSpreadsheetConfigCollection();
     }
 
