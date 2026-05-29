@@ -12,7 +12,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import java.util.Map;
 
 /**
- * @author Maissa Souissi <maissa.souissi@rte-france.com>
+ * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
 public class ReportServerStubs {
     private final WireMockServer wireMock;

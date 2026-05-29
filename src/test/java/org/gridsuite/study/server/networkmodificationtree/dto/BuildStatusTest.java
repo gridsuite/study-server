@@ -7,7 +7,7 @@ import static org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * @author Florent MILLOT <florent.millot@rte-france.com>
+ * @author Florent MILLOT <florent.millot at rte-france.com>
  */
 class BuildStatusTest {
 

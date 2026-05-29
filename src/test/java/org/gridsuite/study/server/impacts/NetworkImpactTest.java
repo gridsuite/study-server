@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.Impacts;
+package org.gridsuite.study.server.impacts;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.IdentifiableType;
@@ -51,11 +51,16 @@ class NetworkImpactTest {
 
         List<AbstractBaseImpact> impacts = List.of(creationImpact, modificationImpact, injectionDeletionImpact, substationModificationImpact, substationDeletionImpact);
 
-        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}", mapper.writeValueAsString(creationImpact));
-        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"LOAD\",\"simpleImpactType\":\"MODIFICATION\",\"elementId\":\"loadId\",\"substationIds\":[\"s3\"]}", mapper.writeValueAsString(modificationImpact));
-        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"GENERATOR\",\"simpleImpactType\":\"DELETION\",\"elementId\":\"generatorId\",\"substationIds\":[\"s4\"]}", mapper.writeValueAsString(injectionDeletionImpact));
-        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"SUBSTATION\",\"simpleImpactType\":\"MODIFICATION\",\"elementId\":\"substationId1\",\"substationIds\":[\"substationId1\"]}", mapper.writeValueAsString(substationModificationImpact));
-        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"SUBSTATION\",\"simpleImpactType\":\"DELETION\",\"elementId\":\"substationId2\",\"substationIds\":[\"substationId2\"]}", mapper.writeValueAsString(substationDeletionImpact));
+        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}",
+                mapper.writeValueAsString(creationImpact));
+        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"LOAD\",\"simpleImpactType\":\"MODIFICATION\",\"elementId\":\"loadId\",\"substationIds\":[\"s3\"]}",
+                mapper.writeValueAsString(modificationImpact));
+        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"GENERATOR\",\"simpleImpactType\":\"DELETION\",\"elementId\":\"generatorId\",\"substationIds\":[\"s4\"]}",
+                mapper.writeValueAsString(injectionDeletionImpact));
+        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"SUBSTATION\",\"simpleImpactType\":\"MODIFICATION\",\"elementId\":\"substationId1\",\"substationIds\":[\"substationId1\"]}",
+                mapper.writeValueAsString(substationModificationImpact));
+        assertEquals("{\"type\":\"SIMPLE\",\"elementType\":\"SUBSTATION\",\"simpleImpactType\":\"DELETION\",\"elementId\":\"substationId2\",\"substationIds\":[\"substationId2\"]}",
+                mapper.writeValueAsString(substationDeletionImpact));
 
         NetworkModificationResult result = NetworkModificationResult.builder()
             .applicationStatus(ApplicationStatus.ALL_OK)
@@ -76,7 +81,8 @@ class NetworkImpactTest {
 
         Set<AbstractBaseImpact> impactsSet = Set.copyOf(List.of(creationImpact, creationImpact, creationImpact));
 
-        assertEquals("[{\"type\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}]", mapper.writeValueAsString(impactsSet));
+        assertEquals("[{\"type\":\"SIMPLE\",\"elementType\":\"LINE\",\"simpleImpactType\":\"CREATION\",\"elementId\":\"lineId\",\"substationIds\":[\"s1\",\"s2\"]}]",
+                mapper.writeValueAsString(impactsSet));
     }
 
     @Test

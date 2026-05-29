@@ -548,7 +548,8 @@ public class StudyService {
         if (studyCreationRequestEntity.isEmpty()) {
             List<RootNetworkInfos> rootNetworkInfos = getStudyRootNetworksInfos(studyUuid);
             // get all modification groups related to the study
-            List<UUID> modificationGroupUuids = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream().map(NetworkModificationNodeInfoEntity::getModificationGroupUuid).toList();
+            List<UUID> modificationGroupUuids = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream().map(
+                    NetworkModificationNodeInfoEntity::getModificationGroupUuid).toList();
             studyEntity.ifPresent(s -> {
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
@@ -750,7 +751,8 @@ public class StudyService {
         }
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         if (networkStoreService.existVariant(networkUuid, variantId)) {
-            return singleLineDiagramService.generateVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, populateSldRequestInfos(sldRequestInfos, voltageLevelId, nodeUuid, rootNetworkUuid));
+            return singleLineDiagramService.generateVoltageLevelSvgAndMetadata(networkUuid, variantId, voltageLevelId, populateSldRequestInfos(sldRequestInfos, voltageLevelId, nodeUuid,
+                    rootNetworkUuid));
         } else {
             return null;
         }
@@ -826,10 +828,11 @@ public class StudyService {
             elementId);
     }
 
-    private Map<String, String> getSingleElementOptionalParameters(String elementId, String elementType, StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, LoadFlowParameters loadFlowParameters) {
+    private Map<String, String> getSingleElementOptionalParameters(String elementId, String elementType, StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid,
+            LoadFlowParameters loadFlowParameters) {
         Map<String, String> additionalParameters = getOptionalParameters(elementType, studyEntity, loadFlowParameters);
 
-        if (elementType.equalsIgnoreCase("voltage_level")) {
+        if ("voltage_level".equalsIgnoreCase(elementType)) {
             try {
                 additionalParameters.put(
                     InfoTypeParameters.QUERY_PARAM_BUS_ID_TO_ICC_VALUES,
@@ -1002,7 +1005,8 @@ public class StudyService {
 
         boolean isSecurityNode = networkModificationTreeService.isSecurityNode(nodeUuid);
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
-        UUID result = loadflowService.runLoadFlow(new NodeReceiver(nodeUuid, rootNetworkUuid), loadflowResultUuid, new VariantInfos(networkUuid, variantId), new LoadFlowService.ParametersInfos(lfParametersUuid, withRatioTapChangers, isSecurityNode), lfReportUuid, userId);
+        UUID result = loadflowService.runLoadFlow(new NodeReceiver(nodeUuid, rootNetworkUuid), loadflowResultUuid, new VariantInfos(networkUuid, variantId),
+                new LoadFlowService.ParametersInfos(lfParametersUuid, withRatioTapChangers, isSecurityNode), lfReportUuid, userId);
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
 
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
@@ -1493,7 +1497,8 @@ public class StudyService {
     }
 
     public StudyEntity updateRootNetworkIndexationStatus(UUID studyUuid, UUID rootNetworkUuid, RootNetworkIndexationStatus indexationStatus) {
-        return updateRootNetworkIndexationStatus(getStudy(studyUuid), rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")), indexationStatus);
+        return updateRootNetworkIndexationStatus(getStudy(studyUuid), rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")),
+                indexationStatus);
     }
 
     private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
@@ -1528,7 +1533,9 @@ public class StudyService {
             // in this case, the first root network's name is the name the user entered when selecting the case.
             firstRootNetworkName = studyCreationRequestEntity.get().getFirstRootNetworkName();
         }
-        rootNetworkService.createRootNetwork(studyEntity, RootNetworkInfos.builder().id(UUID.randomUUID()).name(firstRootNetworkName).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).tag("1").build());
+        rootNetworkService.createRootNetwork(studyEntity,
+                RootNetworkInfos.builder().id(UUID.randomUUID()).name(firstRootNetworkName).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(
+                        importParameters).tag("1").build());
         networkModificationTreeService.createBasicTree(study);
 
         return study;
@@ -1991,7 +1998,8 @@ public class StudyService {
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
             networkModificationService.deleteModifications(groupId, modificationsUuids);
             // for each root network, remove modifications from excluded ones
-            studyEntity.getRootNetworks().forEach(rootNetworkEntity -> rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkEntity.getId(), new HashSet<>(modificationsUuids), true));
+            studyEntity.getRootNetworks().forEach(rootNetworkEntity -> rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkEntity.getId(), new HashSet<>(modificationsUuids),
+                    true));
         } finally {
             notificationService.emitEndDeletionEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
@@ -2205,7 +2213,8 @@ public class StudyService {
     public Map<UUID, NodeBuildStatus> getNodeBuildStatusByRootNetwork(UUID studyUuid, UUID nodeUuid) {
         return getStudyRootNetworks(studyUuid).stream().collect(Collectors.toMap(
             RootNetworkEntity::getId,
-            rn -> rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rn.getId()).map(rni -> rni.getNodeBuildStatus().toDto()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"))
+            rn -> rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rn.getId()).map(rni -> rni.getNodeBuildStatus().toDto()).orElseThrow(() -> new StudyException(NOT_FOUND,
+                    "Root network not found"))
         ));
     }
 
@@ -2250,7 +2259,8 @@ public class StudyService {
                 .map(rootNetworkEntity -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), targetNodeUuid, rootNetworkEntity.getNetworkUuid()))
                 .toList();
 
-            NetworkModificationsResult networkModificationsResult = networkModificationService.moveModifications(originGroupUuid, targetGroupUuid, beforeUuid, Pair.of(modificationUuidList, modificationApplicationContexts), isTargetInDifferentNodeTree);
+            NetworkModificationsResult networkModificationsResult = networkModificationService.moveModifications(originGroupUuid, targetGroupUuid, beforeUuid, Pair.of(modificationUuidList,
+                    modificationApplicationContexts), isTargetInDifferentNodeTree);
             rootNetworkNodeInfoService.moveModificationsToExclude(originNodeUuid, targetNodeUuid, networkModificationsResult.modificationUuids());
 
             // Target node
@@ -2567,7 +2577,8 @@ public class StudyService {
         UUID sensiReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(SENSITIVITY_ANALYSIS.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS, sensiReportUuid);
 
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, rootNetworkUuid, networkUuid, variantId, sensiReportUuid, userId, study.getSensitivityAnalysisParametersUuid(), study.getLoadFlowParametersUuid());
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, rootNetworkUuid, networkUuid, variantId, sensiReportUuid, userId, study.getSensitivityAnalysisParametersUuid(),
+                study.getLoadFlowParametersUuid());
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SENSITIVITY_ANALYSIS);
         notificationService.emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
@@ -2593,7 +2604,8 @@ public class StudyService {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, computationType, scReportUuid);
-        final UUID result = shortCircuitService.runShortCircuit(rootNetworkUuid, new VariantInfos(networkUuid, variantId), busId.orElse(null), studyEntity.getShortCircuitParametersUuid(), new ReportInfos(scReportUuid, nodeUuid), userId, debug);
+        final UUID result = shortCircuitService.runShortCircuit(rootNetworkUuid, new VariantInfos(networkUuid, variantId), busId.orElse(null), studyEntity.getShortCircuitParametersUuid(),
+                new ReportInfos(scReportUuid, nodeUuid), userId, debug);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, computationType);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid,
                 busId.isEmpty() ? NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS : NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
@@ -2921,7 +2933,8 @@ public class StudyService {
         // launch dynamic simulation
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID dynamicSimulationResultUuid = dynamicSimulationService.runDynamicSimulation(nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, dynamicSimulationParametersUuid, events, userId, debug);
+        UUID dynamicSimulationResultUuid = dynamicSimulationService.runDynamicSimulation(nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid, dynamicSimulationParametersUuid, events, userId,
+                debug);
 
         // update result uuid and notification
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSimulationResultUuid, DYNAMIC_SIMULATION);
@@ -3136,7 +3149,8 @@ public class StudyService {
                 }
             });
             // duplicate the modification created by voltageInit server into the current node
-            NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModificationsFromGroup(networkModificationTreeService.getModificationGroupUuid(nodeUuid), voltageInitModificationsGroupUuid, Pair.of(List.of(), modificationApplicationContexts));
+            NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModificationsFromGroup(networkModificationTreeService.getModificationGroupUuid(nodeUuid),
+                    voltageInitModificationsGroupUuid, Pair.of(List.of(), modificationApplicationContexts));
 
             // We expect a single voltageInit modification in the result list
             if (networkModificationResults != null && networkModificationResults.modificationUuids().size() == 1) {

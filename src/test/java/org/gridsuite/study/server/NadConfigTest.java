@@ -8,7 +8,6 @@ package org.gridsuite.study.server;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import org.springframework.web.client.HttpServerErrorException;
 import org.gridsuite.study.server.service.NadConfigService;
 import org.gridsuite.study.server.service.SingleLineDiagramService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -18,8 +17,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.web.client.HttpServerErrorException;
 import java.util.*;
-
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.junit.jupiter.api.Assertions.*;

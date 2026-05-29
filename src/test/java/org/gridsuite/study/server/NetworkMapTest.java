@@ -22,8 +22,8 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
-import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.filter.utils.EquipmentType;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.AbstractNode;
@@ -34,8 +34,8 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
@@ -56,7 +56,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.util.LinkedMultiValueMap;
-
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -64,7 +63,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR;
@@ -100,12 +98,23 @@ class NetworkMapTest {
     private static final String SUBSTATION_ID_1 = "SUBSTATION_ID_1";
     private static final String VL_ID_1 = "VL_ID_1";
     private static final String VOLTAGE_LEVEL_ID = "VOLTAGE_LEVEL_ID";
-    private static final String VOLTAGE_LEVEL_EQUIPMENTS_JSON = "[{\"id\":\"GEN\",\"name\":null,\"type\":\"GENERATOR\"},{\"id\":\"GEN2\",\"name\":null,\"type\":\"GENERATOR\"},{\"id\":\"LCC1\",\"name\":\"LCC1\",\"type\":\"HVDC_CONVERTER_STATION\"},{\"id\":\"SVC1\",\"name\":\"SVC1\",\"type\":\"STATIC_VAR_COMPENSATOR\"},{\"id\":\"NGEN_NHV1\",\"name\":null,\"type\":\"TWO_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT\",\"name\":\"TWT\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT21\",\"name\":\"TWT21\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT32\",\"name\":\"TWT32\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"BL1\",\"name\":\"BL1\",\"type\":\"BOUNDARY_LINE\"},{\"id\":\"LINE3\",\"name\":null,\"type\":\"LINE\"}]";
+    private static final String VOLTAGE_LEVEL_EQUIPMENTS_JSON =
+            "[{\"id\":\"GEN\",\"name\":null,\"type\":\"GENERATOR\"},{\"id\":\"GEN2\",\"name\":null,\"type\":\"GENERATOR\"},{\"id\":\"LCC1\",\"name\":\"LCC1\",\"type\":\"HVDC_CONVERTER_STATION\"},"
+                    + "{\"id\":\"SVC1\",\"name\":\"SVC1\",\"type\":\"STATIC_VAR_COMPENSATOR\"},{\"id\":\"NGEN_NHV1\",\"name\":null,\"type\":\"TWO_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT\","
+                            + "\"name\":\"TWT\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT21\",\"name\":\"TWT21\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"TWT32\","
+                                    + "\"name\":\"TWT32\",\"type\":\"THREE_WINDINGS_TRANSFORMER\"},{\"id\":\"BL1\",\"name\":\"BL1\",\"type\":\"BOUNDARY_LINE\"},{\"id\":\"LINE3\",\"name\":null,"
+                                            + "\"type\":\"LINE\"}]";
     private static final String LOADFLOW_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID LOADFLOW_PARAMETERS_UUID = UUID.fromString(LOADFLOW_PARAMETERS_UUID_STRING);
     private static final String SWITCHES_INFOS_JSON = "[{\"id\":\".ABRE 6_.ABRE6TR615 SA.1_OC\",\"open\":false\"},{\"id\":\".ABRE 6_.ABRE6SEC..12 SS.1.12_OC\",\"open\":false\"}]";
-    private static final String BUSBAR_SECTIONS_INFO_JSON = "{\"topologyKind\":\"NODE_BREAKER\",\"switchKinds\":[\"DISCONNECTOR\"],\"isSymmetrical\":true,\"isBusbarSectionPositionFound\":true,\"busBarSections\":{\"1\":[\"NGEN4\"]}}";
-    private static final String FEEDER_BAYS_BUSBAR_SECTIONS_INFO_JSON = "{\"feederBaysInfos\":{\"SHUNT_VLNB\":[{\"busbarSectionId\":\"NGEN4\",\"connectablePositionInfos\":{\"connectionDirection\":null},\"connectionSide\":null}],\"LINE7\":[{\"busbarSectionId\":\"NGEN4\",\"connectablePositionInfos\":{\"connectionDirection\":\"BOTTOM\",\"connectionPosition\":5,\"connectionName\":\"LINE7_Side_VLGEN4\"},\"connectionSide\":\"ONE\"}],\"SHUNT_NON_LINEAR\":[{\"busbarSectionId\":\"NGEN4\",\"connectablePositionInfos\":{\"connectionDirection\":null},\"connectionSide\":null}]},\"busBarSectionsInfos\":{\"topologyKind\":\"NODE_BREAKER\",\"switchKinds\":[\"DISCONNECTOR\"],\"isSymmetrical\":true,\"isBusbarSectionPositionFound\":true,\"busBarSections\":{\"1\":[\"NGEN4\"]}}}";
+    private static final String BUSBAR_SECTIONS_INFO_JSON =
+            "{\"topologyKind\":\"NODE_BREAKER\",\"switchKinds\":[\"DISCONNECTOR\"],\"isSymmetrical\":true,\"isBusbarSectionPositionFound\":true,\"busBarSections\":{\"1\":[\"NGEN4\"]}}";
+    private static final String FEEDER_BAYS_BUSBAR_SECTIONS_INFO_JSON =
+            "{\"feederBaysInfos\":{\"SHUNT_VLNB\":[{\"busbarSectionId\":\"NGEN4\",\"connectablePositionInfos\":{\"connectionDirection\":null},\"connectionSide\":null}],"
+                    + "\"LINE7\":[{\"busbarSectionId\":\"NGEN4\",\"connectablePositionInfos\":{\"connectionDirection\":\"BOTTOM\",\"connectionPosition\":5,"
+                            + "\"connectionName\":\"LINE7_Side_VLGEN4\"},\"connectionSide\":\"ONE\"}],\"SHUNT_NON_LINEAR\":[{\"busbarSectionId\":\"NGEN4\","
+                                    + "\"connectablePositionInfos\":{\"connectionDirection\":null},\"connectionSide\":null}]},\"busBarSectionsInfos\":{\"topologyKind\":\"NODE_BREAKER\","
+                                            + "\"switchKinds\":[\"DISCONNECTOR\"],\"isSymmetrical\":true,\"isBusbarSectionPositionFound\":true,\"busBarSections\":{\"1\":[\"NGEN4\"]}}}";
 
     @Autowired
     private MockMvc mockMvc;
@@ -382,7 +391,8 @@ class NetworkMapTest {
         AbstractNode node = getRootNode(studyEntity.getId()).getChildren().stream().findFirst().orElseThrow();
 
         //get the voltage levels and its equipments
-        getNetworkElementsInfos(studyEntity.getId(), firstRootNetworkUuid, node.getId(), "LIST", "VOLTAGE_LEVEL", List.of(24.0), mapper.writeValueAsString(List.of()), "[{\"id\":\"MTAUBP3\",\"nominalVoltage\":24.0,\"topologyKind\":\"NODE_BREAKER\"}]");
+        getNetworkElementsInfos(studyEntity.getId(), firstRootNetworkUuid, node.getId(), "LIST", "VOLTAGE_LEVEL", List.of(24.0), mapper.writeValueAsString(List.of()),
+                "[{\"id\":\"MTAUBP3\",\"nominalVoltage\":24.0,\"topologyKind\":\"NODE_BREAKER\"}]");
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/parameters/" + LOADFLOW_PARAMETERS_UUID_STRING)));
     }
 
@@ -484,7 +494,8 @@ class NetworkMapTest {
         AbstractNode node = getRootNode(studyEntity.getId()).getChildren().stream().findFirst().orElseThrow();
 
         MvcResult mvcResult = mockMvc
-            .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}/voltage-level-id", studyEntity.getId(), firstRootNetworkUuid, node.getId(), LINE_ID_1)
+            .perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/branch-or-3wt/{equipmentId}/voltage-level-id", studyEntity.getId(),
+                    firstRootNetworkUuid, node.getId(), LINE_ID_1)
                 .queryParam(QUERY_PARAM_SIDE, TwoSides.ONE.name()))
             .andExpect(status().isOk())
             .andReturn();
@@ -774,7 +785,8 @@ class NetworkMapTest {
                 .getContentAsString(), new TypeReference<>() { });
     }
 
-    private MvcResult getNetworkElementsIds(UUID studyUuid, UUID rootNetworkUuid, UUID rootNodeUuid, String elementType, List<Double> nominalVoltages, String responseBody, String requestBody) throws Exception {
+    private MvcResult getNetworkElementsIds(UUID studyUuid, UUID rootNetworkUuid, UUID rootNodeUuid, String elementType, List<Double> nominalVoltages, String responseBody, String requestBody) throws
+            Exception {
         UUID stubUuid = wireMockStubs.stubNetworkElementsIdsPost(NETWORK_UUID_STRING, responseBody);
         LinkedMultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
         queryParams.add(QUERY_PARAM_EQUIPMENT_TYPE, elementType);
@@ -784,7 +796,8 @@ class NetworkMapTest {
                     .collect(Collectors.toList());
             queryParams.addAll(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltageStrings);
         }
-        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/equipments-ids", studyUuid, rootNetworkUuid, rootNodeUuid)
+        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-map/equipments-ids", studyUuid,
+                rootNetworkUuid, rootNodeUuid)
                 .queryParams(queryParams)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody);
@@ -795,10 +808,12 @@ class NetworkMapTest {
         return mvcResult;
     }
 
-    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNetworkUuid, UUID rootNodeUuid, String infoType, String elementType, List<Double> nominalVoltages, String requestBody, String responseBody) throws Exception {
+    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNetworkUuid, UUID rootNodeUuid, String infoType, String elementType, List<Double> nominalVoltages, String requestBody, String
+            responseBody) throws Exception {
         UUID stubUuid = wireMockStubs.stubNetworkElementsInfosPost(NETWORK_UUID_STRING, infoType, elementType, nominalVoltages, responseBody);
 
-        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNetworkUuid, rootNodeUuid)
+        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNetworkUuid,
+                rootNodeUuid)
                 .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
                 .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
                 .queryParam(String.format(QUERY_FORMAT_OPTIONAL_PARAMS, QUERY_PARAM_DC_POWERFACTOR), Double.toString(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR));
@@ -818,7 +833,8 @@ class NetworkMapTest {
 
     private MvcResult getNetworkElementInfos(UUID studyUuid, UUID rootNetworkUuid, UUID rootNodeUuid, String elementType, String infoType, String elementId, String responseBody) throws Exception {
         UUID stubUuid = wireMockStubs.stubNetworkElementInfosGet(NETWORK_UUID_STRING, elementType, infoType, elementId, responseBody);
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNetworkUuid, rootNodeUuid, elementId)
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNetworkUuid, rootNodeUuid,
+                elementId)
                         .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
                         .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
                 )
@@ -830,7 +846,8 @@ class NetworkMapTest {
 
     private MvcResult getNetworkElementInfosNotFound(UUID studyUuid, UUID rootNetworkUuid, UUID rootNodeUuid, String elementType, String infoType, String elementId) throws Exception {
         UUID stubUuid = wireMockStubs.stubNetworkElementInfosGetNotFound(NETWORK_UUID_STRING, elementType, infoType, elementId);
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNetworkUuid, rootNodeUuid, elementId)
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements/{elementId}", studyUuid, rootNetworkUuid, rootNodeUuid,
+                elementId)
                         .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
                         .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
                         .queryParam(String.format(QUERY_FORMAT_OPTIONAL_PARAMS, QUERY_PARAM_DC_POWERFACTOR), Double.toString(LoadFlowParameters.DEFAULT_DC_POWER_FACTOR))

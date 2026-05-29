@@ -9,10 +9,10 @@ package org.gridsuite.study.server.rootnetworks;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.ExcludedNetworkModifications;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
@@ -39,10 +39,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.util.*;
 import java.util.stream.Collectors;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
@@ -140,7 +138,8 @@ class ModificationToExcludeTest {
         Mockito.doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND)).when(networkModificationService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(invalidModificationUuid));
 
         // try to disable invalid modification - should return 404
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), firstNode.getId())
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(),
+                firstNode.getId())
             .param("uuids", invalidModificationUuid.toString())
             .param("activated", Boolean.FALSE.toString())
             .header(USER_ID, USER_ID))
@@ -149,19 +148,23 @@ class ModificationToExcludeTest {
         UUID validModificationUuid = UUID.randomUUID();
         Mockito.doNothing().when(networkModificationService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(validModificationUuid));
         // disable modification then check it's actually stored in database
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), firstNode.getId())
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(),
+                firstNode.getId())
                 .param("uuids", validModificationUuid.toString())
                 .param("activated", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
-        assertEquals(validModificationUuid, rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude().stream().findFirst().orElseThrow());
+        assertEquals(validModificationUuid, rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst(
+                ).rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude().stream().findFirst().orElseThrow());
         // enable modification then check it's not stored in database anymore
-        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), firstNode.getId())
+        mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(),
+                firstNode.getId())
                         .param("uuids", validModificationUuid.toString())
                         .param("activated", Boolean.TRUE.toString())
                         .header(USER_ID, USER_ID))
                 .andExpect(status().isOk());
-        assertEquals(0, rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude().size());
+        assertEquals(0, rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(
+                ).getModificationsUuidsToExclude().size());
     }
 
     @Test
@@ -177,11 +180,13 @@ class ModificationToExcludeTest {
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         // for each RootNetworkNodeInfoEntity, set some modifications to exclude
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(
+                )).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity1.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity1);
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid(
+                )).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity2.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_2);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity2);
 
@@ -192,12 +197,16 @@ class ModificationToExcludeTest {
         UUID duplicateNodeUuid = networkModificationTreeService.duplicateStudyNode(firstNode.getId(), rootNode.getIdNode(), InsertMode.AFTER);
 
         // get RootNetworkNodeInfoEntity of duplicate node
-        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(duplicateNodeUuid, rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(duplicateNodeUuid, rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(duplicateNodeUuid,
+                rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(duplicateNodeUuid,
+                rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
         // assert those values are actually defined from ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP
-        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()), duplicateRootNetworkNodeInfoEntity1.getModificationsUuidsToExclude());
-        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_2.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()), duplicateRootNetworkNodeInfoEntity2.getModificationsUuidsToExclude());
+        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()),
+                duplicateRootNetworkNodeInfoEntity1.getModificationsUuidsToExclude());
+        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_2.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()),
+                duplicateRootNetworkNodeInfoEntity2.getModificationsUuidsToExclude());
     }
 
     @Test
@@ -337,7 +346,8 @@ class ModificationToExcludeTest {
                 .findFirst()
                 .orElseThrow();
 
-        RootNetworkNodeInfoEntity rnYInfoStudy2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(duplicatedNodeUuid, rnYStudy2.rootNetworkUuid()).orElseThrow();
+        RootNetworkNodeInfoEntity rnYInfoStudy2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(duplicatedNodeUuid, rnYStudy2.rootNetworkUuid(
+                )).orElseThrow();
 
         assertTrue(rnYInfoStudy2.getModificationsUuidsToExclude().contains(modificationDupliqueeUuid),
                 "Duplicated Modification should be excluded on RN2 (tag Y)");
@@ -348,7 +358,8 @@ class ModificationToExcludeTest {
                 .findFirst()
                 .orElseThrow();
 
-        RootNetworkNodeInfoEntity rnXInfoStudy2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(duplicatedNodeUuid, rnXStudy2.rootNetworkUuid()).orElseThrow();
+        RootNetworkNodeInfoEntity rnXInfoStudy2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(duplicatedNodeUuid, rnXStudy2.rootNetworkUuid(
+                )).orElseThrow();
 
         assertTrue(rnXInfoStudy2.getModificationsUuidsToExclude().isEmpty(), "Modification is active on RN1 (tag X)");
     }
@@ -434,11 +445,13 @@ class ModificationToExcludeTest {
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         // for each RootNetworkNodeInfoEntity, set some modifications to exclude
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(
+                )).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity1.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity1);
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid(
+                )).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity2.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_2);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity2);
 
@@ -454,9 +467,11 @@ class ModificationToExcludeTest {
         assertEquals(2, excludedNetworkModifications.size());
 
         assertEquals(excludedNetworkModifications.getFirst().rootNetworkUuid(), rootNetworkBasicInfos.getFirst().rootNetworkUuid());
-        assertEquals(excludedNetworkModifications.getFirst().modificationUuidsToExclude(), rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude());
+        assertEquals(excludedNetworkModifications.getFirst().modificationUuidsToExclude(), rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(),
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude());
         assertEquals(excludedNetworkModifications.get(1).rootNetworkUuid(), rootNetworkBasicInfos.get(1).rootNetworkUuid());
-        assertEquals(excludedNetworkModifications.get(1).modificationUuidsToExclude(), rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude());
+        assertEquals(excludedNetworkModifications.get(1).modificationUuidsToExclude(), rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(),
+                rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow().getModificationsUuidsToExclude());
     }
 
     @Test
@@ -590,11 +605,13 @@ class ModificationToExcludeTest {
         NetworkModificationNode secondNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_2_NAME), InsertMode.AFTER, null);
 
         // for each RootNetworkNodeInfoEntity, set some modifications to exclude
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(),
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity1.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity1);
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(),
+                rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetworkNodeInfoEntity2.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_2);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity2);
 
@@ -616,15 +633,19 @@ class ModificationToExcludeTest {
 
         // test duplication on same node : node1
         studyService.duplicateNetworkModifications(studyEntity.getId(), firstNode.getId(), firstNode.getId(), modificationsToDuplicate, USER_ID);
-        RootNetworkNodeInfoEntity upToDateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        RootNetworkNodeInfoEntity upToDateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity upToDateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(),
+                rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity upToDateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNode.getId(),
+                rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         assertEquals(Sets.union(expectedExcludedModification1, MODIFICATIONS_TO_EXCLUDE_RN_1), upToDateRootNetworkNodeInfoEntity1.getModificationsUuidsToExclude());
         assertEquals(Sets.union(expectedExcludedModification2, MODIFICATIONS_TO_EXCLUDE_RN_2), upToDateRootNetworkNodeInfoEntity2.getModificationsUuidsToExclude());
 
         // test duplication on different nodes : node1 -> node2
         studyService.duplicateNetworkModifications(studyEntity.getId(), secondNode.getId(), firstNode.getId(), modificationsToDuplicate, USER_ID);
-        upToDateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNode.getId(), rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        upToDateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        upToDateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNode.getId(),
+                rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        upToDateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNode.getId(),
+                rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         assertEquals(expectedExcludedModification1, upToDateRootNetworkNodeInfoEntity1.getModificationsUuidsToExclude());
         assertEquals(expectedExcludedModification2, upToDateRootNetworkNodeInfoEntity2.getModificationsUuidsToExclude());
     }
@@ -645,12 +666,14 @@ class ModificationToExcludeTest {
         NetworkModificationNode secondNode = networkModificationTreeService.createNode(studyEntity, firstNode.getId(), createModificationNodeInfo(NODE_2_NAME), InsertMode.AFTER, null);
 
         // root network 0, first node, set some excluded modifications
-        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(),
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetwork0NodeInfo1Entity.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
 
         // root network 1, second node, set some excluded modifications
-        RootNetworkNodeInfoEntity rootNetwork1NodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(secondNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetwork1NodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(secondNode.getId(),
+                rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetwork1NodeInfo2Entity.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_2);
         rootNetworkNodeInfoRepository.save(rootNetwork1NodeInfo2Entity);
 
@@ -666,12 +689,16 @@ class ModificationToExcludeTest {
         UUID secondNodeDuplicateUuid = networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyEntity.getId(), NODE_2_NAME + " (1)").getFirst().getId();
 
         // get RootNetworkNodeInfoEntity of duplicate node
-        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeDuplicateUuid, rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNodeDuplicateUuid, rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeDuplicateUuid,
+                rootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNodeDuplicateUuid,
+                rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
         // assert those values are actually defined from ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP
-        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()), duplicateRootNetworkNodeInfoEntity1.getModificationsUuidsToExclude());
-        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_2.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()), duplicateRootNetworkNodeInfoEntity2.getModificationsUuidsToExclude());
+        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()),
+                duplicateRootNetworkNodeInfoEntity1.getModificationsUuidsToExclude());
+        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_2.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()),
+                duplicateRootNetworkNodeInfoEntity2.getModificationsUuidsToExclude());
     }
 
     @Test
@@ -690,12 +717,14 @@ class ModificationToExcludeTest {
         NetworkModificationNode secondNode = networkModificationTreeService.createNode(studyEntity, firstNode.getId(), createModificationNodeInfo(NODE_2_NAME), InsertMode.AFTER, null);
 
         // root network 0, first node, set some excluded modifications
-        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(),
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetwork0NodeInfo1Entity.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
 
         // root network 1, second node, set some excluded modifications
-        RootNetworkNodeInfoEntity rootNetwork1NodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(secondNode.getId(), rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetwork1NodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(secondNode.getId(),
+                rootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetwork1NodeInfo2Entity.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_2);
         rootNetworkNodeInfoRepository.save(rootNetwork1NodeInfo2Entity);
 
@@ -717,12 +746,16 @@ class ModificationToExcludeTest {
         UUID secondNodeDuplicateUuid = networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(newStudyUuid, NODE_2_NAME).getFirst().getId();
 
         // get RootNetworkNodeInfoEntity of duplicate node
-        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeDuplicateUuid, newStudyRootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNodeDuplicateUuid, newStudyRootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity1 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeDuplicateUuid,
+                newStudyRootNetworkBasicInfos.get(0).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity duplicateRootNetworkNodeInfoEntity2 = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNodeDuplicateUuid,
+                newStudyRootNetworkBasicInfos.get(1).rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
 
         // assert those values are actually defined from ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP
-        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()), duplicateRootNetworkNodeInfoEntity1.getModificationsUuidsToExclude());
-        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_2.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()), duplicateRootNetworkNodeInfoEntity2.getModificationsUuidsToExclude());
+        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()),
+                duplicateRootNetworkNodeInfoEntity1.getModificationsUuidsToExclude());
+        assertEquals(MODIFICATIONS_TO_EXCLUDE_RN_2.stream().map(ORIGIN_TO_DUPLICATE_MODIFICATION_UUID_MAP::get).collect(Collectors.toSet()),
+                duplicateRootNetworkNodeInfoEntity2.getModificationsUuidsToExclude());
     }
 
     @Test
@@ -739,7 +772,8 @@ class ModificationToExcludeTest {
         UUID firstNodeUuid = firstNode.getId();
 
         // add some modifications to exclude
-        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNodeUuid, rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNodeUuid,
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetwork0NodeInfo1Entity.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
 
@@ -748,7 +782,8 @@ class ModificationToExcludeTest {
         List<UUID> modificationsToRemove = List.of(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().findFirst().orElseThrow());
         assertThrows(RuntimeException.class, () -> studyService.deleteNetworkModifications(studyUuid, firstNodeUuid, modificationsToRemove, USER_ID));
 
-        Set<UUID> excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid, rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
+        Set<UUID> excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid,
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
         Set<UUID> expectedExcludedModifications = MODIFICATIONS_TO_EXCLUDE_RN_1;
         assertThat(expectedExcludedModifications).usingRecursiveComparison().isEqualTo(excludedModifications);
 
@@ -756,7 +791,8 @@ class ModificationToExcludeTest {
         Mockito.doNothing().when(networkModificationService).deleteModifications(any(), any());
         studyService.deleteNetworkModifications(studyUuid, firstNodeUuid, modificationsToRemove, USER_ID);
 
-        excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid, rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
+        excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid,
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
         expectedExcludedModifications = MODIFICATIONS_TO_EXCLUDE_RN_1.stream().filter(uuid -> uuid != modificationsToRemove.getFirst()).collect(Collectors.toSet());
         assertThat(expectedExcludedModifications).usingRecursiveComparison().isEqualTo(excludedModifications);
     }
@@ -777,7 +813,8 @@ class ModificationToExcludeTest {
         UUID secondNodeUuid = secondNode.getId();
 
         // add some modifications to exclude to node 1
-        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNodeUuid, rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNodeUuid,
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetwork0NodeInfo1Entity.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
 
@@ -787,12 +824,14 @@ class ModificationToExcludeTest {
         assertThrows(RuntimeException.class, () -> studyService.moveNetworkModifications(studyUuid, firstNodeUuid, firstNodeUuid, modificationsToMove, null, false, USER_ID));
 
         // assert origin node still have all excluded modifications
-        Set<UUID> excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid, rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
+        Set<UUID> excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid,
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
         Set<UUID> expectedExcludedModifications = MODIFICATIONS_TO_EXCLUDE_RN_1;
         assertThat(expectedExcludedModifications).usingRecursiveComparison().isEqualTo(excludedModifications);
 
         // assert target node still have no excluded modifications
-        excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNodeUuid, rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
+        excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNodeUuid,
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
         expectedExcludedModifications = Collections.emptySet();
         assertThat(expectedExcludedModifications).usingRecursiveComparison().isEqualTo(excludedModifications);
 
@@ -805,12 +844,14 @@ class ModificationToExcludeTest {
         studyService.moveNetworkModifications(studyUuid, secondNodeUuid, firstNodeUuid, modificationsToMove, null, true, USER_ID);
 
         // assert origin node still have all excluded modifications, except the moved one
-        excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid, rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
+        excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid,
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
         expectedExcludedModifications = MODIFICATIONS_TO_EXCLUDE_RN_1.stream().filter(uuid -> uuid != modificationsToMove.getFirst()).collect(Collectors.toSet());
         assertThat(expectedExcludedModifications).usingRecursiveComparison().isEqualTo(excludedModifications);
 
         // assert target node now have the moved modification as excluded one
-        excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNodeUuid, rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
+        excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(secondNodeUuid,
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
         expectedExcludedModifications = new HashSet<>(modificationsToMove);
         assertThat(expectedExcludedModifications).usingRecursiveComparison().isEqualTo(excludedModifications);
     }
@@ -828,11 +869,13 @@ class ModificationToExcludeTest {
         NetworkModificationNode secondNode = networkModificationTreeService.createNode(studyEntity, firstNode.getId(), createModificationNodeInfo(NODE_2_NAME), InsertMode.AFTER, null);
 
         // add some modifications to exclude
-        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetwork0NodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(firstNode.getId(),
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetwork0NodeInfo1Entity.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_1);
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
 
-        RootNetworkNodeInfoEntity rootNetwork0NodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(secondNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetwork0NodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(secondNode.getId(),
+                rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
         rootNetwork0NodeInfo2Entity.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_2);
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo2Entity);
 
@@ -841,8 +884,10 @@ class ModificationToExcludeTest {
 
         ArgumentCaptor<BuildInfos> buildInfosCaptor = ArgumentCaptor.forClass(BuildInfos.class);
         Mockito.verify(networkModificationService, Mockito.times(1)).buildNode(eq(secondNode.getId()), eq(rootNetworkBasicInfos.getFirst().rootNetworkUuid()), buildInfosCaptor.capture(), eq(null));
-        assertThat(buildInfosCaptor.getValue().getModificationUuidsToExclude().get(firstNode.getModificationGroupUuid())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(MODIFICATIONS_TO_EXCLUDE_RN_1);
-        assertThat(buildInfosCaptor.getValue().getModificationUuidsToExclude().get(secondNode.getModificationGroupUuid())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(MODIFICATIONS_TO_EXCLUDE_RN_2);
+        assertThat(buildInfosCaptor.getValue().getModificationUuidsToExclude().get(firstNode.getModificationGroupUuid())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(
+                MODIFICATIONS_TO_EXCLUDE_RN_1);
+        assertThat(buildInfosCaptor.getValue().getModificationUuidsToExclude().get(secondNode.getModificationGroupUuid())).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(
+                MODIFICATIONS_TO_EXCLUDE_RN_2);
     }
 
     private void createDummyRootNetwork(StudyEntity studyEntity, String name, String tag) {

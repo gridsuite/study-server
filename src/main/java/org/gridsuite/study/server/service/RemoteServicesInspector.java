@@ -159,6 +159,7 @@ public class RemoteServicesInspector {
      * @return {@code Map<String, Object>} in JSON format
      */
     @Async
+    @SuppressWarnings("checkstyle:IllegalCatch")
     public CompletableFuture<JsonNode> getServiceInfo(@NonNull final RemoteServiceName service) {
         try {
             if (service == RemoteServiceName.STUDY_SERVER) {

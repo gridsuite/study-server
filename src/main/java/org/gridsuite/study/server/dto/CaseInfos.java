@@ -14,7 +14,7 @@ import lombok.Setter;
 import java.util.UUID;
 
 /**
- * @author Slimane amar <slimane.amar at rte-france.com
+ * @author Slimane amar <slimane.amar at rte-france.com>
  */
 @AllArgsConstructor
 @NoArgsConstructor

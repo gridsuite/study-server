@@ -8,12 +8,10 @@ package org.gridsuite.study.server.dto.modification;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
-
-import java.util.*;
-import java.util.stream.Collectors;
-
 import org.gridsuite.study.server.dto.impacts.AbstractBaseImpact;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>

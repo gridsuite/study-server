@@ -22,7 +22,7 @@ import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyDele
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPostRequest;
 
 /**
- * @author Maissa Souissi <maissa.souissi@rte-france.com>
+ * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
 public class ComputationServerStubs {
     private final WireMockServer wireMock;
@@ -115,6 +115,7 @@ public class ComputationServerStubs {
 
     /** Preferably use function without WireMockServer in signature
      * TODO remove after current usages have been fixed
+     * @deprecated use function without WireMockServer in signature
      **/
     @Deprecated
     public void stubParameterPut(WireMockServer wireMockServer, String paramUuid, String responseJson) {
@@ -124,6 +125,7 @@ public class ComputationServerStubs {
 
     /** This function doesn't remove request after verifying it
      * TODO remove after current usages have been fixed
+     * @deprecated use function without WireMockServer in signature
      **/
     @Deprecated
     public void verifyParameterPut(WireMockServer wireMockServer, String paramUuid) {

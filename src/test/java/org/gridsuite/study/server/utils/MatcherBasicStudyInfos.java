@@ -6,11 +6,10 @@
  */
 package org.gridsuite.study.server.utils;
 
-import java.util.UUID;
-
 import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
+import java.util.UUID;
 
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>

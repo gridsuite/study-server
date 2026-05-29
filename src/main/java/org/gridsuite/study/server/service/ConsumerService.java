@@ -126,6 +126,7 @@ public class ConsumerService {
     }
 
     @Bean
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
     public Consumer<Message<String>> consumeBuildStopped() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
@@ -151,6 +152,7 @@ public class ConsumerService {
     }
 
     @Bean
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
     public Consumer<Message<String>> consumeBuildFailed() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
@@ -166,7 +168,8 @@ public class ConsumerService {
 
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                    notificationService.emitNodeBuildFailed(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class));
+                    notificationService.emitNodeBuildFailed(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE,
+                            String.class));
                     handleBuildCanceledOrFailedWorkflow(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
@@ -188,6 +191,7 @@ public class ConsumerService {
     }
 
     @Bean
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
     public Consumer<Message<String>> consumeCaseImportSucceeded() {
         return message -> {
             String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
@@ -318,6 +322,7 @@ public class ConsumerService {
         }
     }
 
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
     private UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
         try {
             List<UUID> workspaceIds = new ArrayList<>();
@@ -336,6 +341,7 @@ public class ConsumerService {
     }
 
     @Bean
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
     public Consumer<Message<String>> consumeCaseImportFailed() {
         return message -> {
             String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
@@ -472,6 +478,7 @@ public class ConsumerService {
             }));
     }
 
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
     public void consumeCalculationResult(Message<String> msg, ComputationType computationType) {
         Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
             .map(UUID::fromString)

@@ -25,7 +25,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
 
-
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */

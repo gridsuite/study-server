@@ -115,14 +115,42 @@ class SensitivityAnalysisTest {
     private static final String PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
     private static final String PROFILE_SENSITIVITY_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
     private static final String USER_PROFILE_NO_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile No params\"}";
-    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"sensitivityAnalysisParameterId\":\"" + PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
-    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"sensitivityAnalysisParameterId\":\"" + PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
+    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"sensitivityAnalysisParameterId\":\""
+            + PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
+    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"sensitivityAnalysisParameterId\":\""
+            + PROFILE_SENSITIVITY_ANALYSIS_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
     private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_SENSITIVITY_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
-    public static final String SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":0.0,\"angleFlowSensitivityValueThreshold\":0.0,\"flowVoltageSensitivityValueThreshold\":0.0," +
+    public static final String SENSITIVITY_ANALYSIS_DEFAULT_PARAMETERS_JSON =
+            "{\"flowFlowSensitivityValueThreshold\":0.0,\"angleFlowSensitivityValueThreshold\":0.0,\"flowVoltageSensitivityValueThreshold\":0.0," +
         "\"sensitivityInjectionsSet\":[],\"sensitivityInjection\":[],\"sensitivityHVDC\":[],\"sensitivityPST\":[],\"sensitivityNodes\":[]}";
-    public static final String SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":90.0,\"angleFlowSensitivityValueThreshold\":0.6,\"flowVoltageSensitivityValueThreshold\":0.1,\"sensitivityInjectionsSet\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"distributionType\":\"PROPORTIONAL\",\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityInjection\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityHVDC\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"sensitivityType\":\"DELTA_MW\",\"hvdcs\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityPST\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"sensitivityType\":\"DELTA_MW\",\"psts\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityNodes\":[{\"monitoredVoltageLevels\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"equipmentsInVoltageRegulation\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}]}";
+    public static final String SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON =
+            "{\"flowFlowSensitivityValueThreshold\":90.0,\"angleFlowSensitivityValueThreshold\":0.6,\"flowVoltageSensitivityValueThreshold\":0.1,"
+                    + "\"sensitivityInjectionsSet\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],"
+                            + "\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],\"distributionType\":\"PROPORTIONAL\","
+                                    + "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],\"activated\":true}],"
+                                            + "\"sensitivityInjection\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],"
+                                                    + "\"injections\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],"
+                                                            + "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\",\"containerName\":\"identifiable3\"}],"
+                                                                    + "\"activated\":true}],\"sensitivityHVDC\":[{\"monitoredBranches\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da321\","
+                                                                            + "\"containerName\":\"identifiable1\"}],\"sensitivityType\":\"DELTA_MW\","
+                                                                                    + "\"hvdcs\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],"
+                                                                                            + "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\","
+                                                                                                    + "\"containerName\":\"identifiable3\"}],\"activated\":true}],\"sensitivityPST\":"
+                                                                                                            + "[{\"monitoredBranches\":[{\"containerId\":"
+                                                                                                            + "\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],"
+                                                                                                            + "\"sensitivityType\":\"DELTA_MW\",\"psts\":[{\"containerId\":"
+                                                                                                            + "\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],"
+                                                                                                            + "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\","
+                                                                                                            + "\"containerName\":\"identifiable3\"}],\"activated\":true}],"
+                                                                                                            + "\"sensitivityNodes\":[{\"monitoredVoltageLevels\":[{\"containerId\":"
+                                                                                                            + "\"cf399ef3-7f14-4884-8c82-1c90300da321\",\"containerName\":\"identifiable1\"}],"
+                                                                                                            + "\"equipmentsInVoltageRegulation\":[{\"containerId\":"
+                                                                                                            + "\"cf399ef3-7f14-4884-8c82-1c90300da322\",\"containerName\":\"identifiable2\"}],"
+                                                                                                            + "\"contingencies\":[{\"containerId\":\"cf399ef3-7f14-4884-8c82-1c90300da323\","
+                                                                                                            + "\"containerName\":\"identifiable3\"}],\"activated\":true}]}";
 
-    private static final String SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON = "{\"flowFlowSensitivityValueThreshold\":30.0,\"voltageVoltageSensitivityValueThreshold\":0.4,\"flowVoltageSensitivityValueThreshold\":0.0,\"angleFlowSensitivityValueThreshold\":0.0}";
+    private static final String SENSITIVITY_ANALYSIS_PROFILE_PARAMETERS_JSON =
+            "{\"flowFlowSensitivityValueThreshold\":30.0,\"voltageVoltageSensitivityValueThreshold\":0.4,\"flowVoltageSensitivityValueThreshold\":0.0,\"angleFlowSensitivityValueThreshold\":0.0}";
 
     //output destinations
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
@@ -473,10 +501,12 @@ class SensitivityAnalysisTest {
         UUID notFoundSensitivityUuid = UUID.randomUUID();
         UUID studyUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, firstRootNetworkUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, firstRootNetworkUuid,
+                UUID.randomUUID(), FAKE_RESULT_JSON))
             .andExpect(status().isNotFound()).andReturn();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, firstRootNetworkUuid, UUID.randomUUID(), FAKE_RESULT_JSON))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, firstRootNetworkUuid,
+                UUID.randomUUID(), FAKE_RESULT_JSON))
             .andExpect(status().isNoContent()).andReturn();
 
         UUID rootNodeUuid = getRootNodeUuid(studyUuid);
@@ -492,11 +522,13 @@ class SensitivityAnalysisTest {
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + notFoundSensitivityUuid + "/filter-options" + ".*"))
             .willReturn(WireMock.notFound()));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, firstRootNetworkUuid, modificationNodeUuid, FAKE_RESULT_JSON))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result?selector={selector}", studyUuid, firstRootNetworkUuid,
+                modificationNodeUuid, FAKE_RESULT_JSON))
             .andExpect(status().isNotFound()).andReturn();
         computationServerStubs.verifyGetResult(notFoundSensitivityUuid.toString(), Map.of("selector", WireMock.matching(".*")));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, firstRootNetworkUuid, modificationNodeUuid, FAKE_RESULT_JSON))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options?selector={selector}", studyUuid, firstRootNetworkUuid,
+                modificationNodeUuid, FAKE_RESULT_JSON))
             .andExpect(status().isNotFound()).andReturn();
         computationServerStubs.verifyGetResultFilterOptions(notFoundSensitivityUuid.toString(), Map.of("selector", WireMock.matching(".*")));
     }
@@ -547,7 +579,8 @@ class SensitivityAnalysisTest {
             )
         );
 
-        MockHttpServletRequestBuilder requestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factor-count", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid);
+        MockHttpServletRequestBuilder requestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factor-count", studyNameUserIdUuid,
+                firstRootNetworkUuid, rootNodeUuid);
         requestBuilder.content(SENSITIVITY_ANALYSIS_UPDATED_PARAMETERS_JSON);
         String resultAsString = mockMvc.perform(requestBuilder.header(HEADER_USER_ID, "userId"))
             .andExpect(status().isOk())

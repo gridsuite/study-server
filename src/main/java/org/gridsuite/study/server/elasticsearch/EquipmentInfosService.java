@@ -11,9 +11,8 @@ import co.elastic.clients.elasticsearch._types.aggregations.*;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.json.JsonData;
-import lombok.Getter;
-
 import com.powsybl.iidm.network.VariantManagerConstants;
+import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.gridsuite.study.server.dto.elasticsearch.BasicEquipmentInfos;
@@ -29,12 +28,10 @@ import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
-
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-
 import static java.util.Map.entry;
 
 /**
@@ -99,7 +96,8 @@ public class EquipmentInfosService {
     @Getter
     private String tombstonedEquipmentsIndexName;
 
-    public EquipmentInfosService(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations elasticsearchOperations) {
+    public EquipmentInfosService(EquipmentInfosRepository equipmentInfosRepository, TombstonedEquipmentInfosRepository tombstonedEquipmentInfosRepository, ElasticsearchOperations
+            elasticsearchOperations) {
         this.equipmentInfosRepository = equipmentInfosRepository;
         this.tombstonedEquipmentInfosRepository = tombstonedEquipmentInfosRepository;
         this.elasticsearchOperations = elasticsearchOperations;
@@ -313,7 +311,8 @@ public class EquipmentInfosService {
         TermQuery networkUuidSearchQuery = Queries.termQuery(NETWORK_UUID, networkUuid.toString());
         TermsQuery variantIdSearchQuery = variantId.equals(VariantManagerConstants.INITIAL_VARIANT_ID) ?
                 new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(VariantManagerConstants.INITIAL_VARIANT_ID))).build()).build() :
-                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(VariantManagerConstants.INITIAL_VARIANT_ID), FieldValue.of(variantId))).build()).build();
+                new TermsQuery.Builder().field(VARIANT_ID).terms(new TermsQueryField.Builder().value(List.of(FieldValue.of(VariantManagerConstants.INITIAL_VARIANT_ID), FieldValue.of(
+                        variantId))).build()).build();
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder()
                 .filter(
@@ -405,7 +404,8 @@ public class EquipmentInfosService {
         return cleanRemovedEquipments(networkUuid, variantId, equipmentInfos);
     }
 
-    public List<EquipmentInfos> searchEquipments(@lombok.NonNull UUID networkUuid, @lombok.NonNull String variantId, @lombok.NonNull String userInput, @lombok.NonNull FieldSelector fieldSelector, String equipmentType) {
+    public List<EquipmentInfos> searchEquipments(@lombok.NonNull UUID networkUuid, @lombok.NonNull String variantId, @lombok.NonNull String userInput, @lombok.NonNull FieldSelector fieldSelector,
+            String equipmentType) {
         String effectiveVariantId = variantId.isEmpty() ? VariantManagerConstants.INITIAL_VARIANT_ID : variantId;
 
         BoolQuery query = buildSearchEquipmentsQuery(userInput, fieldSelector, networkUuid,

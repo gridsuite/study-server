@@ -12,8 +12,8 @@ import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.StudyService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,13 +21,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.elasticsearch.NoSuchIndexException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
@@ -84,12 +82,18 @@ class StudyServiceSearchTests {
     @Test
     void searchEquipmentInfosMultiVariants() {
         // Initialize equipment infos initial variant
-        EquipmentInfos generatorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
-        EquipmentInfos line1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l1").name("name_l1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
-        EquipmentInfos line2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l2").name("name_l2").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl3").name("vl3").build())).build();
-        EquipmentInfos twInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw1").name("name_tw1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("TWO_WINDINGS_TRANSFORMER").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl5").name("vl5").build())).build();
-        EquipmentInfos load1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
-        EquipmentInfos load2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId2").name("name_load2").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
+        EquipmentInfos generatorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type(
+                "GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
+        EquipmentInfos line1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l1").name("name_l1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LINE").voltageLevels(
+                Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
+        EquipmentInfos line2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_l2").name("name_l2").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LINE").voltageLevels(
+                Set.of(VoltageLevelInfos.builder().id("vl3").name("vl3").build())).build();
+        EquipmentInfos twInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_tw1").name("name_tw1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type(
+                "TWO_WINDINGS_TRANSFORMER").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl5").name("vl5").build())).build();
+        EquipmentInfos load1Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type(
+                "LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
+        EquipmentInfos load2Infos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId2").name("name_load2").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type(
+                "LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
 
         Stream.of(generatorInfos, line1Infos, line2Infos, twInfos, load1Infos, load2Infos).forEach(equipmentInfosService::addEquipmentInfos);
 
@@ -118,8 +122,10 @@ class StudyServiceSearchTests {
         assertTrue(hits.contains(line2Infos));
 
         // Add new equipments infos for new variant
-        EquipmentInfos newGeneratorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_new_g1").name("name_new_g1").variantId(VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
-        EquipmentInfos newLineInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_new_l1").name("name_new_l1").variantId(VARIANT_ID).type("LINE").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
+        EquipmentInfos newGeneratorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_new_g1").name("name_new_g1").variantId(VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(
+                VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
+        EquipmentInfos newLineInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_new_l1").name("name_new_l1").variantId(VARIANT_ID).type("LINE").voltageLevels(Set.of(
+                VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
 
         Stream.of(newGeneratorInfos, newLineInfos).forEach(equipmentInfosService::addEquipmentInfos);
 
@@ -224,7 +230,8 @@ class StudyServiceSearchTests {
     @Test
     void searchModifiedEquipment() {
         // Adding an equipment with type "LOAD" and a specific variant to the EquipmentInfosService.
-        EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
+        EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type(
+                "LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
         equipmentInfosService.addEquipmentInfos(loadInfos);
 
         // Searching for the equipment by ID and checking if the list size is 1, indicating successful retrieval.
@@ -232,7 +239,8 @@ class StudyServiceSearchTests {
         assertEquals(1, list.size());
 
         // Adding another version of the same equipment but with a different variant ID.
-        EquipmentInfos loadInfos1 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
+        EquipmentInfos loadInfos1 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VARIANT_ID).type("LOAD").voltageLevels(Set.of(
+                VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
         equipmentInfosService.addEquipmentInfos(loadInfos1);
 
         // Searching for the equipment by ID to check if the correct version is retrieved.
@@ -241,7 +249,8 @@ class StudyServiceSearchTests {
         assertTrue(list.contains(loadInfos1));
 
         // Adding a third version of the same equipment with a different variant ID.
-        EquipmentInfos loadInfos2 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VARIANT_ID_2).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
+        EquipmentInfos loadInfos2 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VARIANT_ID_2).type("LOAD").voltageLevels(Set.of(
+                VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
         equipmentInfosService.addEquipmentInfos(loadInfos2);
 
         // Searching for the third version of the equipment and validating its presence in the results.
@@ -258,8 +267,10 @@ class StudyServiceSearchTests {
     @Test
     void testSearchForModifiedEquipmentsFilteredByType() {
         // Adding LOAD and GENERATOR type equipment to the EquipmentInfosService with initial variant.
-        EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
-        EquipmentInfos generatorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
+        EquipmentInfos loadInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type(
+                "LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
+        EquipmentInfos generatorInfos = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").variantId(VariantManagerConstants.INITIAL_VARIANT_ID).type(
+                "GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl1").name("vl1").build())).build();
         equipmentInfosService.addEquipmentInfos(loadInfos);
         equipmentInfosService.addEquipmentInfos(generatorInfos);
 
@@ -268,8 +279,10 @@ class StudyServiceSearchTests {
         assertEquals(1, list.size());
 
         // Adding new versions of LOAD and GENERATOR equipment with a different variant ID.
-        EquipmentInfos loadInfos1 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VARIANT_ID).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
-        EquipmentInfos generatorInfos1 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").variantId(VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
+        EquipmentInfos loadInfos1 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VARIANT_ID).type("LOAD").voltageLevels(Set.of(
+                VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
+        EquipmentInfos generatorInfos1 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").variantId(VARIANT_ID).type("GENERATOR").voltageLevels(Set.of(
+                VoltageLevelInfos.builder().id("vl2").name("vl2").build())).build();
         equipmentInfosService.addEquipmentInfos(loadInfos1);
         equipmentInfosService.addEquipmentInfos(generatorInfos1);
 
@@ -284,8 +297,10 @@ class StudyServiceSearchTests {
         assertTrue(list.contains(generatorInfos1));
 
         // Adding another set of LOAD and GENERATOR equipment with yet another variant ID.
-        EquipmentInfos loadInfos2 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VARIANT_ID_2).type("LOAD").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl3").name("vl3").build())).build();
-        EquipmentInfos generatorInfos2 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").variantId(VARIANT_ID_2).type("GENERATOR").voltageLevels(Set.of(VoltageLevelInfos.builder().id("vl3").name("vl3").build())).build();
+        EquipmentInfos loadInfos2 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("loadId1").name("name_load1").variantId(VARIANT_ID_2).type("LOAD").voltageLevels(Set.of(
+                VoltageLevelInfos.builder().id("vl3").name("vl3").build())).build();
+        EquipmentInfos generatorInfos2 = EquipmentInfos.builder().networkUuid(NETWORK_UUID).id("id_g1").name("name_g1").variantId(VARIANT_ID_2).type("GENERATOR").voltageLevels(Set.of(
+                VoltageLevelInfos.builder().id("vl3").name("vl3").build())).build();
         equipmentInfosService.addEquipmentInfos(loadInfos2);
         equipmentInfosService.addEquipmentInfos(generatorInfos2);
 
