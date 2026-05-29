@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * @author David Braquart <david.braquart@rte-france.com>
+ * @author David Braquart <david.braquart at rte-france.com>
  */
 @Getter
 @AllArgsConstructor
@@ -30,6 +30,5 @@ public class LoadFlowParametersInfos {
     private Map<String, Map<String, String>> specificParametersPerProvider;
 
     private List<LimitReductionsByVoltageLevel> limitReductions;
-
 
 }

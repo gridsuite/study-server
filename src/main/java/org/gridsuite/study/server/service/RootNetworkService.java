@@ -10,26 +10,24 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
 import lombok.NonNull;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.CaseInfos;
 import org.gridsuite.study.server.dto.NetworkInfos;
 import org.gridsuite.study.server.dto.RootNetworkAction;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
-import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
 /**
@@ -165,7 +163,8 @@ public class RootNetworkService {
     }
 
     public Map<String, String> getImportParameters(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(NOT_FOUND,
+                "Root network not found"));
     }
 
     public List<RootNetworkInfos> getRootNetworkInfosWithLinksInfos(UUID studyUuid) {
@@ -173,6 +172,7 @@ public class RootNetworkService {
     }
 
     @Transactional
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
     public void duplicateStudyRootNetworks(StudyEntity newStudyEntity, StudyEntity sourceStudyEntity) {
         List<RootNetworkEntity> rootNetworkEntities = sourceStudyEntity.getRootNetworks();
         rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
@@ -192,7 +192,8 @@ public class RootNetworkService {
                         .id(UUID.randomUUID())
                         .name(rootNetworkEntityToDuplicate.getName())
                         .importParameters(newImportParameters)
-                        .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getOriginalCaseUuid(), rootNetworkEntityToDuplicate.getCaseName(), rootNetworkEntityToDuplicate.getCaseFormat()))
+                        .caseInfos(new CaseInfos(clonedCaseUuid, rootNetworkEntityToDuplicate.getOriginalCaseUuid(), rootNetworkEntityToDuplicate.getCaseName(),
+                                rootNetworkEntityToDuplicate.getCaseFormat()))
                         .networkInfos(new NetworkInfos(clonedNetworkUuid, rootNetworkEntityToDuplicate.getNetworkId()))
                         .reportUuid(clonedRootNodeReportUuid)
                         .tag(rootNetworkEntityToDuplicate.getTag())
@@ -203,7 +204,8 @@ public class RootNetworkService {
     }
 
     private RootNetworkRequestEntity insertRootNetworkRequest(UUID studyUuid, RootNetworkInfos rootNetworkInfos, RootNetworkAction action, String userId) {
-        return rootNetworkRequestRepository.save(RootNetworkRequestEntity.builder().id(rootNetworkInfos.getId()).name(rootNetworkInfos.getName()).tag(rootNetworkInfos.getTag()).description(rootNetworkInfos.getDescription()).studyUuid(studyUuid).actionRequest(action).userId(userId).build());
+        return rootNetworkRequestRepository.save(RootNetworkRequestEntity.builder().id(rootNetworkInfos.getId()).name(rootNetworkInfos.getName()).tag(rootNetworkInfos.getTag()).description(
+                rootNetworkInfos.getDescription()).studyUuid(studyUuid).actionRequest(action).userId(userId).build());
     }
 
     public RootNetworkRequestEntity insertCreationRequest(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId) {
@@ -244,13 +246,16 @@ public class RootNetworkService {
         CompletableFuture.allOf(
             // delete remote data ids set in root network
             studyServerExecutionService.runAsync(() -> reportService.deleteReports(rootNetworkInfos.stream().map(RootNetworkInfos::getReportUuid).toList())),
-            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(equipmentInfosService::deleteEquipmentIndexes)),
-            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(networkStoreService::deleteNetwork)),
+            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(
+                    equipmentInfosService::deleteEquipmentIndexes)),
+            studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getNetworkInfos().getNetworkUuid()).filter(Objects::nonNull).forEach(
+                    networkStoreService::deleteNetwork)),
             studyServerExecutionService.runAsync(() -> rootNetworkInfos.stream().map(rni -> rni.getCaseInfos().getCaseUuid()).filter(Objects::nonNull).forEach(caseService::deleteCase))
         );
 
         // delete remote data ids set in root network node infos
-        rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(Collection::stream).toList());
+        rootNetworkNodeInfoService.deleteRootNetworkNodeRemoteInfos(rootNetworkInfos.stream().map(RootNetworkInfos::getRootNetworkNodeInfos).filter(Objects::nonNull).flatMap(
+                Collection::stream).toList());
     }
 
     public Optional<RootNetworkRequestEntity> getRootNetworkRequest(UUID rootNetworkUuid) {

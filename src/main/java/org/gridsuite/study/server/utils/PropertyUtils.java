@@ -16,7 +16,7 @@ import java.beans.PropertyDescriptor;
 import java.util.Arrays;
 
 /**
- * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
+ * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
 public final class PropertyUtils {
     private PropertyUtils() {

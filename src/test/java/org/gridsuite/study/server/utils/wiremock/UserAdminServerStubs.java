@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * @author Maissa Souissi <maissa.souissi@rte-france.com>
+ * @author Maissa Souissi <maissa.souissi at rte-france.com>
  */
 
 public class UserAdminServerStubs {

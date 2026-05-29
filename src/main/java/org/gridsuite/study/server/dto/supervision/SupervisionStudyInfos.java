@@ -21,7 +21,7 @@ import java.util.UUID;
 /**
  * More detailed version of {@code StudyInfos} used for supervision and admin tools operations.
  *
- * @author Mathieu Deharbe <mathieu.deharbe@rte-france.com>
+ * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
  */
 @SuperBuilder
 @NoArgsConstructor

@@ -10,7 +10,7 @@ package org.gridsuite.study.server.repository.networkmodificationtree;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
 
 /**
- * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
+ * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
 public interface RootNodeInfoRepository extends NodeInfoRepository<RootNodeInfoEntity> {
 }

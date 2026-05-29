@@ -336,10 +336,13 @@ class StudyTestBase {
     }
 
     private void initMockBeansNetworkNotExisting() {
-        when(networkStoreService.cloneNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID, Collections.emptyList())).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
+        when(networkStoreService.cloneNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID,
+                Collections.emptyList())).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
         when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
-        when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID, PreloadingStrategy.COLLECTION)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
-        when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
+        when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID,
+                PreloadingStrategy.COLLECTION)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
+        when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID,
+                PreloadingStrategy.NONE)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
 
         doNothing().when(networkStoreService).deleteNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID);
     }
@@ -454,7 +457,8 @@ class StudyTestBase {
     }
 
     protected NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-                                                                    UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType, BuildStatus buildStatus, String userId) throws Exception {
+                                                                    UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType, BuildStatus buildStatus,
+                                                                            String userId) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
             .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
             .nodeType(nodeType)
@@ -591,7 +595,8 @@ class StudyTestBase {
                                              UUID stubSpreadsheetConfigDuplicateFromId,
                                              UUID stubNetworkVisualizationParamsDuplicateFromId,
                                              UUID stubWorkspacesConfigDuplicateFromId) {
-        public void verify(WireMockStubs wireMockStubs, ComputationServerStubs computationServerStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests, int networkVisualizationParamsDuplicateFromNbRequests, int workspacesConfigDuplicateFromNbRequests) {
+        public void verify(WireMockStubs wireMockStubs, ComputationServerStubs computationServerStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests,
+                int networkVisualizationParamsDuplicateFromNbRequests, int workspacesConfigDuplicateFromNbRequests) {
             if (stubParametersDuplicateFromId != null) {
                 computationServerStubs.verifyParametersDuplicateFromAny(stubParametersDuplicateFromId, parametersDuplicateFromNbRequests);
             }
@@ -637,7 +642,8 @@ class StudyTestBase {
         wireMockStubs.stubWorkspacesConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
     }
 
-    protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests, int workspacesConfigDefaultNbRequests) {
+    protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests,
+            int workspacesConfigDefaultNbRequests) {
         computationServerStubs.verifyParameters(createParametersNbRequests);
         computationServerStubs.verifyParametersDefault(parametersDefaultNbRequests);
         wireMockStubs.verifySpreadsheetConfigDefault(spreadsheetConfigDefaultNbRequests);

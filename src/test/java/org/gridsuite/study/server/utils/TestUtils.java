@@ -205,7 +205,7 @@ public final class TestUtils {
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, UUID reportUuid) {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
-//            .shortCircuitParametersUuid(UUID.randomUUID())
+            //            .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
         studyEntity.addRootNetwork(RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").tag("dum").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId("netId").networkUuid(networkUuid).reportUuid(reportUuid).build());
 
@@ -220,6 +220,7 @@ public final class TestUtils {
             .children(Collections.emptyList()).build();
     }
 
+    @SuppressWarnings("checkstyle:IllegalCatch")
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {
         try {
             destinations.forEach(destination -> assertNull(output.receive(TIMEOUT, destination), "Should not be any messages in queue " + destination + " : "));
@@ -230,6 +231,7 @@ public final class TestUtils {
         }
     }
 
+    @SuppressWarnings("checkstyle:IllegalCatch")
     public static void assertServerRequestsEmptyThenShutdown(MockWebServer server) throws UncheckedInterruptedException {
         try {
             assertNull(getRequestsDone(1, server), "Should not be any http requests : ");

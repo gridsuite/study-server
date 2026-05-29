@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.elasticsearch;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.QueryStringQuery;
-
 import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -15,7 +14,6 @@ import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;

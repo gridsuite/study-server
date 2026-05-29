@@ -9,7 +9,9 @@ package org.gridsuite.study.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import lombok.AllArgsConstructor;
 import org.gridsuite.study.server.dto.ComputationType;
@@ -27,10 +29,10 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.TestUtils;
+import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
 import org.gridsuite.study.server.utils.wiremock.UserAdminServerStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
-import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.json.JSONObject;
 import org.junit.jupiter.api.*;
@@ -49,15 +51,9 @@ import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.*;
-
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
-
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import org.springframework.web.client.HttpClientErrorException;
-
+import java.util.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -97,15 +93,18 @@ class PccMinTest {
 
     private static final String PCC_MIN_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID PCC_MIN_PARAMETERS_UUID = UUID.fromString(PCC_MIN_PARAMETERS_UUID_STRING);
-    private static final String PCC_MIN_PROFILE_PARAMETERS_JSON = "{\"uuid\":\"7cce52fd-2aca-4d93-9b7b-6a2b4c0c2c11\",\"filters\":[{\"filterId\":\"b5fafd19-25f4-45b9-b5c8-3af51fdc9d1c\",\"filterName\":\"filterName\"}]}";
+    private static final String PCC_MIN_PROFILE_PARAMETERS_JSON =
+            "{\"uuid\":\"7cce52fd-2aca-4d93-9b7b-6a2b4c0c2c11\",\"filters\":[{\"filterId\":\"b5fafd19-25f4-45b9-b5c8-3af51fdc9d1c\",\"filterName\":\"filterName\"}]}";
 
     private static final String PROFILE_PCC_MIN_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
     private static final String PROFILE_PCC_MIN_INVALID_PARAMETERS_UUID_STRING = "f09f5282-8e34-48b5-b66e-7ef9f3f36c4f";
     private static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
     private static final String PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
 
-    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid pcc min params\",\"pccMinParameterId\":\"" + PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
-    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken pcc min params\",\"pccMinParameterId\":\"" + PROFILE_PCC_MIN_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
+    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid pcc min params\",\"pccMinParameterId\":\"" +
+            PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
+    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken pcc min params\",\"pccMinParameterId\":\"" +
+            PROFILE_PCC_MIN_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
     private static final String DUPLICATED_PARAMS_JSON = "\"" + PROFILE_PCC_MIN_DUPLICATED_PARAMETERS_UUID_STRING + "\"";
 
     @Autowired

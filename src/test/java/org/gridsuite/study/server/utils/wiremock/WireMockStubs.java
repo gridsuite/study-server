@@ -31,7 +31,7 @@ import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.*;
 
 /**
  * /!\ STOP ADDING new methods in this file
- *  @Deprecated Do a local method on a test or create a dedicated file (for stub and verify)
+ * @deprecated Do a local method on a test or create a dedicated file (for stub and verify)
  */
 
 @Deprecated
@@ -277,7 +277,8 @@ public class WireMockStubs {
     }
 
     public void verifyNetworkModificationDeleteIndex(UUID stubId, int nbRequests) {
-        verifyDeleteRequest(wireMock, stubId, URI_NETWORK_MODIFICATION + DELIMITER + "index.*", true, Map.of("networkUuid", WireMock.matching(".*"), "groupUuids", WireMock.matching(".*")), nbRequests);
+        verifyDeleteRequest(wireMock, stubId, URI_NETWORK_MODIFICATION + DELIMITER + "index.*", true, Map.of("networkUuid", WireMock.matching(".*"), "groupUuids", WireMock.matching(".*")),
+                nbRequests);
     }
 
     public UUID stubBranchOr3WTVoltageLevelIdGet(String networkUuid, String equipmentId, String responseBody) {

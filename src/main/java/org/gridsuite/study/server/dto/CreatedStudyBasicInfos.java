@@ -9,11 +9,9 @@ package org.gridsuite.study.server.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
 import org.gridsuite.study.server.elasticsearch.ESConfig;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.Document;
-
 
 /**
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
