@@ -2009,7 +2009,7 @@ class NetworkModificationTest {
 
         // switch the 2 modifications order (modification1 is set at the end, after modification2)
         // Same-container reorder: no source/target params -> controller resolves both to the node's group.
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/modification/{modificationID}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
                 studyNameUserIdUuid, modificationNodeUuid, modification1).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         checkUpdateStatusMessagesReceived(studyNameUserIdUuid, modificationNodeUuid, output);
@@ -2027,7 +2027,7 @@ class NetworkModificationTest {
                 expectedBodyStr);
 
         // switch back the 2 modifications order (modification1 is set before modification2)
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/modification/{modificationID}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationID}",
                         studyNameUserIdUuid, modificationNodeUuid, modification1)
                         .queryParam("beforeUuid", modification2.toString())
                         .header(USER_ID_HEADER, "userId"))
@@ -3192,7 +3192,7 @@ class NetworkModificationTest {
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"modificationUuids\":[],\"modificationResults\":[]}")));
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/modification/{modificationUuid}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}",
                         studyUuid, nodeUuid, modificationUuid)
                         .queryParam("sourceContainerId", sourceContainerId.toString())
                         .queryParam("targetContainerId", targetContainerId.toString())
@@ -3216,7 +3216,7 @@ class NetworkModificationTest {
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"modificationUuids\":[],\"modificationResults\":[]}")));
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/modification/{modificationUuid}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}",
                         studyUuid, nodeUuid, modificationUuid)
                         .queryParam("sourceContainerId", sourceContainerId.toString())
                         .header(USER_ID_HEADER, userId))
@@ -3236,7 +3236,7 @@ class NetworkModificationTest {
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"modificationUuids\":[],\"modificationResults\":[]}")));
 
-        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/modification/{modificationUuid}",
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}",
                         studyUuid, nodeUuid, modificationUuid)
                         .queryParam("targetContainerId", targetContainerId.toString())
                         .header(USER_ID_HEADER, userId))

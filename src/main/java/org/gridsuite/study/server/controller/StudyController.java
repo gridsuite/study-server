@@ -625,7 +625,7 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllMapData(studyUuid, nodeUuid, rootNetworkUuid, substationsIds));
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/modification/{modificationUuid}")
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}")
     @Operation(summary = "Move a modification within or between containers (groups or composites)")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification order has been updated")})
     public ResponseEntity<Void> moveModification(
