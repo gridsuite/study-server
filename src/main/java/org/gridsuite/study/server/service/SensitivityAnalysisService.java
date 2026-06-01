@@ -21,6 +21,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -349,11 +350,17 @@ public class SensitivityAnalysisService extends AbstractComputationService imple
             .buildAndExpand(parametersUuid)
             .toUriString();
 
-        return restTemplate.exchange(
-            sensitivityAnalysisServerBaseUri + path,
-            HttpMethod.GET,
-            null,
-            new ParameterizedTypeReference<List<UUID>>() { }
-        ).getBody();
+        try {
+            List<UUID> elementIds = restTemplate.exchange(
+                sensitivityAnalysisServerBaseUri + path,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<UUID>>() { }
+            ).getBody();
+            return elementIds != null ? elementIds : List.of();
+
+        } catch (RestClientException e) {
+            return List.of();
+        }
     }
 }
