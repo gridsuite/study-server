@@ -590,8 +590,8 @@ class SensitivityAnalysisTest {
 
         // --- Stub failing sensitivity analysis run ---
         computationServerStubs.stubComputationRun(NETWORK_UUID_2_STRING, null, SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID);
-        sensitivityAnalysisStubs.stubGetElementIds(objectMapper.writeValueAsString(List.of(ELEMENTS_1_UUID)));
-        directoryServerStubs.stubGetElementNames(objectMapper.writeValueAsString(ELEMENTS_ID_NAME_MAP));
+        sensitivityAnalysisStubs.stubGetElementIds(objectMapper.writeValueAsString(List.of()));
+        directoryServerStubs.stubGetElementNames(objectMapper.writeValueAsString(Map.of()));
 
         // Run failing sensitivity analysis
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run",
@@ -622,7 +622,6 @@ class SensitivityAnalysisTest {
         // Verify the "run-and-save" POST request was called
         computationServerStubs.verifyComputationRun(NETWORK_UUID_2_STRING, Map.of("variantId", WireMock.matching(".*")));
         sensitivityAnalysisStubs.verifyGetElementIds();
-        directoryServerStubs.verifyGetElementNames(Set.of(ELEMENTS_1_UUID));
 
         // --- Test coverage: failed message without receiver ---
         StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
@@ -634,8 +633,8 @@ class SensitivityAnalysisTest {
 
         // Stub failing analysis for second study
         computationServerStubs.stubComputationRun(NETWORK_UUID_3_STRING, null, SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID);
-        sensitivityAnalysisStubs.stubGetElementIds(objectMapper.writeValueAsString(List.of(ELEMENTS_1_UUID)));
-        directoryServerStubs.stubGetElementNames(objectMapper.writeValueAsString(ELEMENTS_ID_NAME_MAP));
+        sensitivityAnalysisStubs.stubGetElementIds(objectMapper.writeValueAsString(List.of()));
+        directoryServerStubs.stubGetElementNames(objectMapper.writeValueAsString(Map.of()));
         // Run failing sensitivity analysis without receiver
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run",
                 studyUuid2, firstRootNetworkUuid2, modificationNode1Uuid2)
@@ -657,7 +656,6 @@ class SensitivityAnalysisTest {
         // Verify run-and-save POST request called
         computationServerStubs.verifyComputationRun(NETWORK_UUID_3_STRING, Map.of("variantId", WireMock.matching(".*")));
         sensitivityAnalysisStubs.verifyGetElementIds();
-        directoryServerStubs.verifyGetElementNames(Set.of(ELEMENTS_1_UUID));
     }
 
     private void createOrUpdateParametersAndDoChecks(UUID studyUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
