@@ -3203,10 +3203,15 @@ class NetworkModificationTest {
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid);
         checkElementUpdatedMessageSent(studyUuid, userId);
+        Pair<List<UUID>, List<ModificationApplicationContext>> expectedMoveBody =
+                Pair.of(List.of(modificationUuid),
+                        List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(
+                                studyTestUtils.getOneRootNetworkUuid(studyUuid), nodeUuid, NETWORK_UUID)));
+        String expectedMoveBodyJson = mapper.writeValueAsString(expectedMoveBody);
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveUrlCase1, false, Map.of(
                 "action", WireMock.equalTo(StudyConstants.ModificationsActionType.MOVE.name()),
                 "originGroupUuid", WireMock.equalTo(sourceContainerId.toString()),
-                "before", WireMock.equalTo(beforeUuid.toString())), null);
+                "before", WireMock.equalTo(beforeUuid.toString())), expectedMoveBodyJson);
 
         // --- Case 2: target container omitted -> controller resolves it to the node's group ---
         // Target is in the path, so the downstream URL now targets the node's group.
@@ -3227,7 +3232,7 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyUuid, userId);
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveUrlNodeGroup, false, Map.of(
                 "action", WireMock.equalTo(StudyConstants.ModificationsActionType.MOVE.name()),
-                "originGroupUuid", WireMock.equalTo(sourceContainerId.toString())), null);
+                "originGroupUuid", WireMock.equalTo(sourceContainerId.toString())), expectedMoveBodyJson);
 
         // --- Case 3: source container omitted -> controller resolves originGroupUuid to the node's group ---
         String moveUrlCase3 = "/v1/groups/" + targetContainerId;
@@ -3247,7 +3252,7 @@ class NetworkModificationTest {
         checkElementUpdatedMessageSent(studyUuid, userId);
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveUrlCase3, false, Map.of(
                 "action", WireMock.equalTo(StudyConstants.ModificationsActionType.MOVE.name()),
-                "originGroupUuid", WireMock.equalTo(nodeGroupUuid.toString())), null);
+                "originGroupUuid", WireMock.equalTo(nodeGroupUuid.toString())), expectedMoveBodyJson);
     }
 
     @Test
