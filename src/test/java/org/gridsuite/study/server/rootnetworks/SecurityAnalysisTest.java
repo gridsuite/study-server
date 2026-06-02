@@ -634,7 +634,6 @@ class SecurityAnalysisTest {
 
         securityAnalysisServerStubs.verifyGetNmkConstraintsResult(resultUuid, Map.of("page", WireMock.matching(".*")));
 
-
         // GET NMK_CUT_OFF_POWER result
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/nmk-cut-off-power-result/paged"))
                 .willReturn(WireMock.okJson(SECURITY_ANALYSIS_NMK_CUT_OFF_POWER_RESULT_JSON)));
