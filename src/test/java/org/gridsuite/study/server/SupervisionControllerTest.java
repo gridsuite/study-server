@@ -15,6 +15,7 @@ import com.powsybl.iidm.network.Identifiable;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.iidm.serde.XMLImporter;
+import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import org.elasticsearch.client.RestClient;
 import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
@@ -51,8 +52,13 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -101,6 +107,9 @@ class SupervisionControllerTest {
 
     @MockitoBean
     private NetworkService networkService;
+
+    @MockitoBean
+    private NetworkStoreService networkStoreService;
 
     @Autowired
     private StudyInfosService studyInfosService;
@@ -301,5 +310,23 @@ class SupervisionControllerTest {
         // checks that the supervision extra data are here
         assertEquals(1, infos.get(0).getCaseUuids().size());
         assertEquals(1, infos.get(0).getRootNetworkInfos().size());
+    }
+
+    @Test
+    void testInvalidateStudy() throws Exception {
+        initStudy();
+        Mockito.doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
+
+        mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
+                .andExpect(status().isOk());
+
+        // Remote root-network data was deleted
+        Mockito.verify(rootNetworkService, Mockito.times(1))
+                .invalidateRootNetworkRemoteInfos(any(), eq(true), eq(false));
+        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID);
+
+        // Indexation flipped to NOT_INDEXED so the auto-detect path will reimport on reopen
+        assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.NOT_INDEXED.name());
+        assertIndexationCount(0, 0);
     }
 }
