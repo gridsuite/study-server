@@ -54,7 +54,7 @@ class RebuildNodeServiceTest {
     @Test
     void testRebuildSingleNode() {
         doReturn(
-                Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT))
+            Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT))
         ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node1Uuid);
 
         rebuildNodeService.moveNetworkModification(studyUuid, node1Uuid, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), null, userId);
@@ -117,8 +117,8 @@ class RebuildNodeServiceTest {
     @Test
     void testRebuildConstructionNode() {
         doReturn(
-                Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT)),
-                Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT))
+            Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT)),
+            Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT))
         ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node1Uuid);
 
         doReturn(true).when(networkModificationTreeService).isRootOrConstructionNode(any());
