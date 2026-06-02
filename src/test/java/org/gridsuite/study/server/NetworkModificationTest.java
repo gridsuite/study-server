@@ -3180,11 +3180,6 @@ class NetworkModificationTest {
         UUID targetContainerId = UUID.randomUUID();
         UUID beforeUuid = UUID.randomUUID();
 
-        // The study-server now forwards every move to the modification-server's group endpoint:
-        //   PUT /v1/groups/{targetContainerId}?action=MOVE&originGroupUuid={source}&build={bool}[&before={before}]
-        // The target container is carried in the PATH (GROUP_PATH = "groups/{groupUuid}", no suffix);
-        // action / originGroupUuid / build / before are query params.
-
         // --- Case 1: move between two explicit containers, with a beforeUuid ---
         String moveUrlCase1 = "/v1/groups/" + targetContainerId;
         wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveUrlCase1))
