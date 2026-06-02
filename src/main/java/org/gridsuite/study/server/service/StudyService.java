@@ -2584,7 +2584,14 @@ public class StudyService {
         UUID sensiReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(SENSITIVITY_ANALYSIS.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS, sensiReportUuid);
 
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, rootNetworkUuid, networkUuid, variantId, sensiReportUuid, userId, study.getSensitivityAnalysisParametersUuid(), study.getLoadFlowParametersUuid());
+        UUID sensiParamsUuid = study.getSensitivityAnalysisParametersUuid();
+
+        // fetch the filters and contingencyLists contained in sensi parameters
+        // and retrieve their names, as they are needed in the results
+        List<UUID> elementIds = sensitivityAnalysisService.getElementIds(sensiParamsUuid);
+        Map<UUID, String> elementsIdNameMap = directoryService.getElementNames(new HashSet<>(elementIds));
+
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, rootNetworkUuid, networkUuid, variantId, sensiReportUuid, userId, sensiParamsUuid, study.getLoadFlowParametersUuid(), elementsIdNameMap);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SENSITIVITY_ANALYSIS);
         notificationService.emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);

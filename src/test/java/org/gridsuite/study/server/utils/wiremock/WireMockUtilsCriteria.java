@@ -48,6 +48,10 @@ public final class WireMockUtilsCriteria {
         verifyRequest(wireMockServer, requestBuilder, queryParams, body, nbRequests);
     }
 
+    public static void verifyPostRequest(WireMockServer wireMockServer, String urlPath, Map<String, StringValuePattern> queryParams, String body) {
+        verifyPostRequest(wireMockServer, urlPath, false, queryParams, body);
+    }
+
     public static void verifyPutRequest(WireMockServer wireMockServer, String urlPath, Map<String, StringValuePattern> queryParams, String body) {
         verifyPutRequest(wireMockServer, urlPath, false, queryParams, body);
     }
