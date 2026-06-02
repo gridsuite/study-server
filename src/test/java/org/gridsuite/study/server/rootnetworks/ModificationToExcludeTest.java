@@ -782,7 +782,7 @@ class ModificationToExcludeTest {
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
 
         // try to execute modification move - if modification move fails, they should not be moved from a node to another in exludedModifications
-        Mockito.doThrow(new RuntimeException()).when(networkModificationService).moveModifications(any(), any(), any(), any(), eq(true));
+        Mockito.doThrow(new RuntimeException()).when(networkModificationService).moveModifications(any(), any(), any(), any(), eq(false));
         List<UUID> modificationsToMove = List.of(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().findFirst().orElseThrow());
         assertThrows(RuntimeException.class, () -> studyService.moveNetworkModifications(studyUuid, secondNodeUuid, firstNodeUuid, modificationsToMove, false, USER_ID));
 
