@@ -2265,10 +2265,9 @@ public class StudyService {
         }
 
         try {
-            List<ModificationApplicationContext> applicationContexts = List.of();
             StudyEntity studyEntity = getStudy(studyUuid);
             checkStudyContainsNode(studyUuid, targetNodeUuid);
-            applicationContexts = studyEntity.getRootNetworks().stream()
+            List<ModificationApplicationContext> applicationContexts = studyEntity.getRootNetworks().stream()
                     .map(rn -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rn.getId(), targetNodeUuid, rn.getNetworkUuid()))
                     .toList();
 
@@ -2279,10 +2278,10 @@ public class StudyService {
                     Pair.of(modificationUuidList, applicationContexts),
                     isTargetInDifferentNodeTree);
 
-            if (originNodeUuid != null) {
+            if (result != null && originNodeUuid != null) {
                 rootNetworkNodeInfoService.moveModificationsToExclude(originNodeUuid, targetNodeUuid, result.modificationUuids());
             }
-            if (isTargetInDifferentNodeTree) {
+            if (result != null && isTargetInDifferentNodeTree) {
                 emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
             }
         } finally {
