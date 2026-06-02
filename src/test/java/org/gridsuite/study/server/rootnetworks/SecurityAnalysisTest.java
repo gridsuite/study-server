@@ -366,6 +366,30 @@ class SecurityAnalysisTest {
         byteArrayResult = mvcResult.getResponse().getContentAsByteArray();
         assertArrayEquals(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED, byteArrayResult);
         computationServerStubs.verifyPostResultCsv(SECURITY_ANALYSIS_RESULT_UUID, "nmk-constraints-result");
+
+        // get NMK_CUT_OFF_POWER security analysis result zipped csv
+        wireMockServer.stubFor(
+                post(urlPathEqualTo("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-cut-off-power-result/csv"))
+                        .withRequestBody(equalTo(CSV_TRANSLATION_DTO_STRING))
+                        .willReturn(aResponse()
+                                .withStatus(200)
+                                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+                                .withBody(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED)
+                        )
+        );
+
+        mvcResult = mockMvc.perform(
+                        post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}",
+                                studyUuid, firstRootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_CUT_OFF_POWER)
+                                .content(CSV_TRANSLATION_DTO_STRING)
+                                .contentType(MediaType.TEXT_PLAIN)
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+
+        byteArrayResult = mvcResult.getResponse().getContentAsByteArray();
+        assertArrayEquals(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED, byteArrayResult);
+        computationServerStubs.verifyPostResultCsv(SECURITY_ANALYSIS_RESULT_UUID, "nmk-cut-off-power-result");
     }
 
     @Test
