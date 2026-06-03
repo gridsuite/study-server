@@ -2250,8 +2250,8 @@ public class StudyService {
         UUID originNodeUuid = networkModificationTreeService.getNodeUuidByModificationGroup(sourceContainerId);
         boolean isTargetDifferentNode = !targetNodeUuid.equals(originNodeUuid);
 
-        List<UUID> originNodeChildrenUuids = List.of();
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
+        List<UUID> originNodeChildrenUuids = new ArrayList<>();
         notificationService.emitStartModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         if (isTargetDifferentNode && originNodeUuid != null) {
             originNodeChildrenUuids = networkModificationTreeService.getChildrenUuids(originNodeUuid);
