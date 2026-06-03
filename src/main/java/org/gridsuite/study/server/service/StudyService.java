@@ -2248,11 +2248,12 @@ public class StudyService {
             boolean isTargetInDifferentNodeTree,
             String userId) {
         UUID originNodeUuid = networkModificationTreeService.getNodeUuidByModificationGroup(sourceContainerId);
+        boolean isTargetDifferentNode = !targetNodeUuid.equals(originNodeUuid);
 
         List<UUID> originNodeChildrenUuids = List.of();
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
-        if (isTargetInDifferentNodeTree) {
+        if (isTargetDifferentNode && originNodeUuid != null) {
             originNodeChildrenUuids = networkModificationTreeService.getChildrenUuids(originNodeUuid);
             notificationService.emitStartModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
         }
@@ -2279,7 +2280,7 @@ public class StudyService {
             }
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
-            if (originNodeUuid != null && !originNodeUuid.equals(targetNodeUuid)) {
+            if (isTargetDifferentNode && originNodeUuid != null) {
                 notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids);
             }
 
