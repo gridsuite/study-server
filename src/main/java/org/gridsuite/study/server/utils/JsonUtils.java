@@ -95,7 +95,8 @@ public final class JsonUtils {
 
         params.forEach((key, value) -> {
             try {
-                result.put(key, objectMapper.writeValueAsString(value));
+                // String longer than 1024 bytes are converted to com.rabbitmq.client.LongString (https://docs.spring.io/spring-amqp/docs/3.0.0/reference/html/#message-properties-converters)
+                result.put(key, objectMapper.writeValueAsString(value != null ? value.toString() : null));
             } catch (JsonProcessingException e) {
                 throw new StudyException(UNPROCESSABLE_IMPORT_PARAMETER, "Import parameter '" + key + " => " + value + "' is not serializable: " + e.getMessage());
             }
