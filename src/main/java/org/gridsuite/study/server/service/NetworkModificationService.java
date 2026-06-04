@@ -284,13 +284,13 @@ public class NetworkModificationService {
 
     public NetworkModificationsResult insertCompositeModifications(UUID groupUuid,
                                                                    CompositeModificationsActionType action,
-                                                                   Pair<List<Pair<UUID, String>>, List<ModificationApplicationContext>> modificationContextInfos) {
+                                                                   Pair<List<Object>, List<ModificationApplicationContext>> modificationContextInfos) {
         var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + GROUP_PATH)
                 .queryParam(QUERY_PARAM_ACTION, action.name());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Pair<List<Pair<UUID, String>>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
+        HttpEntity<Pair<List<Object>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
 
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),

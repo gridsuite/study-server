@@ -2337,7 +2337,7 @@ public class StudyService {
     public void insertCompositeNetworkModifications(
         UUID targetStudyUuid,
         UUID targetNodeUuid,
-        List<Pair<UUID, String>> compositesInfos,
+        List<Object> compositesInfos,
         String userId,
         StudyConstants.CompositeModificationsActionType action) {
         duplicateModificationsOrInsertComposites(targetStudyUuid, targetNodeUuid,
