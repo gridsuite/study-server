@@ -341,7 +341,7 @@ public class StudyService {
         try {
             UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), true);
             rootNetworkInfos.getCaseInfos().setCaseUuid(clonedCaseUuid);
-            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParametersRaw(), CaseImportAction.ROOT_NETWORK_CREATION);
+            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParameters(), CaseImportAction.ROOT_NETWORK_CREATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntity);
             throw e;
@@ -404,7 +404,7 @@ public class StudyService {
         UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), true);
         rootNetworkInfos.getCaseInfos().setCaseUuid(clonedCaseUuid);
         try {
-            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParametersRaw(), CaseImportAction.ROOT_NETWORK_MODIFICATION);
+            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParameters(), CaseImportAction.ROOT_NETWORK_MODIFICATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkModificationRequestEntity);
             throw e;
@@ -604,7 +604,7 @@ public class StudyService {
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos,
                                               ComputationParameterUUIDs computationParameterUUIDs, UUID networkVisualizationParametersUuid,
                                               UUID spreadsheetConfigCollectionUuid, UUID workspacesConfigUuid,
-                                              Map<String, String> importParameters, UUID importReportUuid) {
+                                              Map<String, Object> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -1499,7 +1499,7 @@ public class StudyService {
     private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
                                                     CaseInfos caseInfos, ComputationParameterUUIDs computationParameterUUIDs,
                                                     UUID networkVisualizationParametersUuid, UUID spreadsheetConfigCollectionUuid,
-                                                     UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID workspacesConfigUuid, Map<String, Object> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -3479,7 +3479,7 @@ public class StudyService {
         // using the Hibernate First-Level Cache or Persistence Context
         // cf.https://vladmihalcea.com/spring-data-jpa-multiplebagfetchexception/
         rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
-        return rootNetworkEntities.stream().map(RootNetworkEntity::toDto).toList();
+        return rootNetworkEntities.stream().map(rootNetworkEntity -> rootNetworkEntity.toDto(objectMapper)).toList();
     }
 
     @Transactional(readOnly = true)
