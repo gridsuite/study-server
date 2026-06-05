@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.rabbitmq.client.LongString;
 import lombok.NonNull;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
 import org.gridsuite.study.server.error.StudyException;
@@ -96,7 +97,7 @@ public final class JsonUtils {
         params.forEach((key, value) -> {
             try {
                 // String longer than 1024 bytes are converted to com.rabbitmq.client.LongString (https://docs.spring.io/spring-amqp/docs/3.0.0/reference/html/#message-properties-converters)
-                result.put(key, objectMapper.writeValueAsString(value != null ? value.toString() : null));
+                result.put(key, objectMapper.writeValueAsString((value instanceof LongString) ? value.toString() : value));
             } catch (JsonProcessingException e) {
                 throw new StudyException(UNPROCESSABLE_IMPORT_PARAMETER, "Import parameter '" + key + " => " + value + "' is not serializable: " + e.getMessage());
             }
