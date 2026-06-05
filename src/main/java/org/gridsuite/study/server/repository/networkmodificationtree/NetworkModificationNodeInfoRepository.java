@@ -24,4 +24,7 @@ public interface NetworkModificationNodeInfoRepository extends NodeInfoRepositor
 
     @Query("select n.columnPosition from NetworkModificationNodeInfoEntity n where n.idNode in :uuids")
     List<Integer> findColumnPositionsByUuidIn(List<UUID> uuids);
+
+    @Query(value = "SELECT n FROM NetworkModificationNodeInfoEntity n WHERE n.idNode IN (?1) ORDER BY n.columnPosition")
+    List<NetworkModificationNodeInfoEntity> findAllByIdIn(List<UUID> uuids);
 }

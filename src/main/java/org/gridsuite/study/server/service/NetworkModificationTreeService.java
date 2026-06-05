@@ -145,6 +145,9 @@ public class NetworkModificationTreeService {
                     .forEach(child -> child.setParentNode(nodeEntity));
             }
         }
+
+        nodeInfo.setColumnPosition(nodeInfoEntity.getColumnPosition());
+
         return nodeInfo;
     }
 
@@ -282,7 +285,7 @@ public class NetworkModificationTreeService {
     // TODO test if studyUuid exist and have a node <nodeId>
     public void doDeleteNode(UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
         UUID studyId = self.getStudyUuidForNodeId(nodeId);
-        deleteNodes(nodeId, deleteChildren, false, deleteNodeInfos);
+        deleteNode(nodeId, deleteChildren, false, deleteNodeInfos);
         notificationService.emitNodesDeleted(studyId, deleteNodeInfos.getRemovedNodeUuids(), deleteChildren);
     }
 
@@ -291,7 +294,7 @@ public class NetworkModificationTreeService {
     public void doStashNode(UUID nodeId, boolean stashChildren) {
         List<UUID> stashedNodes = new ArrayList<>();
         UUID studyId = self.getStudyUuidForNodeId(nodeId);
-        stashNodes(nodeId, stashChildren, stashedNodes, true);
+        stashNode(nodeId, stashChildren, stashedNodes, true);
         notificationService.emitNodesDeleted(studyId, stashedNodes, stashChildren);
     }
 
@@ -300,28 +303,47 @@ public class NetworkModificationTreeService {
         return getNodeEntity(id).getStudy().getId();
     }
 
-    private void stashNodes(UUID id, boolean stashChildren, List<UUID> stashedNodes, boolean firstIteration) {
-        Optional<NodeEntity> optNodeToStash = nodesRepository.findById(id);
-        optNodeToStash.ifPresent(nodeToStash -> {
-            UUID modificationGroupUuid = self.getModificationGroupUuid(nodeToStash.getIdNode());
-            networkModificationService.deleteStashedModifications(modificationGroupUuid);
-            if (!stashChildren) {
-                getChildren(id).forEach(node -> node.setParentNode(nodeToStash.getParentNode()));
-            } else {
-                getChildren(id)
-                    .forEach(child -> stashNodes(child.getIdNode(), true, stashedNodes, false));
-            }
-            stashedNodes.add(id);
-            nodeToStash.setStashed(true);
-            nodeToStash.setStashDate(Instant.now());
-            //We only unlink the first deleted node so the rest of the tree is still connected as it was
-            if (firstIteration) {
-                nodeToStash.setParentNode(null);
-            }
-        });
+    private void stashNode(UUID nodeId, boolean stashChildren, List<UUID> stashedNodes, boolean firstIteration) {
+        NetworkModificationNodeInfoEntity nodeToStashInfo = getNetworkModificationNodeInfoEntity(nodeId);
+        NodeEntity nodeToStash = nodeToStashInfo.getNode();
+        UUID modificationGroupUuid = nodeToStashInfo.getModificationGroupUuid();
+        networkModificationService.deleteStashedModifications(modificationGroupUuid);
+        if (!stashChildren) {
+            insertNodesToParent(nodeToStash.getParentNode(), nodeToStashInfo.getColumnPosition(), getChildren(nodeId));
+        } else {
+            getChildren(nodeId)
+                .forEach(child -> stashNode(child.getIdNode(), true, stashedNodes, false));
+        }
+        stashedNodes.add(nodeId);
+        nodeToStash.setStashed(true);
+        nodeToStash.setStashDate(Instant.now());
+        //We only unlink the first deleted node so the rest of the tree is still connected as it was
+        if (firstIteration) {
+            nodeToStash.setParentNode(null);
+        }
     }
 
-    private void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, DeleteNodeInfos deleteNodeInfos) {
+    private void insertNodesToParent(NodeEntity parent, Integer position, List<NodeEntity> newChildren) {
+        if (newChildren.isEmpty()) {
+            return;
+        }
+        newChildren.forEach(node -> node.setParentNode(parent));
+
+        if (position == null) {
+            return;
+        }
+        List<NetworkModificationNodeInfoEntity> childrenInfos = networkModificationNodeInfoRepository.findAllByIdIn(nodesRepository.findChildrenUuids(parent.getIdNode()));
+        List<NetworkModificationNodeInfoEntity> newChildrenInfos = networkModificationNodeInfoRepository.findAllByIdIn(newChildren.stream().map(NodeEntity::getIdNode).toList());
+        childrenInfos.stream()
+            .filter(info -> info.getColumnPosition() != null && info.getColumnPosition() >= position)
+            .forEach(info -> info.setColumnPosition(info.getColumnPosition() + newChildrenInfos.size() - 1));
+        int insertPosition = position;
+        for (NetworkModificationNodeInfoEntity info : newChildrenInfos) {
+            info.setColumnPosition(insertPosition++);
+        }
+    }
+
+    private void deleteNode(UUID id, boolean deleteChildren, boolean allowDeleteRoot, DeleteNodeInfos deleteNodeInfos) {
         Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
         optNodeToDelete.ifPresent(nodeToDelete -> {
             /* root cannot be deleted by accident */
@@ -339,7 +361,7 @@ public class NetworkModificationTreeService {
                 getChildren(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
             } else {
                 getChildren(id)
-                    .forEach(child -> deleteNodes(child.getIdNode(), true, false, deleteNodeInfos));
+                    .forEach(child -> deleteNode(child.getIdNode(), true, false, deleteNodeInfos));
             }
             deleteNodeInfos.addRemovedNodeUuid(id);
             if (nodeToDelete.getType() == NodeType.ROOT) {
