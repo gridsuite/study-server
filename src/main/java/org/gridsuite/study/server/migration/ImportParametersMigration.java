@@ -26,6 +26,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Migrates the importParameters values stored in the importParameters table by
@@ -47,16 +48,16 @@ public class ImportParametersMigration implements CustomSqlChange {
                 "SELECT root_network_entity_id, import_parameters_key, import_parameters FROM import_parameters")) {
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
-                String rootNetworkEntityId = rs.getString("root_network_entity_id");
+                UUID rootNetworkEntityId = rs.getObject("root_network_entity_id", UUID.class);
                 String key = rs.getString("import_parameters_key");
                 String value = rs.getString("import_parameters");
 
-                String migratedValue = migrateValue(key, value);
+                String migratedValue = migrateValue(value);
 
                 try (PreparedStatement updateStmt = connection.prepareStatement(
                         "UPDATE import_parameters SET import_parameters = ? WHERE root_network_entity_id = ? AND import_parameters_key = ?")) {
                     updateStmt.setString(1, migratedValue);
-                    updateStmt.setString(2, rootNetworkEntityId);
+                    updateStmt.setObject(2, rootNetworkEntityId);
                     updateStmt.setString(3, key);
                     updateStmt.executeUpdate();
                 }
@@ -64,11 +65,10 @@ public class ImportParametersMigration implements CustomSqlChange {
         } catch (SQLException | DatabaseException e) {
             throw new CustomChangeException(e);
         }
-
         return statements.toArray(new SqlStatement[0]);
     }
 
-    private String migrateValue(String key, String value) {
+    private String migrateValue(String value) {
         if (value == null) {
             return null;
         }
@@ -76,6 +76,7 @@ public class ImportParametersMigration implements CustomSqlChange {
             Object deserialized = objectMapper.readValue(value, Object.class);
             return objectMapper.writeValueAsString(deserialized);
         } catch (JsonProcessingException e) {
+            // if the value is not valid JSON, it is a string value and it should be wrapped in quotes.
             return "\"" + value + "\"";
         }
     }
