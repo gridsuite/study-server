@@ -8,7 +8,7 @@ package org.gridsuite.study.server.migration;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import liquibase.change.custom.CustomSqlChange;
+import liquibase.change.custom.CustomTaskChange;
 import liquibase.database.Database;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.exception.CustomChangeException;
@@ -16,31 +16,27 @@ import liquibase.exception.DatabaseException;
 import liquibase.exception.SetupException;
 import liquibase.exception.ValidationErrors;
 import liquibase.resource.ResourceAccessor;
-import liquibase.statement.SqlStatement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 /**
  * Migrates the importParameters values stored in the importParameters table by
  * deserializing each value and re-serializing it to ensure consistent JSON format.
  */
-public class ImportParametersMigration implements CustomSqlChange {
+public class ImportParametersMigration implements CustomTaskChange {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ImportParametersMigration.class);
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public SqlStatement[] generateStatements(Database database) throws CustomChangeException {
+    public void execute(Database database) throws CustomChangeException {
         JdbcConnection connection = (JdbcConnection) database.getConnection();
-        List<SqlStatement> statements = new ArrayList<>();
 
         try (PreparedStatement stmt = connection.prepareStatement(
                 "SELECT root_network_entity_id, import_parameters_key, import_parameters FROM import_parameters")) {
@@ -63,7 +59,6 @@ public class ImportParametersMigration implements CustomSqlChange {
         } catch (SQLException | DatabaseException e) {
             throw new CustomChangeException(e);
         }
-        return statements.toArray(new SqlStatement[0]);
     }
 
     private String migrateValue(String value) {
@@ -98,4 +93,5 @@ public class ImportParametersMigration implements CustomSqlChange {
     public ValidationErrors validate(Database database) {
         return new ValidationErrors();
     }
+
 }
