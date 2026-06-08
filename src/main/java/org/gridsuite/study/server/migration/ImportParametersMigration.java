@@ -30,7 +30,6 @@ import java.util.UUID;
 /**
  * Migrates the importParameters values stored in the importParameters table by
  * deserializing each value and re-serializing it to ensure consistent JSON format.
- * If a value is not valid JSON, it is wrapped in quotes.
  */
 public class ImportParametersMigration implements CustomSqlChange {
 
@@ -75,7 +74,7 @@ public class ImportParametersMigration implements CustomSqlChange {
             Object deserialized = objectMapper.readValue(value, Object.class);
             return objectMapper.writeValueAsString(deserialized);
         } catch (JsonProcessingException e) {
-            // if the value is not valid JSON, it is a string value and it should be wrapped in quotes.
+            // if the value is not a valid JSON, it is a string value and it should be wrapped in quotes.
             return "\"" + value + "\"";
         }
     }
