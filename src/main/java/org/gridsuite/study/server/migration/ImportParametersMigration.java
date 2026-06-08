@@ -17,8 +17,7 @@ import liquibase.exception.SetupException;
 import liquibase.exception.ValidationErrors;
 import liquibase.resource.ResourceAccessor;
 import liquibase.statement.SqlStatement;
-import liquibase.statement.core.UpdateStatement;
-import org.slf4j.Logger;
+import org.slf4j.Logger;git add .
 import org.slf4j.LoggerFactory;
 
 import java.sql.PreparedStatement;
