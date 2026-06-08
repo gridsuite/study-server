@@ -75,7 +75,7 @@ public class ImportParametersMigration implements CustomSqlChange {
             return objectMapper.writeValueAsString(deserialized);
         } catch (JsonProcessingException e) {
             // if the value is not a valid JSON, it is a string value and it should be wrapped in quotes.
-            return "\"" + value + "\"";
+            return objectMapper.valueToTree(value).toString();
         }
     }
 
