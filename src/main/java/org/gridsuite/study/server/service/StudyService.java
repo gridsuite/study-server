@@ -2334,6 +2334,25 @@ public class StudyService {
     }
 
     @Transactional
+    public UUID assembleModificationsIntoComposite(
+            UUID targetStudyUuid,
+            UUID targetNodeUuid,
+            List<UUID> modificationsUuids,
+            String userId) {
+        UUID newCompositeUuid;
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
+        notificationService.emitStartModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        try {
+            checkStudyContainsNode(targetStudyUuid, targetNodeUuid);
+            newCompositeUuid = networkModificationService.assembleModificationsIntoComposite(modificationsUuids);
+        } finally {
+            notificationService.emitEndModificationEquipmentNotification(targetStudyUuid, targetNodeUuid, childrenUuids);
+        }
+        notificationService.emitElementUpdated(targetStudyUuid, userId);
+        return newCompositeUuid;
+    }
+
+    @Transactional
     public void insertCompositeNetworkModifications(
         UUID targetStudyUuid,
         UUID targetNodeUuid,
