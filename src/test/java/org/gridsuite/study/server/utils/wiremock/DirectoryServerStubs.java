@@ -16,6 +16,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
@@ -84,6 +85,23 @@ public class DirectoryServerStubs {
             .queryParam(PARAM_IDS, elementUuids)
             .queryParam(PARAM_TARGET_DIRECTORY_UUID, targetDirectoryUuid)
             .queryParam(PARAM_RECURSIVE_CHECK, recursiveCheck);
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, pathBuilder.buildAndExpand().toUriString(), Map.of());
+    }
+
+    public void stubGetElementNames(String responseBody) {
+        wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/elements/names"))
+            .withQueryParam(PARAM_IDS, WireMock.matching(".*"))
+            .withQueryParam("strictMode", WireMock.equalTo("false"))
+            .willReturn(WireMock.aResponse()
+                .withStatus(HttpStatus.OK.value())
+                .withHeader("Content-Type", "application/json")
+                .withBody(responseBody)));
+    }
+
+    public void verifyGetElementNames(Set<UUID> givenElementUuids) {
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath("/v1/elements/names");
+        pathBuilder.queryParam(PARAM_IDS, givenElementUuids)
+            .queryParam("strictMode", "false");
         WireMockUtilsCriteria.verifyGetRequest(wireMock, pathBuilder.buildAndExpand().toUriString(), Map.of());
     }
 }

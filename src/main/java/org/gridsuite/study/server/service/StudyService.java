@@ -341,7 +341,7 @@ public class StudyService {
         try {
             UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), true);
             rootNetworkInfos.getCaseInfos().setCaseUuid(clonedCaseUuid);
-            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParametersRaw(), CaseImportAction.ROOT_NETWORK_CREATION);
+            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParameters(), CaseImportAction.ROOT_NETWORK_CREATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkCreationRequestEntity);
             throw e;
@@ -404,7 +404,7 @@ public class StudyService {
         UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), true);
         rootNetworkInfos.getCaseInfos().setCaseUuid(clonedCaseUuid);
         try {
-            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParametersRaw(), CaseImportAction.ROOT_NETWORK_MODIFICATION);
+            persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParameters(), CaseImportAction.ROOT_NETWORK_MODIFICATION);
         } catch (Exception e) {
             rootNetworkService.deleteRootNetworkRequest(rootNetworkModificationRequestEntity);
             throw e;
@@ -590,7 +590,7 @@ public class StudyService {
             startTime.set(System.nanoTime());
 
             // delete all distant resources linked to rootNetworks
-            rootNetworkService.deleteRootNetworkRemoteInfos(deleteStudyInfos.getRootNetworkInfosList());
+            rootNetworkService.invalidateRootNetworkRemoteInfos(deleteStudyInfos.getRootNetworkInfosList(), false, true);
 
             // delete all distant resources linked to nodes
             studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuids().stream().filter(Objects::nonNull).forEach(networkModificationService::deleteModifications));
@@ -604,7 +604,7 @@ public class StudyService {
     public CreatedStudyBasicInfos insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos,
                                               ComputationParameterUUIDs computationParameterUUIDs, UUID networkVisualizationParametersUuid,
                                               UUID spreadsheetConfigCollectionUuid, UUID workspacesConfigUuid,
-                                              Map<String, String> importParameters, UUID importReportUuid) {
+                                              Map<String, Object> importParameters, UUID importReportUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(userId);
         Objects.requireNonNull(networkInfos.getNetworkUuid());
@@ -1499,7 +1499,7 @@ public class StudyService {
     private StudyEntity saveStudyThenCreateBasicTree(UUID studyUuid, NetworkInfos networkInfos,
                                                     CaseInfos caseInfos, ComputationParameterUUIDs computationParameterUUIDs,
                                                     UUID networkVisualizationParametersUuid, UUID spreadsheetConfigCollectionUuid,
-                                                     UUID workspacesConfigUuid, Map<String, String> importParameters, UUID importReportUuid) {
+                                                    UUID workspacesConfigUuid, Map<String, Object> importParameters, UUID importReportUuid) {
 
         StudyEntity studyEntity = StudyEntity.builder()
                 .id(studyUuid)
@@ -1765,11 +1765,18 @@ public class StudyService {
 
     @Transactional
     public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, @NonNull String userId) {
-        InvalidateNodeTreeParameters invalidateNodeTreeParameters = withBlockNodes ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES : InvalidateNodeTreeParameters.ALL;
-        List<CompletableFuture<Void>> futures = getStudy(studyUuid).getRootNetworks().stream().map(rn ->
-            studyServerExecutionService.runAsync(() -> invalidateNodeTree(studyUuid, rootNodeUuid, rn.getId(), invalidateNodeTreeParameters))
-        ).toList();
+        doUnbuildNodeTree(studyUuid, rootNodeUuid, withBlockNodes, false, userId);
+    }
 
+    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, boolean skipDeleteVariants, @NonNull String userId) {
+        InvalidateNodeTreeParameters invalidateNodeTreeParameters = withBlockNodes
+                ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES
+                : InvalidateNodeTreeParameters.ALL;
+        List<UUID> rootNetworkIds = rootNetworkService.getStudyRootNetworkIds(studyUuid);
+        List<CompletableFuture<Void>> futures = rootNetworkIds.stream()
+                .map(rnId -> studyServerExecutionService.runAsync(() ->
+                        invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
+                .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
         notificationService.emitElementUpdated(studyUuid, userId);
     }
@@ -1951,16 +1958,13 @@ public class StudyService {
         invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters, false);
     }
 
-    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters, boolean blocking) {
+    public void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters, boolean skipDeleteVariants) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         startTime.set(System.nanoTime());
 
         InvalidateNodeInfos invalidateNodeInfos = networkModificationTreeService.invalidateNodeTree(nodeUuid, rootNetworkUuid, invalidateTreeParameters);
         invalidateNodeInfos.setNetworkUuid(rootNetworkService.getNetworkUuid(rootNetworkUuid));
-        CompletableFuture<Void> cf = deleteInvalidationInfos(invalidateNodeInfos);
-        if (blocking) {
-            cf.join();
-        }
+        deleteInvalidationInfos(invalidateNodeInfos, skipDeleteVariants);
 
         if (!networkModificationTreeService.isRootNode(nodeUuid)) {
             emitAllComputationStatusChanged(studyUuid, nodeUuid, rootNetworkUuid, invalidateTreeParameters.computationsInvalidationMode());
@@ -2114,10 +2118,23 @@ public class StudyService {
     }
 
     private CompletableFuture<Void> deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos) {
+        return deleteInvalidationInfos(invalidateNodeInfos, false);
+    }
+
+    private CompletableFuture<Void> deleteInvalidationInfos(InvalidateNodeInfos invalidateNodeInfos, boolean skipDeleteVariants) {
         List<CompletableFuture<?>> futures = new ArrayList<>();
-        futures.add(studyServerExecutionService.runAsync(() -> networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(), invalidateNodeInfos.getVariantIds())));
-        futures.add(studyServerExecutionService.runAsync(() -> networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), invalidateNodeInfos.getNetworkUuid())));
-        futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(invalidateNodeInfos.toRemoteDeletionInfos(invalidateNodeInfos)));
+
+        // We might want to skip variant deletion in a study invalidation scenario when a network is wholly deleted at the end of the process
+        if (!skipDeleteVariants) {
+            futures.add(studyServerExecutionService.runAsync(() ->
+                    networkStoreService.deleteVariants(invalidateNodeInfos.getNetworkUuid(),
+                            invalidateNodeInfos.getVariantIds())));
+        }
+        futures.add(studyServerExecutionService.runAsync(() ->
+                networkModificationService.deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(),
+                        invalidateNodeInfos.getNetworkUuid())));
+        futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(
+                invalidateNodeInfos.toRemoteDeletionInfos(invalidateNodeInfos)));
         // Do not wait completion and do not throw exception
         return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
@@ -2568,7 +2585,14 @@ public class StudyService {
         UUID sensiReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(SENSITIVITY_ANALYSIS.name(), UUID.randomUUID());
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS, sensiReportUuid);
 
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, rootNetworkUuid, networkUuid, variantId, sensiReportUuid, userId, study.getSensitivityAnalysisParametersUuid(), study.getLoadFlowParametersUuid());
+        UUID sensiParamsUuid = study.getSensitivityAnalysisParametersUuid();
+
+        // fetch the filters and contingencyLists contained in sensi parameters
+        // and retrieve their names, as they are needed in the results
+        List<UUID> elementIds = sensitivityAnalysisService.getElementIds(sensiParamsUuid);
+        Map<UUID, String> elementsIdNameMap = directoryService.getElementNames(new HashSet<>(elementIds));
+
+        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, rootNetworkUuid, networkUuid, variantId, sensiReportUuid, userId, sensiParamsUuid, study.getLoadFlowParametersUuid(), elementsIdNameMap);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SENSITIVITY_ANALYSIS);
         notificationService.emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
@@ -3446,9 +3470,9 @@ public class StudyService {
         return newParentNode;
     }
 
-    private List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
+    public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        return studyEntity.getRootNetworks();
+        return rootNetworkService.getStudyRootNetwork(studyEntity);
     }
 
     private List<RootNetworkInfos> getStudyRootNetworksInfos(UUID studyUuid) {
@@ -3456,7 +3480,7 @@ public class StudyService {
         // using the Hibernate First-Level Cache or Persistence Context
         // cf.https://vladmihalcea.com/spring-data-jpa-multiplebagfetchexception/
         rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
-        return rootNetworkEntities.stream().map(RootNetworkEntity::toDto).toList();
+        return rootNetworkEntities.stream().map(rootNetworkEntity -> rootNetworkEntity.toDto(objectMapper)).toList();
     }
 
     @Transactional(readOnly = true)
@@ -3656,5 +3680,21 @@ public class StudyService {
             .stream()
             .map(l -> new CurrentLimitViolationInfos(l.getSubjectId(), null))
             .toList();
+    }
+
+    public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId) {
+        rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
+        var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        try {
+            // First we unbuild all nodes
+            doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId);
+            // Then we erase data linked to root node on all root networks
+            rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
+            rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
+        } finally {
+            networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNodeUuid);
+        }
+
+        notificationService.emitRootNetworksUpdated(studyUuid);
     }
 }
