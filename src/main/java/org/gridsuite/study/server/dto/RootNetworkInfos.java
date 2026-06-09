@@ -1,5 +1,6 @@
 package org.gridsuite.study.server.dto;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,6 +9,8 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import static org.gridsuite.study.server.utils.JsonUtils.serializeImportParameters;
 
 @Builder
 @Getter
@@ -28,13 +31,11 @@ public class RootNetworkInfos {
     // reportUuid of network import, root node one
     private UUID reportUuid;
 
-    private Map<String, String> importParameters;
-
-    private Map<String, Object> importParametersRaw;
+    private Map<String, Object> importParameters;
 
     private String tag;
 
-    public RootNetworkEntity toEntity() {
+    public RootNetworkEntity toEntity(ObjectMapper objectMapper) {
         RootNetworkEntity.RootNetworkEntityBuilder rootNetworkEntityBuilder = RootNetworkEntity.builder()
                 .id(id)
                 .name(name)
@@ -46,7 +47,7 @@ public class RootNetworkInfos {
                 .caseName(caseInfos.getCaseName())
                 .caseFormat(caseInfos.getCaseFormat())
                 .reportUuid(reportUuid)
-                .importParameters(importParameters)
+                .importParameters(serializeImportParameters(importParameters, objectMapper))
                 .tag(tag);
 
         if (rootNetworkNodeInfos != null) {

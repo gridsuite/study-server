@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
@@ -17,6 +18,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
+import org.gridsuite.study.server.utils.JsonUtils;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,6 +56,8 @@ public class RootNetworkService {
     private final NetworkStoreService networkStoreService;
     private final NotificationService notificationService;
 
+    private final ObjectMapper objectMapper;
+
     @Value("${study.max-root-network-by-study}")
     private int maximumRootNetworkByStudy = 4;
 
@@ -66,7 +70,8 @@ public class RootNetworkService {
                               ReportService reportService,
                               EquipmentInfosService equipmentInfosService,
                               NetworkStoreService networkStoreService,
-                              NotificationService notificationService) {
+                              NotificationService notificationService,
+                              ObjectMapper objectMapper) {
         this.rootNetworkRepository = rootNetworkRepository;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkService = networkService;
@@ -77,6 +82,7 @@ public class RootNetworkService {
         this.equipmentInfosService = equipmentInfosService;
         this.networkStoreService = networkStoreService;
         this.notificationService = notificationService;
+        this.objectMapper = objectMapper;
     }
 
     public UUID getNetworkUuid(UUID rootNetworkUuid) {
@@ -118,7 +124,7 @@ public class RootNetworkService {
 
             updateCaseInfos(rootNetworkEntity, rootNetworkInfos.getCaseInfos());
             updateNetworkInfos(rootNetworkEntity, rootNetworkInfos.getNetworkInfos());
-            rootNetworkEntity.setImportParameters(rootNetworkInfos.getImportParameters());
+            rootNetworkEntity.setImportParameters(JsonUtils.serializeImportParameters(rootNetworkInfos.getImportParameters(), objectMapper));
             rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
         }
 
@@ -144,7 +150,7 @@ public class RootNetworkService {
     }
 
     public RootNetworkEntity createRootNetwork(@NonNull StudyEntity studyEntity, @NonNull RootNetworkInfos rootNetworkInfos) {
-        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity());
+        RootNetworkEntity rootNetworkEntity = rootNetworkRepository.save(rootNetworkInfos.toEntity(objectMapper));
         studyEntity.addRootNetwork(rootNetworkEntity);
 
         rootNetworkNodeInfoService.createRootNetworkLinks(Objects.requireNonNull(studyEntity.getId()), rootNetworkEntity);
@@ -168,12 +174,12 @@ public class RootNetworkService {
         return getRootNetwork(rootNetworkUuid).map(RootNetworkEntity::getCaseName).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
 
-    public Map<String, String> getImportParameters(UUID rootNetworkUuid) {
-        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+    public Map<String, Object> getImportParameters(UUID rootNetworkUuid) {
+        return rootNetworkRepository.findWithImportParametersById(rootNetworkUuid).map(RootNetworkEntity::getImportParameters).map(params -> JsonUtils.deserializeImportParameters(params, objectMapper)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
     }
 
     public List<RootNetworkInfos> getRootNetworkInfosWithLinksInfos(UUID studyUuid) {
-        return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(RootNetworkEntity::toDto).toList();
+        return rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(rootNetworkEntity -> rootNetworkEntity.toDto(objectMapper)).toList();
     }
 
     @Transactional
@@ -187,7 +193,7 @@ public class RootNetworkService {
                 UUID clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
 
                 UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
-                Map<String, String> newImportParameters = Map.copyOf(rootNetworkEntityToDuplicate.getImportParameters());
+                Map<String, Object> newImportParameters = JsonUtils.deserializeImportParameters(rootNetworkEntityToDuplicate.getImportParameters(), objectMapper);
 
                 UUID clonedRootNodeReportUuid = reportService.duplicateReport(rootNetworkEntityToDuplicate.getReportUuid());
 
@@ -232,7 +238,7 @@ public class RootNetworkService {
     public void deleteRootNetworks(StudyEntity studyEntity, Stream<UUID> rootNetworksUuids) {
         List<RootNetworkInfos> rootNetworksInfos = rootNetworksUuids.map(rootNetworkRepository::findWithRootNetworkNodeInfosById)
             .map(o -> o.orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")))
-            .map(RootNetworkEntity::toDto)
+            .map(rootNetworkEntity -> rootNetworkEntity.toDto(objectMapper))
             .toList();
 
         deleteRootNetworks(studyEntity, rootNetworksInfos);
@@ -357,7 +363,7 @@ public class RootNetworkService {
     public RootNetworkInfos getRootNetworkInfos(UUID rootNetworkUuid) {
         return rootNetworkRepository.findWithRootNetworkNodeInfosAndReportsById(rootNetworkUuid)
                 .orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"))
-                .toDto();
+                .toDto(objectMapper);
     }
 
     @Transactional

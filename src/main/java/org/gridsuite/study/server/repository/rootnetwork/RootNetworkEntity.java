@@ -6,17 +6,17 @@
  */
 package org.gridsuite.study.server.repository.rootnetwork;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.gridsuite.study.server.utils.JsonUtils.deserializeImportParameters;
 
 /**
  * @author Le Saulnier Kevin <lesaulnier.kevin at rte-france.com>
@@ -88,12 +88,12 @@ public class RootNetworkEntity {
         rootNetworkNodeInfos.add(rootNetworkNodeInfoEntity);
     }
 
-    public RootNetworkInfos toDto() {
+    public RootNetworkInfos toDto(ObjectMapper objectMapper) {
         RootNetworkInfos.RootNetworkInfosBuilder rootNetworkInfosBuilder = RootNetworkInfos.builder();
         rootNetworkInfosBuilder.id(this.id)
             .name(this.name)
             .networkInfos(new NetworkInfos(this.networkUuid, this.networkId))
-            .importParameters(this.importParameters)
+            .importParameters(deserializeImportParameters(this.importParameters, objectMapper))
             .caseInfos(new CaseInfos(this.caseUuid, this.originalCaseUuid, this.caseName, this.caseFormat))
             .reportUuid(this.reportUuid)
             .tag(tag)
