@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -111,14 +112,24 @@ public class RebuildNodeService {
         handleRebuildNode(studyUuid, nodeUuid, nodeUuid, userId, action);
     }
 
+    private <T> T handleRebuildNodeWithReturn(UUID studyUuid, UUID nodeUuid, String userId, Supplier<T> action) {
+        return handleRebuildNodeWithReturn(studyUuid, nodeUuid, nodeUuid, userId, action);
+    }
+
     private void handleRebuildNode(UUID studyUuid, UUID node1Uuid, UUID node2Uuid, String userId, Runnable action) {
+        handleRebuildNodeWithReturn(studyUuid, node1Uuid, node2Uuid, userId, () -> {
+            action.run();
+            return null;
+        });
+    }
+
+    private <T> T handleRebuildNodeWithReturn(UUID studyUuid, UUID node1Uuid, UUID node2Uuid, String userId, Supplier<T> action) {
         // if node 1 and 2 are in the same "subtree", rebuild only the highest one - otherwise, rebuild both
         List<UUID> nodesToReBuild = networkModificationTreeService.getHighestNodeUuids(node1Uuid, node2Uuid).stream()
             .filter(Predicate.not(networkModificationTreeService::isRootOrConstructionNode)).toList();
 
         if (nodesToReBuild.isEmpty()) {
-            action.run();
-            return;
+            return action.get();
         }
 
         Map<UUID, Set<UUID>> rootNetworkUuidsByNodeBuilt = nodesToReBuild.stream().collect(Collectors.toMap(
@@ -126,7 +137,7 @@ public class RebuildNodeService {
             nodeUuid -> getRootNetworkWhereNodeIsBuilt(studyUuid, nodeUuid)
         ));
 
-        action.run();
+        T result = action.get();
 
         rootNetworkUuidsByNodeBuilt.forEach((nodeUuid, rootNetworkUuids) ->
             rootNetworkUuids.stream().forEach(rootNetworkUuid ->
@@ -138,6 +149,8 @@ public class RebuildNodeService {
                     )
                 )
         );
+
+        return result;
     }
 
     private Set<UUID> getRootNetworkWhereNodeIsBuilt(UUID studyUuid, UUID nodeUuid) {

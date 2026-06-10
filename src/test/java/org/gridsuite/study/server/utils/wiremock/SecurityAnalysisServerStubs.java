@@ -40,6 +40,10 @@ public class SecurityAnalysisServerStubs {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/nmk-constraints-result/paged", queryParams);
     }
 
+    public void verifyGetNmkCutOffPowerConstraintsResult(String resultUuid, Map<String, StringValuePattern> queryParams) {
+        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/nmk-cut-off-power-result/paged", queryParams);
+    }
+
     public void stubContingencyListCount(String responseJson, Map<String, StringValuePattern> queryParams) {
         MappingBuilder builder = WireMock.get(WireMock.urlPathEqualTo("/v1/contingency-lists/count"));
         queryParams.forEach(builder::withQueryParam);

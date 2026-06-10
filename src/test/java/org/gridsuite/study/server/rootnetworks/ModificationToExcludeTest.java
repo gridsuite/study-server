@@ -856,7 +856,7 @@ class ModificationToExcludeTest {
             .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), "caseName", "caseFormat"))
             .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
             .reportUuid(UUID.randomUUID())
-            .build().toEntity();
+            .build().toEntity(objectMapper);
         studyEntity.addRootNetwork(rootNetworkEntity);
     }
 
