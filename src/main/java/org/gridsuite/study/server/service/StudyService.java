@@ -3703,16 +3703,11 @@ public class StudyService {
     public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId) {
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        try {
-            // First we unbuild all nodes
-            doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId);
-            // Then we erase data linked to root node on all root networks
-            rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
-            rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
-        } finally {
-            networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNodeUuid);
-        }
-
+        // First we unbuild all nodes
+        doUnbuildNodeTree(studyUuid, rootNodeUuid, true, true, userId);
+        // Then we erase data linked to root node on all root networks
+        rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
+        rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
 }
