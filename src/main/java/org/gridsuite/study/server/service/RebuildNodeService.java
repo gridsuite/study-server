@@ -71,6 +71,23 @@ public class RebuildNodeService {
                 () -> handleMoveNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId));
     }
 
+    public UUID assembleModificationsIntoComposite(UUID studyUuid, UUID nodeUuid, List<UUID> modificationsUuids, String userId) {
+        return handleRebuildNodeWithReturn(
+                studyUuid,
+                nodeUuid,
+                userId,
+                () -> {
+                    studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
+                    UUID compositeUuid;
+                    try {
+                        compositeUuid = studyService.assembleModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
+                    } finally {
+                        studyService.unblockNodeTree(studyUuid, nodeUuid);
+                    }
+                    return compositeUuid;
+                });
+    }
+
     private void handleMoveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
         boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
         try {
