@@ -18,10 +18,7 @@ import com.powsybl.iidm.serde.XMLImporter;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
 import org.elasticsearch.client.RestClient;
-import org.gridsuite.study.server.dto.BasicRootNetworkInfos;
-import org.gridsuite.study.server.dto.CreatedStudyBasicInfos;
-import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
-import org.gridsuite.study.server.dto.VoltageLevelInfos;
+import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.elasticsearch.TombstonedEquipmentInfos;
 import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
@@ -29,6 +26,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -49,6 +47,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -77,6 +76,9 @@ class SupervisionControllerTest {
     private static final UUID CASE_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID STUDY_UUID = UUID.randomUUID();
+
+    private static final UUID SECOND_NETWORK_UUID = UUID.randomUUID();
+    private static final UUID SECOND_CASE_UUID = UUID.randomUUID();
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
@@ -113,6 +115,9 @@ class SupervisionControllerTest {
 
     @Autowired
     private StudyInfosService studyInfosService;
+
+    @Autowired
+    private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
     private static EquipmentInfos toEquipmentInfos(Identifiable<?> i) {
         return EquipmentInfos.builder()
@@ -157,6 +162,24 @@ class SupervisionControllerTest {
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(NETWORK_UUID);
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.INDEXED.name());
         return study;
+    }
+
+    private void addSecondRootNetwork(UUID rootNetworkUuid, UUID networkUuid) {
+        rootNetworkService.insertCreationRequest(STUDY_UUID,
+                RootNetworkInfos.builder()
+                        .id(rootNetworkUuid)
+                        .name("second")
+                        .tag("SND")
+                        .caseInfos(new CaseInfos(UUID.randomUUID(), null, "secondCase", "XIIDM"))
+                        .networkInfos(new NetworkInfos(networkUuid, "secondNetworkId"))
+                        .build(),
+                "userId");
+        studyService.createRootNetwork(STUDY_UUID,
+                RootNetworkInfos.builder()
+                        .id(rootNetworkUuid)
+                        .networkInfos(new NetworkInfos(networkUuid, "secondNetworkId"))
+                        .caseInfos(new CaseInfos(UUID.randomUUID(), null, "secondCase", "XIIDM"))
+                        .build());
     }
 
     private void assertIndexationCount(long expectedEquipmentsIndexationCount, long expectedTombstonedEquipmentsIndexationCount) throws Exception {
@@ -315,18 +338,28 @@ class SupervisionControllerTest {
     @Test
     void testInvalidateStudy() throws Exception {
         initStudy();
+        UUID secondRootNetworkUuid = UUID.randomUUID();
+        addSecondRootNetwork(secondRootNetworkUuid, SECOND_NETWORK_UUID);
+        when(rootNetworkService.getNetworkUuid(secondRootNetworkUuid)).thenReturn(SECOND_NETWORK_UUID);
+
         Mockito.doNothing().when(networkStoreService).deleteNetwork(NETWORK_UUID);
+        Mockito.doNothing().when(networkStoreService).deleteNetwork(SECOND_NETWORK_UUID);
 
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
                 .andExpect(status().isOk());
 
-        // Remote root-network data was deleted
-        Mockito.verify(rootNetworkService, Mockito.times(1))
+        Mockito.verify(rootNetworkService, Mockito.times(2))
                 .invalidateRootNetworkRemoteInfos(any(), eq(true), eq(false));
         Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID);
+        Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(SECOND_NETWORK_UUID);
 
-        // Indexation flipped to NOT_INDEXED so the auto-detect path will reimport on reopen
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.NOT_INDEXED.name());
         assertIndexationCount(0, 0);
+
+        List<UUID> allRootNetworkUuids = rootNetworkService.getStudyRootNetworkIds(STUDY_UUID);
+        assertThat(allRootNetworkUuids).hasSize(2);
+        allRootNetworkUuids.forEach(rootNetworkUuid ->
+                rootNetworkNodeInfoRepository.findAllByRootNetworkId(rootNetworkUuid)
+                        .forEach(info -> assertThat(info.getBlockedNode()).isFalse()));
     }
 }
