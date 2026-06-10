@@ -170,7 +170,7 @@ class SupervisionControllerTest {
                         .id(rootNetworkUuid)
                         .name("second")
                         .tag("SND")
-                        .caseInfos(new CaseInfos(UUID.randomUUID(), null, "secondCase", "XIIDM"))
+                        .caseInfos(new CaseInfos(SECOND_CASE_UUID, null, "secondCase", "XIIDM"))
                         .networkInfos(new NetworkInfos(networkUuid, "secondNetworkId"))
                         .build(),
                 "userId");
@@ -178,7 +178,7 @@ class SupervisionControllerTest {
                 RootNetworkInfos.builder()
                         .id(rootNetworkUuid)
                         .networkInfos(new NetworkInfos(networkUuid, "secondNetworkId"))
-                        .caseInfos(new CaseInfos(UUID.randomUUID(), null, "secondCase", "XIIDM"))
+                        .caseInfos(new CaseInfos(SECOND_CASE_UUID, null, "secondCase", "XIIDM"))
                         .build());
     }
 
