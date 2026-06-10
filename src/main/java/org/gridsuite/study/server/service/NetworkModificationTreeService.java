@@ -129,7 +129,7 @@ public class NetworkModificationTreeService {
         nodeInfo.setId(nodeInfoEntity.getIdNode());
 
         // Set parent and position
-        insertNodeToReference(reference, nodeInfoEntity, insertMode);
+        insertNodeToReference(reference, nodeInfoEntity, insertMode, nodeInfo.getColumnPosition());
 
         nodeInfo.setColumnPosition(nodeInfoEntity.getColumnPosition());
 
@@ -238,7 +238,7 @@ public class NetworkModificationTreeService {
             insertNodesToParent(nodeToMoveEntity.getParentNode(), nodeToMoveEntityInfo.getColumnPosition(), getChildren(nodeToMoveUuid));
         }
 
-        insertNodeToReference(anchorNodeEntity, nodeToMoveEntityInfo, insertMode);
+        insertNodeToReference(anchorNodeEntity, nodeToMoveEntityInfo, insertMode, null);
         nodeToMoveEntity.setParentNode(oldParent);
 
         return anchorNodeEntity.getStudy().getId();
@@ -297,12 +297,12 @@ public class NetworkModificationTreeService {
             .orElse(0);
     }
 
-    private void insertNodeToReference(NodeEntity reference, NetworkModificationNodeInfoEntity nodeInfoEntity, InsertMode insertMode) {
+    private void insertNodeToReference(NodeEntity reference, NetworkModificationNodeInfoEntity nodeInfoEntity, InsertMode insertMode, Integer position) {
         // Parent of node to insert already set
         NodeEntity nodeEntity = nodeInfoEntity.getNode();
 
         switch (insertMode) {
-            case CHILD -> nodeInfoEntity.setColumnPosition(getNextColumnPosition(reference.getIdNode()));
+            case CHILD -> nodeInfoEntity.setColumnPosition(position == null ? getNextColumnPosition(reference.getIdNode()) : position);
             case BEFORE -> {
                 AbstractNodeInfoEntity referenceNodeInfoEntity = getNodeInfoEntity(reference.getIdNode());
                 nodeInfoEntity.setColumnPosition(referenceNodeInfoEntity.getColumnPosition());
