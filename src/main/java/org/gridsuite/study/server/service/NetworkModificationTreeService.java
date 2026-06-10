@@ -285,7 +285,6 @@ public class NetworkModificationTreeService {
         stashedNodes.add(nodeId);
         nodeToStash.setStashed(true);
         nodeToStash.setStashDate(Instant.now());
-        nodeToStashInfo.setColumnPosition(null);
         //We only unlink the first deleted node so the rest of the tree is still connected as it was
         if (firstIteration) {
             nodeToStash.setParentNode(null);
@@ -293,12 +292,9 @@ public class NetworkModificationTreeService {
     }
 
     private int getNextColumnPosition(UUID parentNodeId) {
-        return networkModificationNodeInfoRepository.findColumnPositionsByUuidIn(nodesRepository.findChildrenUuids(parentNodeId))
-            .stream()
-            .filter(Objects::nonNull)
-            .mapToInt(i -> i)
-            .max()
-            .orElse(-1) + 1;
+        return networkModificationNodeInfoRepository.findMaxColumnPositionByParentNodeId(parentNodeId)
+            .map(max -> max + 1)
+            .orElse(0);
     }
 
     private void insertNodeToReference(NodeEntity reference, NetworkModificationNodeInfoEntity nodeInfoEntity, InsertMode insertMode) {
@@ -838,6 +834,7 @@ public class NetworkModificationTreeService {
             nodeToRestore.setParentNode(anchorNode);
             nodeToRestore.setStashed(false);
             nodeToRestore.setStashDate(null);
+            modificationNodeToRestore.setColumnPosition(getNextColumnPosition(anchorNodeId));
             nodesRepository.save(nodeToRestore);
             if (hasChildren(nodeId)) {
                 restoreNodeChildren(studyId, nodeId);

@@ -12,6 +12,7 @@ import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModifi
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -22,8 +23,8 @@ public interface NetworkModificationNodeInfoRepository extends NodeInfoRepositor
 
     List<NetworkModificationNodeInfoEntity> findByModificationGroupUuidIn(List<UUID> modificationGroupUuid);
 
-    @Query("select n.columnPosition from NetworkModificationNodeInfoEntity n where n.idNode in :uuids")
-    List<Integer> findColumnPositionsByUuidIn(List<UUID> uuids);
+    @Query("select max(n.columnPosition) from NetworkModificationNodeInfoEntity n join n.node nd where nd.parentNode.idNode = :parentNodeId")
+    Optional<Integer> findMaxColumnPositionByParentNodeId(UUID parentNodeId);
 
     @Query(value = "SELECT n FROM NetworkModificationNodeInfoEntity n WHERE n.idNode IN (?1) ORDER BY n.columnPosition")
     List<NetworkModificationNodeInfoEntity> findAllByIdIn(List<UUID> uuids);
