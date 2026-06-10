@@ -148,8 +148,8 @@ class NodeControllerTest extends StudyTestBase {
         allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
         assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
         assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
-        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
-        assertEquals(1, allNodesInfos.get(emptyNode.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(emptyNode.getId()).getColumnPosition());
         /*
          *              rootNode
          *              /      \
@@ -188,8 +188,8 @@ class NodeControllerTest extends StudyTestBase {
         allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
         assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
         assertEquals(1, allNodesInfos.get(emptyNode.getId()).getColumnPosition());
-        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
-        assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(2, allNodesInfos.get(node2.getId()).getColumnPosition());
         /*
          *              rootNode
          *              /      \
@@ -357,6 +357,7 @@ class NodeControllerTest extends StudyTestBase {
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isForbidden());
 
+        // cut and paste emptyNode branch in after node 1
         UUID deleteModificationIndexStub = wireMockStubs.stubNetworkModificationDeleteIndex();
         UUID stubDeleteReportsId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
             .willReturn(WireMock.ok())).getId();
@@ -370,7 +371,7 @@ class NodeControllerTest extends StudyTestBase {
         Map<UUID, AbstractNode> allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
         assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
         assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
-        assertEquals(1, allNodesInfos.get(emptyNode.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(emptyNode.getId()).getColumnPosition());
         assertEquals(0, allNodesInfos.get(emptyNodeChild.getId()).getColumnPosition());
         /*
          *              rootNode

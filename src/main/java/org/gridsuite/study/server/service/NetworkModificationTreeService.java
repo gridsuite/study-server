@@ -126,38 +126,14 @@ public class NetworkModificationTreeService {
 
         // Create node
         NetworkModificationNodeInfoEntity nodeInfoEntity = createNetworkModificationNode(study, insertMode.equals(InsertMode.BEFORE) ? reference.getParentNode() : reference, nodeInfo);
-        NodeEntity nodeEntity = nodeInfoEntity.getNode();
         nodeInfo.setId(nodeInfoEntity.getIdNode());
 
         // Set parent and position
-        switch (insertMode) {
-            case CHILD -> nodeInfoEntity.setColumnPosition(getNextColumnPosition(reference.getIdNode()));
-            case BEFORE -> {
-                AbstractNodeInfoEntity referenceNodeInfoEntity = getNodeInfoEntity(reference.getIdNode());
-                nodeInfoEntity.setColumnPosition(referenceNodeInfoEntity.getColumnPosition());
-                reference.setParentNode(nodeEntity);
-                referenceNodeInfoEntity.setColumnPosition(0);
-            }
-            case AFTER -> {
-                nodeInfoEntity.setColumnPosition(0);
-                getChildren(nodeId).stream()
-                    .filter(n -> !n.getIdNode().equals(nodeEntity.getIdNode()))
-                    .forEach(child -> child.setParentNode(nodeEntity));
-            }
-        }
+        insertNodeToReference(reference, nodeInfoEntity, insertMode);
 
         nodeInfo.setColumnPosition(nodeInfoEntity.getColumnPosition());
 
         return nodeInfo;
-    }
-
-    private int getNextColumnPosition(UUID parentNodeId) {
-        return networkModificationNodeInfoRepository.findColumnPositionsByUuidIn(nodesRepository.findChildrenUuids(parentNodeId))
-            .stream()
-            .filter(Objects::nonNull)
-            .mapToInt(i -> i)
-            .max()
-            .orElse(-1) + 1;
     }
 
     @Transactional
@@ -243,42 +219,34 @@ public class NetworkModificationTreeService {
         } else {
             parent = anchorNode;
         }
-        UUID studyUuid = moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode);
+        UUID studyUuid = moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode, false);
         notificationService.emitNodeMoved(studyUuid, parent.getIdNode(), nodeToMoveUuid, insertMode, anchorNodeUuid);
     }
 
-    private UUID moveNode(UUID nodeToMoveUuid, UUID anchorNodeUuid, InsertMode insertMode) {
-        NodeEntity nodeToMoveEntity = getNodeEntity(nodeToMoveUuid);
-
-        getChildren(nodeToMoveUuid)
-            .forEach(child -> child.setParentNode(nodeToMoveEntity.getParentNode()));
-
+    private UUID moveNode(UUID nodeToMoveUuid, UUID anchorNodeUuid, InsertMode insertMode, boolean moveStudySubtree) {
         NodeEntity anchorNodeEntity = getNodeEntity(anchorNodeUuid);
-
         if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
             throw new StudyException(NOT_ALLOWED);
         }
 
-        NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ?
-            anchorNodeEntity.getParentNode() : anchorNodeEntity;
+        // Need to remember the anchor parent before modification
+        NodeEntity oldParent = insertMode.equals(InsertMode.BEFORE) ? anchorNodeEntity.getParentNode() : anchorNodeEntity;
 
-        if (insertMode.equals(InsertMode.BEFORE)) {
-            anchorNodeEntity.setParentNode(nodeToMoveEntity);
-        } else if (insertMode.equals(InsertMode.AFTER)) {
-            getChildren(anchorNodeUuid).stream()
-                .filter(n -> !n.getIdNode().equals(nodeToMoveEntity.getIdNode()))
-                .forEach(child -> child.setParentNode(nodeToMoveEntity));
+        NetworkModificationNodeInfoEntity nodeToMoveEntityInfo = getNetworkModificationNodeInfoEntity(nodeToMoveUuid);
+        NodeEntity nodeToMoveEntity = nodeToMoveEntityInfo.getNode();
+        if (!moveStudySubtree) {
+            insertNodesToParent(nodeToMoveEntity.getParentNode(), nodeToMoveEntityInfo.getColumnPosition(), getChildren(nodeToMoveUuid));
         }
 
-        nodeToMoveEntity.setParentNode(parent);
+        insertNodeToReference(anchorNodeEntity, nodeToMoveEntityInfo, insertMode);
+        nodeToMoveEntity.setParentNode(oldParent);
+
         return anchorNodeEntity.getStudy().getId();
     }
 
     @Transactional
     public void moveStudySubtree(UUID parentNodeToMoveUuid, UUID anchorNodeUuid) {
-        List<NodeEntity> children = getChildren(parentNodeToMoveUuid);
-        moveNode(parentNodeToMoveUuid, anchorNodeUuid, InsertMode.CHILD);
-        children.forEach(child -> self.moveStudySubtree(child.getIdNode(), parentNodeToMoveUuid));
+        moveNode(parentNodeToMoveUuid, anchorNodeUuid, InsertMode.CHILD, true);
     }
 
     @Transactional
@@ -320,6 +288,36 @@ public class NetworkModificationTreeService {
         //We only unlink the first deleted node so the rest of the tree is still connected as it was
         if (firstIteration) {
             nodeToStash.setParentNode(null);
+        }
+    }
+
+    private int getNextColumnPosition(UUID parentNodeId) {
+        return networkModificationNodeInfoRepository.findColumnPositionsByUuidIn(nodesRepository.findChildrenUuids(parentNodeId))
+            .stream()
+            .filter(Objects::nonNull)
+            .mapToInt(i -> i)
+            .max()
+            .orElse(-1) + 1;
+    }
+
+    private void insertNodeToReference(NodeEntity reference, NetworkModificationNodeInfoEntity nodeInfoEntity, InsertMode insertMode) {
+        // Parent of node to insert already set
+        NodeEntity nodeEntity = nodeInfoEntity.getNode();
+
+        switch (insertMode) {
+            case CHILD -> nodeInfoEntity.setColumnPosition(getNextColumnPosition(reference.getIdNode()));
+            case BEFORE -> {
+                AbstractNodeInfoEntity referenceNodeInfoEntity = getNodeInfoEntity(reference.getIdNode());
+                nodeInfoEntity.setColumnPosition(referenceNodeInfoEntity.getColumnPosition());
+                reference.setParentNode(nodeEntity);
+                referenceNodeInfoEntity.setColumnPosition(0);
+            }
+            case AFTER -> {
+                nodeInfoEntity.setColumnPosition(0);
+                getChildren(reference.getIdNode()).stream()
+                    .filter(n -> !n.getIdNode().equals(nodeEntity.getIdNode()))
+                    .forEach(child -> child.setParentNode(nodeEntity));
+            }
         }
     }
 
