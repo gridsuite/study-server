@@ -348,14 +348,18 @@ class SupervisionControllerTest {
         mockMvc.perform(delete("/v1/supervision/studies/{studyUuid}/invalidate", STUDY_UUID))
                 .andExpect(status().isOk());
 
+        // Check that both root network underlying networks have been erased
         Mockito.verify(rootNetworkService, Mockito.times(2))
                 .invalidateRootNetworkRemoteInfos(any(), eq(true), eq(false));
         Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(NETWORK_UUID);
         Mockito.verify(networkStoreService, Mockito.times(1)).deleteNetwork(SECOND_NETWORK_UUID);
 
+        // Check that the study index data has been erased
         assertIndexationStatus(STUDY_UUID, RootNetworkIndexationStatus.NOT_INDEXED.name());
         assertIndexationCount(0, 0);
 
+        // Check that all nodes aren't blocked
+        Mockito.verify(studyService, Mockito.times(1)).unblockNodeTree(eq(STUDY_UUID), any());
         List<UUID> allRootNetworkUuids = rootNetworkService.getStudyRootNetworkIds(STUDY_UUID);
         assertThat(allRootNetworkUuids).hasSize(2);
         allRootNetworkUuids.forEach(rootNetworkUuid ->
