@@ -285,6 +285,7 @@ public class NetworkModificationTreeService {
         stashedNodes.add(nodeId);
         nodeToStash.setStashed(true);
         nodeToStash.setStashDate(Instant.now());
+        nodeToStashInfo.setColumnPosition(null);
         //We only unlink the first deleted node so the rest of the tree is still connected as it was
         if (firstIteration) {
             nodeToStash.setParentNode(null);

@@ -83,6 +83,47 @@ class NodePositionTest {
         assertEquals(3, getNode("N3", children).getColumnPosition());
     }
 
+    @Test
+    void testMoveNode() {
+        List<AbstractNode> children = createNodeTree().getChildren();
+
+        networkModificationTreeService.moveStudyNode(getNode("N2", children).getId(), getNode("N1", children).getId(), InsertMode.BEFORE);
+
+        children = networkModificationTreeService.getStudyTree(studyUuid, studyTestUtils.getOneRootNetworkUuid(studyUuid)).getChildren();
+        //               root
+        //       /      /   \       \
+        //      n2     n21 n22      n3
+        //      /
+        //     n1
+        assertEquals(0, getNode("N2", children).getColumnPosition());
+        assertEquals(1, getNode("N21", children).getColumnPosition());
+        assertEquals(2, getNode("N22", children).getColumnPosition());
+        assertEquals(3, getNode("N3", children).getColumnPosition());
+        assertEquals(0, getNode("N1", getNode("N2", children).getChildren()).getColumnPosition());
+    }
+
+    @Test
+    void testMoveSubtree() {
+        List<AbstractNode> children = createNodeTree().getChildren();
+
+        networkModificationTreeService.moveStudySubtree(getNode("N2", children).getId(), getNode("N1", children).getId());
+
+        children = networkModificationTreeService.getStudyTree(studyUuid, studyTestUtils.getOneRootNetworkUuid(studyUuid)).getChildren();
+        //            root
+        //          /      \
+        //        n1        n3
+        //        /
+        //       n2
+        //      /  \
+        //     n21  n22
+        assertEquals(0, getNode("N1", children).getColumnPosition());
+        assertEquals(2, getNode("N3", children).getColumnPosition());
+        AbstractNode n2 = getNode("N2", getNode("N1", children).getChildren());
+        assertEquals(0, n2.getColumnPosition());
+        assertEquals(0, getNode("N21", n2.getChildren()).getColumnPosition());
+        assertEquals(1, getNode("N22", n2.getChildren()).getColumnPosition());
+    }
+
     private AbstractNode getNode(String name, List<AbstractNode> nodes) {
         return nodes.stream().filter(node -> node.getName().equals(name)).findFirst().orElse(null);
     }
