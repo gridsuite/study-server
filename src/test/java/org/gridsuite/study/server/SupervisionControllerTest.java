@@ -152,6 +152,7 @@ class SupervisionControllerTest {
     @AfterEach
     void tearDown() {
         equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID);
+        equipmentInfosService.deleteAllByNetworkUuid(SECOND_NETWORK_UUID);
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         rootNetworkNodeInfoRepository.deleteAll();
         studyRepository.deleteAll();
