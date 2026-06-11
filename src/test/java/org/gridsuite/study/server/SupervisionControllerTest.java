@@ -145,6 +145,7 @@ class SupervisionControllerTest {
         network.getIdentifiables().forEach(idable -> equipmentInfosService.addEquipmentInfos(toEquipmentInfos(idable)));
 
         when(networkConversionService.checkStudyIndexationStatus(NETWORK_UUID)).thenReturn(true);
+        rootNetworkNodeInfoRepository.deleteAll();
         studyRepository.deleteAll();
     }
 
@@ -152,6 +153,7 @@ class SupervisionControllerTest {
     void tearDown() {
         equipmentInfosService.deleteAllByNetworkUuid(NETWORK_UUID);
         studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
+        git.deleteAll();
         studyRepository.deleteAll();
     }
 
