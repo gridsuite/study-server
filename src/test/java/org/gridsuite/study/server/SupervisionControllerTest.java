@@ -146,6 +146,7 @@ class SupervisionControllerTest {
 
         when(networkConversionService.checkStudyIndexationStatus(NETWORK_UUID)).thenReturn(true);
         rootNetworkNodeInfoRepository.deleteAll();
+        studyRepository.findAll().forEach(s -> networkModificationTreeService.doDeleteTree(s.getId()));
         studyRepository.deleteAll();
     }
 
