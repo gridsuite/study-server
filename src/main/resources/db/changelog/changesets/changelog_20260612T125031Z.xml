@@ -3,9 +3,15 @@
                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
     <changeSet author="homereti" id="1781261546000-1">
-        <update tableName="import_parameters">
-            <column name="import_parameters" value="cgmesBoundaryLineBoundaryNode"/>
-            <where>import_parameters='cgmesDanglingLineBoundaryNode'</where>
-        </update>
+        <sql>
+            UPDATE import_parameters
+            SET import_parameters = REPLACE(import_parameters, 'cgmesDanglingLineBoundaryNode', 'cgmesBoundaryLineBoundaryNode')
+            WHERE import_parameters_key = 'iidm.import.xml.included.extensions'
+        </sql>
+        <sql>
+            UPDATE import_parameters
+            SET import_parameters_key = 'iidm.import.cgmes.disconnect-boundary-line-if-boundary-side-is-disconnected'
+            WHERE import_parameters_key = 'iidm.import.cgmes.disconnect-dangling-line-if-boundary-side-is-disconnected'
+        </sql>
     </changeSet>
 </databaseChangeLog>
