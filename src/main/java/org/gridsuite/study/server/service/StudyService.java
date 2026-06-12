@@ -2011,7 +2011,12 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.stashModifications(groupId, modificationsUuids);
+
+            Map<UUID, UUID> referenceToBeDeleted = networkModificationService.stashModifications(groupId, modificationsUuids);
+            // if there are references modifications in the stashed netmods, those references have to be removed from directory server
+            referenceToBeDeleted.forEach((modUuid, refUuid) -> {
+                directoryService.removeReference(refUuid != null ? refUuid : nodeUuid, userId, modUuid);
+            });
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -2066,7 +2071,13 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            networkModificationService.restoreModifications(groupId, modificationsUuids);
+            Map<UUID, UUID> referenceToBeRecreated = networkModificationService.restoreModifications(groupId, modificationsUuids);
+            // if there are references modifications in the unstashed netmods, those references had been removed and must be recreated in directory server
+            directoryService.addReferencesToSharedComposites(
+                        referenceToBeRecreated.keySet().stream().toList(),
+                        userId,
+                        nodeUuid
+            );
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -2361,7 +2372,7 @@ public class StudyService {
         StudyConstants.CompositeModificationsActionType action) {
         // is some of the inserted modifications are shared, references have to be created in directory server
         if (action == StudyConstants.CompositeModificationsActionType.INSERT && !compositesInfos.stream().filter(CompositesToBeInserted::isShared).toList().isEmpty()) {
-            directoryService.addReferencesToNewSharedComposites(compositesInfos, userId, targetNodeUuid);
+            directoryService.addReferencesToSharedComposites(compositesInfos.stream().map(CompositesToBeInserted::id).toList(), userId, targetNodeUuid);
         }
 
         duplicateModificationsOrInsertComposites(

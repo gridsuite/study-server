@@ -11,7 +11,6 @@ import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ElementAttributes;
 import org.gridsuite.study.server.dto.ReferenceAttributes;
-import org.gridsuite.study.server.dto.modification.CompositesToBeInserted;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -104,15 +103,15 @@ public class DirectoryService {
 
     /**
      *
-     * @param compositesInfos all the shared composites that have been inserted and need to be referenced in directory server
+     * @param elementsUuids all the element uuids of the shared composites that need to be referenced in directory server
      * @param userId id of the user who started the insertion
-     * @param targetNodeUuid where the new reference will point
+     * @param targetNodeUuid where the new references will point
      */
-    public void addReferencesToNewSharedComposites(List<CompositesToBeInserted> compositesInfos, String userId, UUID targetNodeUuid) {
-        compositesInfos.forEach(composite -> {
+    public void addReferencesToSharedComposites(List<UUID> elementsUuids, String userId, UUID targetNodeUuid) {
+        elementsUuids.forEach(elementUuid -> {
             var path = UriComponentsBuilder.fromPath(
                             DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
-                    .buildAndExpand(composite.id())
+                    .buildAndExpand(elementUuid)
                     .toUriString();
 
             HttpHeaders headers = new HttpHeaders();
@@ -124,6 +123,21 @@ public class DirectoryService {
             HttpEntity<ReferenceAttributes> requestEntity = new HttpEntity<>(referenceAttributes, headers);
             restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
         });
+    }
+
+    public void removeReference(UUID referenceUuid, String userId, UUID sharedElementUuid) {
+        var path = UriComponentsBuilder.fromPath(
+                        DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
+                .queryParam("referenceUuid", referenceUuid)
+                .buildAndExpand(sharedElementUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("userId", userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
+        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.DELETE, requestEntity, ElementAttributes.class);
     }
 
     public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId) {
