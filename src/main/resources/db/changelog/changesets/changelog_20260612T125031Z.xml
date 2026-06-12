@@ -8,6 +8,8 @@
             SET import_parameters = REPLACE(import_parameters, 'cgmesDanglingLineBoundaryNode', 'cgmesBoundaryLineBoundaryNode')
             WHERE import_parameters_key = 'iidm.import.xml.included.extensions'
         </sql>
+    </changeSet>
+    <changeSet author="homereti" id="1781261978000-1">
         <sql>
             UPDATE import_parameters
             SET import_parameters_key = 'iidm.import.cgmes.disconnect-boundary-line-if-boundary-side-is-disconnected'
