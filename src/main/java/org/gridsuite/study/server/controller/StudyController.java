@@ -27,6 +27,7 @@ import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAna
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
+import org.gridsuite.study.server.dto.modification.CompositesToBeInserted;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
@@ -699,7 +700,7 @@ public class StudyController {
     public ResponseEntity<Void> insertCompositeModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestParam("action") CompositeModificationsActionType action,
-                                                         @RequestBody List<Object> compositesToBeInserted,
+                                                         @RequestBody List<CompositesToBeInserted> compositesToBeInserted,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
@@ -707,7 +708,7 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    private void handleInsertCompositeNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, List<Object> compositesToBeInserted, String userId, CompositeModificationsActionType action) {
+    private void handleInsertCompositeNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, List<CompositesToBeInserted> compositesToBeInserted, String userId, CompositeModificationsActionType action) {
         studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
         studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
         try {

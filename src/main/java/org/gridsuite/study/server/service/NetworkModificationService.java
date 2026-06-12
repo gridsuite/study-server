@@ -13,6 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.modification.CompositesToBeInserted;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
@@ -284,13 +285,13 @@ public class NetworkModificationService {
 
     public NetworkModificationsResult insertCompositeModifications(UUID groupUuid,
                                                                    CompositeModificationsActionType action,
-                                                                   Pair<List<Object>, List<ModificationApplicationContext>> modificationContextInfos) {
+                                                                   Pair<List<CompositesToBeInserted>, List<ModificationApplicationContext>> modificationContextInfos) {
         var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + GROUP_PATH)
                 .queryParam(QUERY_PARAM_ACTION, action.name());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Pair<List<Object>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
+        HttpEntity<Pair<List<CompositesToBeInserted>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
 
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
