@@ -5,7 +5,7 @@ spring:
     allow-circular-references: true
   cloud:
     function:
-      definition: "consumeSaResult;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;\
+      definition: "consumeSaResult;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;consumeSaProgress;\
       consumeDsDebug;consumeDsResult;consumeDsStopped;consumeDsFailed;consumeDsCancelFailed;\
       consumeDsaDebug;consumeDsaResult;consumeDsaStopped;consumeDsaFailed;consumeDsaCancelFailed;\
       consumeDmcDebug;consumeDmcResult;consumeDmcStopped;consumeDmcFailed;consumeDmcCancelFailed;\
@@ -36,6 +36,9 @@ spring:
         consumeSaFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.run.dlx
           group: dlq
+        consumeSaProgress-in-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.progress
+          group: studySaProgressGroup
         consumeDsDebug-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}ds.debug
           group: studyDsDebugGroup
