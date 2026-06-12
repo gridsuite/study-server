@@ -475,10 +475,11 @@ class StudyTestBase {
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
 
-        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), rootNetworkUuid,
             RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(NodeBuildStatus.from(buildStatus)).build());
 
-        return modificationNode;
+        return (NetworkModificationNode) networkModificationTreeService.getNode(modificationNode.getId(), rootNetworkUuid);
     }
 
     protected void assertStudyCreation(UUID studyUuid, String userId, String... errorMessage) {

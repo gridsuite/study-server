@@ -36,6 +36,9 @@ public interface NodeRepository extends JpaRepository<NodeEntity, UUID> {
     @NativeQuery("UPDATE node_export SET status = :status WHERE export_uuid = :exportUuid")
     void updateExportNetworkStatus(UUID exportUuid, String status);
 
+    @NativeQuery("select cast(n.id_node AS VARCHAR) from NODE n where n.parent_node = :nodeUuid")
+    List<UUID> findChildrenUuids(UUID nodeUuid);
+
     @NativeQuery("WITH RECURSIVE NodeHierarchy (id_node) AS ( " +
             "  SELECT n0.id_node" +
             "  FROM NODE n0 " +

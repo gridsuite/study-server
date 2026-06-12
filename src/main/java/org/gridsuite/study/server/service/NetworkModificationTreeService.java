@@ -79,7 +79,7 @@ public class NetworkModificationTreeService {
         this.reportService = reportService;
     }
 
-    private NodeEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
+    private NetworkModificationNodeInfoEntity createNetworkModificationNode(StudyEntity study, NodeEntity parentNode, NetworkModificationNode networkModificationNode) {
         NodeEntity newNode = nodesRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null, new ArrayList<>()));
         if (networkModificationNode.getModificationGroupUuid() == null) {
             networkModificationNode.setModificationGroupUuid(UUID.randomUUID());
@@ -87,7 +87,7 @@ public class NetworkModificationTreeService {
         if (networkModificationNode.getNodeType() == null) {
             networkModificationNode.setNodeType(NetworkModificationNodeType.CONSTRUCTION);
         }
-        networkModificationNodeInfoRepository.save(
+        NetworkModificationNodeInfoEntity newNodeInfo = networkModificationNodeInfoRepository.save(
             NetworkModificationNodeInfoEntity.builder()
                 .modificationGroupUuid(networkModificationNode.getModificationGroupUuid())
                 .idNode(newNode.getIdNode())
@@ -96,7 +96,8 @@ public class NetworkModificationTreeService {
                 .nodeType(networkModificationNode.getNodeType())
                 .build()
         );
-        return newNode;
+        newNodeInfo.setNode(newNode);
+        return newNodeInfo;
     }
 
     public List<ModificationsSearchResultByNode> getNetworkModificationsByNodeInfos(
@@ -114,8 +115,7 @@ public class NetworkModificationTreeService {
                 .toList();
     }
 
-    // TODO test if studyUuid exist and have a node <nodeId>
-    private NetworkModificationNode createAndInsertNode(StudyEntity study, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode, String userId) {
+    private NetworkModificationNode createAndInsertNode(StudyEntity study, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode) {
         NodeEntity reference = getNodeEntity(nodeId);
 
         assertNodeNameNotExist(study.getId(), nodeInfo.getName());
@@ -123,24 +123,23 @@ public class NetworkModificationTreeService {
         if (insertMode.equals(InsertMode.BEFORE) && reference.getType().equals(NodeType.ROOT)) {
             throw new StudyException(NOT_ALLOWED);
         }
-        NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ? reference.getParentNode() : reference;
-        NodeEntity node = createNetworkModificationNode(study, parent, nodeInfo);
-        nodeInfo.setId(node.getIdNode());
 
-        if (insertMode.equals(InsertMode.BEFORE)) {
-            reference.setParentNode(node);
-        } else if (insertMode.equals(InsertMode.AFTER)) {
-            getChildren(nodeId).stream()
-                .filter(n -> !n.getIdNode().equals(node.getIdNode()))
-                .forEach(child -> child.setParentNode(node));
-        }
+        // Create node
+        NetworkModificationNodeInfoEntity nodeInfoEntity = createNetworkModificationNode(study, insertMode.equals(InsertMode.BEFORE) ? reference.getParentNode() : reference, nodeInfo);
+        nodeInfo.setId(nodeInfoEntity.getIdNode());
+
+        // Set parent and position
+        insertNodeToReference(reference, nodeInfoEntity, insertMode, nodeInfo.getColumnPosition());
+
+        nodeInfo.setColumnPosition(nodeInfoEntity.getColumnPosition());
+
         return nodeInfo;
     }
 
     @Transactional
     public NetworkModificationNode createNode(@NonNull StudyEntity study, @NonNull UUID nodeId, @NonNull NetworkModificationNode nodeInfo, @NonNull InsertMode insertMode, String userId) {
         // create new node
-        NetworkModificationNode newNode = createAndInsertNode(study, nodeId, nodeInfo, insertMode, userId);
+        NetworkModificationNode newNode = createAndInsertNode(study, nodeId, nodeInfo, insertMode);
 
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         rootNetworkNodeInfoService.createNodeLinks(study, newNodeInfoEntity);
@@ -150,7 +149,7 @@ public class NetworkModificationTreeService {
 
     private NetworkModificationNode duplicateNode(@NonNull StudyEntity targetStudy, @NonNull UUID referenceNodeId, @NonNull NetworkModificationNode newNodeInfo, @NonNull UUID originNodeUuid, @NonNull InsertMode insertMode, Map<UUID, UUID> mappingModificationUuids) {
         // create new node
-        NetworkModificationNode newNode = createAndInsertNode(targetStudy, referenceNodeId, newNodeInfo, insertMode, null);
+        NetworkModificationNode newNode = createAndInsertNode(targetStudy, referenceNodeId, newNodeInfo, insertMode);
 
         NetworkModificationNodeInfoEntity newNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(newNode.getId());
         NetworkModificationNodeInfoEntity originNodeInfoEntity = networkModificationNodeInfoRepository.getReferenceById(originNodeUuid);
@@ -220,49 +219,41 @@ public class NetworkModificationTreeService {
         } else {
             parent = anchorNode;
         }
-        UUID studyUuid = moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode);
+        UUID studyUuid = moveNode(nodeToMoveUuid, anchorNodeUuid, insertMode, false);
         notificationService.emitNodeMoved(studyUuid, parent.getIdNode(), nodeToMoveUuid, insertMode, anchorNodeUuid);
     }
 
-    private UUID moveNode(UUID nodeToMoveUuid, UUID anchorNodeUuid, InsertMode insertMode) {
-        NodeEntity nodeToMoveEntity = getNodeEntity(nodeToMoveUuid);
-
-        getChildren(nodeToMoveUuid)
-            .forEach(child -> child.setParentNode(nodeToMoveEntity.getParentNode()));
-
+    private UUID moveNode(UUID nodeToMoveUuid, UUID anchorNodeUuid, InsertMode insertMode, boolean moveStudySubtree) {
         NodeEntity anchorNodeEntity = getNodeEntity(anchorNodeUuid);
-
         if (insertMode.equals(InsertMode.BEFORE) && anchorNodeEntity.getType().equals(NodeType.ROOT)) {
             throw new StudyException(NOT_ALLOWED);
         }
 
-        NodeEntity parent = insertMode.equals(InsertMode.BEFORE) ?
-            anchorNodeEntity.getParentNode() : anchorNodeEntity;
+        // Need to remember the anchor parent before modification
+        NodeEntity oldParent = insertMode.equals(InsertMode.BEFORE) ? anchorNodeEntity.getParentNode() : anchorNodeEntity;
 
-        if (insertMode.equals(InsertMode.BEFORE)) {
-            anchorNodeEntity.setParentNode(nodeToMoveEntity);
-        } else if (insertMode.equals(InsertMode.AFTER)) {
-            getChildren(anchorNodeUuid).stream()
-                .filter(n -> !n.getIdNode().equals(nodeToMoveEntity.getIdNode()))
-                .forEach(child -> child.setParentNode(nodeToMoveEntity));
+        NetworkModificationNodeInfoEntity nodeToMoveEntityInfo = getNetworkModificationNodeInfoEntity(nodeToMoveUuid);
+        NodeEntity nodeToMoveEntity = nodeToMoveEntityInfo.getNode();
+        if (!moveStudySubtree) {
+            insertNodesToParent(nodeToMoveEntity.getParentNode(), nodeToMoveEntityInfo.getColumnPosition(), getChildren(nodeToMoveUuid));
         }
 
-        nodeToMoveEntity.setParentNode(parent);
+        insertNodeToReference(anchorNodeEntity, nodeToMoveEntityInfo, insertMode, null);
+        nodeToMoveEntity.setParentNode(oldParent);
+
         return anchorNodeEntity.getStudy().getId();
     }
 
     @Transactional
     public void moveStudySubtree(UUID parentNodeToMoveUuid, UUID anchorNodeUuid) {
-        List<NodeEntity> children = getChildren(parentNodeToMoveUuid);
-        moveNode(parentNodeToMoveUuid, anchorNodeUuid, InsertMode.CHILD);
-        children.forEach(child -> self.moveStudySubtree(child.getIdNode(), parentNodeToMoveUuid));
+        moveNode(parentNodeToMoveUuid, anchorNodeUuid, InsertMode.CHILD, true);
     }
 
     @Transactional
     // TODO test if studyUuid exist and have a node <nodeId>
     public void doDeleteNode(UUID nodeId, boolean deleteChildren, DeleteNodeInfos deleteNodeInfos) {
         UUID studyId = self.getStudyUuidForNodeId(nodeId);
-        deleteNodes(nodeId, deleteChildren, false, deleteNodeInfos);
+        deleteNode(nodeId, deleteChildren, false, deleteNodeInfos);
         notificationService.emitNodesDeleted(studyId, deleteNodeInfos.getRemovedNodeUuids(), deleteChildren);
     }
 
@@ -271,7 +262,7 @@ public class NetworkModificationTreeService {
     public void doStashNode(UUID nodeId, boolean stashChildren) {
         List<UUID> stashedNodes = new ArrayList<>();
         UUID studyId = self.getStudyUuidForNodeId(nodeId);
-        stashNodes(nodeId, stashChildren, stashedNodes, true);
+        stashNode(nodeId, stashChildren, stashedNodes, true);
         notificationService.emitNodesDeleted(studyId, stashedNodes, stashChildren);
     }
 
@@ -280,28 +271,74 @@ public class NetworkModificationTreeService {
         return getNodeEntity(id).getStudy().getId();
     }
 
-    private void stashNodes(UUID id, boolean stashChildren, List<UUID> stashedNodes, boolean firstIteration) {
-        Optional<NodeEntity> optNodeToStash = nodesRepository.findById(id);
-        optNodeToStash.ifPresent(nodeToStash -> {
-            UUID modificationGroupUuid = self.getModificationGroupUuid(nodeToStash.getIdNode());
-            networkModificationService.deleteStashedModifications(modificationGroupUuid);
-            if (!stashChildren) {
-                getChildren(id).forEach(node -> node.setParentNode(nodeToStash.getParentNode()));
-            } else {
-                getChildren(id)
-                    .forEach(child -> stashNodes(child.getIdNode(), true, stashedNodes, false));
-            }
-            stashedNodes.add(id);
-            nodeToStash.setStashed(true);
-            nodeToStash.setStashDate(Instant.now());
-            //We only unlink the first deleted node so the rest of the tree is still connected as it was
-            if (firstIteration) {
-                nodeToStash.setParentNode(null);
-            }
-        });
+    private void stashNode(UUID nodeId, boolean stashChildren, List<UUID> stashedNodes, boolean firstIteration) {
+        NetworkModificationNodeInfoEntity nodeToStashInfo = getNetworkModificationNodeInfoEntity(nodeId);
+        NodeEntity nodeToStash = nodeToStashInfo.getNode();
+        UUID modificationGroupUuid = nodeToStashInfo.getModificationGroupUuid();
+        networkModificationService.deleteStashedModifications(modificationGroupUuid);
+        if (!stashChildren) {
+            insertNodesToParent(nodeToStash.getParentNode(), nodeToStashInfo.getColumnPosition(), getChildren(nodeId));
+        } else {
+            getChildren(nodeId)
+                .forEach(child -> stashNode(child.getIdNode(), true, stashedNodes, false));
+        }
+        stashedNodes.add(nodeId);
+        nodeToStash.setStashed(true);
+        nodeToStash.setStashDate(Instant.now());
+        //We only unlink the first deleted node so the rest of the tree is still connected as it was
+        if (firstIteration) {
+            nodeToStash.setParentNode(null);
+        }
     }
 
-    private void deleteNodes(UUID id, boolean deleteChildren, boolean allowDeleteRoot, DeleteNodeInfos deleteNodeInfos) {
+    private int getNextColumnPosition(UUID parentNodeId) {
+        return networkModificationNodeInfoRepository.findMaxColumnPositionByParentNodeId(parentNodeId)
+            .map(max -> max + 1)
+            .orElse(0);
+    }
+
+    private void insertNodeToReference(NodeEntity reference, NetworkModificationNodeInfoEntity nodeInfoEntity, InsertMode insertMode, Integer position) {
+        // Parent of node to insert already set
+        NodeEntity nodeEntity = nodeInfoEntity.getNode();
+
+        switch (insertMode) {
+            case CHILD -> nodeInfoEntity.setColumnPosition(position == null ? getNextColumnPosition(reference.getIdNode()) : position);
+            case BEFORE -> {
+                AbstractNodeInfoEntity referenceNodeInfoEntity = getNodeInfoEntity(reference.getIdNode());
+                nodeInfoEntity.setColumnPosition(referenceNodeInfoEntity.getColumnPosition());
+                reference.setParentNode(nodeEntity);
+                referenceNodeInfoEntity.setColumnPosition(0);
+            }
+            case AFTER -> {
+                nodeInfoEntity.setColumnPosition(0);
+                getChildren(reference.getIdNode()).stream()
+                    .filter(n -> !n.getIdNode().equals(nodeEntity.getIdNode()))
+                    .forEach(child -> child.setParentNode(nodeEntity));
+            }
+        }
+    }
+
+    private void insertNodesToParent(NodeEntity parent, Integer position, List<NodeEntity> newChildren) {
+        if (newChildren.isEmpty()) {
+            return;
+        }
+        newChildren.forEach(node -> node.setParentNode(parent));
+
+        if (position == null) {
+            return;
+        }
+        List<NetworkModificationNodeInfoEntity> childrenInfos = networkModificationNodeInfoRepository.findAllByIdIn(nodesRepository.findChildrenUuids(parent.getIdNode()));
+        List<NetworkModificationNodeInfoEntity> newChildrenInfos = networkModificationNodeInfoRepository.findAllByIdIn(newChildren.stream().map(NodeEntity::getIdNode).toList());
+        childrenInfos.stream()
+            .filter(info -> info.getColumnPosition() != null && info.getColumnPosition() >= position)
+            .forEach(info -> info.setColumnPosition(info.getColumnPosition() + newChildrenInfos.size() - 1));
+        int insertPosition = position;
+        for (NetworkModificationNodeInfoEntity info : newChildrenInfos) {
+            info.setColumnPosition(insertPosition++);
+        }
+    }
+
+    private void deleteNode(UUID id, boolean deleteChildren, boolean allowDeleteRoot, DeleteNodeInfos deleteNodeInfos) {
         Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
         optNodeToDelete.ifPresent(nodeToDelete -> {
             /* root cannot be deleted by accident */
@@ -319,7 +356,7 @@ public class NetworkModificationTreeService {
                 getChildren(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
             } else {
                 getChildren(id)
-                    .forEach(child -> deleteNodes(child.getIdNode(), true, false, deleteNodeInfos));
+                    .forEach(child -> deleteNode(child.getIdNode(), true, false, deleteNodeInfos));
             }
             deleteNodeInfos.addRemovedNodeUuid(id);
             if (nodeToDelete.getType() == NodeType.ROOT) {
@@ -797,6 +834,7 @@ public class NetworkModificationTreeService {
             nodeToRestore.setParentNode(anchorNode);
             nodeToRestore.setStashed(false);
             nodeToRestore.setStashDate(null);
+            modificationNodeToRestore.setColumnPosition(getNextColumnPosition(anchorNodeId));
             nodesRepository.save(nodeToRestore);
             if (hasChildren(nodeId)) {
                 restoreNodeChildren(studyId, nodeId);
