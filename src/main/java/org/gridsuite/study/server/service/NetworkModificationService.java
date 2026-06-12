@@ -13,6 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.modification.CompositesToBeInserted;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
@@ -169,7 +170,7 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
-    public void stashModifications(UUID groupUUid, List<UUID> modificationsUuids) {
+    public Map<UUID, UUID> stashModifications(UUID groupUUid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
@@ -184,7 +185,12 @@ public class NetworkModificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
-        restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
+        return restTemplate.exchange(
+                path,
+                HttpMethod.PUT,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+        ).getBody();
     }
 
     public void updateModificationsMetadata(UUID groupUUid, List<UUID> modificationsUuids, NetworkModificationMetadata metadata) {
@@ -204,7 +210,7 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
-    public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids) {
+    public Map<UUID, UUID> restoreModifications(UUID groupUUid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
@@ -220,7 +226,12 @@ public class NetworkModificationService {
 
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
 
-        restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
+        return restTemplate.exchange(
+                path,
+                HttpMethod.PUT,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+        ).getBody();
     }
 
     public void buildNode(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos, AbstractWorkflowInfos workflowInfos) {
@@ -284,13 +295,13 @@ public class NetworkModificationService {
 
     public NetworkModificationsResult insertCompositeModifications(UUID groupUuid,
                                                                    CompositeModificationsActionType action,
-                                                                   Pair<List<Pair<UUID, String>>, List<ModificationApplicationContext>> modificationContextInfos) {
+                                                                   Pair<List<CompositesToBeInserted>, List<ModificationApplicationContext>> modificationContextInfos) {
         var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + GROUP_PATH)
                 .queryParam(QUERY_PARAM_ACTION, action.name());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Pair<List<Pair<UUID, String>>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
+        HttpEntity<Pair<List<CompositesToBeInserted>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
 
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),

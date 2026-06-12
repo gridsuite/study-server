@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ElementAttributes;
+import org.gridsuite.study.server.dto.ReferenceAttributes;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -27,6 +28,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -97,6 +99,45 @@ public class DirectoryService {
         HttpEntity<Void> request = new HttpEntity<>(headers);
         ResponseEntity<Void> response = restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.HEAD, request, Void.class);
         return response.getStatusCode() == HttpStatus.OK;
+    }
+
+    /**
+     *
+     * @param elementsUuids all the element uuids of the shared composites that need to be referenced in directory server
+     * @param userId id of the user who started the insertion
+     * @param targetNodeUuid where the new references will point
+     */
+    public void addReferencesToSharedComposites(List<UUID> elementsUuids, String userId, UUID targetNodeUuid) {
+        elementsUuids.forEach(elementUuid -> {
+            var path = UriComponentsBuilder.fromPath(
+                            DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
+                    .buildAndExpand(elementUuid)
+                    .toUriString();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("userId", userId);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            ReferenceAttributes referenceAttributes = new ReferenceAttributes(targetNodeUuid, STUDY_NODE);
+
+            HttpEntity<ReferenceAttributes> requestEntity = new HttpEntity<>(referenceAttributes, headers);
+            restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
+        });
+    }
+
+    public void removeReference(UUID referenceUuid, String userId, UUID sharedElementUuid) {
+        var path = UriComponentsBuilder.fromPath(
+                        DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
+                .queryParam("referenceUuid", referenceUuid)
+                .buildAndExpand(sharedElementUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("userId", userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
+        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.DELETE, requestEntity, ElementAttributes.class);
     }
 
     public void createElement(UUID directoryUuid, String description, UUID elementUuid, String elementName, String type, String userId) {
