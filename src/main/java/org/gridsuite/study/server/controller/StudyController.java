@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
@@ -627,35 +626,28 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}")
-    @Operation(summary = "move network modification before another")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification order is updated")})
-    public ResponseEntity<Void> moveModification(@PathVariable("studyUuid") UUID studyUuid,
-                                                        @PathVariable("nodeUuid") UUID nodeUuid,
-                                                        @PathVariable("modificationUuid") UUID modificationUuid,
-                                                        @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
-                                                        @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-        rebuildNodeService.moveNetworkModification(studyUuid, nodeUuid, modificationUuid, beforeUuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-sub-modification/{modificationUuid}")
-    @Operation(summary = "Move a composite sub-modification within/between composites or to/from root level")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sub-modification order has been updated")})
-    public ResponseEntity<Void> moveSubModification(
+    @Operation(summary = "Move a modification within or between containers (groups or composites)")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification order has been updated")})
+    public ResponseEntity<Void> moveModification(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("modificationUuid") UUID modificationUuid,
-            @Nullable @Parameter(description = "Source composite UUID; absent when moving from root level") @RequestParam(value = "sourceCompositeUuid", required = false) UUID sourceCompositeUuid,
-            @Nullable @Parameter(description = "Target composite UUID; absent when moving to root level") @RequestParam(value = "targetCompositeUuid", required = false) UUID targetCompositeUuid,
-            @Nullable @Parameter(description = "Insert before this UUID; absent means append at end") @RequestParam(value = "beforeUuid", required = false) UUID beforeUuid,
+            @Parameter(description = "source container UUID; for GROUP source the node's group is used when absent") @RequestParam(value = "sourceContainerId", required = false) UUID sourceContainerId,
+            @Parameter(description = "target container UUID; for GROUP target the node's group is used when absent") @RequestParam(value = "targetContainerId", required = false) UUID targetContainerId,
+            @Parameter(description = "insert before this modification (empty = at end)") @RequestParam(value = "beforeUuid", required = false) UUID beforeUuid,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
         studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-        rebuildNodeService.moveSubModification(
-                studyUuid, nodeUuid,
-                sourceCompositeUuid, targetCompositeUuid,
+        // For GROUP containers without an explicit id, fall back to the node's group.
+        UUID resolvedSourceId = sourceContainerId == null
+                ? networkModificationTreeService.getModificationGroupUuid(nodeUuid) : sourceContainerId;
+        UUID resolvedTargetId = targetContainerId == null
+                ? networkModificationTreeService.getModificationGroupUuid(nodeUuid) : targetContainerId;
+        rebuildNodeService.moveNetworkModification(
+                studyUuid,
+                nodeUuid,
+                resolvedTargetId,
+                resolvedSourceId,
                 modificationUuid, beforeUuid, userId);
         return ResponseEntity.ok().build();
     }

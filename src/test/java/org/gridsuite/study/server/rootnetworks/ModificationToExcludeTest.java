@@ -767,6 +767,7 @@ class ModificationToExcludeTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
         UUID studyUuid = studyEntity.getId();
+        assertNotNull(studyUuid);
         List<BasicRootNetworkInfos> rootNetworkBasicInfos = studyService.getExistingBasicRootNetworkInfos(studyUuid);
 
         // create root node and a network modification node - it will create a RootNetworkNodeInfoEntity
@@ -782,9 +783,11 @@ class ModificationToExcludeTest {
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
 
         // try to execute modification move - if modification move fails, they should not be moved from a node to another in exludedModifications
-        Mockito.doThrow(new RuntimeException()).when(networkModificationService).moveModifications(any(), any(), any(), any(), eq(true));
+        Mockito.doThrow(new RuntimeException()).when(networkModificationService).moveModifications(any(), any(), any(), any(), eq(false));
         List<UUID> modificationsToMove = List.of(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().findFirst().orElseThrow());
-        assertThrows(RuntimeException.class, () -> studyService.moveNetworkModifications(studyUuid, firstNodeUuid, firstNodeUuid, modificationsToMove, null, false, USER_ID));
+        var secondNodeGroupUuid = secondNode.getModificationGroupUuid();
+        var firstNodeGroupUuid = firstNode.getModificationGroupUuid();
+        assertThrows(RuntimeException.class, () -> studyService.moveNetworkModifications(studyUuid, firstNodeUuid, secondNodeGroupUuid, firstNodeGroupUuid, modificationsToMove, null, false, USER_ID));
 
         // assert origin node still have all excluded modifications
         Set<UUID> excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid, rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
@@ -802,7 +805,7 @@ class ModificationToExcludeTest {
             .lastGroupApplicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK)
             .networkImpacts(List.of())
             .build())))).when(networkModificationService).moveModifications(any(), any(), any(), any(), eq(true));
-        studyService.moveNetworkModifications(studyUuid, secondNodeUuid, firstNodeUuid, modificationsToMove, null, true, USER_ID);
+        studyService.moveNetworkModifications(studyUuid, secondNodeUuid, secondNodeGroupUuid, firstNodeGroupUuid, modificationsToMove, null, true, USER_ID);
 
         // assert origin node still have all excluded modifications, except the moved one
         excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid, rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();
