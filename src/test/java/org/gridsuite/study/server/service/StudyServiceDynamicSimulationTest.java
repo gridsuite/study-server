@@ -162,11 +162,11 @@ class StudyServiceDynamicSimulationTest {
         given(dynamicSimulationService.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
 
         // call method to be tested
-        DynamicSimulationStatus status = rootNetworkNodeInfoService.getDynamicSimulationStatus(NODE_UUID, ROOTNETWORK_UUID);
+        String status = rootNetworkNodeInfoService.getDynamicSimulationStatus(NODE_UUID, ROOTNETWORK_UUID);
 
         // --- check result --- //
         LOGGER.info("Status expected = {}", DynamicSimulationStatus.CONVERGED.name());
         LOGGER.info("Status result = {}", status);
-        assertThat(status).isEqualTo(DynamicSimulationStatus.CONVERGED);
+        assertThat(status).isEqualTo(DynamicSimulationStatus.CONVERGED.name());
     }
 }

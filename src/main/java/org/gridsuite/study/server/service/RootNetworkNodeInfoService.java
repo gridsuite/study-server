@@ -792,8 +792,9 @@ public class RootNetworkNodeInfoService {
      * GET COMPUTATION STATUS *
      **************************/
     @Transactional(readOnly = true)
-    public LoadFlowStatus getLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
-        return getBasicLoadFlowStatus(nodeUuid, rootNetworkUuid);
+    public String getLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        LoadFlowStatus status = getBasicLoadFlowStatus(nodeUuid, rootNetworkUuid);
+        return status == null ? null : status.name();
     }
 
     @Transactional(readOnly = true)
@@ -834,27 +835,31 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public SecurityAnalysisStatus getSecurityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public String getSecurityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
-        return securityAnalysisService.getSecurityAnalysisStatus(resultUuid);
+        SecurityAnalysisStatus status = securityAnalysisService.getSecurityAnalysisStatus(resultUuid);
+        return status == null ? null : status.name();
     }
 
     @Transactional(readOnly = true)
-    public DynamicSimulationStatus getDynamicSimulationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public String getDynamicSimulationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
-        return dynamicSimulationService.getStatus(resultUuid);
+        DynamicSimulationStatus status = dynamicSimulationService.getStatus(resultUuid);
+        return status == null ? null : status.name();
     }
 
     @Transactional(readOnly = true)
-    public DynamicSecurityAnalysisStatus getDynamicSecurityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public String getDynamicSecurityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS);
-        return dynamicSecurityAnalysisService.getStatus(resultUuid);
+        DynamicSecurityAnalysisStatus status = dynamicSecurityAnalysisService.getStatus(resultUuid);
+        return status == null ? null : status.name();
     }
 
     @Transactional(readOnly = true)
-    public DynamicMarginCalculationStatus getDynamicMarginCalculationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+    public String getDynamicMarginCalculationStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION);
-        return dynamicMarginCalculationService.getStatus(resultUuid);
+        DynamicMarginCalculationStatus status = dynamicMarginCalculationService.getStatus(resultUuid);
+        return status == null ? null : status.name();
     }
 
     public String getSensitivityAnalysisStatus(UUID nodeUuid, UUID rootNetworkUuid) {

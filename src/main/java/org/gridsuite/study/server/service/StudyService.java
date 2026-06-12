@@ -56,6 +56,7 @@ import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurit
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.ElementType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -3018,8 +3019,8 @@ public class StudyService {
             throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic security analysis");
         }
 
-        DynamicSimulationStatus dsStatus = rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid);
-        if (DynamicSimulationStatus.CONVERGED != dsStatus) {
+        String dsStatus = rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid);
+        if (!DynamicSimulationStatus.CONVERGED.name().equals(dsStatus)) {
             throw new StudyException(NOT_ALLOWED, "Dynamic simulation must run successfully before running dynamic security analysis");
         }
 
@@ -3235,19 +3236,12 @@ public class StudyService {
     }
 
     private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode computationsInvalidationMode) {
-        if (!InvalidateNodeTreeParameters.ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
-            notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
+        if (InvalidateNodeTreeParameters.ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
+            // use for security node, when reruning loadflow, there is a modification due to the first lf and the node is unbuild when a modification is deleted and we want to keep the results
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS_WITHOUT_LOADFLOW);
+        } else {
+            notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS);
         }
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
     }
 
     @Transactional(readOnly = true)
@@ -3698,6 +3692,23 @@ public class StudyService {
             .stream()
             .map(l -> new CurrentLimitViolationInfos(l.getSubjectId(), null))
             .toList();
+    }
+
+    public Map<ComputationType, String> getAllComputationsStatus(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull UUID nodeUuid) {
+        assertIsStudyExist(studyUuid);
+        Map<ComputationType, String> allComputationStatus = new EnumMap<>(ComputationType.class);
+        allComputationStatus.put(LOAD_FLOW, rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(SECURITY_ANALYSIS, rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(PCC_MIN, rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(DYNAMIC_MARGIN_CALCULATION, rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(DYNAMIC_SECURITY_ANALYSIS, rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(DYNAMIC_SIMULATION, rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(STATE_ESTIMATION, rootNetworkNodeInfoService.getStateEstimationStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(SENSITIVITY_ANALYSIS, rootNetworkNodeInfoService.getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(SHORT_CIRCUIT_ONE_BUS, rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ONE_BUS));
+        allComputationStatus.put(SHORT_CIRCUIT, rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ALL_BUSES));
+        allComputationStatus.put(VOLTAGE_INITIALIZATION, rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid));
+        return allComputationStatus;
     }
 
     public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId) {
