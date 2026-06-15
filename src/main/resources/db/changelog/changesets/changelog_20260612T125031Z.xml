@@ -9,7 +9,7 @@
             WHERE import_parameters_key = 'iidm.import.xml.included.extensions'
         </sql>
     </changeSet>
-    <changeSet author="homereti" id="1781261978000-1">
+    <changeSet author="homereti" id="1781261546000-2">
         <sql>
             UPDATE import_parameters
             SET import_parameters_key = 'iidm.import.cgmes.disconnect-boundary-line-if-boundary-side-is-disconnected'
