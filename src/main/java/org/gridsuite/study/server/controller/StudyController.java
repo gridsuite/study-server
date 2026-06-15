@@ -58,7 +58,6 @@ import org.springframework.lang.NonNull;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.beans.PropertyEditorSupport;
 import java.util.*;
@@ -689,6 +688,21 @@ public class StudyController {
                 break;
         }
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-modification", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "For a list of network modifications passed in body, assemble them into a new composite modification")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The composite modification has been created.")})
+    public ResponseEntity<UUID> assembleModificationsIntoNewComposite(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @RequestBody List<UUID> modificationsUuids,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
+        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
+        UUID newCompositeUuid = rebuildNodeService.assembleModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
+        return ResponseEntity.ok().body(newCompositeUuid);
     }
 
     /**
@@ -2153,14 +2167,6 @@ public class StudyController {
             @RequestBody(required = false) String networkVisualizationParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.setNetworkVisualizationParametersValues(studyUuid, networkVisualizationParametersValues, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/network-visualizations/nad-positions-config", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "create a nad positions configuration using data from a csv")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The nad positions configuration created")})
-    public ResponseEntity<Void> createNadPositionsConfigFromCsv(@RequestParam("file") MultipartFile file) {
-        studyService.createNadPositionsConfigFromCsv(file);
         return ResponseEntity.ok().build();
     }
 

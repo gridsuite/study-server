@@ -47,6 +47,10 @@ public class ComputationServerStubs {
         WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/networks/" + networkUuid + "/run-and-save", queryParams);
     }
 
+    public void verifyComputationRun(String networkUuid, Map<String, StringValuePattern> queryParams, String body) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/networks/" + networkUuid + "/run-and-save", queryParams, body);
+    }
+
     public void stubComputationStop(String resultUuid) {
         wireMock.stubFor(WireMock.put(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/stop"))
             .willReturn(WireMock.ok()));

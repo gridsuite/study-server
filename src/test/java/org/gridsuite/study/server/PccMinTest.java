@@ -635,7 +635,7 @@ class PccMinTest {
             .willReturn(WireMock.notFound()));
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> pccMinService.createDefaultPccMinParameters()
+            () -> pccMinService.createDefaultParameters()
         );
     }
 

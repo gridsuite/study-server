@@ -311,6 +311,24 @@ public class NetworkModificationService {
         ).getBody();
     }
 
+    public UUID assembleModificationsIntoComposite(@NonNull List<UUID> modificationsUuids) {
+        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(
+                modificationsUuids,
+                headers
+        );
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path.toUriString(),
+                HttpMethod.POST,
+                httpEntity,
+                UUID.class
+        ).getBody();
+    }
+
     private List<UUID> handleModifications(UUID groupUuid, UUID originGroupUuid, ModificationsActionType action,
                                            ModificationReceiver receiver,
                                            Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {

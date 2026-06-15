@@ -15,6 +15,7 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +44,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
  */
 @Service
-public class PccMinService extends AbstractComputationService {
+public class PccMinService extends AbstractComputationService implements ComputationParameters {
     static final String RESULT_UUID = "resultUuid";
     static final String RESULTS = "results";
     static final String BUS_ID = "busId";
@@ -217,12 +218,13 @@ public class PccMinService extends AbstractComputationService {
 
     public UUID getPccMinParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
         if (studyEntity.getPccMinParametersUuid() == null) {
-            studyEntity.setPccMinParametersUuid(createDefaultPccMinParameters());
+            studyEntity.setPccMinParametersUuid(createDefaultParameters());
         }
         return studyEntity.getPccMinParametersUuid();
     }
 
-    public UUID createDefaultPccMinParameters() {
+    @Override
+    public UUID createDefaultParameters() {
         var path = UriComponentsBuilder
             .fromPath(PARAMETERS_URI + DELIMITER + "default")
             .buildAndExpand()
@@ -240,7 +242,8 @@ public class PccMinService extends AbstractComputationService {
         return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
     }
 
-    public void deletePccMinParameters(UUID uuid) {
+    @Override
+    public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
 
         String path = UriComponentsBuilder
@@ -251,7 +254,8 @@ public class PccMinService extends AbstractComputationService {
         restTemplate.delete(pccMinServerBaseUri + path);
     }
 
-    public UUID duplicatePccMinParameters(UUID sourceParametersUuid) {
+    @Override
+    public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
 
         String path = UriComponentsBuilder

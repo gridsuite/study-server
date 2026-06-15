@@ -243,7 +243,7 @@ class LoadFLowIntegrationTest {
         UUID loadFlowProviderStubUuid = wireMockStubs.stubLoadFlowProvider(parametersUuid, testProvider);
         UUID runLoadflowStubUuid = wireMockStubs.stubRunLoadFlow(networkUuid, withRatioTapChangers, null, objectMapper.writeValueAsString(loadflowResultUuid));
 
-        doReturn(parametersUuid).when(loadFlowService).createDefaultLoadFlowParameters();
+        doReturn(parametersUuid).when(loadFlowService).createDefaultParameters();
 
         assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
 
