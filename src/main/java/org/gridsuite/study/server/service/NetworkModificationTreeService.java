@@ -229,11 +229,20 @@ public class NetworkModificationTreeService {
             throw new StudyException(NOT_ALLOWED);
         }
 
-        // Need to remember the anchor parent before modification
-        NodeEntity oldParent = insertMode.equals(InsertMode.BEFORE) ? anchorNodeEntity.getParentNode() : anchorNodeEntity;
-
         NetworkModificationNodeInfoEntity nodeToMoveEntityInfo = getNetworkModificationNodeInfoEntity(nodeToMoveUuid);
         NodeEntity nodeToMoveEntity = nodeToMoveEntityInfo.getNode();
+
+        // Need to remember the anchor's new parent before modification.
+        // If the anchor's current parent is the node being moved, the anchor will be reattached to that
+        // node's own parent, so its effective new parent is the moved node's old parent.
+        NodeEntity oldParent;
+        if (insertMode.equals(InsertMode.BEFORE)) {
+            NodeEntity anchorParent = anchorNodeEntity.getParentNode();
+            oldParent = anchorParent.getIdNode().equals(nodeToMoveUuid) ? nodeToMoveEntity.getParentNode() : anchorParent;
+        } else {
+            oldParent = anchorNodeEntity;
+        }
+
         if (!moveStudySubtree) {
             insertNodesToParent(nodeToMoveEntity.getParentNode(), nodeToMoveEntityInfo.getColumnPosition(), getChildren(nodeToMoveUuid));
         }
@@ -353,7 +362,7 @@ public class NetworkModificationTreeService {
             rootNetworkNodeInfoService.fillDeleteNodeInfo(id, deleteNodeInfos);
 
             if (!deleteChildren) {
-                getChildren(id).forEach(node -> node.setParentNode(nodeToDelete.getParentNode()));
+                insertNodesToParent(nodeToDelete.getParentNode(), getNodeInfoEntity(id).getColumnPosition(), getChildren(id));
             } else {
                 getChildren(id)
                     .forEach(child -> deleteNode(child.getIdNode(), true, false, deleteNodeInfos));

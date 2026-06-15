@@ -103,6 +103,33 @@ class NodePositionTest {
     }
 
     @Test
+    void testMoveNodeBeforeOwnChild() {
+        List<AbstractNode> children = createNodeTree().getChildren();
+
+        AbstractNode n2 = getNode("N2", children);
+        UUID n21Id = getNode("N21", n2.getChildren()).getId();
+
+        // Move N2 before its own child N21: must not create a parent cycle (N2 becoming its own parent)
+        networkModificationTreeService.moveStudyNode(n2.getId(), n21Id, InsertMode.BEFORE);
+
+        RootNode root = networkModificationTreeService.getStudyTree(studyUuid, studyTestUtils.getOneRootNetworkUuid(studyUuid));
+        children = root.getChildren();
+        //               root
+        //       /      /   \      \
+        //      n1     n2   n22    n3
+        //              \
+        //              n21
+        AbstractNode movedN2 = getNode("N2", children);
+        assertEquals(0, getNode("N1", children).getColumnPosition());
+        assertEquals(1, movedN2.getColumnPosition());
+        assertEquals(2, getNode("N22", children).getColumnPosition());
+        assertEquals(3, getNode("N3", children).getColumnPosition());
+
+        assertEquals(1, movedN2.getChildren().size());
+        assertEquals(0, getNode("N21", movedN2.getChildren()).getColumnPosition());
+    }
+
+    @Test
     void testMoveSubtree() {
         List<AbstractNode> children = createNodeTree().getChildren();
 
