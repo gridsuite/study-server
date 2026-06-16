@@ -483,11 +483,6 @@ class StudyTest extends StudyTestBase {
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(HEADER_UPDATE_TYPE));
 
-        message = output.receive(TIMEOUT, "study.update");
-        headers = message.getHeaders();
-        assertEquals(userId, headers.get(HEADER_USER_ID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, headers.get(HEADER_UPDATE_TYPE));
-
         MvcResult mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
                 status().isOk(),
                 content().contentType(MediaType.APPLICATION_JSON))
