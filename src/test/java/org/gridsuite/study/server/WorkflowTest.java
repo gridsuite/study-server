@@ -116,7 +116,7 @@ class WorkflowTest {
     }
 
     @Test
-    void testConsumeApplicationResult() throws JsonProcessingException {
+    void testConsumeModificationApplicationResult() throws JsonProcessingException {
         NetworkModificationsResult result = new NetworkModificationsResult(
             List.of(UUID.randomUUID()), List.of(Optional.empty()));
         ModificationReceiver receiver = new ModificationReceiver(studyUuid, nodeUuid, null, List.of(rootNetworkUuid));
@@ -125,20 +125,20 @@ class WorkflowTest {
         headers.put(HEADER_RECEIVER, objectMapper.writeValueAsString(receiver));
         MessageHeaders messageHeaders = new MessageHeaders(headers);
 
-        consumerService.consumeApplicationResult().accept(MessageBuilder.createMessage(result, messageHeaders));
+        consumerService.consumeModificationApplicationResult().accept(MessageBuilder.createMessage(result, messageHeaders));
 
-        verify(studyService, times(1)).handleApplicationResult(receiver, result);
+        verify(studyService, times(1)).handleModificationApplicationResult(receiver, result);
     }
 
     @Test
-    void testConsumeApplicationFailed() throws JsonProcessingException {
+    void testConsumeModificationApplicationFailed() throws JsonProcessingException {
         ModificationReceiver receiver = new ModificationReceiver(studyUuid, nodeUuid, null, List.of(rootNetworkUuid));
 
         Map<String, Object> headers = new HashMap<>();
         headers.put(HEADER_RECEIVER, objectMapper.writeValueAsString(receiver));
         MessageHeaders messageHeaders = new MessageHeaders(headers);
 
-        consumerService.consumeApplicationFailed().accept(MessageBuilder.createMessage("", messageHeaders));
+        consumerService.consumeModificationApplicationFailed().accept(MessageBuilder.createMessage("", messageHeaders));
 
         verify(studyService, times(1)).handleApplicationFailed(receiver);
     }

@@ -2326,7 +2326,7 @@ public class StudyService {
         }
     }
 
-    public void handleApplicationResult(ModificationReceiver receiver, NetworkModificationsResult result) {
+    public void handleModificationApplicationResult(ModificationReceiver receiver, NetworkModificationsResult result) {
         try {
             List<Optional<NetworkModificationResult>> modificationResults = result.modificationResults();
             List<UUID> rootNetworkUuids = receiver.rootNetworkUuids();

@@ -134,7 +134,7 @@ public class NetworkModificationService {
         restTemplate.delete(path);
     }
 
-    public List<UUID> createModification(UUID groupUuid, ModificationReceiver receiver,
+    public void createModification(UUID groupUuid, ModificationReceiver receiver,
                                          Pair<String, List<ModificationApplicationContext>> modificationContextInfos) {
         Objects.requireNonNull(modificationContextInfos);
 
@@ -153,7 +153,7 @@ public class NetworkModificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<String> httpEntity = new HttpEntity<>(getModificationContextJsonString(objectMapper, modificationContextInfos), headers);
-        return restTemplate.exchange(path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<List<UUID>>() { }).getBody();
+        restTemplate.exchange(path, HttpMethod.POST, httpEntity, new ParameterizedTypeReference<List<UUID>>() { }).getBody();
     }
 
     public void updateModification(String createEquipmentAttributes, UUID modificationUuid) {

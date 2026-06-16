@@ -190,14 +190,14 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<NetworkModificationsResult>> consumeApplicationResult() {
+    public Consumer<Message<NetworkModificationsResult>> consumeModificationApplicationResult() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {
                 try {
                     ModificationReceiver receiverObj = objectMapper.readValue(
                         URLDecoder.decode(receiver, StandardCharsets.UTF_8), ModificationReceiver.class);
-                    studyService.handleApplicationResult(receiverObj, message.getPayload());
+                    studyService.handleModificationApplicationResult(receiverObj, message.getPayload());
                 } catch (Exception e) {
                     LOGGER.error(e.toString());
                 }
@@ -206,7 +206,7 @@ public class ConsumerService {
     }
 
     @Bean
-    public Consumer<Message<String>> consumeApplicationFailed() {
+    public Consumer<Message<String>> consumeModificationApplicationFailed() {
         return message -> {
             String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
             if (receiver != null) {

@@ -10,7 +10,7 @@ spring:
       consumeDsaDebug;consumeDsaResult;consumeDsaStopped;consumeDsaFailed;consumeDsaCancelFailed;\
       consumeDmcDebug;consumeDmcResult;consumeDmcStopped;consumeDmcFailed;consumeDmcCancelFailed;\
       consumeBuildResult;consumeBuildStopped;consumeBuildFailed;\
-      consumeApplicationResult;consumeApplicationFailed;\
+      consumeModificationApplicationResult;consumeModificationApplicationFailed;\
       consumeCaseImportSucceeded;consumeCaseImportFailed;\
       consumeSensitivityAnalysisResult;consumeSensitivityAnalysisStopped;consumeSensitivityAnalysisFailed;consumeSensitivityAnalysisCancelFailed;\
       consumeShortCircuitAnalysisDebug;consumeShortCircuitAnalysisResult;consumeShortCircuitAnalysisStopped;consumeShortCircuitAnalysisFailed;consumeShortCircuitAnalysisCancelFailed;\
@@ -91,10 +91,10 @@ spring:
         consumeBuildFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}build.run.dlx
           group: dlq
-        consumeApplicationResult-in-0:
+        consumeModificationApplicationResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}modification.result
           group: studyModificationResultGroup
-        consumeApplicationFailed-in-0:
+        consumeModificationApplicationFailed-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}modification.run.dlx
           group: dlq
         consumeLoadFlowResult-in-0:
