@@ -63,11 +63,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.client.HttpClientErrorException;
 
-import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.awaitility.Awaitility.await;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
@@ -184,6 +183,8 @@ class LoadFlowTest {
     private TestUtils studyTestUtils;
     @Autowired
     private ConsumerService consumerService;
+    @Autowired
+    private StudyServerExecutionService studyServerExecutionService;
 
     private static WireMockServer wireMockServer;
     private WireMockStubs wireMockStubs;
@@ -192,6 +193,14 @@ class LoadFlowTest {
     static void initWireMock(@Autowired InputDestination input) {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
         wireMockServer.start();
+    }
+
+    @BeforeEach
+    void runAsyncInline() {
+        doAnswer(invocation -> {
+            ((Runnable) invocation.getArgument(0)).run();
+            return CompletableFuture.completedFuture(null);
+        }).when(studyServerExecutionService).runAsync(any());
     }
 
     @BeforeEach
@@ -585,9 +594,7 @@ class LoadFlowTest {
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk());
 
-        await().atMost(Duration.ofSeconds(2))
-                .pollInterval(Duration.ofMillis(250))
-                .untilAsserted(wireMockStubs.loadflowServer::verifyDeleteLoadflowResults);
+        wireMockStubs.loadflowServer.verifyDeleteLoadflowResults();
         wireMockStubs.reportServer.verifyDeleteReport();
 
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
