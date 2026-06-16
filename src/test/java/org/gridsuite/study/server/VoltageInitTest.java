@@ -30,7 +30,6 @@ import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.dto.impacts.SimpleElementImpact.SimpleImpactType;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
-import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.voltageinit.parameters.*;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -337,10 +336,7 @@ class VoltageInitTest {
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + MODIFICATIONS_GROUP_UUID + "\"");
                 } else if (path.matches("/v1/groups/.*" + "\\?action=COPY.*")) {
-                    Optional<NetworkModificationResult> networkModificationResult =
-                            createModificationResultWithElementImpact(SimpleImpactType.MODIFICATION,
-                                    IdentifiableType.GENERATOR, "genId", Set.of("s1"));
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(new NetworkModificationsResult(List.of(VOLTAGE_INIT_MODIFICATION_UUID), List.of(networkModificationResult))));
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(List.of(VOLTAGE_INIT_MODIFICATION_UUID)));
                 } else if (path.matches("/v1/groups/" + MODIFICATIONS_GROUP_UUID + "/network-modifications\\?errorOnGroupNotFound=false&onlyStashed=false&onlyMetadata=.*")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PREVIEW_MODIFICATION_LIST));
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/stop.*")
@@ -730,14 +726,13 @@ class VoltageInitTest {
 
         // clone and insert again voltage-init modification to modificationNode3Uuid, with LF result -> node is invalidated
         when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
-        when(networkModificationService.duplicateModificationsFromGroup(any(), any(), any())).thenReturn(null);
+        doReturn(List.of()).when(networkModificationService).duplicateModificationsFromGroup(any(), any(), any(), any());
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
             .header("userId", "userId")).andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(7, server).stream().allMatch(r ->
+        assertTrue(TestUtils.getRequestsDone(6, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
                 r.matches("/v1/results\\?resultsUuids=" + VOLTAGE_INIT_RESULT_UUID) ||
-                r.matches("/v1/groups/.*\\?action=COPY.*") ||
                 r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*") ||
                 r.matches("/v1/reports")
         ));
@@ -858,10 +853,13 @@ class VoltageInitTest {
         ));
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid);
         checkUpdateModelsStatusMessagesReceived(studyUuid, firstRootNetworkUuid);
-        checkEquipmentMessagesReceived(studyUuid, nodeUuid, NetworkImpactsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1")).build());
         checkUpdateModelStatusMessagesReceived(studyUuid, firstRootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT); // results only for 1st root network
-        checkElementUpdatedMessageSent(studyUuid, "userId");
+        studyTestUtils.sendApplicationResult(studyUuid, nodeUuid, firstRootNetworkUuid, null,
+            new NetworkModificationsResult(List.of(VOLTAGE_INIT_MODIFICATION_UUID),
+                List.of(createModificationResultWithElementImpact(SimpleImpactType.MODIFICATION, IdentifiableType.GENERATOR, "genId", Set.of("s1")))));
+        checkEquipmentMessagesReceived(studyUuid, nodeUuid, NetworkImpactsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1")).build());
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid);
+        checkElementUpdatedMessageSent(studyUuid, "userId");
 
         ModificationApplicationContext ctx1 = rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, nodeUuid, NETWORK_UUID);
         ModificationApplicationContext ctx2 = rootNetworkNodeInfoService.getNetworkModificationApplicationContext(secondRootNetworkUuid, nodeUuid, SECOND_NETWORK_UUID);
@@ -904,18 +902,24 @@ class VoltageInitTest {
     }
 
     private void checkInsertVoltageInitModifications(UUID studyUuid, UUID modificationNodeUuid, UUID rootNetworkUuid, boolean isBuildNode) throws Exception {
-        NodeBuildStatus nodeBuildStatus = networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid, rootNetworkUuid);
-        assertTrue(isBuildNode ? nodeBuildStatus.isBuilt() : nodeBuildStatus.isNotBuilt());
         checkEquipmentUpdatingMessagesReceived(studyUuid, modificationNodeUuid);
         if (!isBuildNode) {
             checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.NODE_BUILD_STATUS_UPDATED);
         }
         checkUpdateModelsStatusMessagesReceived(studyUuid, rootNetworkUuid);
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
+        // Simulate broker result from network-modification-server
+        studyTestUtils.sendApplicationResult(studyUuid, modificationNodeUuid, rootNetworkUuid, null,
+            new NetworkModificationsResult(List.of(VOLTAGE_INIT_MODIFICATION_UUID),
+                isBuildNode
+                    ? List.of(createModificationResultWithElementImpact(SimpleImpactType.MODIFICATION, IdentifiableType.GENERATOR, "genId", Set.of("s1")))
+                    : List.of(Optional.empty())));
         if (isBuildNode) {
             checkEquipmentMessagesReceived(studyUuid, modificationNodeUuid, NetworkImpactsInfos.builder().impactedSubstationsIds(ImmutableSet.of("s1")).build());
         }
-        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, modificationNodeUuid);
+        NodeBuildStatus nodeBuildStatus = networkModificationTreeService.getNodeBuildStatus(modificationNodeUuid, rootNetworkUuid);
+        assertTrue(isBuildNode ? nodeBuildStatus.isBuilt() : nodeBuildStatus.isNotBuilt());
         checkElementUpdatedMessageSent(studyUuid, "userId");
     }
 

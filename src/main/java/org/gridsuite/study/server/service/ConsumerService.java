@@ -15,8 +15,10 @@ import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
+import org.gridsuite.study.server.dto.modification.ModificationReceiver;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
+import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
@@ -185,6 +187,39 @@ public class ConsumerService {
                 studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid());
             }
         }
+    }
+
+    @Bean
+    public Consumer<Message<NetworkModificationsResult>> consumeModificationApplicationResult() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                try {
+                    ModificationReceiver receiverObj = objectMapper.readValue(
+                        URLDecoder.decode(receiver, StandardCharsets.UTF_8), ModificationReceiver.class);
+                    studyService.handleModificationApplicationResult(receiverObj, message.getPayload());
+                } catch (Exception e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeModificationApplicationFailed() {
+        return message -> {
+            String receiver = message.getHeaders().get(HEADER_RECEIVER, String.class);
+            if (receiver != null) {
+                try {
+                    ModificationReceiver receiverObj = objectMapper.readValue(
+                        URLDecoder.decode(receiver, StandardCharsets.UTF_8), ModificationReceiver.class);
+                    LOGGER.warn("Modification application failed for node '{}'", receiverObj.nodeUuid());
+                    studyService.handleApplicationFailed(receiverObj);
+                } catch (Exception e) {
+                    LOGGER.error(e.toString());
+                }
+            }
+        };
     }
 
     @Bean
