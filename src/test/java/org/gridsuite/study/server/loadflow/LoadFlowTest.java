@@ -63,20 +63,27 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.client.HttpClientErrorException;
 
+import java.time.Duration;
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.awaitility.Awaitility.await;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
-import static org.gridsuite.study.server.notification.NotificationService.*;
+import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
+import static org.gridsuite.study.server.notification.NotificationService.NODE_BUILD_STATUS_UPDATED;
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria.removeRequestMatching;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -508,7 +515,7 @@ class LoadFlowTest {
         //Test result count
         testResultCount();
 
-        //Delete Voltage init results
+        //Delete loadflow results
         testDeleteResults(studyNameUserIdUuid, 1);
     }
 
@@ -577,7 +584,10 @@ class LoadFlowTest {
                         .queryParam("type", LOAD_FLOW.toString())
                         .queryParam("dryRun", "false"))
                 .andExpect(status().isOk());
-        wireMockStubs.loadflowServer.verifyDeleteLoadflowResults();
+
+        await().atMost(Duration.ofSeconds(2))
+                .pollInterval(Duration.ofMillis(250))
+                .untilAsserted(wireMockStubs.loadflowServer::verifyDeleteLoadflowResults);
         wireMockStubs.reportServer.verifyDeleteReport();
 
         assertEquals(0, rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull().size());
