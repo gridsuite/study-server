@@ -170,7 +170,7 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
-    public Map<UUID, UUID> stashModifications(UUID groupUUid, List<UUID> modificationsUuids) {
+    public void stashModifications(UUID groupUUid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
@@ -185,12 +185,7 @@ public class NetworkModificationService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
-        return restTemplate.exchange(
-                path,
-                HttpMethod.PUT,
-                httpEntity,
-                new ParameterizedTypeReference<Map<UUID, UUID>>() { }
-        ).getBody();
+        restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
     public void updateModificationsMetadata(UUID groupUUid, List<UUID> modificationsUuids, NetworkModificationMetadata metadata) {
@@ -210,7 +205,7 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
-    public Map<UUID, UUID> restoreModifications(UUID groupUUid, List<UUID> modificationsUuids) {
+    public void restoreModifications(UUID groupUUid, List<UUID> modificationsUuids) {
         Objects.requireNonNull(groupUUid);
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
@@ -226,9 +221,25 @@ public class NetworkModificationService {
 
         HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
 
+        restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
+    }
+
+    public Map<UUID, UUID> getReferencesData(List<UUID> modificationsUuids) {
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + "references")
+                .queryParam(UUIDS, modificationsUuids)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
+
         return restTemplate.exchange(
                 path,
-                HttpMethod.PUT,
+                HttpMethod.GET,
                 httpEntity,
                 new ParameterizedTypeReference<Map<UUID, UUID>>() { }
         ).getBody();

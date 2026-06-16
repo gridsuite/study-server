@@ -127,9 +127,8 @@ public class DirectoryService {
 
     public void removeReference(UUID referenceUuid, String userId, UUID sharedElementUuid) {
         var path = UriComponentsBuilder.fromPath(
-                        DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
-                .queryParam("referenceUuid", referenceUuid)
-                .buildAndExpand(sharedElementUuid)
+                        DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references/{referenceUuid}")
+                .buildAndExpand(sharedElementUuid, referenceUuid)
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();

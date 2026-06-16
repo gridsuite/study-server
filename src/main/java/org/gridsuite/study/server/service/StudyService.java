@@ -2012,7 +2012,8 @@ public class StudyService {
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
 
-            Map<UUID, UUID> referenceToBeDeleted = networkModificationService.stashModifications(groupId, modificationsUuids);
+            Map<UUID, UUID> referenceToBeDeleted = networkModificationService.getReferencesData(modificationsUuids);
+            networkModificationService.stashModifications(groupId, modificationsUuids);
             // if there are references modifications in the stashed netmods, those references have to be removed from directory server
             referenceToBeDeleted.forEach((modUuid, refUuid) -> {
                 directoryService.removeReference(refUuid != null ? refUuid : nodeUuid, userId, modUuid);
@@ -2071,7 +2072,8 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            Map<UUID, UUID> referenceToBeRecreated = networkModificationService.restoreModifications(groupId, modificationsUuids);
+            Map<UUID, UUID> referenceToBeRecreated = networkModificationService.getReferencesData(modificationsUuids);
+            networkModificationService.restoreModifications(groupId, modificationsUuids);
             // if there are references modifications in the unstashed netmods, those references had been removed and must be recreated in directory server
             directoryService.addReferencesToSharedComposites(
                         referenceToBeRecreated.keySet().stream().toList(),
