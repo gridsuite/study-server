@@ -199,7 +199,6 @@ class LoadFlowTest {
     void setup() throws Exception {
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
-        wireMockServer.resetRequests();
         wireMockStubs = new WireMockStubs(wireMockServer);
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
