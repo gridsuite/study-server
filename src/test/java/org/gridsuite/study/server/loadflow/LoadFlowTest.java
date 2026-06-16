@@ -183,7 +183,7 @@ class LoadFlowTest {
     private TestUtils studyTestUtils;
     @Autowired
     private ConsumerService consumerService;
-    @Autowired
+    @MockitoSpyBean
     private StudyServerExecutionService studyServerExecutionService;
 
     private static WireMockServer wireMockServer;
@@ -193,14 +193,6 @@ class LoadFlowTest {
     static void initWireMock(@Autowired InputDestination input) {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().extensions(new SendInput(input)));
         wireMockServer.start();
-    }
-
-    @BeforeEach
-    void runAsyncInline() {
-        doAnswer(invocation -> {
-            ((Runnable) invocation.getArgument(0)).run();
-            return CompletableFuture.completedFuture(null);
-        }).when(studyServerExecutionService).runAsync(any());
     }
 
     @BeforeEach
@@ -585,6 +577,11 @@ class LoadFlowTest {
     private void testDeleteResults(UUID studyUuid, int expectedInitialResultCount) throws Exception {
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoEntities.getFirst();
+
+        doAnswer(invocation -> {
+            ((Runnable) invocation.getArgument(0)).run();
+            return CompletableFuture.completedFuture(null);
+        }).when(studyServerExecutionService).runAsync(any());
 
         assertEquals(expectedInitialResultCount, rootNetworkNodeInfoEntities.size());
         wireMockStubs.loadflowServer.stubDeleteLoadflowResults(LOADFLOW_RESULT_UUID);
