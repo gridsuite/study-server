@@ -561,7 +561,7 @@ public class StudyService {
             });
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
-            studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
+            studyCreationRequestRepository.deleteAllByIdInBatch(List.of(studyCreationRequestEntity.get().getId()));
         }
 
         if (deleteStudyInfos == null) {
