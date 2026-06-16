@@ -196,11 +196,6 @@ public class ConsumerService {
             String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
             String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
             Map<String, Object> rawParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
-            // String longer than 1024 bytes are converted to com.rabbitmq.client.LongString (https://docs.spring.io/spring-amqp/docs/3.0.0/reference/html/#message-properties-converters)
-            Map<String, String> importParameters = new HashMap<>();
-            if (rawParameters != null) {
-                rawParameters.forEach((key, value) -> importParameters.put(key, value.toString()));
-            }
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
@@ -211,12 +206,12 @@ public class ConsumerService {
                     return;
                 }
 
-                handleConsumeCaseImportSucceeded(receiver, networkUuid, networkId, caseName, caseFormat, importParameters);
+                handleConsumeCaseImportSucceeded(receiver, networkUuid, networkId, caseName, caseFormat, rawParameters);
             }
         };
     }
 
-    private void handleConsumeCaseImportSucceeded(CaseImportReceiver receiver, UUID networkUuid, String networkId, String caseName, String caseFormat, Map<String, String> importParameters) {
+    private void handleConsumeCaseImportSucceeded(CaseImportReceiver receiver, UUID networkUuid, String networkId, String caseName, String caseFormat, Map<String, Object> importParameters) {
         UUID caseUuid = receiver.getCaseUuid();
         UUID studyUuid = receiver.getStudyUuid();
         String userId = receiver.getUserId();
@@ -265,7 +260,7 @@ public class ConsumerService {
     }
 
     private void insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos,
-                             Map<String, String> importParameters, UUID importReportUuid) {
+                             Map<String, Object> importParameters, UUID importReportUuid) {
         UserProfileInfos userProfileInfos = studyService.getUserProfile(userId);
 
         ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);

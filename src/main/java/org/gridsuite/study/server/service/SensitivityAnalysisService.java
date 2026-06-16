@@ -22,6 +22,7 @@ import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -29,12 +30,7 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
@@ -73,7 +69,8 @@ public class SensitivityAnalysisService extends AbstractComputationService imple
                                        UUID reportUuid,
                                        String userId,
                                        UUID parametersUuid,
-                                       UUID loadFlowParametersUuid) {
+                                       UUID loadFlowParametersUuid,
+                                       Map<UUID, String> elementsIdNameMap) {
         String receiver;
         try {
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
@@ -102,7 +99,7 @@ public class SensitivityAnalysisService extends AbstractComputationService imple
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
+        HttpEntity<Map<UUID, String>> httpEntity = new HttpEntity<>(elementsIdNameMap, headers);
 
         return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
@@ -364,5 +361,26 @@ public class SensitivityAnalysisService extends AbstractComputationService imple
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
         return List.of();
+    }
+
+    public List<UUID> getElementIds(UUID parametersUuid) {
+
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + PARAMETERS_URI + "/contingency-lists-and-filters")
+            .buildAndExpand(parametersUuid)
+            .toUriString();
+
+        try {
+            List<UUID> elementIds = restTemplate.exchange(
+                sensitivityAnalysisServerBaseUri + path,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<UUID>>() { }
+            ).getBody();
+            return elementIds != null ? elementIds : List.of();
+
+        } catch (RestClientException e) {
+            return List.of();
+        }
     }
 }

@@ -1031,6 +1031,7 @@ class NetworkModificationTreeTest {
         createNode(root.getStudyId(), root, networkModification1, userId);
         createNode(root.getStudyId(), root, networkModification2, userId);
         root = getRootNode(root.getStudyId());
+        assertEquals(Set.of(0, 1), root.getChildren().stream().map(AbstractNode::getColumnPosition).collect(Collectors.toCollection(TreeSet::new)));
         /* root
             / \
            n1  n2
@@ -1038,23 +1039,24 @@ class NetworkModificationTreeTest {
         AbstractNode unchangedNode = root.getChildren().get(0);
         AbstractNode willBeMoved = root.getChildren().get(1);
         insertNode(root.getStudyId(), willBeMoved, networkModification3, InsertMode.BEFORE, root, userId);
+        root = getRootNode(root.getStudyId());
+        assertEquals(Set.of(0, 1), root.getChildren().stream().map(AbstractNode::getColumnPosition).collect(Collectors.toCollection(TreeSet::new)));
         /* root
             / \
            n3  n2
            /
           n1
          */
-        root = getRootNode(root.getStudyId());
         assertEquals(1, root.getChildren().stream().filter(child -> child.getId().equals(unchangedNode.getId())).count());
         AbstractNode newNode = root.getChildren().get(0).getId().equals(unchangedNode.getId()) ? root.getChildren().get(1) : root.getChildren().get(0);
         assertEquals(willBeMoved.getId(), newNode.getChildren().get(0).getId());
+        assertEquals(Set.of(0), newNode.getChildren().stream().map(AbstractNode::getColumnPosition).collect(Collectors.toCollection(TreeSet::new)));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", root.getStudyId(), UUID.randomUUID())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(networkModification1))
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isNotFound());
-
     }
 
     @Test
@@ -1070,12 +1072,18 @@ class NetworkModificationTreeTest {
         createNode(root.getStudyId(), root, node2, userId);
         createNode(root.getStudyId(), root, node3, userId);
         root = getRootNode(root.getStudyId());
-        var originalChildren = root.getChildren().stream().map(AbstractNode::getId).collect(Collectors.toSet());
+        Set<UUID> originalChildrenUuids = root.getChildren().stream().map(AbstractNode::getId).collect(Collectors.toSet());
+        assertEquals(Set.of(0, 1), root.getChildren().stream().map(AbstractNode::getColumnPosition).collect(Collectors.toCollection(TreeSet::new)));
+
         insertNode(root.getStudyId(), root, node1, InsertMode.AFTER, root, userId);
         root = getRootNode(root.getStudyId());
         assertEquals(1, root.getChildren().size());
-        var grandChildren = getRootNode(root.getStudyId()).getChildren().get(0).getChildren().stream().map(AbstractNode::getId).collect(Collectors.toSet());
-        assertEquals(originalChildren, grandChildren);
+        assertEquals(Set.of(0), root.getChildren().stream().map(AbstractNode::getColumnPosition).collect(Collectors.toCollection(TreeSet::new)));
+
+        List<AbstractNode> grandChildren = getRootNode(root.getStudyId()).getChildren().get(0).getChildren();
+        Set<UUID> grandChildrenUuids = grandChildren.stream().map(AbstractNode::getId).collect(Collectors.toSet());
+        assertEquals(originalChildrenUuids, grandChildrenUuids);
+        assertEquals(Set.of(0, 1), grandChildren.stream().map(AbstractNode::getColumnPosition).collect(Collectors.toCollection(TreeSet::new)));
 
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(root.getStudyId());
         assertEquals(VARIANT_ID, networkModificationTreeService.getVariantId(node1.getId(), rootNetworkUuid));

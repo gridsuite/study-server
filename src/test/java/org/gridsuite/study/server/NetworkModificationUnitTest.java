@@ -12,7 +12,6 @@ import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
-import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.error.StudyException;
@@ -272,7 +271,7 @@ class NetworkModificationUnitTest {
     void unbuildAllNodes() {
         setupWithTwoRootNetwork();
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        List<UUID> rootNetworkUuids = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid).stream().map(RootNetworkInfos::getId).toList();
+        List<UUID> rootNetworkUuids = rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(RootNetworkEntity::getId).toList();
 
         studyController.unbuildAllNodes(studyUuid, USER_ID_HEADER);
 

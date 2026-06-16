@@ -28,11 +28,16 @@ public interface RootNetworkRepository extends JpaRepository<RootNetworkEntity, 
     @EntityGraph(attributePaths = {"rootNetworkNodeInfos"}, type = EntityGraph.EntityGraphType.LOAD)
     Optional<RootNetworkEntity> findWithRootNetworkNodeInfosById(UUID rootNetworkUuid);
 
+    @EntityGraph(attributePaths = {"rootNetworkNodeInfos.modificationReports", "rootNetworkNodeInfos.computationReports"}, type = EntityGraph.EntityGraphType.LOAD)
+    Optional<RootNetworkEntity> findWithRootNetworkNodeInfosAndReportsById(UUID rootNetworkUuid);
+
     boolean existsByIdAndStudyId(UUID rootNetworkUuid, UUID studyUuid);
 
     int countAllByStudyId(UUID studyUuid);
 
     Optional<RootNetworkEntity> findByNameAndStudyId(String name, UUID studyUuid);
+
+    List<RootNetworkEntity> findAllByStudyId(UUID studyUuid);
 
     Optional<RootNetworkEntity> findByTagAndStudyId(String tag, UUID studyUuid);
 

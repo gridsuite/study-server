@@ -27,10 +27,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
-import org.gridsuite.study.server.utils.wiremock.ComputationServerStubs;
-import org.gridsuite.study.server.utils.wiremock.ReportServerStubs;
-import org.gridsuite.study.server.utils.wiremock.UserAdminServerStubs;
-import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
+import org.gridsuite.study.server.utils.wiremock.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,10 +47,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
@@ -105,6 +99,12 @@ class SensitivityAnalysisTest {
     private static final String VARIANT_ID_2 = "variant_2";
     private static final String VARIANT_ID_3 = "variant_3";
 
+    private static final UUID ELEMENTS_1_UUID = UUID.randomUUID();
+    private static final String ELEMENTS_1_NAME = "element1";
+    private static final Map<UUID, String> ELEMENTS_ID_NAME_MAP = Map.of(
+        ELEMENTS_1_UUID, ELEMENTS_1_NAME
+    );
+
     private static final String SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID SENSITIVITY_ANALYSIS_PARAMETERS_UUID = UUID.fromString(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING);
     private static final String NO_PROFILE_USER_ID = "noProfileUser";
@@ -139,6 +139,8 @@ class SensitivityAnalysisTest {
     private ComputationServerStubs computationServerStubs;
     private ReportServerStubs reportServerStubs;
     private UserAdminServerStubs userAdminServerStubs;
+    private DirectoryServerStubs directoryServerStubs;
+    private SensitivityAnalysisServerStubs sensitivityAnalysisStubs;
 
     @Autowired
     private MockMvc mockMvc;
@@ -187,6 +189,8 @@ class SensitivityAnalysisTest {
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @Autowired
     private TestUtils studyTestUtils;
+    @Autowired
+    private DirectoryService directoryService;
 
     @BeforeEach
     void setup() {
@@ -195,12 +199,15 @@ class SensitivityAnalysisTest {
         computationServerStubs = new ComputationServerStubs(wireMockServer);
         reportServerStubs = new ReportServerStubs(wireMockServer);
         userAdminServerStubs = new UserAdminServerStubs(wireMockServer);
+        directoryServerStubs = new DirectoryServerStubs(wireMockServer);
+        sensitivityAnalysisStubs = new SensitivityAnalysisServerStubs(wireMockServer);
 
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(wireMockServer.baseUrl());
         actionsService.setActionsServerBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
+        directoryService.setDirectoryServerServerBaseUri(wireMockServer.baseUrl());
 
         loadFlowService.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
@@ -262,7 +269,7 @@ class SensitivityAnalysisTest {
 
     @Test
     void testSensitivityAnalysis() throws Exception {
-        //insert a study
+        // insert a study
         StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
         UUID studyNameUserIdUuid = studyEntity.getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
@@ -299,6 +306,8 @@ class SensitivityAnalysisTest {
             .andExpect(status().isNoContent());
 
         // --- 2. Run additional sensitivity analysis for deletion test ---
+        sensitivityAnalysisStubs.stubGetElementIds(objectMapper.writeValueAsString(List.of(ELEMENTS_1_UUID)));
+        directoryServerStubs.stubGetElementNames(objectMapper.writeValueAsString(ELEMENTS_ID_NAME_MAP));
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, SENSITIVITY_ANALYSIS_RESULT_UUID);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run",
@@ -308,6 +317,8 @@ class SensitivityAnalysisTest {
 
         consumeSensitivityAnalysisResult(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid, SENSITIVITY_ANALYSIS_RESULT_UUID);
         computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("receiver", WireMock.matching(".*")));
+        sensitivityAnalysisStubs.verifyGetElementIds();
+        directoryServerStubs.verifyGetElementNames(Set.of(ELEMENTS_1_UUID));
 
         // --- 3. Test result count (dryRun) ---
         computationServerStubs.stubResultsCount(1);
@@ -351,6 +362,8 @@ class SensitivityAnalysisTest {
 
         // --- 2. Run sensitivity analysis ---
         computationServerStubs.stubComputationRun(NETWORK_UUID_STRING, null, resultUuid);
+        sensitivityAnalysisStubs.stubGetElementIds(objectMapper.writeValueAsString(List.of(ELEMENTS_1_UUID)));
+        directoryServerStubs.stubGetElementNames(objectMapper.writeValueAsString(ELEMENTS_ID_NAME_MAP));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run",
                 studyUuid, rootNetworkUuid, nodeUuid)
@@ -358,7 +371,12 @@ class SensitivityAnalysisTest {
             .andExpect(status().isOk());
 
         consumeSensitivityAnalysisResult(studyUuid, rootNetworkUuid, nodeUuid, resultUuid);
-        computationServerStubs.verifyComputationRun(NETWORK_UUID_STRING, Map.of("receiver", WireMock.matching(".*")));
+        sensitivityAnalysisStubs.verifyGetElementIds();
+        directoryServerStubs.verifyGetElementNames(Set.of(ELEMENTS_1_UUID));
+        computationServerStubs.verifyComputationRun(
+            NETWORK_UUID_STRING,
+            Map.of("receiver", WireMock.matching(".*")),
+            objectMapper.writeValueAsString(ELEMENTS_ID_NAME_MAP));
 
         // --- 3. GET sensitivity analysis result ---
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/results/" + resultUuid + ".*"))
@@ -572,6 +590,8 @@ class SensitivityAnalysisTest {
 
         // --- Stub failing sensitivity analysis run ---
         computationServerStubs.stubComputationRun(NETWORK_UUID_2_STRING, null, SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID);
+        sensitivityAnalysisStubs.stubGetElementIds(objectMapper.writeValueAsString(List.of()));
+        directoryServerStubs.stubGetElementNames(objectMapper.writeValueAsString(Map.of()));
 
         // Run failing sensitivity analysis
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run",
@@ -601,6 +621,7 @@ class SensitivityAnalysisTest {
 
         // Verify the "run-and-save" POST request was called
         computationServerStubs.verifyComputationRun(NETWORK_UUID_2_STRING, Map.of("variantId", WireMock.matching(".*")));
+        sensitivityAnalysisStubs.verifyGetElementIds();
 
         // --- Test coverage: failed message without receiver ---
         StudyEntity studyEntity2 = insertDummyStudy(UUID.fromString(NETWORK_UUID_3_STRING), CASE_3_UUID, SENSITIVITY_ANALYSIS_PARAMETERS_UUID);
@@ -612,6 +633,8 @@ class SensitivityAnalysisTest {
 
         // Stub failing analysis for second study
         computationServerStubs.stubComputationRun(NETWORK_UUID_3_STRING, null, SENSITIVITY_ANALYSIS_ERROR_NODE_RESULT_UUID);
+        sensitivityAnalysisStubs.stubGetElementIds(objectMapper.writeValueAsString(List.of()));
+        directoryServerStubs.stubGetElementNames(objectMapper.writeValueAsString(Map.of()));
         // Run failing sensitivity analysis without receiver
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run",
                 studyUuid2, firstRootNetworkUuid2, modificationNode1Uuid2)
@@ -632,6 +655,7 @@ class SensitivityAnalysisTest {
 
         // Verify run-and-save POST request called
         computationServerStubs.verifyComputationRun(NETWORK_UUID_3_STRING, Map.of("variantId", WireMock.matching(".*")));
+        sensitivityAnalysisStubs.verifyGetElementIds();
     }
 
     private void createOrUpdateParametersAndDoChecks(UUID studyUuid, String parameters, String userId, HttpStatusCode status) throws Exception {
@@ -764,6 +788,8 @@ class SensitivityAnalysisTest {
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
         computationServerStubs.stubParameterPut(SENSITIVITY_ANALYSIS_PARAMETERS_UUID_STRING, objectWriter.writeValueAsString(SENSITIVITY_ANALYSIS_PARAMETERS));
         computationServerStubs.stubParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING, DUPLICATED_PARAMS_JSON);
+        sensitivityAnalysisStubs.stubGetElementIds(objectMapper.writeValueAsString(List.of(ELEMENTS_1_UUID)));
+        directoryServerStubs.stubGetElementNames(objectMapper.writeValueAsString(ELEMENTS_ID_NAME_MAP));
 
         // ---------------- Run sensitivity analysis ----------------
         mockMvc.perform(post(
@@ -785,6 +811,8 @@ class SensitivityAnalysisTest {
             "variantId", equalTo(VARIANT_ID),
             "receiver", matching(".*")
         ));
+        sensitivityAnalysisStubs.verifyGetElementIds();
+        directoryServerStubs.verifyGetElementNames(Set.of(ELEMENTS_1_UUID));
         // parameters duplicated
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SENSITIVITY_ANALYSIS_VALID_PARAMETERS_UUID_STRING);
