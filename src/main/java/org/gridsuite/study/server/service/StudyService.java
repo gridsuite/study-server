@@ -559,10 +559,9 @@ public class StudyService {
             removeWorkspacesConfig(s.getWorkspacesConfigUuid());
             removeNadConfigs(s.getNadConfigsUuids().stream().toList());
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
-        } else if (studyCreationRequestEntity.isPresent()) {
-            studyCreationRequestRepository.deleteAllByIdInBatch(List.of(studyCreationRequestEntity.get().getId()));
+        } else {
+            studyCreationRequestEntity.ifPresent(creationRequestEntity -> studyCreationRequestRepository.deleteAllByIdInBatch(List.of(creationRequestEntity.getId())));
         }
-        // else: neither creation request nor study exist -> nothing to delete (idempotent no-op)
 
         if (deleteStudyInfos == null) {
             return Optional.empty();

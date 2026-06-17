@@ -64,7 +64,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -75,6 +74,7 @@ import static org.gridsuite.study.server.notification.NotificationService.HEADER
 import static org.gridsuite.study.server.notification.NotificationService.NODE_BUILD_STATUS_UPDATED;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
+import static org.gridsuite.study.server.utils.TestUtils.executeAsyncOnMainThread;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria.removeRequestMatching;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -577,10 +577,9 @@ class LoadFlowTest {
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoEntities.getFirst();
 
-        doAnswer(invocation -> {
-            ((Runnable) invocation.getArgument(0)).run();
-            return CompletableFuture.completedFuture(null);
-        }).when(studyServerExecutionService).runAsync(any());
+        // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
+        // completes before the test verifies it, removes the race condition.
+        executeAsyncOnMainThread(studyServerExecutionService);
 
         assertEquals(expectedInitialResultCount, rootNetworkNodeInfoEntities.size());
         wireMockStubs.loadflowServer.stubDeleteLoadflowResults(LOADFLOW_RESULT_UUID);

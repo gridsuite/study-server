@@ -307,4 +307,17 @@ public final class TestUtils {
     public static void checkUpdateStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, OutputDestination output) {
         ALL_COMPUTATION_STATUS.forEach(computationStatus -> checkUpdateTypeMessageReceived(studyUuid, nodeUuid, computationStatus, output, STUDY_UPDATE_DESTINATION));
     }
+
+    /**
+     * Forces {@link StudyServerExecutionService#runAsync} to execute its task inline on the calling
+     * thread instead of dispatching it to the executor pool.
+     *
+     */
+
+    public static void executeAsyncOnMainThread(StudyServerExecutionService studyServerExecutionService) {
+        doAnswer(invocation -> {
+            ((Runnable) invocation.getArgument(0)).run();
+            return CompletableFuture.completedFuture(null);
+        }).when(studyServerExecutionService).runAsync(any());
+    }
 }
