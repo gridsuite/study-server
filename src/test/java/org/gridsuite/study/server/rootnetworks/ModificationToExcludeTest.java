@@ -802,6 +802,10 @@ class ModificationToExcludeTest {
             .lastGroupApplicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK)
             .networkImpacts(List.of())
             .build())))).when(networkModificationService).moveModifications(any(), any(), any(), any(), eq(true));
+        // Expands the moved UUIDs to leaves before remapping exclusions:
+        // stub expandToLeafUuids to return exactly the moved UUIDs (no composites involved here)
+        Mockito.doReturn(new HashSet<>(modificationsToMove)).when(networkModificationService).expandToLeafUuids(modificationsToMove);
+
         studyService.moveNetworkModifications(studyUuid, secondNodeUuid, firstNodeUuid, modificationsToMove, null, true, USER_ID);
 
         // assert origin node still have all excluded modifications, except the moved one
