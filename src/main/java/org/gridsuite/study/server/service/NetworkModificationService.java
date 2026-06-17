@@ -235,10 +235,27 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<BuildInfos> httpEntity = new HttpEntity<>(headers);
+        HttpEntity<Map<UUID, UUID>> httpEntity = new HttpEntity<>(headers);
 
         return restTemplate.exchange(
                 path,
+                HttpMethod.GET,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+        ).getBody();
+    }
+
+    public Map<UUID, UUID> getAllReferencesDataFromGroup(UUID groupUuid) {
+        Objects.requireNonNull(groupUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "references");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<UUID, UUID>> httpEntity = new HttpEntity<>(headers);
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
                 HttpMethod.GET,
                 httpEntity,
                 new ParameterizedTypeReference<Map<UUID, UUID>>() { }

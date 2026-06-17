@@ -81,6 +81,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.BUS_ID_TO_ICC_VALUES;
@@ -548,7 +549,10 @@ public class StudyService {
         if (studyCreationRequestEntity.isEmpty()) {
             List<RootNetworkInfos> rootNetworkInfos = getStudyRootNetworksInfos(studyUuid);
             // get all modification groups related to the study
-            List<UUID> modificationGroupUuids = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid).stream().map(NetworkModificationNodeInfoEntity::getModificationGroupUuid).toList();
+            List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid);
+            List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = allStudyNetworkModificationNodeInfo.stream()
+                    .map(nodeInfoEntity -> Pair.of(nodeInfoEntity.getModificationGroupUuid(),nodeInfoEntity.getIdNode()))
+                    .toList();
             studyEntity.ifPresent(s -> {
                 networkModificationTreeService.doDeleteTree(studyUuid);
                 studyRepository.deleteById(studyUuid);
@@ -559,7 +563,7 @@ public class StudyService {
                 removeWorkspacesConfig(s.getWorkspacesConfigUuid());
                 removeNadConfigs(s.getNadConfigsUuids().stream().toList());
             });
-            deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
+            deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuidsNodeUuids);
         } else {
             studyCreationRequestRepository.deleteById(studyCreationRequestEntity.get().getId());
         }
@@ -593,11 +597,23 @@ public class StudyService {
             rootNetworkService.invalidateRootNetworkRemoteInfos(deleteStudyInfos.getRootNetworkInfosList(), false, true);
 
             // delete all distant resources linked to nodes
-            studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuids().stream().filter(Objects::nonNull).forEach(networkModificationService::deleteModifications));
+            studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuidsNodeUuids().stream()
+                    .filter(Objects::nonNull)
+                    .forEach(this::deleteModificationsFromGroup));
 
             LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
         }
+    }
+
+    private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid) {
+        // fetch the references data in order to remove those references from directory-server
+        Map<UUID, UUID> referenceToBeDeleted = networkModificationService.getAllReferencesDataFromGroup(groupUuidNodeUuid.getFirst());
+        referenceToBeDeleted.forEach((modUuid, refUuid) -> {
+            directoryService.removeReference(refUuid != null ? refUuid : groupUuidNodeUuid.getSecond(), "userId", modUuid); // TODO : handle userId ?? voir avec Slimane
+        });
+
+        networkModificationService.deleteModifications(groupUuidNodeUuid.getFirst());
     }
 
     @Transactional
@@ -1993,7 +2009,15 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
+
+            Map<UUID, UUID> referenceToBeDeleted = networkModificationService.getReferencesData(modificationsUuids);
             networkModificationService.deleteModifications(groupId, modificationsUuids);
+            // if there are unstashed references modifications in the deleted netmods, those references have to be removed from directory server
+            referenceToBeDeleted.forEach((modUuid, refUuid) -> {
+                directoryService.removeReference(refUuid != null ? refUuid : nodeUuid, userId, modUuid);
+            });
+            invalidateNodeTree(studyUuid, nodeUuid);
+
             // for each root network, remove modifications from excluded ones
             studyEntity.getRootNetworks().forEach(rootNetworkEntity -> rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkEntity.getId(), new HashSet<>(modificationsUuids), true));
         } finally {
@@ -2155,7 +2179,12 @@ public class StudyService {
     private void deleteNodesInfos(DeleteNodeInfos deleteNodeInfos) {
         List<CompletableFuture<?>> futures = new ArrayList<>();
         futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)));
-        futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getModificationGroupUuids().forEach(networkModificationService::deleteModifications)));
+        List<UUID> modificationGroupUuids = deleteNodeInfos.getModificationGroupUuids();
+        List<UUID> removedNodeUuids = deleteNodeInfos.getRemovedNodeUuids();
+        List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = IntStream.range(0, modificationGroupUuids.size())
+                .mapToObj(index -> Pair.of(modificationGroupUuids.get(index), removedNodeUuids.get(index)))
+                .toList();
+        futures.add(studyServerExecutionService.runAsync(() -> modificationGroupUuidsNodeUuids.forEach(this::deleteModificationsFromGroup)));
         futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)));
         futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(deleteNodeInfos));
         // Do not wait completion and do not throw exception
