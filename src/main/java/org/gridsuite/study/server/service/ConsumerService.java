@@ -345,9 +345,7 @@ public class ConsumerService {
                     String userId = receiver.getUserId();
                     UUID rootNetworkUuid = receiver.getRootNetworkUuid();
 
-                    System.out.println("AAAAAAAAAAAAAAAAAAAAAAA " + receiver.getCaseImportAction());
                     if (receiver.getCaseImportAction() == CaseImportAction.STUDY_CREATION) {
-                        System.out.println("OOOOOOOOOOOOOOOOOOOOOOOOO");
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid);
                         notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
                     } else {
