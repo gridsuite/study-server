@@ -3309,6 +3309,11 @@ class NetworkModificationTest {
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"modificationUuids\":[],\"modificationResults\":[]}")));
 
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/network-composite-modifications/children-uuids"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(List.of()))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}",
                         studyUuid, nodeUuid, modificationUuid)
                         .queryParam("targetContainerId", targetContainerId.toString())
@@ -3321,6 +3326,8 @@ class NetworkModificationTest {
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, moveUrlCase3, false, Map.of(
                 "action", WireMock.equalTo(StudyConstants.ModificationsActionType.MOVE.name()),
                 "originGroupUuid", WireMock.equalTo(nodeGroupUuid.toString())), expectedMoveBodyJson);
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/network-composite-modifications/children-uuids", Map.of(
+                "uuids", WireMock.matching(".*")), 1);
     }
 
     @Test
