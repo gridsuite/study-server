@@ -310,8 +310,8 @@ public final class TestUtils {
 
     /**
      * Forces {@link StudyServerExecutionService#runAsync} to execute its task inline on the calling
-     * thread instead of dispatching it to the executor pool.
-     *
+     * thread instead of dispatching it to the executor pool. Used to make testing more consistent when
+     * functions launch new threads in non blocking mode
      */
 
     public static void executeAsyncOnMainThread(StudyServerExecutionService studyServerExecutionService) {
