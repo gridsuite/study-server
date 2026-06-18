@@ -2405,8 +2405,12 @@ public class StudyService {
         String userId,
         StudyConstants.CompositeModificationsActionType action) {
         // is some of the inserted modifications are shared, references have to be created in directory server
-        if (action == StudyConstants.CompositeModificationsActionType.INSERT && !compositesInfos.stream().filter(CompositesToBeInserted::isShared).toList().isEmpty()) {
-            directoryService.addReferencesToSharedComposites(compositesInfos.stream().map(CompositesToBeInserted::id).toList(), userId, targetNodeUuid);
+        List<UUID> sharedCompositeUuids = compositesInfos.stream()
+                .filter(CompositesToBeInserted::isShared)
+                .map(CompositesToBeInserted::id)
+                .toList();
+        if (action == StudyConstants.CompositeModificationsActionType.INSERT && !sharedCompositeUuids.isEmpty()) {
+            directoryService.addReferencesToSharedComposites(sharedCompositeUuids, userId, targetNodeUuid);
         }
 
         duplicateModificationsOrInsertComposites(

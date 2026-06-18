@@ -79,6 +79,7 @@ import java.util.stream.Collectors;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR_MESSAGE;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
+import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_NODE_BUILDS_EXCEEDED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
@@ -194,6 +195,9 @@ class NetworkModificationTest {
     private NetworkModificationService networkModificationService;
 
     @Autowired
+    private DirectoryService directoryService;
+
+    @Autowired
     private ReportService reportService;
 
     @Autowired
@@ -302,6 +306,7 @@ class NetworkModificationTest {
         doReturn(baseUrl).when(dynamicMarginCalculationClient).getBaseUri();
 
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
+        directoryService.setDirectoryServerServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 
         buildOkStubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks/" + NETWORK_UUID_STRING + "/build"))
@@ -2099,7 +2104,8 @@ class NetworkModificationTest {
                 UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
         UUID nodeUuid1 = node1.getId();
         CompositesToBeInserted modification1 = new CompositesToBeInserted(UUID.randomUUID(), "composite 1", false);
-        CompositesToBeInserted modification2 = new CompositesToBeInserted(UUID.randomUUID(), "composite 2", false);
+        UUID sharedNetModId = UUID.randomUUID();
+        CompositesToBeInserted modification2 = new CompositesToBeInserted(sharedNetModId, "composite 2", true);
         String compositesData = mapper.writeValueAsString(
                 Arrays.asList(
                         modification1,
@@ -2111,7 +2117,14 @@ class NetworkModificationTest {
                 .withQueryParam("action", WireMock.equalTo("INSERT"))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID(), UUID.randomUUID()), List.of(Optional.empty()))))
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
+        // stubs the references creation :
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/elements/" + sharedNetModId + "/references"))
+                .withHeader(USER_ID_HEADER, WireMock.equalTo(userId))
+                .withHeader(HttpHeaders.CONTENT_TYPE, WireMock.containing(MediaType.APPLICATION_JSON_VALUE))
+                .willReturn(WireMock.ok()
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
         // insert 2 composite modifications in node1
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}/composite-modifications?action=INSERT",
@@ -2136,6 +2149,11 @@ class NetworkModificationTest {
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, url, false, Map.of(
                         "action", WireMock.equalTo("INSERT")),
                 expectedBody);
+        WireMockUtilsCriteria.verifyPostRequest(
+                wireMockServer,
+                "/v1/elements/" + sharedNetModId + "/references",
+                Map.of(),
+                mapper.writeValueAsString(new ReferenceAttributes(nodeUuid1, STUDY_NODE)));
     }
 
     @Test
