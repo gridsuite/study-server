@@ -2273,6 +2273,7 @@ public class StudyService {
                     isTargetInDifferentNodeTree);
 
             if (result != null && originNodeUuid != null) {
+                Set<UUID> allMovedUuids = networkModificationService.expandToLeafUuids(result.modificationUuids());
                 rootNetworkNodeInfoService.moveModificationsToExclude(originNodeUuid, targetNodeUuid, result.modificationUuids());
             }
             if (result != null && isTargetInDifferentNodeTree) {
