@@ -298,7 +298,7 @@ public class StudyService {
 
             persistNetwork(rootNetworkInfos, basicStudyInfos.getId(), NetworkModificationTreeService.FIRST_VARIANT_ID, userId, importParameters, CaseImportAction.STUDY_CREATION);
         } catch (Exception e) {
-            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId());
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             throw e;
         }
 
@@ -492,7 +492,7 @@ public class StudyService {
         } catch (Exception e) {
             LOGGER.error(e.toString(), e);
         } finally {
-            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId());
+            self.deleteStudyIfNotCreationInProgress(basicStudyInfos.getId(), userId);
             LOGGER.trace("Create study '{}' from source {} : {} seconds", basicStudyInfos.getId(), sourceStudyUuid,
                     TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
@@ -586,7 +586,7 @@ public class StudyService {
     }
 
     @Transactional
-    public void deleteStudyIfNotCreationInProgress(UUID studyUuid) {
+    public void deleteStudyIfNotCreationInProgress(UUID studyUuid, String userId) {
         AtomicReference<Long> startTime = new AtomicReference<>(null);
         Optional<DeleteStudyInfos> deleteStudyInfosOpt = doDeleteStudyIfNotCreationInProgress(studyUuid);
         if (deleteStudyInfosOpt.isPresent()) {
@@ -599,18 +599,18 @@ public class StudyService {
             // delete all distant resources linked to nodes
             studyServerExecutionService.runAsync(() -> deleteStudyInfos.getModificationGroupUuidsNodeUuids().stream()
                     .filter(Objects::nonNull)
-                    .forEach(this::deleteModificationsFromGroup));
+                    .forEach(groupUuidNodeUuid -> deleteModificationsFromGroup(groupUuidNodeUuid, userId)));
 
             LOGGER.trace("Delete study '{}' : {} seconds", studyUuid, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
 
         }
     }
 
-    private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid) {
+    private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid, String userId) {
         // fetch the references data in order to remove those references from directory-server
         Map<UUID, UUID> referenceToBeDeleted = networkModificationService.getAllReferencesDataFromGroup(groupUuidNodeUuid.getFirst());
         referenceToBeDeleted.forEach((modUuid, refUuid) -> {
-            directoryService.removeReference(refUuid != null ? refUuid : groupUuidNodeUuid.getSecond(), "userId", modUuid); // TODO : handle userId ?? voir avec Slimane
+            directoryService.removeReference(refUuid != null ? refUuid : groupUuidNodeUuid.getSecond(), userId, modUuid);
         });
 
         networkModificationService.deleteModifications(groupUuidNodeUuid.getFirst());
@@ -2149,7 +2149,7 @@ public class StudyService {
             }
         }
 
-        deleteNodesInfos(deleteNodeInfos);
+        deleteNodesInfos(deleteNodeInfos, userId);
 
         notificationService.emitElementUpdated(studyUuid, userId);
     }
@@ -2176,7 +2176,7 @@ public class StudyService {
         return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
 
-    private void deleteNodesInfos(DeleteNodeInfos deleteNodeInfos) {
+    private void deleteNodesInfos(DeleteNodeInfos deleteNodeInfos, String userId) {
         List<CompletableFuture<?>> futures = new ArrayList<>();
         futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getVariantIds().forEach(networkStoreService::deleteVariants)));
         List<UUID> modificationGroupUuids = deleteNodeInfos.getModificationGroupUuids();
@@ -2184,7 +2184,9 @@ public class StudyService {
         List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = IntStream.range(0, modificationGroupUuids.size())
                 .mapToObj(index -> Pair.of(modificationGroupUuids.get(index), removedNodeUuids.get(index)))
                 .toList();
-        futures.add(studyServerExecutionService.runAsync(() -> modificationGroupUuidsNodeUuids.forEach(this::deleteModificationsFromGroup)));
+        futures.add(studyServerExecutionService.runAsync(() -> modificationGroupUuidsNodeUuids.forEach(
+                groupUuidNodeUuid -> deleteModificationsFromGroup(groupUuidNodeUuid, userId))
+        ));
         futures.add(studyServerExecutionService.runAsync(() -> deleteNodeInfos.getRemovedNodeUuids().forEach(dynamicSimulationEventService::deleteEventsByNodeId)));
         futures.addAll(rootNetworkNodeInfoService.getRemoteDeletions(deleteNodeInfos));
         // Do not wait completion and do not throw exception
