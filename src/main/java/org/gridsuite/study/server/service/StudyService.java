@@ -2097,11 +2097,13 @@ public class StudyService {
             Map<UUID, UUID> referenceToBeRecreated = networkModificationService.getReferencesData(modificationsUuids);
             networkModificationService.restoreModifications(groupId, modificationsUuids);
             // if there are references modifications in the unstashed netmods, those references had been removed and must be recreated in directory server
-            directoryService.addReferencesToSharedComposites(
+            if (!referenceToBeRecreated.isEmpty()) {
+                directoryService.addReferencesToSharedComposites(
                         referenceToBeRecreated.keySet().stream().toList(),
                         userId,
                         nodeUuid
-            );
+                );
+            }
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);

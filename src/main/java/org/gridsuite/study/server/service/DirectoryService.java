@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.Setter;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ElementAttributes;
@@ -107,7 +108,7 @@ public class DirectoryService {
      * @param userId id of the user who started the insertion
      * @param targetNodeUuid where the new references will point
      */
-    public void addReferencesToSharedComposites(List<UUID> elementsUuids, String userId, UUID targetNodeUuid) {
+    public void addReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, UUID targetNodeUuid) {
         elementsUuids.forEach(elementUuid -> {
             var path = UriComponentsBuilder.fromPath(
                             DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
