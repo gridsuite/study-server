@@ -288,6 +288,7 @@ class StudyTest extends StudyTestBase {
         UUID nonExistingCaseUuid = UUID.randomUUID();
 
         UUID stubUuid = wireMockStubs.stubNetworkModificationDeleteGroup();
+        UUID stubReferencesUuid = wireMockStubs.stubGetAllReferencesDataFromGroup();
 
         // Changing the study case uuid with a non-existing case
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
@@ -304,6 +305,7 @@ class StudyTest extends StudyTestBase {
 
         assertTrue(studyRepository.findById(studyUuid).isEmpty());
 
+        wireMockStubs.verifyGetAllReferencesDataFromGroup(stubReferencesUuid);
         wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid, false);
         wireMockStubs.caseServer.verifyDeleteCase(stubDeleteCaseId, nonExistingCaseUuid.toString());
         deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 10);

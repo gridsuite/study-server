@@ -69,7 +69,7 @@ public class NetworkModificationService {
     }
 
     public void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
-        this.networkModificationServerBaseUri = networkModificationServerBaseUri + DELIMITER;
+        this.networkModificationServerBaseUri = networkModificationServerBaseUri;
     }
 
     private String getNetworkModificationServerURI(boolean addNetworksPart) {
