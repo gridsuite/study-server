@@ -551,7 +551,7 @@ public class StudyService {
             // get all modification groups related to the study
             List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid);
             List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = allStudyNetworkModificationNodeInfo.stream()
-                    .map(nodeInfoEntity -> Pair.of(nodeInfoEntity.getModificationGroupUuid(),nodeInfoEntity.getIdNode()))
+                    .map(nodeInfoEntity -> Pair.of(nodeInfoEntity.getModificationGroupUuid(), nodeInfoEntity.getIdNode()))
                     .toList();
             studyEntity.ifPresent(s -> {
                 networkModificationTreeService.doDeleteTree(studyUuid);
@@ -2016,8 +2016,6 @@ public class StudyService {
             referenceToBeDeleted.forEach((modUuid, refUuid) -> {
                 directoryService.removeReference(refUuid != null ? refUuid : nodeUuid, userId, modUuid);
             });
-            invalidateNodeTree(studyUuid, nodeUuid);
-
             // for each root network, remove modifications from excluded ones
             studyEntity.getRootNetworks().forEach(rootNetworkEntity -> rootNetworkNodeInfoService.updateModificationsToExclude(nodeUuid, rootNetworkEntity.getId(), new HashSet<>(modificationsUuids), true));
         } finally {
