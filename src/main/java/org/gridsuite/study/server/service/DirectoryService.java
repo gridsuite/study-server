@@ -126,7 +126,16 @@ public class DirectoryService {
         });
     }
 
+    /**
+     * remove references from the shared modification in directory server
+     * @param referenceUuid uuid of the composite or group where the 'Modification reference' is located
+     * @param userId id of the user who caused the unreferencing
+     * @param sharedElementUuid uuid of the referenced shared element in the directory-server
+     */
     public void removeReference(UUID referenceUuid, String userId, UUID sharedElementUuid) {
+        Objects.requireNonNull(referenceUuid);
+        Objects.requireNonNull(sharedElementUuid);
+
         var path = UriComponentsBuilder.fromPath(
                         DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references/{referenceUuid}")
                 .buildAndExpand(sharedElementUuid, referenceUuid)

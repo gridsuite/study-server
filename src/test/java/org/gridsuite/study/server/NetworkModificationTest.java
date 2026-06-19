@@ -1128,11 +1128,19 @@ class NetworkModificationTest {
     void deleteModificationRequest() throws Exception {
         String userId = "userId";
 
-        // stubs the checks and updates of referenced modifications : there are none here
+        UUID modificationUuid = UUID.randomUUID();
+        // stubs the checks and updates of referenced modifications
+        Map<UUID, UUID> stubbedReferences = new HashMap<>();
+        stubbedReferences.put(modificationUuid, null);
         UUID referencesStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
+                .withQueryParam("uuids", WireMock.equalTo(modificationUuid.toString()))
                 .willReturn(WireMock.ok()
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                        .withBody("{}"))
+                        .withBody(mapper.writeValueAsString(stubbedReferences)))
+        ).getId();
+        UUID removeReferencesStubId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching(
+                "/v1/elements/" + modificationUuid + "/references/.*"))
+                .willReturn(WireMock.ok())
         ).getId();
 
         UUID stubId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathMatching("/v1/network-modifications")).willReturn(WireMock.ok())).getId();
@@ -1156,13 +1164,19 @@ class NetworkModificationTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isNotFound());
 
-        UUID modificationUuid = UUID.randomUUID();
         mockMvc.perform(delete(URI_NETWORK_MODIF, studyUuid, modificationNode.getId())
                         .queryParam("uuids", modificationUuid.toString())
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
         WireMockUtils.verifyGetRequest(wireMockServer, referencesStubId, "/v1/references", Map.of("uuids", WireMock.equalTo(modificationUuid.toString())));
         WireMockUtils.verifyDeleteRequest(wireMockServer, stubId, "/v1/network-modifications", false, Map.of("uuids", WireMock.equalTo(modificationUuid.toString())));
+        WireMockUtils.verifyDeleteRequest(
+                wireMockServer,
+                removeReferencesStubId,
+                "/v1/elements/" + modificationUuid + "/references/.*",
+                true,
+                Map.of()
+        );
         checkEquipmentDeletingMessagesReceived(studyUuid, modificationNode.getId());
         checkEquipmentDeletingFinishedMessagesReceived(studyUuid, modificationNode.getId());
 
