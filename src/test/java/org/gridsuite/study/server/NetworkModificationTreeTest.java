@@ -287,6 +287,18 @@ class NetworkModificationTreeTest {
 
                 if (path.matches("/v1/results.*") && request.getMethod().equals("DELETE")) {
                     return new MockResponse(HttpStatus.OK.value());
+                } else if (path.matches("/v1/references\\?uuids=.*") && request.getMethod().equals("GET")) {
+                    return new MockResponse(
+                            HttpStatus.OK.value(),
+                            Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
+                            "{}"
+                    );
+                } else if (path.matches("/v1/groups/.*/references") && Objects.equals(request.getMethod(), "GET")) {
+                    return new MockResponse(
+                            HttpStatus.OK.value(),
+                            Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
+                            "{}"
+                    );
                 } else if (path.matches("/v1/network-modifications.*")) {
                     return new MockResponse(HttpStatus.OK.value());
                 } else if (path.matches("/v1/groups/" + MODIFICATION_GROUP_UUID + "/network-modifications-count.*") && request.getMethod().equals("GET")) {
@@ -305,18 +317,6 @@ class NetworkModificationTreeTest {
                     return new MockResponse(HttpStatus.OK.value());
                 } else if (path.matches("/v1/reports") && request.getMethod().equals("DELETE")) {
                     return new MockResponse(HttpStatus.OK.value());
-                } else if (path.matches("/v1/references\\?uuids=.*") && request.getMethod().equals("GET")) {
-                    return new MockResponse(
-                            HttpStatus.OK.value(),
-                            Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
-                            "{}"
-                    );
-                } else if (path.matches("/v1/groups/.*/references") && Objects.equals(request.getMethod(), "GET")) {
-                    return new MockResponse(
-                            HttpStatus.OK.value(),
-                            Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
-                            "{}"
-                    );
                 } else {
                     LOGGER.error("Path not supported: {}", request.getPath());
                     return new MockResponse(HttpStatus.NOT_FOUND.value());
