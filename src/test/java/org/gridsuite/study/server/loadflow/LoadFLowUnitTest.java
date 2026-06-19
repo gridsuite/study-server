@@ -33,6 +33,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS_WITHOUT_LOADFLOW;
 import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.mockito.Mockito.*;
 
@@ -176,7 +177,7 @@ class LoadFLowUnitTest {
         verify(networkModificationTreeService, times(1)).invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters);
         verify(networkModificationService, times(1)).deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), networkUuid);
         verify(notificationService, times(1 /* only all computation without lf */))
-            .emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), eq("all_computation_status_without_loadflow"));
+            .emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, UPDATE_TYPE_ALL_COMPUTATION_STATUS_WITHOUT_LOADFLOW);
 
         // node build
         ArgumentCaptor<RerunLoadFlowInfos> rerunLoadFlowWorkflowInfosArgumentCaptor = ArgumentCaptor.forClass(RerunLoadFlowInfos.class);
