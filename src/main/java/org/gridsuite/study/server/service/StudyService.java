@@ -2214,7 +2214,14 @@ public class StudyService {
             );
         }
 
+        UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeId);
         networkModificationTreeService.doStashNode(nodeId, stashChildren);
+
+        Map<UUID, UUID> referenceToBeDeleted = networkModificationService.getAllReferencesDataFromGroup(groupId);
+        // if there are references modifications in the stashed node, those references have to be removed from directory server
+        referenceToBeDeleted.forEach((modUuid, refUuid) -> {
+            directoryService.removeReference(refUuid != null ? refUuid : nodeId, userId, modUuid);
+        });
 
         if (startTime.get() != null) {
             LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId, studyUuid,
@@ -2231,6 +2238,20 @@ public class StudyService {
     public void restoreNodes(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId, String userId) {
         networkModificationTreeService.assertIsRootOrConstructionNode(anchorNodeId);
         networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId);
+
+        // if there are references modifications in the unstashed node, those references had been removed and must be recreated in directory server
+        nodeIds.forEach(nodeId -> {
+            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeId);
+            Map<UUID, UUID> referenceToBeRecreated = networkModificationService.getAllReferencesDataFromGroup(groupId);
+            if (!referenceToBeRecreated.isEmpty()) {
+                directoryService.addReferencesToSharedComposites(
+                        referenceToBeRecreated.keySet().stream().toList(),
+                        userId,
+                        nodeId
+                );
+            }
+        });
+
         notificationService.emitElementUpdated(studyId, userId);
     }
 

@@ -707,9 +707,6 @@ public class StudyController {
         return ResponseEntity.ok().body(newCompositeUuid);
     }
 
-    /**
-     * @param compositesToBeInserted is a List<CompositesToBeInserted> but there is no need to create a specific dto here, the data is only useful in network-modification-server
-     */
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-modifications", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "For a list of composite network modifications passed in body, insert them into the target node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The composite modification list has been inserted.")})
