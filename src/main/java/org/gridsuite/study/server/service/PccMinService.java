@@ -136,7 +136,7 @@ public class PccMinService extends AbstractComputationService implements Computa
             return Map.of();
         }
         String path = UriComponentsBuilder
-            .fromPath(PCC_MIN_URI + DELIMITER + "results/statuses")
+            .fromPath(DELIMITER + PCC_MIN_API_VERSION + "/results/statuses")
             .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
@@ -144,7 +144,7 @@ public class PccMinService extends AbstractComputationService implements Computa
 
         HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
         Map<UUID, PccMinStatus> statuses = restTemplate.exchange(
-            path,
+            pccMinServerBaseUri + path,
             HttpMethod.POST,
             httpEntity,
             new ParameterizedTypeReference<Map<UUID, PccMinStatus>>() {
