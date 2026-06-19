@@ -116,7 +116,7 @@ public class DirectoryService {
                     .toUriString();
 
             HttpHeaders headers = new HttpHeaders();
-            headers.set("userId", userId);
+            headers.set(HEADER_USER_ID, userId);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
             ReferenceAttributes referenceAttributes = new ReferenceAttributes(targetNodeUuid, STUDY_NODE);
@@ -142,7 +142,7 @@ public class DirectoryService {
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("userId", userId);
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Object> requestEntity = new HttpEntity<>(headers);
@@ -155,7 +155,7 @@ public class DirectoryService {
         String path = pathBuilder.buildAndExpand(directoryUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("userId", userId);
+        headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<ElementAttributes> requestEntity = new HttpEntity<>(elementAttributes, headers);
