@@ -57,7 +57,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
@@ -97,7 +96,7 @@ class SecurityAnalysisTest {
     private static final byte[] SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_CSV_ZIPPED = {0x02, 0x03};
     private static final byte[] SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED = {0x04, 0x03};
     private static final byte[] SECURITY_ANALYSIS_NMK_CUT_OFF_POWER_RESULT_CSV_ZIPPED = {0x05, 0x03};
-    private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
+    private static final String SECURITY_ANALYSIS_STATUS_JSON = "CONVERGED";
     private static final ContingencyCount CONTINGENCIES_COUNT = new ContingencyCount(2, 0);
 
     public static final String SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":0.0,\"lowVoltageProportionalThreshold\":0.0,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
@@ -292,7 +291,7 @@ class SecurityAnalysisTest {
          * RUN SECURITY ANALYSIS END
          */
 
-        wireMockServer.stubFor(post(urlPathEqualTo(
+        wireMockServer.stubFor(WireMock.post(urlPathEqualTo(
             "/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies-result/csv"
         )).withQueryParam("resultType", equalTo(SecurityAnalysisResultType.NMK_CONTINGENCIES.name()))
             .withRequestBody(equalToJson(objectMapper.writeValueAsString(CSV_TRANSLATION_DTO_STRING)))
@@ -303,7 +302,7 @@ class SecurityAnalysisTest {
             ));
 
         // get N security analysis result zipped csv
-        wireMockServer.stubFor(post(urlPathEqualTo(
+        wireMockServer.stubFor(WireMock.post(urlPathEqualTo(
             "/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/n-result/csv"
         )).withRequestBody(equalToJson(objectMapper.writeValueAsString(CSV_TRANSLATION_DTO_STRING)))
             .willReturn(aResponse()
@@ -324,7 +323,7 @@ class SecurityAnalysisTest {
 
         // get NMK_CONTINGENCIES security analysis result zipped csv
         wireMockServer.stubFor(
-            post(urlPathEqualTo("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies-result/csv"))
+            WireMock.post(urlPathEqualTo("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-contingencies-result/csv"))
                 .withRequestBody(equalTo(CSV_TRANSLATION_DTO_STRING))
                 .willReturn(aResponse()
                     .withStatus(200)
@@ -348,7 +347,7 @@ class SecurityAnalysisTest {
 
         // get NMK_CONSTRAINTS security analysis result zipped csv
         wireMockServer.stubFor(
-            post(urlPathEqualTo("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-constraints-result/csv"))
+            WireMock.post(urlPathEqualTo("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-constraints-result/csv"))
                 .withRequestBody(equalTo(CSV_TRANSLATION_DTO_STRING))
                 .willReturn(aResponse()
                     .withStatus(200)
@@ -371,7 +370,7 @@ class SecurityAnalysisTest {
 
         // get NMK_CUT_OFF_POWER security analysis result zipped csv
         wireMockServer.stubFor(
-                post(urlPathEqualTo("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-cut-off-power-result/csv"))
+                WireMock.post(urlPathEqualTo("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-cut-off-power-result/csv"))
                         .withRequestBody(equalTo(CSV_TRANSLATION_DTO_STRING))
                         .willReturn(aResponse()
                                 .withStatus(200)
@@ -416,7 +415,7 @@ class SecurityAnalysisTest {
 
         // get NOT_FOUND security analysis result zipped csv
         wireMockServer.stubFor(
-            post(urlPathEqualTo("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result/csv"))
+            WireMock.post(urlPathEqualTo("/v1/results/" + SECURITY_ANALYSIS_OTHER_NODE_RESULT_UUID + "/n-result/csv"))
                 .withRequestBody(equalTo(CSV_TRANSLATION_DTO_STRING))
                 .willReturn(aResponse()
                     .withStatus(404)
@@ -645,10 +644,13 @@ class SecurityAnalysisTest {
         securityAnalysisServerStubs.verifyGetNmkCutOffPowerConstraintsResult(resultUuid, Map.of("page", WireMock.matching(".*")));
 
         // --- 8. GET security analysis status ---
-        computationServerStubs.stubGetResultStatus(resultUuid, SECURITY_ANALYSIS_STATUS_JSON);
+        computationServerStubs.stubGetResultStatuses(
+            objectMapper.writeValueAsString(List.of(resultUuid)),
+            objectMapper.writeValueAsString(Map.of(resultUuid, SECURITY_ANALYSIS_STATUS_JSON))
+        );
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/status", studyUuid, rootNetworkUuid, nodeUuid)).andExpectAll(
             status().isOk()).andReturn();
-        computationServerStubs.verifyGetResultStatus(resultUuid);
+        computationServerStubs.verifyGetResultStatus(objectMapper.writeValueAsString(List.of(resultUuid)));
 
         // stop security analysis
         computationServerStubs.stubComputationStop(resultUuid);
@@ -882,7 +884,7 @@ class SecurityAnalysisTest {
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
         NetworkModificationNode modificationNode1 = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
-        wireMockServer.stubFor(post(urlPathMatching("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
+        wireMockServer.stubFor(WireMock.post(urlPathMatching("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
             .willReturn(ok()));
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
         computationServerStubs.stubDeleteParameters(SECURITY_ANALYSIS_PARAMETERS_UUID_STRING);

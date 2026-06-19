@@ -265,7 +265,7 @@ class DynamicSimulationServiceTest {
     @Test
     void testGetStatus() {
         // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
+        given(dynamicSimulationClient.getStatuses(List.of(RESULT_UUID))).willReturn(Map.of(RESULT_UUID, DynamicSimulationStatus.CONVERGED));
 
         // call method to be tested
         DynamicSimulationStatus status = dynamicSimulationService.getStatus(RESULT_UUID);
@@ -295,7 +295,7 @@ class DynamicSimulationServiceTest {
     @Test
     void testAssertDynamicSimulationRunning() {
         // setup for running node
-        given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING);
+        given(dynamicSimulationClient.getStatuses(List.of(RESULT_UUID_RUNNING))).willReturn(Map.of(RESULT_UUID_RUNNING, DynamicSimulationStatus.RUNNING));
         given(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID_RUNNING, ROOTNETWORK_UUID, ComputationType.DYNAMIC_SIMULATION)).willReturn(RESULT_UUID_RUNNING);
 
         // test running

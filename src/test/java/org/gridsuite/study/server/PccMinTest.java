@@ -53,6 +53,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
@@ -62,7 +66,11 @@ import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -75,7 +83,7 @@ class PccMinTest {
     private static final String PCC_MIN_RESULT_UUID = "cf203721-6150-4203-8960-d61d815a9d16";
     private static final String PCC_MIN_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
     private static final UUID PCCMIN_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f2");
-    private static final String PCC_MIN_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+    private static final String PCC_MIN_STATUS_JSON = "COMPLETED";
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -278,12 +286,17 @@ class PccMinTest {
         wireMockStubs.verifyPccMinRun(stubRun, NETWORK_UUID_STRING, VARIANT_ID);
 
         // verify pcc min status
-        computationServerStubs.stubGetResultStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON);
+        computationServerStubs.stubGetResultStatuses(
+            objectMapper.writeValueAsString(List.of(PCC_MIN_RESULT_UUID)),
+            objectMapper.writeValueAsString(Map.of(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON))
+        );
         mockMvc.perform(get(PCC_MIN_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId))
-            .andExpect(status().isOk())
-            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(PCC_MIN_STATUS_JSON));
+            .andExpectAll(
+                status().isOk(),
+                content().string(PCC_MIN_STATUS_JSON)
+            );
 
-        computationServerStubs.verifyGetResultStatus(PCC_MIN_RESULT_UUID);
+        computationServerStubs.verifyGetResultStatus(objectMapper.writeValueAsString(List.of(PCC_MIN_RESULT_UUID)));
     }
 
     @Test

@@ -676,13 +676,14 @@ public class RootNetworkNodeInfoService {
         dynamicSecurityAnalysisService.assertNoDynamicSecurityAnalysisRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS));
         dynamicMarginCalculationService.assertNoDynamicMarginCalculationRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION));
         sensitivityAnalysisService.assertNoSensitivityAnalysisRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, SENSITIVITY_ANALYSIS));
-        shortCircuitService.assertNoShortCircuitAnalysisRunning(Stream.concat(getComputationResultUuids(nodeUuids, rootNetworkUuid, SHORT_CIRCUIT).stream(), getComputationResultUuids(nodeUuids, rootNetworkUuid, SHORT_CIRCUIT_ONE_BUS).stream()).toList());
+        shortCircuitService.assertNoShortCircuitAnalysisRunning(Stream.concat(
+            getComputationResultUuids(nodeUuids, rootNetworkUuid, SHORT_CIRCUIT).stream(),
+            getComputationResultUuids(nodeUuids, rootNetworkUuid, SHORT_CIRCUIT_ONE_BUS).stream()
+        ).toList());
         voltageInitService.assertNoVoltageInitRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, VOLTAGE_INITIALIZATION));
         stateEstimationService.assertNoStateEstimationRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, STATE_ESTIMATION));
         pccMinService.assertNoPccMinRunning(getComputationResultUuids(nodeUuids, rootNetworkUuid, PCC_MIN));
     }
-
-
 
     /***************************
      * GET COMPUTATION RESULTS *

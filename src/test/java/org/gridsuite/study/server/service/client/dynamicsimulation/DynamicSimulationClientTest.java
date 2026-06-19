@@ -26,8 +26,10 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -408,10 +410,11 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetStatus() throws Exception {
 
-        // configure mock server response for test get status result - results/{resultUuid}/status
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_UUID + DELIMITER + "status"))
+        // configure mock server response for test get status result - results/statuses
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + "statuses"))
+                .withRequestBody(containing(RESULT_UUID.toString()))
                 .willReturn(WireMock.ok()
-                        .withBody(objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED))
+                        .withBody(objectMapper.writeValueAsString(Map.of(RESULT_UUID, DynamicSimulationStatus.CONVERGED)))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         DynamicSimulationStatus status = dynamicSimulationClient.getStatus(RESULT_UUID);
@@ -422,7 +425,8 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetStatusGivenBadUuid() {
         // configure mock server response
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_NOT_FOUND_UUID + DELIMITER + "status"))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + "statuses"))
+                .withRequestBody(containing(RESULT_NOT_FOUND_UUID.toString()))
                 .willReturn(WireMock.notFound()
                 ));
         assertThrows(

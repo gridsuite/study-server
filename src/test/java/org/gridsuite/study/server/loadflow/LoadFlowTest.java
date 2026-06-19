@@ -75,6 +75,7 @@ import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JS
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria.removeRequestMatching;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -256,7 +257,11 @@ class LoadFlowTest {
         // consume loadflow result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
         if (modificationNode.isSecurityNode()) {
-            wireMockStubs.loadflowServer.stubGetLoadflowStatus(UUID.fromString(LOADFLOW_RESULT_UUID), objectMapper.writeValueAsString(LoadFlowStatus.CONVERGED), false);
+            wireMockStubs.loadflowServer.stubGetLoadflowStatuses(
+                objectMapper.writeValueAsString(List.of(LOADFLOW_RESULT_UUID)),
+                objectMapper.writeValueAsString(Map.of(LOADFLOW_RESULT_UUID, LoadFlowStatus.CONVERGED)),
+                false
+            );
         }
         MessageHeaders messageHeaders = new MessageHeaders(
             Map.of(
@@ -271,7 +276,7 @@ class LoadFlowTest {
         assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
         if (modificationNode.isSecurityNode()) {
             // if running successful loadflow on security node -> first children are built
-            wireMockStubs.loadflowServer.verifyGetLoadflowStatus(UUID.fromString(LOADFLOW_RESULT_UUID));
+            wireMockStubs.loadflowServer.verifyGetLoadflowStatus(objectMapper.writeValueAsString(List.of(LOADFLOW_RESULT_UUID)));
             verify(studyService, times(1)).buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, "userId");
         }
     }
@@ -350,12 +355,16 @@ class LoadFlowTest {
         wireMockStubs.loadflowServer.verifyGetLoadflowResult(loadflowResultUuid);
 
         // get loadflow status
-        wireMockStubs.loadflowServer.stubGetLoadflowStatus(loadflowResultUuid, objectMapper.writeValueAsString(LoadFlowStatus.CONVERGED), false);
+        wireMockStubs.loadflowServer.stubGetLoadflowStatuses(
+            objectMapper.writeValueAsString(List.of(loadflowResultUuid)),
+            objectMapper.writeValueAsString(Map.of(loadflowResultUuid, LoadFlowStatus.CONVERGED)),
+            false
+        );
         mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/status?withRatioTapChangers={withRatioTapChangers}", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid, false))
             .andExpect(status().isOk())
             .andReturn();
         assertEquals(LoadFlowStatus.CONVERGED.name(), mvcResult.getResponse().getContentAsString());
-        wireMockStubs.loadflowServer.verifyGetLoadflowStatus(loadflowResultUuid);
+        wireMockStubs.loadflowServer.verifyGetLoadflowStatus(objectMapper.writeValueAsString(List.of(loadflowResultUuid)));
 
         // stop loadflow
         wireMockStubs.loadflowServer.stubStopLoadflow(loadflowResultUuid, modificationNodeUuid, firstRootNetworkUuid, objectMapper.writeValueAsString(LoadFlowStatus.CONVERGED));
@@ -806,11 +815,15 @@ class LoadFlowTest {
     }
 
     @Test
-    void testGetStatusNotFound() {
+    void testGetStatusNotFound() throws Exception {
         UUID notExistingNetworkUuid = UUID.fromString(LOADFLOW_ERROR_RESULT_UUID);
-        wireMockStubs.loadflowServer.stubGetLoadflowStatus(UUID.fromString(LOADFLOW_ERROR_RESULT_UUID), null, true);
+        wireMockStubs.loadflowServer.stubGetLoadflowStatuses(
+            objectMapper.writeValueAsString(List.of(LOADFLOW_ERROR_RESULT_UUID)),
+            null,
+            true
+        );
         assertThrows(HttpClientErrorException.NotFound.class, () -> loadFlowService.getLoadFlowStatus(notExistingNetworkUuid), NOT_FOUND.name());
-        wireMockStubs.loadflowServer.verifyGetLoadflowStatus(UUID.fromString(LOADFLOW_ERROR_RESULT_UUID));
+        wireMockStubs.loadflowServer.verifyGetLoadflowStatus(objectMapper.writeValueAsString(List.of(LOADFLOW_ERROR_RESULT_UUID)));
     }
 
     @Test

@@ -101,7 +101,7 @@ class ShortCircuitTest implements WithAssertions {
 
     private static final byte[] SHORT_CIRCUIT_ANALYSIS_CSV_RESULT = {0x00, 0x11};
 
-    private static final String SHORT_CIRCUIT_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+    private static final String SHORT_CIRCUIT_ANALYSIS_STATUS_JSON = "COMPLETED";
 
     private static final String SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID = UUID.fromString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
@@ -271,11 +271,14 @@ class ShortCircuitTest implements WithAssertions {
                 status().isNoContent());
 
         // get short circuit status
-        computationServerStubs.stubGetResultStatus(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, SHORT_CIRCUIT_ANALYSIS_STATUS_JSON);
+        computationServerStubs.stubGetResultStatuses(
+            objectMapper.writeValueAsString(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)),
+            objectMapper.writeValueAsString(Map.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, SHORT_CIRCUIT_ANALYSIS_STATUS_JSON))
+        );
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON));
-        computationServerStubs.verifyGetResultStatus(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
+        computationServerStubs.verifyGetResultStatus(objectMapper.writeValueAsString(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
 
         // stop short circuit analysis
         shortcircuitServerStubs.stubShortCircuitStopWithPostAction(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, shortCircuitAnalysisStoppedDestination, modificationNode3Uuid, firstRootNetworkUuid);
@@ -462,11 +465,14 @@ class ShortCircuitTest implements WithAssertions {
                 status().isNoContent());
 
         // get short circuit status
-        computationServerStubs.stubGetResultStatus(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, SHORT_CIRCUIT_ANALYSIS_STATUS_JSON);
+        computationServerStubs.stubGetResultStatuses(
+            objectMapper.writeValueAsString(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)),
+            objectMapper.writeValueAsString(Map.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, SHORT_CIRCUIT_ANALYSIS_STATUS_JSON))
+        );
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON));
-        computationServerStubs.verifyGetResultStatus(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, 1);
+        computationServerStubs.verifyGetResultStatus(objectMapper.writeValueAsString(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
 
         // stop short circuit analysis
         shortcircuitServerStubs.stubShortCircuitStopWithPostAction(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, shortCircuitAnalysisStoppedDestination, modificationNode1Uuid, firstRootNetworkUuid);
@@ -534,14 +540,17 @@ class ShortCircuitTest implements WithAssertions {
         shortcircuitServerStubs.verifyGetPagedFeederResults(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, NETWORK_UUID_STRING, VARIANT_ID_2, "fakeFilters", "FULL", "0", "20", "id,DESC");
 
         // get one bus short circuit status
-        computationServerStubs.stubGetResultStatus(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, SHORT_CIRCUIT_ANALYSIS_STATUS_JSON);
+        computationServerStubs.stubGetResultStatuses(
+            objectMapper.writeValueAsString(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)),
+            objectMapper.writeValueAsString(Map.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, SHORT_CIRCUIT_ANALYSIS_STATUS_JSON))
+        );
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
             .param("type", ShortcircuitAnalysisType.ONE_BUS.name()))
             .andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON)
             );
-        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/status", Map.of());
+        computationServerStubs.verifyGetResultStatus(objectMapper.writeValueAsString(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID)));
 
         //Test result count
         computationServerStubs.stubResultsCount(1);

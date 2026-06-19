@@ -83,6 +83,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_NODE_B
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.ImpactUtils.createModificationResultWithElementImpact;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
+import static org.gridsuite.study.server.utils.JsonUtils.throwingJsonProcessingConsumerWrapper;
 import static org.gridsuite.study.server.utils.MatcherCreatedStudyBasicInfos.createMatcherCreatedStudyBasicInfos;
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.gridsuite.study.server.utils.TestUtils.checkUpdateStatusMessagesReceived;
@@ -92,6 +93,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -131,26 +134,12 @@ class NetworkModificationTest {
     private static final String DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID = "2e0f05e1-8a6f-6d50-1e6c-0a9071d3f40a";
     private static final String DYNAMIC_MARGIN_CALCULATION_RESULT_UUID = "52b88cb8-d3ce-4263-bd4d-8b27849d88bc";
     private static final String SECURITY_ANALYSIS_RESULT_UUID = "f3a85c9b-9594-4e55-8ec7-07ea965d24eb";
-    private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
-
     private static final String SENSITIVITY_ANALYSIS_RESULT_UUID = "b3a84c9b-9594-4e85-8ec7-07ea965d24eb";
-    private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-
     private static final String SHORTCIRCUIT_ANALYSIS_RESULT_UUID = "72f94d64-4fc6-11ed-bdc3-0242ac120002";
     private static final String ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID = "72f94d88-4fc6-11ed-bdc3-0242ac120009";
-
-    private static final String SHORTCIRCUIT_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-    private static final String ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-
     private static final String VOLTAGE_INIT_RESULT_UUID = "37cf33ad-f4a0-4ab8-84c5-6ad2e22d9866";
-
     private static final String PCC_MIN_RESULT_UUID = "37cf33ad-f4a0-4ab8-84c5-6ad2e22d9863";
-
-    private static final String VOLTAGE_INIT_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-
     private static final String STATE_ESTIMATION_RESULT_UUID = "d3a85e9b-9894-4255-8ec7-07ea965d24eb";
-    private static final String STATE_ESTIMATION_STATUS_JSON = "\"COMPLETED\"";
-    private static final String PCC_MIN_STATUS_JSON = "\"COMPLETED\"";
 
     private static final String MODIFICATION_UUID = "796719f5-bd31-48be-be46-ef7b96951e32";
 
@@ -2624,15 +2613,17 @@ class NetworkModificationTest {
         List.of(
             SECURITY_ANALYSIS_RESULT_UUID,
             SENSITIVITY_ANALYSIS_RESULT_UUID,
-            SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
-            ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
             VOLTAGE_INIT_RESULT_UUID,
             PCC_MIN_RESULT_UUID,
             STATE_ESTIMATION_RESULT_UUID
-        ).forEach(resultUuid -> {
+        ).forEach(throwingJsonProcessingConsumerWrapper(resultUuid -> {
             computationServerStubs.verifyDeleteResult(resultUuid);
-            computationServerStubs.verifyGetResultStatus(resultUuid);
-        });
+            computationServerStubs.verifyGetResultStatus(mapper.writeValueAsString(List.of(resultUuid)));
+        }));
+        // must verify individually because One bus and full shorticuit analysisi statuses are checked with the same request
+        computationServerStubs.verifyDeleteResult(SHORTCIRCUIT_ANALYSIS_RESULT_UUID);
+        computationServerStubs.verifyDeleteResult(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID);
+        computationServerStubs.verifyGetResultStatus(mapper.writeValueAsString(List.of(SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
 
         // Mark nodes 2 and 3 status as built
         rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode2Uuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
@@ -2720,22 +2711,24 @@ class NetworkModificationTest {
 
         // 1 status LF + 2 x 10 computations + 1 report
         computationServerStubs.verifyDeleteResult(LOADFLOW_RESULT_UUID);
-        computationServerStubs.verifyGetResultStatus(LOADFLOW_RESULT_UUID, 2);
+        computationServerStubs.verifyGetResultStatuses(mapper.writeValueAsString(List.of(LOADFLOW_RESULT_UUID)), 2);
         List.of(
                 SECURITY_ANALYSIS_RESULT_UUID,
                 DYNAMIC_SIMULATION_RESULT_UUID,
                 DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID,
                 DYNAMIC_MARGIN_CALCULATION_RESULT_UUID,
                 SENSITIVITY_ANALYSIS_RESULT_UUID,
-                SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
-                ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID,
                 VOLTAGE_INIT_RESULT_UUID,
                 STATE_ESTIMATION_RESULT_UUID,
                 PCC_MIN_RESULT_UUID
-        ).forEach(resultUuid -> {
+        ).forEach(throwingJsonProcessingConsumerWrapper(resultUuid -> {
             computationServerStubs.verifyDeleteResult(resultUuid);
-            computationServerStubs.verifyGetResultStatus(resultUuid);
-        });
+            computationServerStubs.verifyGetResultStatus(mapper.writeValueAsString(List.of(resultUuid)));
+        }));
+        // must verify individually because One bus and full shorticuit analysisi statuses are checked with the same request
+        computationServerStubs.verifyDeleteResult(SHORTCIRCUIT_ANALYSIS_RESULT_UUID);
+        computationServerStubs.verifyDeleteResult(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID);
+        computationServerStubs.verifyGetResultStatus(mapper.writeValueAsString(List.of(SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID)));
         // requests for computation sub-report deletion
         reportServerStubs.verifyDeleteReport();
     }
@@ -2973,17 +2966,60 @@ class NetworkModificationTest {
         ).forEach(resultUuid -> {
             deleteResultStubIds.put(resultUuid, computationServerStubs.stubDeleteResult(resultUuid));
         });
-        getStatusStubIds.put(LOADFLOW_RESULT_UUID, computationServerStubs.stubGetResultStatus(LOADFLOW_RESULT_UUID, mapper.writeValueAsString(LoadFlowStatus.CONVERGED)));
-        getStatusStubIds.put(SECURITY_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatus(SECURITY_ANALYSIS_RESULT_UUID, SECURITY_ANALYSIS_STATUS_JSON));
-        getStatusStubIds.put(DYNAMIC_SIMULATION_RESULT_UUID, computationServerStubs.stubGetResultStatus(DYNAMIC_SIMULATION_RESULT_UUID, objectMapper.writeValueAsString(DynamicSimulationStatus.CONVERGED)));
-        getStatusStubIds.put(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatus(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID, objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED)));
-        getStatusStubIds.put(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID, computationServerStubs.stubGetResultStatus(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID, objectMapper.writeValueAsString(DynamicMarginCalculationStatus.SUCCEED)));
-        getStatusStubIds.put(SENSITIVITY_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatus(SENSITIVITY_ANALYSIS_RESULT_UUID, SENSITIVITY_ANALYSIS_STATUS_JSON));
-        getStatusStubIds.put(SHORTCIRCUIT_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatus(SHORTCIRCUIT_ANALYSIS_RESULT_UUID, SHORTCIRCUIT_ANALYSIS_STATUS_JSON));
-        getStatusStubIds.put(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatus(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ONE_BUS_SHORTCIRCUIT_ANALYSIS_STATUS_JSON));
-        getStatusStubIds.put(VOLTAGE_INIT_RESULT_UUID, computationServerStubs.stubGetResultStatus(VOLTAGE_INIT_RESULT_UUID, VOLTAGE_INIT_STATUS_JSON));
-        getStatusStubIds.put(STATE_ESTIMATION_RESULT_UUID, computationServerStubs.stubGetResultStatus(STATE_ESTIMATION_RESULT_UUID, STATE_ESTIMATION_STATUS_JSON));
-        getStatusStubIds.put(PCC_MIN_RESULT_UUID, computationServerStubs.stubGetResultStatus(PCC_MIN_RESULT_UUID, PCC_MIN_STATUS_JSON));
+        getStatusStubIds.put(LOADFLOW_RESULT_UUID, computationServerStubs.stubGetResultStatuses(
+                mapper.writeValueAsString(List.of(LOADFLOW_RESULT_UUID)),
+                mapper.writeValueAsString(Map.of(LOADFLOW_RESULT_UUID, LoadFlowStatus.CONVERGED))
+                )
+        );
+        getStatusStubIds.put(SECURITY_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatuses(
+                mapper.writeValueAsString(List.of(SECURITY_ANALYSIS_RESULT_UUID)),
+                mapper.writeValueAsString(Map.of(SECURITY_ANALYSIS_RESULT_UUID, SecurityAnalysisStatus.CONVERGED))
+                )
+        );
+        getStatusStubIds.put(DYNAMIC_SIMULATION_RESULT_UUID, computationServerStubs.stubGetResultStatuses(
+                mapper.writeValueAsString(List.of(DYNAMIC_SIMULATION_RESULT_UUID)),
+                mapper.writeValueAsString(Map.of(DYNAMIC_SIMULATION_RESULT_UUID, DynamicSimulationStatus.CONVERGED))
+                )
+        );
+        getStatusStubIds.put(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatuses(
+                mapper.writeValueAsString(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID)),
+                mapper.writeValueAsString(Map.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID, DynamicSecurityAnalysisStatus.SUCCEED))
+                )
+        );
+        getStatusStubIds.put(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID, computationServerStubs.stubGetResultStatuses(
+                mapper.writeValueAsString(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID)),
+                mapper.writeValueAsString(Map.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID, DynamicMarginCalculationStatus.SUCCEED))
+                )
+        );
+        getStatusStubIds.put(SENSITIVITY_ANALYSIS_RESULT_UUID, computationServerStubs.stubGetResultStatuses(
+                mapper.writeValueAsString(List.of(SENSITIVITY_ANALYSIS_RESULT_UUID)),
+                mapper.writeValueAsString(Map.of(SENSITIVITY_ANALYSIS_RESULT_UUID, SensitivityAnalysisStatus.COMPLETED))
+                )
+        );
+        UUID bothShortcircuitStubid = computationServerStubs.stubGetResultStatuses(
+                mapper.writeValueAsString(List.of(SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID)),
+                mapper.writeValueAsString(Map.of(
+                        SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ShortCircuitAnalysisStatus.COMPLETED,
+                        ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, ShortCircuitAnalysisStatus.COMPLETED
+                ))
+        );
+        getStatusStubIds.put(SHORTCIRCUIT_ANALYSIS_RESULT_UUID, bothShortcircuitStubid);
+        getStatusStubIds.put(ONE_BUS_SHORTCIRCUIT_ANALYSIS_RESULT_UUID, bothShortcircuitStubid);
+        getStatusStubIds.put(VOLTAGE_INIT_RESULT_UUID, computationServerStubs.stubGetResultStatuses(
+                mapper.writeValueAsString(List.of(VOLTAGE_INIT_RESULT_UUID)),
+                mapper.writeValueAsString(Map.of(VOLTAGE_INIT_RESULT_UUID, VoltageInitStatus.COMPLETED))
+                )
+        );
+        getStatusStubIds.put(STATE_ESTIMATION_RESULT_UUID, computationServerStubs.stubGetResultStatuses(
+                mapper.writeValueAsString(List.of(STATE_ESTIMATION_RESULT_UUID)),
+                mapper.writeValueAsString(Map.of(STATE_ESTIMATION_RESULT_UUID, StateEstimationStatus.COMPLETED))
+                )
+        );
+        getStatusStubIds.put(PCC_MIN_RESULT_UUID, computationServerStubs.stubGetResultStatuses(
+                mapper.writeValueAsString(List.of(PCC_MIN_RESULT_UUID)),
+                mapper.writeValueAsString(Map.of(PCC_MIN_RESULT_UUID, PccMinStatus.COMPLETED))
+                )
+        );
         return new ComputationResultStubIds(deleteResultStubIds, getStatusStubIds);
     }
 
