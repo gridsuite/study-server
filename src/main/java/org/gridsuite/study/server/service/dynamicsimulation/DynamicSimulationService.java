@@ -17,6 +17,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -85,6 +86,13 @@ public interface DynamicSimulationService extends ComputationParameters {
     DynamicSimulationStatus getStatus(UUID resultUuid);
 
     /**
+     * Get the current status of the simulations
+     * @param resultUuids a given list of result UUIDs
+     * @return a map of result UUID and its corresponding dynamic simulation status
+     */
+    Map<UUID, DynamicSimulationStatus> getDynamicSimulationStatuses(List<UUID> resultUuids);
+
+    /**
      * invalidate status of the simulation results
      * @param resultUuids a given list of result UUIDs
      */
@@ -118,4 +126,6 @@ public interface DynamicSimulationService extends ComputationParameters {
      * @return a list of time-series metadata
      */
     List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID resultUuid);
+
+    void assertNoDynamicSimulationRunning(List<UUID> computationResultUuids);
 }

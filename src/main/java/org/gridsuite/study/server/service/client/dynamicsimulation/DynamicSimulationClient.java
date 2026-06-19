@@ -14,6 +14,7 @@ import org.gridsuite.study.server.service.client.RestClient;
 import org.springframework.lang.NonNull;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DYNAMIC_SIMULATION_API_VERSION;
@@ -55,6 +56,8 @@ public interface DynamicSimulationClient extends RestClient {
     UUID getTimelineResult(UUID resultUuid);
 
     DynamicSimulationStatus getStatus(UUID resultUuid);
+
+    Map<UUID, DynamicSimulationStatus> getStatuses(List<UUID> resultUuids);
 
     void invalidateStatus(List<UUID> resultUuids);
 

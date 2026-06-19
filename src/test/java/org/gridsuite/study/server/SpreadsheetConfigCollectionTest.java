@@ -176,7 +176,7 @@ class SpreadsheetConfigCollectionTest {
                 } else if (path.equals("/v1/spreadsheet-config-collections") && "POST".equals(method)) {
                     String body = null;
                     try {
-                        body = request.getBody().readUtf8();
+                        body = request.getBody().snapshot().utf8();
                     } catch (Exception e) {
                         LOGGER.error("Error reading request body", e);
                     }

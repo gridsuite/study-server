@@ -23,6 +23,7 @@ import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPost
 
 /**
  * @author Maissa Souissi <maissa.souissi@rte-france.com>
+ * @author Sylvain Bouzols <sylvain.bouzols@rte-france.com>
  */
 public class ComputationServerStubs {
     private final WireMockServer wireMock;
@@ -63,6 +64,14 @@ public class ComputationServerStubs {
                 .withBody(statusJson))).getId();
     }
 
+    public UUID stubGetResultStatuses(String resultUuidsAsJson, String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/results/statuses"))
+                .withRequestBody(equalToJson(resultUuidsAsJson))
+                .willReturn(WireMock.ok()
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(responseBody))).getId();
+    }
+
     public UUID stubGetResult(String resultUuid, String statusJson) {
         return wireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid)).withQueryParam("mode", WireMock.equalTo("FULL"))
                 .willReturn(WireMock.ok()
@@ -74,12 +83,12 @@ public class ComputationServerStubs {
         WireMockUtilsCriteria.verifyPutRequest(wireMock, "/v1/results/" + resultUuid + "/stop", true, queryParams, null);
     }
 
-    public void verifyGetResultStatus(String resultUuid) {
-        verifyGetResultStatus(resultUuid, 1);
+    public void verifyGetResultStatus(String resultUuidsAsJson) {
+        verifyGetResultStatuses(resultUuidsAsJson, 1);
     }
 
-    public void verifyGetResultStatus(String resultUuid, int nbRequests) {
-        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/status", Map.of(), nbRequests);
+    public void verifyGetResultStatuses(String resultUuidsAsJson, int nbRequests) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/results/statuses", false, Map.of(), resultUuidsAsJson, nbRequests);
     }
 
     /*

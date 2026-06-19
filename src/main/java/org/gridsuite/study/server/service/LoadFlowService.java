@@ -21,6 +21,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -28,8 +29,11 @@ import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -137,11 +141,29 @@ public class LoadFlowService extends AbstractComputationService implements Compu
         if (resultUuid == null) {
             return null;
         }
+        return getLoadFlowStatuses(List.of(resultUuid)).get(resultUuid);
+    }
 
-        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/status");
-        String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
+    public Map<UUID, LoadFlowStatus> getLoadFlowStatuses(List<UUID> resultUuids) {
+        if (CollectionUtils.isEmpty(resultUuids)) {
+            return Map.of();
+        }
 
-        return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowStatus.class);
+        UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/statuses");
+        String path = uriComponentsBuilder.toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
+
+        Map<UUID, LoadFlowStatus> statuses = restTemplate.exchange(
+            loadFlowServerBaseUri + path,
+            HttpMethod.POST,
+            httpEntity,
+            new ParameterizedTypeReference<Map<UUID, LoadFlowStatus>>() {
+            }
+        ).getBody();
+        return statuses != null ? statuses : Map.of();
     }
 
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
@@ -192,9 +214,10 @@ public class LoadFlowService extends AbstractComputationService implements Compu
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
     }
 
-    public void assertLoadFlowNotRunning(UUID resultUuid) {
-        LoadFlowStatus loadFlowStatus = getLoadFlowStatus(resultUuid);
-        if (LoadFlowStatus.RUNNING.equals(loadFlowStatus)) {
+    public void assertNoLoadFlowRunning(List<UUID> resultUuids) {
+        Map<UUID, LoadFlowStatus> loadFlowStatuses = getLoadFlowStatuses(resultUuids);
+        Set<LoadFlowStatus> values = new HashSet<>(loadFlowStatuses.values());
+        if (values.contains(LoadFlowStatus.RUNNING)) {
             throw new StudyException(COMPUTATION_RUNNING);
         }
     }

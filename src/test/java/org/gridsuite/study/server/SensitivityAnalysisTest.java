@@ -50,7 +50,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.util.*;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
+// import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
@@ -82,7 +82,7 @@ class SensitivityAnalysisTest {
     private static final String NOT_FOUND_NODE_UUID = "a3a80c9b-9594-4e55-8ec7-07ea965d24eb";
 
     private static final String FAKE_RESULT_JSON = "fake result json";
-    private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+    private static final String SENSITIVITY_ANALYSIS_STATUS_JSON = "COMPLETED";
 
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String NETWORK_UUID_2_STRING = "11111111-aaaa-48be-be46-ef7b93331e32";
@@ -420,13 +420,16 @@ class SensitivityAnalysisTest {
         ));
 
         // --- 6. GET sensitivity analysis status ---
-        computationServerStubs.stubGetResultStatus(resultUuid, SENSITIVITY_ANALYSIS_STATUS_JSON);
+        computationServerStubs.stubGetResultStatuses(
+            objectMapper.writeValueAsString(List.of(resultUuid)),
+            objectMapper.writeValueAsString(Map.of(resultUuid, SENSITIVITY_ANALYSIS_STATUS_JSON))
+        );
 
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/status",
                 studyUuid, rootNetworkUuid, nodeUuid))
             .andExpectAll(status().isOk(), content().string(SENSITIVITY_ANALYSIS_STATUS_JSON));
 
-        computationServerStubs.verifyGetResultStatus(resultUuid);
+        computationServerStubs.verifyGetResultStatus(objectMapper.writeValueAsString(List.of(resultUuid)));
 
         // --- 7. Export CSV ---
         String content = objectMapper.writeValueAsString(SensitivityAnalysisCsvFileInfos.builder()
@@ -557,7 +560,7 @@ class SensitivityAnalysisTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
 
-        wireMockServer.stubFor(post(urlPathMatching("/v1/networks/.*/factor-count"))
+        wireMockServer.stubFor(WireMock.post(urlPathMatching("/v1/networks/.*/factor-count"))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -779,7 +782,7 @@ class SensitivityAnalysisTest {
         );
 
         // ---------------- WireMock stubs ----------------
-        wireMockServer.stubFor(post(urlPathMatching(
+        wireMockServer.stubFor(WireMock.post(urlPathMatching(
             "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save.*"))
             .willReturn(ok()));
 

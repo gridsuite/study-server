@@ -25,9 +25,11 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.absent;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
@@ -347,10 +349,11 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
     @Test
     void testGetStatus() throws Exception {
         // configure mock server response
-        String url = RESULT_BASE_URL + DELIMITER + RESULT_UUID + "/status";
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
+        String url = RESULT_BASE_URL + DELIMITER + "statuses";
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(url))
+                .withRequestBody(containing(RESULT_UUID.toString()))
                 .willReturn(WireMock.ok()
-                        .withBody(objectMapper.writeValueAsString(DynamicSecurityAnalysisStatus.SUCCEED))
+                        .withBody(objectMapper.writeValueAsString(Map.of(RESULT_UUID, DynamicSecurityAnalysisStatus.SUCCEED)))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test

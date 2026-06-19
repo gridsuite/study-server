@@ -21,6 +21,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -169,15 +170,33 @@ public class SensitivityAnalysisService extends AbstractComputationService imple
         return restTemplate.getForObject(uri, String.class);
     }
 
-    public String getSensitivityAnalysisStatus(UUID resultUuid) {
+    public SensitivityAnalysisStatus getSensitivityAnalysisStatus(UUID resultUuid) {
         if (resultUuid == null) {
             return null;
         }
+        return getSensitivityAnalysisStatuses(List.of(resultUuid)).get(resultUuid);
+    }
 
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
-            .buildAndExpand(resultUuid).toUriString();
+    public Map<UUID, SensitivityAnalysisStatus> getSensitivityAnalysisStatuses(List<UUID> resultUuids) {
+        if (CollectionUtils.isEmpty(resultUuids)) {
+            return Map.of();
+        }
 
-        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results/statuses")
+            .toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(resultUuids, headers);
+
+        Map<UUID, SensitivityAnalysisStatus> statuses = restTemplate.exchange(
+            sensitivityAnalysisServerBaseUri + path,
+            HttpMethod.POST,
+            httpEntity,
+            new ParameterizedTypeReference<Map<UUID, SensitivityAnalysisStatus>>() {
+            }
+        ).getBody();
+        return statuses != null ? statuses : Map.of();
     }
 
     public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
@@ -230,9 +249,10 @@ public class SensitivityAnalysisService extends AbstractComputationService imple
         return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, Integer.class);
     }
 
-    public void assertSensitivityAnalysisNotRunning(UUID resultUuid) {
-        String sas = getSensitivityAnalysisStatus(resultUuid);
-        if (SensitivityAnalysisStatus.RUNNING.name().equals(sas)) {
+    public void assertNoSensitivityAnalysisRunning(List<UUID> resultUuids) {
+        Map<UUID, SensitivityAnalysisStatus> sensitivityAnalysisStatuses = getSensitivityAnalysisStatuses(resultUuids);
+        Set<SensitivityAnalysisStatus> values = new HashSet<>(sensitivityAnalysisStatuses.values());
+        if (values.contains(SensitivityAnalysisStatus.RUNNING)) {
             throw new StudyException(COMPUTATION_RUNNING);
         }
     }

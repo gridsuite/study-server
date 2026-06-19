@@ -9,7 +9,7 @@ package org.gridsuite.study.server.dto;
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
-public enum ShortCircuitStatus {
+public enum ShortCircuitAnalysisStatus {
     NOT_DONE,
     RUNNING,
     COMPLETED

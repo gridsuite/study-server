@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 
 /**
@@ -43,14 +44,14 @@ public class LoadflowServerStubs {
     }
 
     public void stubRunLoadflow(UUID networkUuid, String responseBody) {
-        wireMock.stubFor(WireMock.post(WireMock.urlMatching("/v1/networks/" + networkUuid + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=.*"))
+        wireMock.stubFor(WireMock.post(WireMock.urlMatching("/v1/networks/" + networkUuid + "/run-and-save.*"))
                 .willReturn(WireMock.ok().withBody(responseBody)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         );
     }
 
     public void stubRunLoadflowFailed(UUID networkUuid, UUID nodeUuid, String responseBody) {
-        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlMatching("/v1/networks/" + networkUuid + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=.*"));
+        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlMatching("/v1/networks/" + networkUuid + "/run-and-save.*"));
 
         mappingBuilder = mappingBuilder.withPostServeAction(POST_ACTION_SEND_INPUT,
                 Parameters.from(
@@ -82,15 +83,20 @@ public class LoadflowServerStubs {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid, Map.of());
     }
 
-    public void stubGetLoadflowStatus(UUID resultUuid, String responseBody, boolean isNotFound) {
-        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/v1/results/" + resultUuid + "/status"))
+    public void stubGetLoadflowStatuses(String resultUuids, String responseBody, boolean isNotFound) {
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/results/statuses"))
+                .withRequestBody(equalToJson(resultUuids))
                 .willReturn(isNotFound ? WireMock.notFound() : WireMock.ok().withBody(responseBody)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         );
     }
 
-    public void verifyGetLoadflowStatus(UUID resultUuid) {
-        WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/status", Map.of());
+    public void verifyGetLoadflowStatus(String resultUuid) {
+        verifyGetLoadflowStatuses(resultUuid, 1);
+    }
+
+    public void verifyGetLoadflowStatuses(String resultUuidsAsJson, int nbRequests) {
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/results/statuses", false, Map.of(), resultUuidsAsJson, nbRequests);
     }
 
     public void stubStopLoadflow(UUID resultUuid, UUID nodeUuid, UUID networkUuid, String responseBody) {

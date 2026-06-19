@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.timeseries.DoubleTimeSeries;
 import com.powsybl.timeseries.StringTimeSeries;
 import com.powsybl.timeseries.TimeSeries;
-import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
@@ -26,13 +25,17 @@ import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimula
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -201,12 +204,20 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     @Override
     public DynamicSimulationStatus getStatus(UUID resultUuid) {
-        return resultUuid == null ? null : dynamicSimulationClient.getStatus(resultUuid);
+        if (resultUuid == null) {
+            return null;
+        }
+        return getDynamicSimulationStatuses(List.of(resultUuid)).get(resultUuid);
+    }
+
+    @Override
+    public Map<UUID, DynamicSimulationStatus> getDynamicSimulationStatuses(List<UUID> resultUuids) {
+        return dynamicSimulationClient.getStatuses(resultUuids);
     }
 
     @Override
     public void invalidateStatus(List<UUID> resultUuids) {
-        if (CollectionUtils.isNotEmpty(resultUuids)) {
+        if (!CollectionUtils.isEmpty(resultUuids)) {
             dynamicSimulationClient.invalidateStatus(resultUuids);
         }
     }
@@ -230,6 +241,14 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     public void assertDynamicSimulationNotRunning(UUID resultUuid) {
         DynamicSimulationStatus status = getStatus(resultUuid);
         if (DynamicSimulationStatus.RUNNING == status) {
+            throw new StudyException(COMPUTATION_RUNNING);
+        }
+    }
+
+    public void assertNoDynamicSimulationRunning(List<UUID> computationResultUuids) {
+        Map<UUID, DynamicSimulationStatus> loadFlowStatuses = getDynamicSimulationStatuses(computationResultUuids);
+        Set<DynamicSimulationStatus> values = new HashSet<>(loadFlowStatuses.values());
+        if (values.contains(DynamicSimulationStatus.RUNNING)) {
             throw new StudyException(COMPUTATION_RUNNING);
         }
     }

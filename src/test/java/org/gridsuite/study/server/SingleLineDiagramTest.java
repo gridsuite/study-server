@@ -185,7 +185,7 @@ class SingleLineDiagramTest {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "svgandmetadata");
 
                     case "/v1/svg-and-metadata/" + NETWORK_UUID_STRING + "/voltageLevelId": {
-                        Map<String, Object> sldRequestInfos = objectMapper.readValue(request.getBody().readUtf8(), new TypeReference<>() { });
+                        Map<String, Object> sldRequestInfos = objectMapper.readValue(request.getBody().snapshot().utf8(), new TypeReference<>() { });
                         switch (sldRequestInfos.get("sldDisplayMode")) {
                             case SldDisplayMode.STATE_VARIABLE:
                                 return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "svgandmetadata");

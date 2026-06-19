@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -129,7 +130,7 @@ class DynamicSecurityAnalysisServiceTest {
     @Test
     void testGetStatus() {
         // setup DynamicSecurityAnalysisClient mock
-        given(dynamicSecurityAnalysisClient.getStatus(RESULT_UUID)).willReturn(DynamicSecurityAnalysisStatus.SUCCEED);
+        given(dynamicSecurityAnalysisClient.getStatuses(List.of(RESULT_UUID))).willReturn(Map.of(RESULT_UUID, DynamicSecurityAnalysisStatus.SUCCEED));
 
         // call method to be tested
         DynamicSecurityAnalysisStatus status = dynamicSecurityAnalysisService.getStatus(RESULT_UUID);
@@ -177,18 +178,18 @@ class DynamicSecurityAnalysisServiceTest {
 
     @Test
     void testAssertDynamicSecurityAnalysisNotRunning() {
-        when(dynamicSecurityAnalysisClient.getStatus(RESULT_UUID)).thenReturn(DynamicSecurityAnalysisStatus.SUCCEED);
+        when(dynamicSecurityAnalysisClient.getStatuses(List.of(RESULT_UUID))).thenReturn(Map.of(RESULT_UUID, DynamicSecurityAnalysisStatus.SUCCEED));
 
         // test not running
         assertDoesNotThrow(() -> dynamicSecurityAnalysisService.assertDynamicSecurityAnalysisNotRunning(RESULT_UUID));
 
-        verify(dynamicSecurityAnalysisClient, times(1)).getStatus(RESULT_UUID);
+        verify(dynamicSecurityAnalysisClient, times(1)).getStatuses(List.of(RESULT_UUID));
     }
 
     @Test
     void testAssertDynamicSecurityAnalysisRunning() {
         // setup for running node
-        given(dynamicSecurityAnalysisClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSecurityAnalysisStatus.RUNNING);
+        given(dynamicSecurityAnalysisClient.getStatuses(List.of(RESULT_UUID_RUNNING))).willReturn(Map.of(RESULT_UUID_RUNNING, DynamicSecurityAnalysisStatus.RUNNING));
 
         // test running
         assertStudyException(() -> dynamicSecurityAnalysisService.assertDynamicSecurityAnalysisNotRunning(RESULT_UUID_RUNNING),

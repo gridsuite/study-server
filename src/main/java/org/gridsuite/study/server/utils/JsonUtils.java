@@ -21,6 +21,7 @@ import org.springframework.data.util.Pair;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.UNPROCESSABLE_IMPORT_PARAMETER;
@@ -103,5 +104,15 @@ public final class JsonUtils {
             }
         });
         return result;
+    }
+
+    public static <T> Consumer<T> throwingJsonProcessingConsumerWrapper(ThrowingConsumer<T, JsonProcessingException> throwingConsumer) {
+        return i -> {
+            try {
+                throwingConsumer.accept(i);
+            } catch (JsonProcessingException ex) {
+                throw new RuntimeException(ex);
+            }
+        };
     }
 }

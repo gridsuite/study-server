@@ -31,6 +31,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.utils.RequestWithBody;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -101,7 +102,7 @@ class StateEstimationTest {
     private static final UUID STATE_ESTIMATION_PARAMETERS_UUID = UUID.fromString(STATE_ESTIMATION_PARAMETERS_UUID_STRING);
     private static final String WRONG_STATE_ESTIMATION_PARAMETERS_UUID_STRING = "72c9d1ef-d8ab-4388-a6fe-855604c2dc10";
 
-    private static final String ESTIM_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
+    private static final String ESTIM_STATUS_JSON = "COMPLETED";
 
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
@@ -178,6 +179,7 @@ class StateEstimationTest {
             public MockResponse dispatch(RecordedRequest request) {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = Objects.requireNonNull(request.getMethod());
+                String body = request.getBody().snapshot().utf8();
 
                 if (path.matches("/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?reportUuid=.*&reporterId=.*&reportType=StateEstimation&variantId=" + VARIANT_ID + "&receiver=.*")) {
                     // estim with success
@@ -193,8 +195,9 @@ class StateEstimationTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimErrorResultUuidStr);
                 } else if (path.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), estimResultJson);
-                } else if (path.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/status")) {
-                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), ESTIM_STATUS_JSON);
+                } else if (path.matches("/v1/results/statuses") && "POST".equals(method) && body.contains(STATE_ESTIMATION_RESULT_UUID)) {
+                    return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE),
+                        objectMapper.writeValueAsString(Map.of(STATE_ESTIMATION_RESULT_UUID, ESTIM_STATUS_JSON)));
                 } else if (path.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/stop.*")) {
                     input.send(MessageBuilder.withPayload("")
                             .setHeader("resultUuid", STATE_ESTIMATION_RESULT_UUID)
@@ -343,7 +346,9 @@ class StateEstimationTest {
         mockMvc.perform(get(STATE_ESTIMATION_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId)).andExpectAll(
                 status().isOk(),
                 content().string(ESTIM_STATUS_JSON));
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/status")));
+        RequestWithBody request = TestUtils.getRequestsWithBodyDone(1, server).iterator().next();
+        assertEquals("/v1/results/statuses", request.getPath());
+        assertTrue(request.getBody().contains(STATE_ESTIMATION_RESULT_UUID));
     }
 
     @Test
@@ -476,6 +481,8 @@ class StateEstimationTest {
         mockMvc.perform(get(STATE_ESTIMATION_URL_BASE + "status", ids.studyId, ids.rootNetworkUuid, ids.nodeId)).andExpectAll(
                 status().isOk(),
                 content().string(ESTIM_STATUS_JSON));
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + STATE_ESTIMATION_RESULT_UUID + "/status")));
+        RequestWithBody request = TestUtils.getRequestsWithBodyDone(1, server).iterator().next();
+        assertEquals("/v1/results/statuses", request.getPath());
+        assertTrue(request.getBody().contains(STATE_ESTIMATION_RESULT_UUID));
     }
 }

@@ -20,8 +20,6 @@ import mockwebserver3.RecordedRequest;
 import mockwebserver3.junit5.internal.MockWebServerExtension;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.ListUtils;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
@@ -38,11 +36,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 
-import static org.apache.commons.collections4.CollectionUtils.emptyIfNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient.API_VERSION;
 import static org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient.TIME_SERIES_END_POINT;
@@ -92,7 +90,7 @@ class TimeSeriesClientTest {
                 String method = recordedRequest.getMethod();
 
                 MockResponse response = new MockResponse(HttpStatus.NOT_FOUND.value());
-                List<String> pathSegments = ListUtils.emptyIfNull(recordedRequest.getRequestUrl().pathSegments());
+                List<String> pathSegments = Optional.ofNullable(recordedRequest.getRequestUrl().pathSegments()).orElse(List.of());
 
                 // timeseries-group/{groupUuid}/xxx
                 if ("GET".equals(method) && path.matches(TIME_SERIES_BASE_URL + "/.*")) {
@@ -111,7 +109,7 @@ class TimeSeriesClientTest {
                         }
                     } else {
                         // take {groupUuid} at the last
-                        String groupUuid = emptyIfNull(recordedRequest.getRequestUrl().pathSegments()).stream().reduce((first, second) -> second).orElse("");
+                        String groupUuid = Optional.ofNullable(recordedRequest.getRequestUrl().pathSegments()).orElse(List.of()).stream().reduce((first, second) -> second).orElse("");
                         String timeSeriesNames = recordedRequest.getRequestUrl().queryParameter("timeSeriesNames");
                         LOGGER.info("sent timeSeriesNames = {}", timeSeriesNames);
                         List<TimeSeries<?, ?>> timeseries;

@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -130,7 +131,7 @@ class DynamicMarginCalculationServiceTest {
     @Test
     void testGetStatus() {
         // setup DynamicMarginCalculationClient mock
-        given(dynamicMarginCalculationClient.getStatus(RESULT_UUID)).willReturn(DynamicMarginCalculationStatus.SUCCEED);
+        given(dynamicMarginCalculationClient.getStatuses(List.of(RESULT_UUID))).willReturn(Map.of(RESULT_UUID, DynamicMarginCalculationStatus.SUCCEED));
 
         // call method to be tested
         DynamicMarginCalculationStatus status = dynamicMarginCalculationService.getStatus(RESULT_UUID);
@@ -178,18 +179,18 @@ class DynamicMarginCalculationServiceTest {
 
     @Test
     void testAssertDynamicSecurityAnalysisNotRunning() {
-        when(dynamicMarginCalculationClient.getStatus(RESULT_UUID)).thenReturn(DynamicMarginCalculationStatus.SUCCEED);
+        when(dynamicMarginCalculationClient.getStatuses(List.of(RESULT_UUID))).thenReturn(Map.of(RESULT_UUID, DynamicMarginCalculationStatus.SUCCEED));
 
         // test not running
         assertDoesNotThrow(() -> dynamicMarginCalculationService.assertDynamicMarginCalculationNotRunning(RESULT_UUID));
 
-        verify(dynamicMarginCalculationClient, times(1)).getStatus(RESULT_UUID);
+        verify(dynamicMarginCalculationClient, times(1)).getStatuses(List.of(RESULT_UUID));
     }
 
     @Test
     void testAssertDynamicSecurityAnalysisRunning() {
         // setup for running node
-        given(dynamicMarginCalculationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicMarginCalculationStatus.RUNNING);
+        given(dynamicMarginCalculationClient.getStatuses(List.of(RESULT_UUID_RUNNING))).willReturn(Map.of(RESULT_UUID_RUNNING, DynamicMarginCalculationStatus.RUNNING));
 
         // test running
         assertStudyException(() -> dynamicMarginCalculationService.assertDynamicMarginCalculationNotRunning(RESULT_UUID_RUNNING),
