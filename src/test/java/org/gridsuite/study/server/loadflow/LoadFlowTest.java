@@ -72,6 +72,7 @@ import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_UPDATE_TYPE;
 import static org.gridsuite.study.server.notification.NotificationService.NODE_BUILD_STATUS_UPDATED;
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS;
 import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS;
 import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JSON;
 import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
