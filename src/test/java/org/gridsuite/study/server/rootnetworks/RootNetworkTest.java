@@ -64,7 +64,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
-import static org.gridsuite.study.server.utils.TestUtils.executeAsyncOnMainThread;
+import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -473,7 +473,7 @@ class RootNetworkTest {
 
         // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
         // completes before the test verifies it, removes the race condition.
-        executeAsyncOnMainThread(studyServerExecutionService);
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
 
         // DO NOT insert creation request - it means root network won't be created and remote resources will be deleted
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(UUID.randomUUID()).name("newRootNetworkName").tag("newT")
@@ -547,7 +547,7 @@ class RootNetworkTest {
 
         // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
         // completes before the test verifies it, removes the race condition.
-        executeAsyncOnMainThread(studyServerExecutionService);
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
                 .contentType(APPLICATION_JSON)
