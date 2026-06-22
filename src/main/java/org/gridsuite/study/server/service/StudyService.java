@@ -561,7 +561,7 @@ public class StudyService {
             removeNadConfigs(s.getNadConfigsUuids().stream().toList());
             deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuids);
         } else {
-            studyCreationRequestEntity.ifPresent(creationRequestEntity -> studyCreationRequestRepository.deleteAllByIdInBatch(List.of(creationRequestEntity.getId())));
+            studyCreationRequestEntity.ifPresent(creationRequestEntity -> studyCreationRequestRepository.deleteById(creationRequestEntity.getId()));
         }
 
         if (deleteStudyInfos == null) {
