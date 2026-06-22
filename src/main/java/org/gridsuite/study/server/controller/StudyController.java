@@ -183,7 +183,7 @@ public class StudyController {
     @Operation(summary = "delete the study")
     @ApiResponse(responseCode = "200", description = "Study deleted")
     public ResponseEntity<Void> deleteStudy(@PathVariable("studyUuid") UUID studyUuid,
-                                            @RequestHeader(HEADER_USER_ID) String userId) { // TODO : aller ajouter ce param dans le front (où?)
+                                            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
         return ResponseEntity.ok().build();
     }

@@ -548,7 +548,7 @@ public class StudyService {
         DeleteStudyInfos deleteStudyInfos = null;
         if (studyCreationRequestEntity.isEmpty()) {
             List<RootNetworkInfos> rootNetworkInfos = getStudyRootNetworksInfos(studyUuid);
-            // get all modification groups related to the study
+            // get all modification groups and nodes related to the study
             List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid);
             List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = allStudyNetworkModificationNodeInfo.stream()
                     .map(nodeInfoEntity -> Pair.of(nodeInfoEntity.getModificationGroupUuid(), nodeInfoEntity.getIdNode()))
@@ -608,7 +608,7 @@ public class StudyService {
 
     private void deleteModificationsFromGroup(Pair<UUID, UUID> groupUuidNodeUuid, String userId) {
         // fetch the references data in order to remove those references from directory-server
-        Map<UUID, UUID> referenceToBeDeleted = networkModificationService.getAllReferencesDataFromGroup(groupUuidNodeUuid.getFirst());
+        Map<UUID, UUID> referenceToBeDeleted = networkModificationService.getReferencesDataFromGroup(groupUuidNodeUuid.getFirst());
         referenceToBeDeleted.forEach((modUuid, refUuid) ->
             directoryService.removeReference(refUuid != null ? refUuid : groupUuidNodeUuid.getSecond(), userId, modUuid)
         );
@@ -2217,7 +2217,7 @@ public class StudyService {
         UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeId);
         networkModificationTreeService.doStashNode(nodeId, stashChildren);
 
-        Map<UUID, UUID> referenceToBeDeleted = networkModificationService.getAllReferencesDataFromGroup(groupId);
+        Map<UUID, UUID> referenceToBeDeleted = networkModificationService.getReferencesDataFromGroup(groupId);
         // if there are references modifications in the stashed node, those references have to be removed from directory server
         referenceToBeDeleted.forEach((modUuid, refUuid) ->
             directoryService.removeReference(refUuid != null ? refUuid : nodeId, userId, modUuid)
@@ -2242,7 +2242,7 @@ public class StudyService {
         // if there are references modifications in the unstashed node, those references had been removed and must be recreated in directory server
         nodeIds.forEach(nodeId -> {
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeId);
-            Map<UUID, UUID> referenceToBeRecreated = networkModificationService.getAllReferencesDataFromGroup(groupId);
+            Map<UUID, UUID> referenceToBeRecreated = networkModificationService.getReferencesDataFromGroup(groupId);
             if (!referenceToBeRecreated.isEmpty()) {
                 directoryService.addReferencesToSharedComposites(
                         referenceToBeRecreated.keySet().stream().toList(),

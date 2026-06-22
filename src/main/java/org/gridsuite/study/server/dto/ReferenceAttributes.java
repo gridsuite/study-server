@@ -17,6 +17,7 @@ import java.util.UUID;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
+ * attributes of the references to the shared composites stored in directory server
  */
 @Getter
 @Setter

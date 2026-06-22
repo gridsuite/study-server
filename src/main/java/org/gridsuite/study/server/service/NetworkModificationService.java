@@ -224,6 +224,9 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
+    /**
+     * @return references data of the modificationsUuids as Pair<element uuid in directory server, uuid of its mother composite (null if the modification is at the root level)>
+     */
     public Map<UUID, UUID> getReferencesData(List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
@@ -245,7 +248,10 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public Map<UUID, UUID> getAllReferencesDataFromGroup(UUID groupUuid) {
+    /**
+     * @return references data of the modifications in the group as Pair<element uuid in directory server, uuid of its mother composite (null if the modification is at the root level)>
+     */
+    public Map<UUID, UUID> getReferencesDataFromGroup(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "references");
 

@@ -245,8 +245,8 @@ public class WireMockStubs {
                         .withBody("{}"))).getId();
     }
 
-    public void verifyGetAllReferencesDataFromGroup(UUID getAllReferencesDataUuid) {
-        verifyGetRequest(wireMock, getAllReferencesDataUuid, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*/references", true, Map.of(), 1);
+    public void verifyGetReferencesDataFromGroup(UUID getReferencesDataUuid) {
+        verifyGetRequest(wireMock, getReferencesDataUuid, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*/references", true, Map.of(), 1);
     }
 
     public UUID stubNetworkModificationDeleteIndex() {

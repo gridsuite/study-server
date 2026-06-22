@@ -23,5 +23,6 @@ public class DeleteStudyInfos {
 
     private List<RootNetworkInfos> rootNetworkInfosList;
 
+    // group uuids as keys and each their own node as values
     private List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids;
 }
