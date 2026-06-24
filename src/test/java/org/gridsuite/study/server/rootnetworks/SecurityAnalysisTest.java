@@ -15,8 +15,10 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import com.powsybl.contingency.violations.LimitViolationType;
 import com.powsybl.security.SecurityAnalysisParameters;
+import org.assertj.core.api.recursive.comparison.RecursiveComparisonConfiguration;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.ContingencyCount;
+import org.gridsuite.study.server.dto.ContingencyCountByContingencyList;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
@@ -54,11 +56,13 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
@@ -98,7 +102,8 @@ class SecurityAnalysisTest {
     private static final byte[] SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED = {0x04, 0x03};
     private static final byte[] SECURITY_ANALYSIS_NMK_CUT_OFF_POWER_RESULT_CSV_ZIPPED = {0x05, 0x03};
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
-    private static final ContingencyCount CONTINGENCIES_COUNT = new ContingencyCount(2, 0);
+    private static final ContingencyCount CONTINGENCIES_COUNT =
+        new ContingencyCount(Map.of(UUID.randomUUID(), new ContingencyCountByContingencyList(2, Map.of("contingencyName", Set.of("equipmentName")))));
 
     public static final String SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":0.0,\"lowVoltageProportionalThreshold\":0.0,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
     private static final String SECURITY_ANALYSIS_PROFILE_PARAMETERS_JSON = "{\"lowVoltageAbsoluteThreshold\":30.0,\"lowVoltageProportionalThreshold\":0.4,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,\"flowProportionalThreshold\":0.1}";
@@ -672,8 +677,10 @@ class SecurityAnalysisTest {
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         ContingencyCount count = objectMapper.readValue(resultAsString, ContingencyCount.class);
-        Integer expectedResponse = CONTINGENCIES_COUNT.contingencies();
-        assertEquals(expectedResponse, count.contingencies());
+
+        assertThat(CONTINGENCIES_COUNT)
+            .usingRecursiveComparison(RecursiveComparisonConfiguration.builder().build())
+            .isEqualTo(count);
 
         securityAnalysisServerStubs.verifyContingencyListCount(Map.of("ids", WireMock.matching(".*")));
 
@@ -683,8 +690,7 @@ class SecurityAnalysisTest {
             .andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         ContingencyCount count2 = objectMapper.readValue(resultAsString, ContingencyCount.class);
-        assertEquals(0, count2.contingencies());
-
+        assertEquals(0, count2.countByContingencyList().size());
     }
 
     private void checkMessagesReceived(UUID studyUuid, String updateTypeToCheck) {
