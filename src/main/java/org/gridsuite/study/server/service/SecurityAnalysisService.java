@@ -98,6 +98,7 @@ public class SecurityAnalysisService extends AbstractComputationService implemen
         return switch (resultType) {
             case NMK_CONTINGENCIES -> "nmk-contingencies-result/paged";
             case NMK_LIMIT_VIOLATIONS -> "nmk-constraints-result/paged";
+            case NMK_CUT_OFF_POWER -> "nmk-cut-off-power-result/paged";
             case N -> "n-result";
         };
     }
@@ -106,6 +107,7 @@ public class SecurityAnalysisService extends AbstractComputationService implemen
         return switch (resultType) {
             case NMK_CONTINGENCIES -> "nmk-contingencies-result/csv";
             case NMK_LIMIT_VIOLATIONS -> "nmk-constraints-result/csv";
+            case NMK_CUT_OFF_POWER -> "nmk-cut-off-power-result/csv";
             case N -> "n-result/csv";
         };
     }

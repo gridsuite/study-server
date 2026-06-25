@@ -148,9 +148,15 @@ class SecurityAnalysisTest {
                                                                                                     + "\"computationStatus\":\"CONVERGED\",\"limitType\":\"HIGH_VOLTAGE\",\"limitName\":\"\","
                                                                                                     + "\"side\":null,\"acceptableDuration\":0,\"limit\":400.0,\"value\":410.0,\"elements\":"
                                                                                                     + "[{\"id\":\"la\",\"elementType\":\"STATIC_VAR_COMPENSATOR\"}]}]}]";
+    private static final String SECURITY_ANALYSIS_NMK_CUT_OFF_POWER_RESULT_JSON = "[{\"contingencyId\":\"l1\"," +
+            "\"status\":\"CONVERGED\",\"connectivityResult\":{\"disconnectedLoadActivePower\":237.4,\"disconnectedGenerationActivePower\":-237.4}}," +
+            "{\"contingencyId\":\"l2\",\"status\":\"CONVERGED\",\"connectivityResult\":" +
+            "{\"disconnectedLoadActivePower\":237.4,\"disconnectedGenerationActivePower\":-237.4}}," +
+            "{\"contingencyId\":\"f1\",\"status\":\"FAILED\",\"connectivityResult\":{\"disconnectedLoadActivePower\":237.4,\"disconnectedGenerationActivePower\":-237.4}}]";
     private static final byte[] SECURITY_ANALYSIS_N_RESULT_CSV_ZIPPED = {0x00, 0x01};
     private static final byte[] SECURITY_ANALYSIS_NMK_CONTINGENCIES_RESULT_CSV_ZIPPED = {0x02, 0x03};
     private static final byte[] SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED = {0x04, 0x03};
+    private static final byte[] SECURITY_ANALYSIS_NMK_CUT_OFF_POWER_RESULT_CSV_ZIPPED = {0x05, 0x03};
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
     private static final ContingencyCount CONTINGENCIES_COUNT = new ContingencyCount(2, 0);
 
@@ -428,6 +434,30 @@ class SecurityAnalysisTest {
         byteArrayResult = mvcResult.getResponse().getContentAsByteArray();
         assertArrayEquals(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_CSV_ZIPPED, byteArrayResult);
         computationServerStubs.verifyPostResultCsv(SECURITY_ANALYSIS_RESULT_UUID, "nmk-constraints-result");
+
+        // get NMK_CUT_OFF_POWER security analysis result zipped csv
+        wireMockServer.stubFor(
+                post(urlPathEqualTo("/v1/results/" + SECURITY_ANALYSIS_RESULT_UUID + "/nmk-cut-off-power-result/csv"))
+                        .withRequestBody(equalTo(CSV_TRANSLATION_DTO_STRING))
+                        .willReturn(aResponse()
+                                .withStatus(200)
+                                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+                                .withBody(SECURITY_ANALYSIS_NMK_CUT_OFF_POWER_RESULT_CSV_ZIPPED)
+                        )
+        );
+
+        mvcResult = mockMvc.perform(
+                        post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result/csv?resultType={resultType}",
+                                studyUuid, firstRootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_CUT_OFF_POWER)
+                                .content(CSV_TRANSLATION_DTO_STRING)
+                                .contentType(MediaType.TEXT_PLAIN)
+                )
+                .andExpect(status().isOk())
+                .andReturn();
+
+        byteArrayResult = mvcResult.getResponse().getContentAsByteArray();
+        assertArrayEquals(SECURITY_ANALYSIS_NMK_CUT_OFF_POWER_RESULT_CSV_ZIPPED, byteArrayResult);
+        computationServerStubs.verifyPostResultCsv(SECURITY_ANALYSIS_RESULT_UUID, "nmk-cut-off-power-result");
     }
 
     @Test
@@ -677,6 +707,17 @@ class SecurityAnalysisTest {
             .andExpectAll(status().isOk(), content().string(SECURITY_ANALYSIS_NMK_CONSTRAINTS_RESULT_JSON));
 
         securityAnalysisServerStubs.verifyGetNmkConstraintsResult(resultUuid, Map.of("page", WireMock.matching(".*")));
+
+        // GET NMK_CUT_OFF_POWER result
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/results/" + resultUuid + "/nmk-cut-off-power-result/paged"))
+                .willReturn(WireMock.okJson(SECURITY_ANALYSIS_NMK_CUT_OFF_POWER_RESULT_JSON)));
+
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}" +
+                                "/security-analysis/result?resultType={resultType}&page=0&size=10&filters=random_filters&globalFilters=random_globalfilters&sort=random_sort",
+                        studyUuid, rootNetworkUuid, nodeUuid, SecurityAnalysisResultType.NMK_CUT_OFF_POWER))
+                .andExpectAll(status().isOk(), content().string(SECURITY_ANALYSIS_NMK_CUT_OFF_POWER_RESULT_JSON));
+
+        securityAnalysisServerStubs.verifyGetNmkCutOffPowerConstraintsResult(resultUuid, Map.of("page", WireMock.matching(".*")));
 
         // --- 8. GET security analysis status ---
         computationServerStubs.stubGetResultStatus(resultUuid, SECURITY_ANALYSIS_STATUS_JSON);

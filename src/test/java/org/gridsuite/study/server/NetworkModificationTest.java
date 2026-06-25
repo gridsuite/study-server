@@ -2075,6 +2075,14 @@ class NetworkModificationTest {
 
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
+
+        UUID childrenStubId = wireMockServer.stubFor(
+                WireMock.get(WireMock.urlPathEqualTo("/v1/network-composite-modifications/children-uuids"))
+                        .withQueryParam("uuids", WireMock.containing(modification1.toString()))
+                        .willReturn(WireMock.ok()
+                                .withBody(mapper.writeValueAsString(List.of(modification1, modification2)))
+                                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+        ).getId();
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("MOVE"))
                 .willReturn(WireMock.ok()
@@ -2115,6 +2123,11 @@ class NetworkModificationTest {
                         "build", WireMock.equalTo("false"),
                         "before", WireMock.equalTo(modification2.toString())),
                 expectedBodyStr);
+        WireMockUtils.verifyGetRequest(wireMockServer, childrenStubId,
+                "/v1/network-composite-modifications/children-uuids",
+                Map.of("uuids", WireMock.containing(modification1.toString())),
+                2);
+
     }
 
     @Test
@@ -2189,6 +2202,53 @@ class NetworkModificationTest {
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, url, false, Map.of(
                         "action", WireMock.equalTo("INSERT")),
                 expectedBody);
+    }
+
+    @Test
+    void testAssembleModificationsIntoNewComposite() throws Exception {
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "New node 1", userId);
+        UUID nodeUuid1 = node1.getId();
+
+        UUID modification1 = UUID.randomUUID();
+        UUID modification2 = UUID.randomUUID();
+        List<UUID> modificationUuids = List.of(modification1, modification2);
+        String modificationsData = mapper.writeValueAsString(modificationUuids);
+
+        UUID newCompositeUuid = UUID.randomUUID();
+
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/network-composite-modifications/"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(newCompositeUuid))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
+        MvcResult mvcResult = mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/{nodeUuid}/composite-modification",
+                        studyUuid, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationsData)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        UUID resultUuid = mapper.readValue(mvcResult.getResponse().getContentAsString(), UUID.class);
+        assertEquals(newCompositeUuid, resultUuid);
+
+        checkUpdateStatusMessagesReceived(studyUuid, nodeUuid1, output);
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+        checkElementUpdatedMessageSent(studyUuid, userId);
+
+        WireMockUtilsCriteria.verifyPostRequest(
+                wireMockServer,
+                "/v1/network-composite-modifications/",
+                Map.of(),
+                1
+        );
     }
 
     @Test
@@ -2449,6 +2509,14 @@ class NetworkModificationTest {
         UUID modification2 = UUID.randomUUID();
         String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
 
+        UUID childrenStubId = wireMockServer.stubFor(
+                WireMock.get(WireMock.urlPathEqualTo("/v1/network-composite-modifications/children-uuids"))
+                        .withQueryParam("uuids", WireMock.containing(modification1.toString()))
+                        .willReturn(WireMock.ok()
+                                .withBody(mapper.writeValueAsString(List.of(modification1, modification2)))
+                                .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+        ).getId();
+
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/groups/.*"))
                 .withQueryParam("action", WireMock.equalTo("MOVE"))
                 .willReturn(WireMock.ok()
@@ -2500,6 +2568,11 @@ class NetworkModificationTest {
                         "originGroupUuid", WireMock.equalTo(node1.getModificationGroupUuid().toString()),
                         "build", WireMock.equalTo("true")),
                 expectedBodyStr);
+
+        WireMockUtils.verifyGetRequest(wireMockServer, childrenStubId,
+                "/v1/network-composite-modifications/children-uuids",
+                Map.of("uuids", WireMock.containing(modification1.toString())),
+                2);
 
         // move modification without defining originNodeUuid
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=MOVE",

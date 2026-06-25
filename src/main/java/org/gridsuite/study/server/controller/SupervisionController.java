@@ -23,6 +23,7 @@ import org.gridsuite.study.server.service.SupervisionService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -176,6 +177,14 @@ public class SupervisionController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "all built nodes for the given study have been invalidated")})
     public ResponseEntity<Void> invalidateAllNodesBuilds(@PathVariable("studyUuid") UUID studyUuid) {
         supervisionService.unbuildAllNodes(studyUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping(value = "/studies/{studyUuid}/invalidate")
+    @Operation(summary = "Invalidate built nodes and delete root node network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "study has been invalidated")})
+    public ResponseEntity<Void> invalidateStudy(@PathVariable("studyUuid") UUID studyUuid) {
+        supervisionService.invalidateStudy(studyUuid);
         return ResponseEntity.ok().build();
     }
 
