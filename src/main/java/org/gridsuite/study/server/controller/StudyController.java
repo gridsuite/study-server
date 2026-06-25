@@ -252,8 +252,8 @@ public class StudyController {
                                               @Parameter(description = "The copied node original study") @RequestParam(value = "sourceStudyUuid", required = false) UUID sourceStudyUuid,
                                               @Parameter(description = "The node we want to copy") @RequestParam("nodeToCopyUuid") UUID nodeToCopyUuid,
                                               @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
-                                              @Parameter(description = "The position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode
-                                                      insertMode,
+                                              @Parameter(description = "The position where the node will be pasted relative to the reference node")
+                                                  @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
         //if the source study is not set we assume it's the same as the target study
         studyService.assertNoBlockedNodeInStudy(targetStudyUuid, referenceNodeUuid);
@@ -270,8 +270,8 @@ public class StudyController {
     public ResponseEntity<Void> cutAndPasteNode(@PathVariable("studyUuid") UUID studyUuid,
                                               @Parameter(description = "The node we want to cut") @RequestParam("nodeToCutUuid") UUID nodeToCutUuid,
                                               @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
-                                              @Parameter(description = "The position where the node will be pasted relative to the reference node") @RequestParam(name = "insertMode") InsertMode
-                                                      insertMode,
+                                              @Parameter(description = "The position where the node will be pasted relative to the reference node")
+                                                    @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertNoBlockedNodeInStudy(studyUuid, nodeToCutUuid);
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeToCutUuid);
@@ -357,10 +357,10 @@ public class StudyController {
         @ApiResponse(responseCode = "404", description = "The source study or subtree doesn't exist")})
     public ResponseEntity<Void> duplicateSubtree(@Parameter(description = "The study where we want to copy the node") @PathVariable("studyUuid") UUID targetStudyUuid,
                                                  @Parameter(description = "The copied node original study") @RequestParam(value = "sourceStudyUuid") UUID sourceStudyUuid,
-                                                       @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCopyParentNodeUuid") UUID
-                                                               subtreeToCopyParentNodeUuid,
-                                                       @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
-                                                       @RequestHeader(HEADER_USER_ID) String userId) {
+                                                 @Parameter(description = "The parent node of the subtree we want to cut")
+                                                     @RequestParam("subtreeToCopyParentNodeUuid") UUID subtreeToCopyParentNodeUuid,
+                                                 @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
+                                                 @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertNoBlockedNodeInStudy(targetStudyUuid, referenceNodeUuid);
         studyService.duplicateStudySubtree(sourceStudyUuid, targetStudyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
         return ResponseEntity.ok().build();
