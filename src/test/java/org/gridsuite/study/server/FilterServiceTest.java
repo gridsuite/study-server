@@ -19,8 +19,8 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.FilterService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,11 +35,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -414,7 +412,8 @@ class FilterServiceTest {
                         """;
         UUID stubUuid = wireMockStubs.stubFiltersExport(NETWORK_UUID_STRING, FILTERS_UUID_STRING, responseBody);
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/elements?filtersUuid=" + FILTERS_UUID_STRING.stream().collect(Collectors.joining(",")),
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/elements?filtersUuid=" + FILTERS_UUID_STRING.stream().collect(
+                Collectors.joining(",")),
                 studyUuid, firstRootNetworkUuid, rootNodeUuid))
             .andExpect(status().isOk())
             .andReturn();
@@ -424,7 +423,8 @@ class FilterServiceTest {
         wireMockStubs.verifyFiltersExport(stubUuid, FILTERS_UUID_STRING, NETWORK_UUID_STRING);
 
         // export on first node
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/elements?filtersUuid=" + FILTERS_UUID_STRING.stream().collect(Collectors.joining(",")),
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/filters/elements?filtersUuid=" + FILTERS_UUID_STRING.stream().collect(
+                Collectors.joining(",")),
                 studyUuid, firstRootNetworkUuid, firstNode.getId()))
             .andExpect(status().isOk())
             .andReturn();

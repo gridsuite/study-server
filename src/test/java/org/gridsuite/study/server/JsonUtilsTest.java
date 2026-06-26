@@ -19,7 +19,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * @author Etienne HOMER <etiennehomer@gmail.com>
+ * @author Etienne HOMER <etiennehomer at gmail.com>
  */
 class JsonUtilsTest {
     private static final ObjectMapper MAPPER = new ObjectMapper();

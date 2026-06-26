@@ -6,14 +6,13 @@
  */
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
-import lombok.*;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import lombok.*;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 
 /**
  * @author Hugo Marcellin <hugo.marcelin at rte-france.com>

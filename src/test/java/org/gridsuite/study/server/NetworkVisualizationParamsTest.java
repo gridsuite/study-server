@@ -107,7 +107,7 @@ class NetworkVisualizationParamsTest {
                 String path = Objects.requireNonNull(request.getPath());
                 String method = Objects.requireNonNull(request.getMethod());
                 if (path.startsWith("/v1/network-visualizations-params")) {
-                    if (method.equals("GET")) {
+                    if ("GET".equals(method)) {
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NETWORK_VISU_DEFAULT_PARAMETERS_JSON);
                     } else {
                         return new MockResponse(200);

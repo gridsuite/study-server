@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
 /**
- * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com
+ * @author Jacques Borsenberger <jacques.borsenberger at rte-france.com>
  */
 @Service
 public class NetworkModificationTreeService {
@@ -147,7 +147,8 @@ public class NetworkModificationTreeService {
         return newNode;
     }
 
-    private NetworkModificationNode duplicateNode(@NonNull StudyEntity targetStudy, @NonNull UUID referenceNodeId, @NonNull NetworkModificationNode newNodeInfo, @NonNull UUID originNodeUuid, @NonNull InsertMode insertMode, Map<UUID, UUID> mappingModificationUuids) {
+    private NetworkModificationNode duplicateNode(@NonNull StudyEntity targetStudy, @NonNull UUID referenceNodeId, @NonNull NetworkModificationNode newNodeInfo, @NonNull UUID originNodeUuid,
+            @NonNull InsertMode insertMode, Map<UUID, UUID> mappingModificationUuids) {
         // create new node
         NetworkModificationNode newNode = createAndInsertNode(targetStudy, referenceNodeId, newNodeInfo, insertMode);
 
@@ -347,6 +348,7 @@ public class NetworkModificationTreeService {
         }
     }
 
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
     private void deleteNode(UUID id, boolean deleteChildren, boolean allowDeleteRoot, DeleteNodeInfos deleteNodeInfos) {
         Optional<NodeEntity> optNodeToDelete = nodesRepository.findById(id);
         optNodeToDelete.ifPresent(nodeToDelete -> {
@@ -465,7 +467,8 @@ public class NetworkModificationTreeService {
             if (nodeInfo instanceof RootNode rootNode) {
                 rootNode.setReportUuid(rootNetworkEntity.getReportUuid());
             } else {
-                ((NetworkModificationNode) nodeInfo).completeDtoFromRootNetworkNodeInfo(rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeInfo.getId(), rootNetworkEntity.getId()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")));
+                ((NetworkModificationNode) nodeInfo).completeDtoFromRootNetworkNodeInfo(rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeInfo.getId(),
+                        rootNetworkEntity.getId()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")));
             }
         });
     }
@@ -713,7 +716,8 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public boolean isNodeNameExists(UUID studyUuid, String nodeName) {
-        return ROOT_NODE_NAME.equals(nodeName) || !networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyUuid, nodeName).stream().filter(abstractNodeInfoEntity -> !abstractNodeInfoEntity.getNode().isStashed()).toList().isEmpty();
+        return ROOT_NODE_NAME.equals(nodeName) || !networkModificationNodeInfoRepository.findAllByNodeStudyIdAndName(studyUuid,
+                nodeName).stream().filter(abstractNodeInfoEntity -> !abstractNodeInfoEntity.getNode().isStashed()).toList().isEmpty();
     }
 
     @Transactional(readOnly = true)
@@ -834,7 +838,8 @@ public class NetworkModificationTreeService {
         for (UUID nodeId : nodeIds) {
             NodeEntity nodeToRestore = getNodeEntity(nodeId);
             NodeEntity anchorNode = getNodeEntity(anchorNodeId);
-            NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeToRestore.getIdNode()).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found"));
+            NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeToRestore.getIdNode()).orElseThrow(() -> new StudyException(NOT_FOUND,
+                    "Node not found"));
             if (self.isNodeNameExists(studyId, modificationNodeToRestore.getName())) {
                 String newName = getSuffixedNodeName(studyId, modificationNodeToRestore.getName());
                 modificationNodeToRestore.setName(newName);
@@ -880,7 +885,8 @@ public class NetworkModificationTreeService {
 
     private void restoreNodeChildren(UUID studyId, UUID parentNodeId) {
         getChildren(parentNodeId).forEach(nodeEntity -> {
-            NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeEntity.getIdNode()).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found"));
+            NetworkModificationNodeInfoEntity modificationNodeToRestore = networkModificationNodeInfoRepository.findById(nodeEntity.getIdNode()).orElseThrow(() -> new StudyException(NOT_FOUND,
+                    "Node not found"));
             if (self.isNodeNameExists(studyId, modificationNodeToRestore.getName())) {
                 String newName = getSuffixedNodeName(studyId, modificationNodeToRestore.getName());
                 modificationNodeToRestore.setName(newName);
@@ -989,7 +995,8 @@ public class NetworkModificationTreeService {
         AbstractNode node = getSimpleNode(nodeEntity.getIdNode());
         if (node.getType() == NodeType.NETWORK_MODIFICATION) {
             NetworkModificationNode modificationNode = (NetworkModificationNode) node;
-            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeEntity.getIdNode(), rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+            RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeEntity.getIdNode(),
+                    rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
             if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
                 UUID reportUuid = getModificationReportUuid(nodeEntity.getIdNode(), rootNetworkUuid, nodeToBuildUuid);
                 ReportInfos reportInfos = new ReportInfos(reportUuid, modificationNode.getId(), ReportMode.REPLACE);
@@ -1050,7 +1057,8 @@ public class NetworkModificationTreeService {
 
         // Invalidate indexed nodes
         if (shouldInvalidateIndexedInfos) {
-            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos, isNodeBuilt && (invalidateTreeParameters.isOnlyChildren() || invalidateTreeParameters.isOnlyChildrenBuildStatus()));
+            fillIndexedNodeTreeInfosToInvalidate(nodeEntity, rootNetworkUuid, invalidateNodeInfos,
+                    isNodeBuilt && (invalidateTreeParameters.isOnlyChildren() || invalidateTreeParameters.isOnlyChildrenBuildStatus()));
         }
 
         // Children
@@ -1169,7 +1177,8 @@ public class NetworkModificationTreeService {
     @Transactional
     public void updateNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid, NodeBuildStatus nodeBuildStatus) {
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND,
+                "Root network not found"));
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         NodeBuildStatusEmbeddable currentNodeStatus = rootNetworkNodeInfoEntity.getNodeBuildStatus();
 
@@ -1203,7 +1212,8 @@ public class NetworkModificationTreeService {
             return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
         }
 
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND,
+                "Root network not found"));
         return rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto();
     }
 

@@ -57,7 +57,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
