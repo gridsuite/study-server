@@ -22,7 +22,7 @@ import java.util.UUID;
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 
 /**
- * @author Abdelsalem Hedhili <abdelsalem.hedhili@rte-france.com>
+ * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 public class LoadflowServerStubs {
     private final WireMockServer wireMock;
@@ -50,7 +50,8 @@ public class LoadflowServerStubs {
     }
 
     public void stubRunLoadflowFailed(UUID networkUuid, UUID nodeUuid, String responseBody) {
-        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlMatching("/v1/networks/" + networkUuid + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=.*"));
+        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlMatching("/v1/networks/" + networkUuid
+                + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=.*"));
 
         mappingBuilder = mappingBuilder.withPostServeAction(POST_ACTION_SEND_INPUT,
                 Parameters.from(
@@ -68,7 +69,8 @@ public class LoadflowServerStubs {
     }
 
     public void verifyRunLoadflow(UUID networkUuid) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/networks/" + networkUuid + "/run-and-save", Map.of("withRatioTapChangers", new RegexPattern(".*"), "receiver", new RegexPattern(".*"), "reportUuid", new RegexPattern(".*"), "reporterId", new RegexPattern(".*"), "variantId", new RegexPattern(".*")));
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/networks/" + networkUuid + "/run-and-save", Map.of("withRatioTapChangers", new RegexPattern(".*"), "receiver", new RegexPattern(".*"),
+                "reportUuid", new RegexPattern(".*"), "reporterId", new RegexPattern(".*"), "variantId", new RegexPattern(".*")));
     }
 
     public void stubGetLoadflowResult(UUID resultUuid, String responseBody) {
@@ -239,7 +241,8 @@ public class LoadflowServerStubs {
     }
 
     public void stubGetLimitViolation(String resultUuid, String limitViolationResponse, boolean withRequestParam) {
-        wireMock.stubFor(WireMock.get(WireMock.urlMatching("/v1/results/" + resultUuid + "/limit-violations" + (withRequestParam ? "\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*" : "")))
+        wireMock.stubFor(WireMock.get(WireMock.urlMatching("/v1/results/" + resultUuid + "/limit-violations"
+                + (withRequestParam ? "\\?filters=.*globalFilters=.*networkUuid=.*variantId.*sort=.*" : "")))
                 .willReturn(WireMock.ok()
                         .withBody(limitViolationResponse)
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
@@ -249,7 +252,8 @@ public class LoadflowServerStubs {
     public void verifyGetLimitViolation(String resultUuid, boolean withRequestParam) {
         WireMockUtilsCriteria.verifyGetRequest(wireMock, "/v1/results/" + resultUuid + "/limit-violations",
                 withRequestParam ?
-                        Map.of("filters", new RegexPattern(".*"), "globalFilters", new RegexPattern(".*"), "networkUuid", new RegexPattern(".*"), "variantId", new RegexPattern(".*"), "sort", new RegexPattern(".*"))
+                        Map.of("filters", new RegexPattern(".*"), "globalFilters", new RegexPattern(".*"), "networkUuid", new RegexPattern(".*"), "variantId", new RegexPattern(".*"), "sort", new
+                                RegexPattern(".*"))
                         : Map.of());
     }
 

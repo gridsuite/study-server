@@ -27,7 +27,7 @@ import java.time.Instant;
 import java.util.*;
 
 /**
- * @author Nicolas Noir <nicolas.noir at rte-france.com
+ * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @Service
 public class NotificationService {

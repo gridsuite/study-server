@@ -102,7 +102,10 @@ class ShortCircuitTest implements WithAssertions {
     private static final byte[] SHORT_CIRCUIT_ANALYSIS_CSV_RESULT = {0x00, 0x11};
 
     private static final String SHORT_CIRCUIT_ANALYSIS_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-    private static final String ALL_COMPUTATIONS_STATUS_JSON = "{\"LOAD_FLOW\":null,\"SECURITY_ANALYSIS\":null,\"SENSITIVITY_ANALYSIS\":null,\"SHORT_CIRCUIT\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\",\"SHORT_CIRCUIT_ONE_BUS\":null,\"VOLTAGE_INITIALIZATION\":null,\"DYNAMIC_SIMULATION\":null,\"DYNAMIC_SECURITY_ANALYSIS\":null,\"DYNAMIC_MARGIN_CALCULATION\":null,\"STATE_ESTIMATION\":null,\"PCC_MIN\":null}";
+    private static final String ALL_COMPUTATIONS_STATUS_JSON = "{\"LOAD_FLOW\":null,\"SECURITY_ANALYSIS\":null," +
+            "\"SENSITIVITY_ANALYSIS\":null,\"SHORT_CIRCUIT\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\"," +
+            "\"SHORT_CIRCUIT_ONE_BUS\":null,\"VOLTAGE_INITIALIZATION\":null,\"DYNAMIC_SIMULATION\":null," +
+            "\"DYNAMIC_SECURITY_ANALYSIS\":null,\"DYNAMIC_MARGIN_CALCULATION\":null,\"STATE_ESTIMATION\":null,\"PCC_MIN\":null}";
 
     private static final String SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING = "0c0f1efd-bd22-4a75-83d3-9e530245c7f4";
     private static final UUID SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID = UUID.fromString(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
@@ -113,8 +116,10 @@ class ShortCircuitTest implements WithAssertions {
     private static final String VALID_PARAMS_IN_PROFILE_USER_ID = "validParamInProfileUser";
     private static final String PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING = "1cec4a7b-ab7e-4d78-9dd7-ce73c5ef11d9";
     private static final String PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING = "a4ce25e1-59a7-401d-abb1-04425fe24587";
-    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"shortcircuitParameterId\":\"" + PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
-    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"shortcircuitParameterId\":\"" + PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
+    private static final String USER_PROFILE_VALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with valid params\",\"shortcircuitParameterId\":\""
+            + PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":true}";
+    private static final String USER_PROFILE_INVALID_PARAMS_JSON = "{\"id\":\"97bb1890-a90c-43c3-a004-e631246d42d6\",\"name\":\"Profile with broken params\",\"shortcircuitParameterId\":\""
+            + PROFILE_SHORT_CIRCUIT_ANALYSIS_INVALID_PARAMETERS_UUID_STRING + "\",\"allParametersLinksValid\":false}";
 
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
@@ -265,23 +270,26 @@ class ShortCircuitTest implements WithAssertions {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                 .param("type", "ALL_BUSES")
                 .content(CSV_HEADERS)).andExpectAll(status().isOk(), content().bytes(SHORT_CIRCUIT_ANALYSIS_CSV_RESULT));
-        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv", Map.of("networkUuid", WireMock.equalTo(NETWORK_UUID_STRING), "variantId", WireMock.equalTo(VARIANT_ID_2)));
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID + "/csv", Map.of("networkUuid", WireMock.equalTo(NETWORK_UUID_STRING), "variantId",
+                WireMock.equalTo(VARIANT_ID_2)));
 
         // get short circuit result but with unknown node
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, firstRootNetworkUuid, unknownModificationNodeUuid)).andExpect(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, firstRootNetworkUuid,
+                unknownModificationNodeUuid)).andExpect(
                 status().isNoContent());
 
         // get short circuit status
         computationServerStubs.stubGetResultStatus(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, SHORT_CIRCUIT_ANALYSIS_STATUS_JSON);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid,
+                modificationNode3Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON));
         computationServerStubs.verifyGetResultStatus(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
 
         // get all computing status and check shortcircuit status
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computations/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)).andExpectAll(
-                status().isOk(),
-                content().string(ALL_COMPUTATIONS_STATUS_JSON));
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computations/status",
+                        studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid))
+                .andExpectAll(status().isOk(), content().string(ALL_COMPUTATIONS_STATUS_JSON));
         computationServerStubs.verifyGetResultStatus(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID);
 
         // stop short circuit analysis
@@ -295,7 +303,8 @@ class ShortCircuitTest implements WithAssertions {
         checkUpdateModelStatusMessagesReceived(studyNameUserIdUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_RESULT);
 
         // short circuit analysis failed
-        shortcircuitServerStubs.stubShortCircuitRunWithPostAction(NETWORK_UUID_STRING, VARIANT_ID, SHORT_CIRCUIT_ANALYSIS_ERROR_RESULT_UUID, shortCircuitAnalysisFailedDestination, modificationNode2Uuid, firstRootNetworkUuid);
+        shortcircuitServerStubs.stubShortCircuitRunWithPostAction(NETWORK_UUID_STRING, VARIANT_ID, SHORT_CIRCUIT_ANALYSIS_ERROR_RESULT_UUID, shortCircuitAnalysisFailedDestination,
+                modificationNode2Uuid, firstRootNetworkUuid);
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode2Uuid)
                 .header(HEADER_USER_ID, "testUserId"))
                 .andExpect(status().isOk()).andReturn();
@@ -388,7 +397,8 @@ class ShortCircuitTest implements WithAssertions {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result/csv", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
                 .param("type", "ALL_BUSES")
                 .content(CSV_HEADERS)).andExpectAll(status().isNotFound());
-        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv", Map.of("networkUuid", WireMock.equalTo(NETWORK_UUID_STRING_NOT_FOUND), "variantId", WireMock.equalTo(VARIANT_ID_4)));
+        WireMockUtilsCriteria.verifyPostRequest(wireMockServer, "/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID_NOT_FOUND + "/csv", Map.of("networkUuid",
+                WireMock.equalTo(NETWORK_UUID_STRING_NOT_FOUND), "variantId", WireMock.equalTo(VARIANT_ID_4)));
     }
 
     private void consumeShortCircuitAnalysisResult(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, String resultUuid, boolean debug) throws JsonProcessingException {
@@ -458,19 +468,22 @@ class ShortCircuitTest implements WithAssertions {
         // get short circuit result with pagination
         shortcircuitServerStubs.stubGetPagedFaultResults(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID,
                 SHORT_CIRCUIT_ANALYSIS_RESULT_JSON, NETWORK_UUID_STRING, VARIANT_ID_2, "FULL", "0", "20", "id,DESC");
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC", studyNameUserIdUuid,
+                firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_RESULT_JSON));
         shortcircuitServerStubs.verifyGetPagedFaultResults(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, NETWORK_UUID_STRING, VARIANT_ID_2,
                 "FULL", "0", "20", "id,DESC");
 
         // get short circuit result with pagination but with unknown node
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20", studyNameUserIdUuid, firstRootNetworkUuid, unknownModificationNodeUuid)).andExpect(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20", studyNameUserIdUuid, firstRootNetworkUuid,
+                unknownModificationNodeUuid)).andExpect(
                 status().isNoContent());
 
         // get short circuit status
         computationServerStubs.stubGetResultStatus(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, SHORT_CIRCUIT_ANALYSIS_STATUS_JSON);
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid,
+                modificationNode1Uuid)).andExpectAll(
                 status().isOk(),
                 content().string(SHORT_CIRCUIT_ANALYSIS_STATUS_JSON));
         computationServerStubs.verifyGetResultStatus(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, 1);
@@ -532,8 +545,10 @@ class ShortCircuitTest implements WithAssertions {
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/results/" + SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, Map.of("mode", WireMock.equalTo("FULL")));
 
         // get short circuit result with pagination
-        shortcircuitServerStubs.stubGetPagedFeederResults(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, SHORT_CIRCUIT_ANALYSIS_RESULT_JSON, NETWORK_UUID_STRING, VARIANT_ID_2, "fakeFilters", "FULL", "0", "20", "id,DESC");
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC&filters=fakeFilters", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
+        shortcircuitServerStubs.stubGetPagedFeederResults(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID, SHORT_CIRCUIT_ANALYSIS_RESULT_JSON, NETWORK_UUID_STRING, VARIANT_ID_2, "fakeFilters", "FULL", "0", "20",
+                "id,DESC");
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result?paged=true&page=0&size=20&sort=id,DESC&filters=fakeFilters",
+                studyNameUserIdUuid, firstRootNetworkUuid, modificationNode3Uuid)
             .param("type", ShortcircuitAnalysisType.ONE_BUS.name())
         ).andExpectAll(
             status().isOk(),
@@ -627,7 +642,8 @@ class ShortCircuitTest implements WithAssertions {
         UUID modificationNode1Uuid = modificationNode1.getId();
 
         // No short circuit result
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result", studyNameUserIdUuid, firstRootNetworkUuid,
+                modificationNode1Uuid)).andExpectAll(
                 status().isNoContent());
 
         // No one bus short circuit result
@@ -641,7 +657,8 @@ class ShortCircuitTest implements WithAssertions {
                 .content(CSV_HEADERS)).andExpectAll(status().isNotFound());
 
         // No short circuit status
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid)).andExpectAll(
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status", studyNameUserIdUuid, firstRootNetworkUuid,
+                modificationNode1Uuid)).andExpectAll(
                 status().isNoContent());
 
         // stop non-existing short circuit analysis
@@ -804,7 +821,8 @@ class ShortCircuitTest implements WithAssertions {
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
-        computationServerStubs.stubParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING, objectMapper.writeValueAsString(PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING));
+        computationServerStubs.stubParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING,
+                objectMapper.writeValueAsString(PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING));
         computationServerStubs.stubDeleteParameters(SHORT_CIRCUIT_ANALYSIS_PARAMETERS_UUID_STRING);
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
@@ -818,7 +836,8 @@ class ShortCircuitTest implements WithAssertions {
         UUID studyNameUserIdUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
-        computationServerStubs.stubParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING, objectMapper.writeValueAsString(PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING));
+        computationServerStubs.stubParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING,
+                objectMapper.writeValueAsString(PROFILE_SHORT_CIRCUIT_ANALYSIS_DUPLICATED_PARAMETERS_UUID_STRING));
         createOrUpdateParametersAndDoChecks(studyNameUserIdUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
         computationServerStubs.verifyParametersDuplicateFrom(PROFILE_SHORT_CIRCUIT_ANALYSIS_VALID_PARAMETERS_UUID_STRING);

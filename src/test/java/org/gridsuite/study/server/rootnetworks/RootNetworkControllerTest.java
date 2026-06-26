@@ -187,7 +187,8 @@ class RootNetworkControllerTest {
 
         UUID caseExistsStubId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
+        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst",
+                null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockStubs.caseServer.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
@@ -234,7 +235,8 @@ class RootNetworkControllerTest {
 
         UUID caseExistsStubId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(CASE_UUID_STRING, newImportParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
+        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(CASE_UUID_STRING, newImportParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst",
+                null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockStubs.caseServer.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
@@ -283,7 +285,8 @@ class RootNetworkControllerTest {
         // mock API calls
         UUID caseExistsStubId = wireMockStubs.caseServer.stubCaseExists(RootNetworkControllerTest.CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(RootNetworkControllerTest.CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", WireMockStubs.FIRST_VARIANT_ID, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
+        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(RootNetworkControllerTest.CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(),
+                "20140116_0830_2D4_UX1_pst", WireMockStubs.FIRST_VARIANT_ID, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockStubs.caseServer.stubDisableCaseExpiration(RootNetworkControllerTest.CASE_UUID.toString());
         reportServerStubs.stubSendReport();
         when(loadFlowService.createDefaultParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);

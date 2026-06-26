@@ -13,11 +13,11 @@ import com.powsybl.shortcircuit.ShortCircuitParameters;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.dto.VariantInfos;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
@@ -31,7 +31,6 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -40,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 import static org.gridsuite.study.server.utils.StudyUtils.*;
@@ -132,7 +130,8 @@ public class ShortCircuitService extends AbstractComputationService implements C
         return resultPath + "/paged";
     }
 
-    public String getShortCircuitAnalysisResult(ResultParameters resultParameters, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, String globalFilters, boolean paged, Pageable pageable) {
+    public String getShortCircuitAnalysisResult(ResultParameters resultParameters, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, String globalFilters, boolean paged, Pageable
+            pageable) {
         if (paged) {
             return getShortCircuitAnalysisResultsPage(resultParameters, mode, type, filters, globalFilters, pageable);
         } else {
