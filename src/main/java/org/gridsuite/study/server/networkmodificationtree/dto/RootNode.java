@@ -7,13 +7,12 @@
 package org.gridsuite.study.server.networkmodificationtree.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-
 import java.util.UUID;
 
 /**

@@ -34,8 +34,8 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
@@ -54,10 +54,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-
 import java.util.*;
 import java.util.stream.Collectors;
-
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR;
@@ -209,7 +207,7 @@ class SingleLineDiagramTest {
                     case "/v1/substation-svg-and-metadata/" + NETWORK_UUID_STRING + "/substationNotFoundId":
                         return new MockResponse(404);
 
-                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING :
+                    case "/v1/network-area-diagram/" + NETWORK_UUID_STRING:
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "nad-svg");
                     case "/v1/svg/" + NETWORK_UUID_STRING + "/voltageLevelId":
                         return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "byte");
@@ -328,7 +326,8 @@ class SingleLineDiagramTest {
                  .andExpect(status().isNotFound());
 
         //get voltage levels
-        mvcResult = getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "VOLTAGE_LEVEL", null, objectMapper.writeValueAsString(List.of()), TestUtils.resourceToString("/network-voltage-levels-infos.json"));
+        mvcResult = getNetworkElementsInfos(studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "MAP", "VOLTAGE_LEVEL", null, objectMapper.writeValueAsString(List.of()),
+                TestUtils.resourceToString("/network-voltage-levels-infos.json"));
         List<VoltageLevelInfos> vliListResponse = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() { });
         assertThat(vliListResponse, new MatcherJson<>(objectMapper, List.of(
                 VoltageLevelInfos.builder().id("BBE1AA1").name("BBE1AA1").substationId("BBE1AA").build(),
@@ -426,19 +425,23 @@ class SingleLineDiagramTest {
         assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-component-libraries"));
 
         // Test getting non existing voltage level or substation svg
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelNotFoundId")
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg", studyNameUserIdUuid, firstRootNetworkUuid,
+                rootNodeUuid, "voltageLevelNotFoundId")
                 .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
         assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg/%s/voltageLevelNotFoundId".formatted(NETWORK_UUID_STRING)));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "voltageLevelNotFoundId")
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/voltage-levels/{voltageLevelId}/svg-and-metadata", studyNameUserIdUuid,
+                firstRootNetworkUuid, rootNodeUuid, "voltageLevelNotFoundId")
                 .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
         assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/svg-and-metadata/%s/voltageLevelNotFoundId".formatted(NETWORK_UUID_STRING)));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationNotFoundId")
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg", studyNameUserIdUuid, firstRootNetworkUuid,
+                rootNodeUuid, "substationNotFoundId")
                 .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
         assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg/%s/substationNotFoundId".formatted(NETWORK_UUID_STRING)));
 
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata", studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "substationNotFoundId")
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg-and-metadata", studyNameUserIdUuid, firstRootNetworkUuid,
+                rootNodeUuid, "substationNotFoundId")
                 .content(objectMapper.writeValueAsString(BODY_CONTENT)).contentType(MediaType.APPLICATION_JSON)).andExpectAll(status().isNotFound());
         assertTrue(TestUtils.getRequestsDone(1, server).contains("/v1/substation-svg-and-metadata/%s/substationNotFoundId".formatted(NETWORK_UUID_STRING)));
     }
@@ -535,7 +538,8 @@ class SingleLineDiagramTest {
         return modificationNode;
     }
 
-    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNetworkUuid, UUID rootNodeUuid, String infoType, String elementType, List<Double> nominalVoltages, String requestBody, String responseBody) throws Exception {
+    private MvcResult getNetworkElementsInfos(UUID studyUuid, UUID rootNetworkUuid, UUID rootNodeUuid, String infoType, String elementType, List<Double> nominalVoltages, String requestBody, String
+            responseBody) throws Exception {
         List<String> nominalVoltageStrings = new ArrayList<>();
 
         if (nominalVoltages != null && !nominalVoltages.isEmpty()) {
@@ -546,7 +550,8 @@ class SingleLineDiagramTest {
         String nominalVoltagesParam = nominalVoltageStrings.isEmpty() ? null : objectMapper.writeValueAsString(nominalVoltageStrings);
         UUID stubUuid = wireMockStubs.stubNetworkElementsInfosPost(NETWORK_UUID_STRING, infoType, elementType, nominalVoltages, responseBody);
 
-        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNetworkUuid, rootNodeUuid)
+        MockHttpServletRequestBuilder mockHttpServletRequestBuilder = post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/elements", studyUuid, rootNetworkUuid,
+                rootNodeUuid)
                 .queryParam(QUERY_PARAM_INFO_TYPE, infoType)
                 .queryParam(QUERY_PARAM_ELEMENT_TYPE, elementType)
                 .queryParam(QUERY_PARAM_NOMINAL_VOLTAGES, nominalVoltagesParam)

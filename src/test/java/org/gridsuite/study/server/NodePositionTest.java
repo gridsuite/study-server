@@ -34,7 +34,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * @author Slimane amar <slimane.amar at rte-france.com
+ * @author Slimane amar <slimane.amar at rte-france.com>
  */
 @SpringBootTest
 @DisableElasticsearch

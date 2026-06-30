@@ -9,7 +9,6 @@ package org.gridsuite.study.server.dto.elasticsearch;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
 import org.gridsuite.study.server.elasticsearch.ESConfig;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.Document;

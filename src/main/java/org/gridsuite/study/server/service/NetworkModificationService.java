@@ -38,7 +38,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 
 /**
- * @author Slimane amar <slimane.amar at rte-france.com
+ * @author Slimane amar <slimane.amar at rte-france.com>
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
@@ -262,7 +262,6 @@ public class NetworkModificationService {
             UUID beforeUuid,
             Pair<List<UUID>, List<ModificationApplicationContext>> body,
             boolean buildTargetNode) {
-
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
                 .queryParam(QUERY_PARAM_ACTION, ModificationsActionType.MOVE.name())
                 .queryParam("originGroupUuid", sourceContainerId)

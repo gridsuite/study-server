@@ -30,8 +30,8 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,10 +50,8 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
-
 import java.util.*;
 import java.util.stream.Stream;
-
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -293,9 +291,11 @@ class LoadFLowIntegrationTest {
             .build();
     }
 
-    private UUID insertNode(StudyEntity study, String variantId, UUID reportUuid, NodeEntity parentNode, RootNetworkEntity rootNetworkEntity, BuildStatus buildStatus, NetworkModificationNodeType nodeType) {
+    private UUID insertNode(StudyEntity study, String variantId, UUID reportUuid, NodeEntity parentNode, RootNetworkEntity rootNetworkEntity, BuildStatus buildStatus, NetworkModificationNodeType
+            nodeType) {
         NodeEntity nodeEntity = nodeRepository.save(new NodeEntity(null, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null, new ArrayList<>()));
-        NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).modificationGroupUuid(UUID.randomUUID()).nodeType(nodeType).build());
+        NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(
+                NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).modificationGroupUuid(UUID.randomUUID()).nodeType(nodeType).build());
         createNodeLinks(rootNetworkEntity, modificationNodeInfoEntity, variantId, reportUuid, buildStatus);
         return nodeEntity.getIdNode();
     }
@@ -303,7 +303,8 @@ class LoadFLowIntegrationTest {
     // We can't use the method RootNetworkNodeInfoService::createNodeLinks because there is no transaction in a session
     private void createNodeLinks(RootNetworkEntity rootNetworkEntity, NetworkModificationNodeInfoEntity modificationNodeInfoEntity,
                                  String variantId, UUID reportUuid, BuildStatus buildStatus) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = RootNetworkNodeInfoEntity.builder().variantId(variantId).modificationReports(Map.of(modificationNodeInfoEntity.getId(), reportUuid)).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).blockedNode(false).build();
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = RootNetworkNodeInfoEntity.builder().variantId(variantId).modificationReports(Map.of(modificationNodeInfoEntity.getId(),
+                reportUuid)).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).blockedNode(false).build();
         modificationNodeInfoEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);

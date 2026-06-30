@@ -132,7 +132,8 @@ class SingleLineDiagramWiremockTest {
         }
     }
 
-    private void mockServicesAroundSvgGeneration(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, UUID loadflowResultUuid, UUID shortcircuitResultUuid, String variantId, Map<String, Object> sldRequestInfos) {
+    private void mockServicesAroundSvgGeneration(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, UUID loadflowResultUuid, UUID shortcircuitResultUuid, String variantId, Map<String,
+            Object> sldRequestInfos) {
         doReturn(networkUuid).when(rootNetworkService).getNetworkUuid(rootNetworkUuid);
         doReturn(variantId).when(networkModificationTreeService).getVariantId(nodeUuid, rootNetworkUuid);
         doReturn(true).when(networkService).existVariant(networkUuid, variantId);

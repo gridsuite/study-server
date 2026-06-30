@@ -21,7 +21,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.*;
 
 /**
- * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 public class CaseServerStubs {
     private final WireMockServer wireMock;

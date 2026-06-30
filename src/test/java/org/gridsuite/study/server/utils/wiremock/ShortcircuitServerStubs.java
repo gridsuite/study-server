@@ -39,7 +39,8 @@ public class ShortcircuitServerStubs {
                                         Map.of(
                                                 "payload", "",
                                                 "destination", destination,
-                                                "receiver", "%7B%22nodeUuid%22%3A%22" + modificationUuid + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + rootNetworkUuid + "%22%2C%20%22userId%22%3A%22userId%22%7D"
+                                                "receiver", "%7B%22nodeUuid%22%3A%22" + modificationUuid + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + rootNetworkUuid
+                                                        + "%22%2C%20%22userId%22%3A%22userId%22%7D"
                                         ))
                         ).willReturn(WireMock.okJson("\"" + resultUuid + "\"")));
     }
@@ -51,7 +52,8 @@ public class ShortcircuitServerStubs {
                                 Map.of(
                                         "payload", "",
                                         "destination", destination,
-                                        "receiver", "%7B%22nodeUuid%22%3A%22" + modificationNodeUuid + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + rootNetworkUuid + "%22%2C%20%22userId%22%3A%22userId%22%7D"
+                                        "receiver", "%7B%22nodeUuid%22%3A%22" + modificationNodeUuid + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + rootNetworkUuid
+                                                + "%22%2C%20%22userId%22%3A%22userId%22%7D"
                                 ))).willReturn(ok())
         );
     }

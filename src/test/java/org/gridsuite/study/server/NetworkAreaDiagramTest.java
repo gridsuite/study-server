@@ -6,7 +6,6 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.model.VariantInfos;
-
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.CurrentLimitViolationInfos;
 import org.gridsuite.study.server.dto.LimitViolationInfos;
@@ -26,12 +25,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.CURRENT_LIMIT_VIOLATIONS_INFOS;
