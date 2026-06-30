@@ -654,8 +654,10 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("modificationUuid") UUID modificationUuid,
-            @Parameter(description = "source container UUID; for GROUP source the node's group is used when absent") @RequestParam(value = "sourceContainerId", required = false) UUID sourceContainerId,
-            @Parameter(description = "target container UUID; for GROUP target the node's group is used when absent") @RequestParam(value = "targetContainerId", required = false) UUID targetContainerId,
+            @Parameter(description = "source container UUID; for GROUP source the node's group is used when absent")
+                @RequestParam(value = "sourceContainerId", required = false) UUID sourceContainerId,
+            @Parameter(description = "target container UUID; for GROUP target the node's group is used when absent")
+                @RequestParam(value = "targetContainerId", required = false) UUID targetContainerId,
             @Parameter(description = "insert before this modification (empty = at end)") @RequestParam(value = "beforeUuid", required = false) UUID beforeUuid,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
