@@ -61,6 +61,7 @@ import org.gridsuite.study.server.utils.ElementType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -164,6 +165,9 @@ public class StudyService {
     }
 
     private final StudyService self;
+
+    @Value("${study.enable-operation-quotas}")
+    private boolean shouldCheckOperationQuotas = true;
 
     @Autowired
     public StudyService(
@@ -1009,6 +1013,7 @@ public class StudyService {
                 new LoadFlowService.ParametersInfos(lfParametersUuid, withRatioTapChangers, isSecurityNode), lfReportUuid, userId);
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
 
+        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(LOAD_FLOW), result);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         notificationService.emitElementUpdated(studyEntity.getId(), userId);
     }
@@ -1324,7 +1329,10 @@ public class StudyService {
         StudyEntity study = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-        return handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
+        UUID result = handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
+
+        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(SECURITY_ANALYSIS), result);
+        return result;
     }
 
     private UUID handleSecurityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
@@ -1737,20 +1745,25 @@ public class StudyService {
     }
 
     private long getAllowedBuildNodesUpToQuota(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
-        return userAdminService.getUserMaxAllowedBuilds(userId).map(maxBuilds -> {
+        Map<OperationType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
+
+        return Optional.ofNullable(userMaxQuotas.get(OperationType.BUILD)).map(maxBuilds -> {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
             return maxBuilds - nbBuiltNodes;
         }).orElse(Long.MAX_VALUE);
     }
 
     public void assertNoMaxBuilds(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+        Map<OperationType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
+
         // check restrictions on node builds number
-        userAdminService.getUserMaxAllowedBuilds(userId).ifPresent(maxBuilds -> {
+        Integer maxBuilds = userMaxQuotas.get(OperationType.BUILD);
+        if (maxBuilds != null) {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
             if (nbBuiltNodes >= maxBuilds) {
                 throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes reached", Map.of("limit", maxBuilds));
             }
-        });
+        }
     }
 
     @Transactional
@@ -2601,7 +2614,10 @@ public class StudyService {
         StudyEntity study = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-        return handleSensitivityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
+        UUID result = handleSensitivityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
+
+        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(SENSITIVITY_ANALYSIS), result);
+        return result;
     }
 
     private UUID handleSensitivityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
@@ -2634,7 +2650,10 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-        return handleShortCircuitRequest(studyEntity, nodeUuid, rootNetworkUuid, busId, debug, userId);
+        UUID result = handleShortCircuitRequest(studyEntity, nodeUuid, rootNetworkUuid, busId, debug, userId);
+
+        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(SHORT_CIRCUIT), result);
+        return result;
     }
 
     private UUID handleShortCircuitRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, Optional<String> busId, boolean debug, String userId) {
@@ -2661,7 +2680,10 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-        return handleVoltageInitRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+        UUID result = handleVoltageInitRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+
+        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(VOLTAGE_INITIALIZATION), result);
+        return result;
     }
 
     private UUID handleVoltageInitRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
@@ -2949,7 +2971,10 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-        return handleDynamicSimulationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+        UUID result = handleDynamicSimulationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+
+        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(DYNAMIC_SIMULATION), result);
+        return result;
     }
 
     private UUID handleDynamicSimulationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
@@ -3021,7 +3046,10 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-        return handleDynamicSecurityAnalysisRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+        UUID result = handleDynamicSecurityAnalysisRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+
+        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(DYNAMIC_SECURITY_ANALYSIS), result);
+        return result;
     }
 
     private UUID handleDynamicSecurityAnalysisRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
@@ -3100,7 +3128,10 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-        return handleDynamicMarginCalculationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+        UUID result = handleDynamicMarginCalculationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+
+        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(DYNAMIC_MARGIN_CALCULATION), result);
+        return result;
     }
 
     private UUID handleDynamicMarginCalculationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
@@ -3322,7 +3353,10 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-        return handleStateEstimationRequest(studyEntity, nodeUuid, rootNetworkUuid, userId, debug);
+        UUID result = handleStateEstimationRequest(studyEntity, nodeUuid, rootNetworkUuid, userId, debug);
+
+        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(STATE_ESTIMATION), result);
+        return result;
     }
 
     @Transactional
@@ -3330,7 +3364,10 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-        return handlePccMinRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
+        UUID result = handlePccMinRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
+
+        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(PCC_MIN), result);
+        return result;
     }
 
     private UUID handleStateEstimationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
@@ -3733,5 +3770,27 @@ public class StudyService {
         rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
         rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
         notificationService.emitRootNetworksUpdated(studyUuid);
+    }
+
+    public void assertOnQuotasAvailability(ComputationType computationType, String userId) {
+        if (!shouldCheckOperationQuotas) {
+            return;
+        }
+
+        Map<OperationType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
+        Map<OperationType, Integer> userCurrentQuotas = userAdminService.getUserCurrentQuota(userId);
+        OperationType quotaType = OperationType.mapFromComputationType(computationType);
+
+        Integer maxComputation = userMaxQuotas.get(quotaType);
+        Integer currentComputation = userCurrentQuotas.get(quotaType);
+
+        if (maxComputation != null && currentComputation != null && currentComputation >= maxComputation) {
+            throw new StudyException(MAX_OPERATION_TYPE_EXCEEDED, "Max number of " + computationType.name() + " already reached",
+                                     Map.of("maxComputation", maxComputation, "currentComputation", currentComputation));
+        }
+    }
+
+    public Boolean getOperationQuotaStatus() {
+        return shouldCheckOperationQuotas;
     }
 }

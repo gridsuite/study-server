@@ -11,6 +11,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -45,11 +46,11 @@ public class UserProfileInfos {
 
     private UUID voltageInitParameterId;
 
-    Integer maxAllowedBuilds;
-
     private UUID spreadsheetConfigCollectionId;
 
     private UUID networkVisualizationParameterId;
 
     private UUID workspaceId;
+
+    private Map<OperationType, Integer> maxComputationQuotas;
 }

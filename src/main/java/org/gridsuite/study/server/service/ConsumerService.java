@@ -69,6 +69,7 @@ public class ConsumerService {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
     private final ComputationParametersService computationParametersService;
+    private final UserAdminService userAdminService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -79,7 +80,8 @@ public class ConsumerService {
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            DirectoryService directoryService,
-                           ComputationParametersService computationParametersService) {
+                           ComputationParametersService computationParametersService,
+                           UserAdminService userAdminService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -90,6 +92,7 @@ public class ConsumerService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
+        this.userAdminService = userAdminService;
     }
 
     @Bean
@@ -101,7 +104,7 @@ public class ConsumerService {
                 try {
                     NetworkModificationResult networkModificationResult = message.getPayload();
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                        NodeReceiver.class);
+                                                         NodeReceiver.class);
 
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     studyService.handleBuildSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), networkModificationResult);
@@ -134,7 +137,7 @@ public class ConsumerService {
                 NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                        NodeReceiver.class);
+                                                         NodeReceiver.class);
 
                     LOGGER.info("Build stopped for node '{}'", receiverObj.getNodeUuid());
 
@@ -160,7 +163,7 @@ public class ConsumerService {
                 NodeReceiver receiverObj;
                 try {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
-                        NodeReceiver.class);
+                                                         NodeReceiver.class);
 
                     LOGGER.info("Build failed for node '{}'", receiverObj.getNodeUuid());
 
@@ -169,7 +172,7 @@ public class ConsumerService {
                     // send notification
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitNodeBuildFailed(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE,
-                            String.class));
+                                                                                                                                                             String.class));
                     handleBuildCanceledOrFailedWorkflow(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message);
                 } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
@@ -228,23 +231,22 @@ public class ConsumerService {
         NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
         try {
             switch (caseImportAction) {
-                case STUDY_CREATION ->
-                    insertStudy(studyUuid, userId, networkInfos, caseInfos, importParameters, importReportUuid);
+                case STUDY_CREATION -> insertStudy(studyUuid, userId, networkInfos, caseInfos, importParameters, importReportUuid);
                 case ROOT_NETWORK_CREATION -> studyService.createRootNetwork(studyUuid, RootNetworkInfos.builder()
-                    .id(rootNetworkUuid)
-                    .caseInfos(caseInfos)
-                    .reportUuid(importReportUuid)
-                    .networkInfos(networkInfos)
-                    .importParameters(importParameters)
-                    .build());
+                        .id(rootNetworkUuid)
+                        .caseInfos(caseInfos)
+                        .reportUuid(importReportUuid)
+                        .networkInfos(networkInfos)
+                        .importParameters(importParameters)
+                        .build());
                 case NETWORK_RECREATION -> studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                 case ROOT_NETWORK_MODIFICATION -> studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
-                    .id(rootNetworkUuid)
-                    .networkInfos(networkInfos)
-                    .caseInfos(caseInfos)
-                    .importParameters(importParameters)
-                    .reportUuid(importReportUuid)
-                    .build());
+                        .id(rootNetworkUuid)
+                        .networkInfos(networkInfos)
+                        .caseInfos(caseInfos)
+                        .importParameters(importParameters)
+                        .reportUuid(importReportUuid)
+                        .build());
             }
             caseService.disableCaseExpiration(caseUuid);
         } catch (Exception e) {
@@ -259,7 +261,7 @@ public class ConsumerService {
                 networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNodeUuid);
             }
             LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
-                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
+                         TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
         }
     }
 
@@ -273,8 +275,8 @@ public class ConsumerService {
         UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, computationParameterUUIDs,
-            networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
-            importParameters, importReportUuid);
+                                 networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
+                                 importParameters, importReportUuid);
     }
 
     private UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
@@ -285,7 +287,7 @@ public class ConsumerService {
             } catch (Exception e) {
                 // TODO try to report a log in Root subreporter ?
                 LOGGER.error(String.format("Could not duplicate network visualization parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getNetworkVisualizationParameterId(), userId, userProfileInfos.getName()), e);
+                                           userProfileInfos.getNetworkVisualizationParameterId(), userId, userProfileInfos.getName()), e);
             }
         }
         // no profile, or no/bad network visualization parameters in profile => use default values
@@ -305,7 +307,7 @@ public class ConsumerService {
             } catch (Exception e) {
                 // TODO try to report a log in Root subreporter ?
                 LOGGER.error(String.format("Could not duplicate spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default spreadsheet config collection",
-                    userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
+                                           userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
             }
         }
         // no profile, or no/bad spreadsheet config collection in profile => use default values
@@ -346,7 +348,7 @@ public class ConsumerService {
                 CaseImportReceiver receiver;
                 try {
                     receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8),
-                        CaseImportReceiver.class);
+                                                      CaseImportReceiver.class);
                     UUID studyUuid = receiver.getStudyUuid();
                     String userId = receiver.getUserId();
                     UUID rootNetworkUuid = receiver.getRootNetworkUuid();
@@ -396,6 +398,11 @@ public class ConsumerService {
                 if (receiverObj != null) {
                     handleUnblockNode(receiverObj, computationType);
 
+                    // free quota
+                    if (userId != null && resultUuid != null) {
+                        userAdminService.endOperationWithQuota(userId, OperationType.mapFromComputationType(computationType), resultUuid);
+                    }
+
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateFailedType(), errorMessage, userId);
@@ -416,6 +423,14 @@ public class ConsumerService {
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for stopped computation
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
+
+                // free quota
+                String resultId = msg.getHeaders().get(RESULT_UUID, String.class);
+                String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
+                if (resultId != null && userId != null) {
+                    UUID resultUuid = UUID.fromString(resultId);
+                    userAdminService.endOperationWithQuota(userId, OperationType.mapFromComputationType(computationType), resultUuid);
+                }
 
                 LOGGER.info("{} stopped for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
             } catch (JsonProcessingException e) {
@@ -439,12 +454,12 @@ public class ConsumerService {
                 String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
                 // send notification for cancel computation fail
                 notificationService.emitStudyError(
-                    studyUuid,
-                    receiverObj.getNodeUuid(),
-                    receiverObj.getRootNetworkUuid(),
-                    updateType,
-                    errorMessage,
-                    userId
+                        studyUuid,
+                        receiverObj.getNodeUuid(),
+                        receiverObj.getRootNetworkUuid(),
+                        updateType,
+                        errorMessage,
+                        userId
                 );
                 LOGGER.info("{} cancellation could not be stopped for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
             } catch (JsonProcessingException e) {
@@ -463,47 +478,59 @@ public class ConsumerService {
 
     public void consumeCalculationDebug(Message<String> msg, ComputationType computationType) {
         Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
-            .map(UUID::fromString)
-            .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {
-                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                .map(UUID::fromString)
+                .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
 
-                String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR_MESSAGE);
-                String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
-                notificationService.emitComputationDebugFileStatus(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType, userId, resultUuid, errorMessage);
-            }));
+                    String errorMessage = (String) msg.getHeaders().get(HEADER_ERROR_MESSAGE);
+                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
+
+                    // free quota
+                    if (userId != null) {
+                        userAdminService.endOperationWithQuota(userId, OperationType.mapFromComputationType(computationType), resultUuid);
+                    }
+
+                    notificationService.emitComputationDebugFileStatus(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType, userId, resultUuid, errorMessage);
+                }));
     }
 
     @SuppressWarnings("checkstyle:LambdaBodyLength")
     public void consumeCalculationResult(Message<String> msg, ComputationType computationType) {
         Optional.ofNullable(msg.getHeaders().get(RESULT_UUID, String.class))
-            .map(UUID::fromString)
-            .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {
-                LOGGER.info("{} result '{}' available for node '{}'",
-                    computationType.getLabel(),
-                    resultUuid,
-                    receiverObj.getNodeUuid());
+                .map(UUID::fromString)
+                .ifPresent(resultUuid -> getNodeReceiver(msg).ifPresent(receiverObj -> {
+                    LOGGER.info("{} result '{}' available for node '{}'",
+                                computationType.getLabel(),
+                                resultUuid,
+                                receiverObj.getNodeUuid());
 
-                // update DB
-                if (computationType == LOAD_FLOW) {
-                    Boolean withRatioTapChangers = msg.getHeaders().get(HEADER_WITH_RATIO_TAP_CHANGERS, Boolean.class);
-                    rootNetworkNodeInfoService.updateLoadflowResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, withRatioTapChangers);
-                } else {
-                    rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
-                }
+                    // update DB
+                    if (computationType == LOAD_FLOW) {
+                        Boolean withRatioTapChangers = msg.getHeaders().get(HEADER_WITH_RATIO_TAP_CHANGERS, Boolean.class);
+                        rootNetworkNodeInfoService.updateLoadflowResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, withRatioTapChangers);
+                    } else {
+                        rootNetworkNodeInfoService.updateComputationResultUuid(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, computationType);
+                    }
 
-                // unblock node
-                handleUnblockNode(receiverObj, computationType);
+                    // unblock node
+                    handleUnblockNode(receiverObj, computationType);
 
-                UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
-                if (computationType == LOAD_FLOW) {
-                    String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
-                    handleLoadFlowSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, userId);
-                }
+                    UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
+                    if (computationType == LOAD_FLOW) {
+                        String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
+                        handleLoadFlowSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, userId);
+                    }
 
-                // send notifications
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
-                notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateResultType());
-            }));
+                    // free quota
+                    String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
+                    if (userId != null) {
+                        userAdminService.endOperationWithQuota(userId, OperationType.mapFromComputationType(computationType), resultUuid);
+                    }
+
+                    // send notifications
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
+                    notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateResultType());
+                }));
     }
 
     private void handleLoadFlowSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
