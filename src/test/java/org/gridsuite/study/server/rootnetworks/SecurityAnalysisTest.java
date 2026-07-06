@@ -163,7 +163,7 @@ class SecurityAnalysisTest {
     private static final byte[] SECURITY_ANALYSIS_NMK_CUT_OFF_POWER_RESULT_CSV_ZIPPED = {0x05, 0x03};
     private static final String SECURITY_ANALYSIS_STATUS_JSON = "\"CONVERGED\"";
     private static final ContingencyCount CONTINGENCIES_COUNT =
-        new ContingencyCount(Map.of(UUID.randomUUID(), new ContingencyCountByContingencyList(2, Map.of("contingencyName", Set.of("equipmentName")))));
+        new ContingencyCount(Map.of(UUID.randomUUID(), new ContingencyCountByContingencyList(2, Map.of("contingencyName", Set.of("equipmentName")), "titi is not a valid contingency")));
 
     public static final String SECURITY_ANALYSIS_DEFAULT_PARAMETERS_JSON =
             "{\"lowVoltageAbsoluteThreshold\":0.0,\"lowVoltageProportionalThreshold\":0.0,\"highVoltageAbsoluteThreshold\":0.0,\"highVoltageProportionalThreshold\":0.0,"

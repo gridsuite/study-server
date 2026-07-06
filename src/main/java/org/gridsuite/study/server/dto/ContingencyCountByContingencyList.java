@@ -14,5 +14,6 @@ import java.util.Set;
  */
 public record ContingencyCountByContingencyList(
         int nbContingencies,
-        Map<String, Set<String>> notFoundElements
+        Map<String, Set<String>> notFoundElements,
+        String invalidContingencyErrorMessage
 ) { }
