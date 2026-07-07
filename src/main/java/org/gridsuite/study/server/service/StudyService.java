@@ -2417,7 +2417,7 @@ public class StudyService {
                 .map(CompositesToBeInserted::id)
                 .toList();
         if (action == StudyConstants.CompositeModificationsActionType.INSERT && !sharedCompositeUuids.isEmpty()) {
-            directoryService.addReferencesToSharedComposites(sharedCompositeUuids, userId, targetNodeUuid);
+            directoryService.createsReferencesToSharedComposites(sharedCompositeUuids, userId, targetNodeUuid);
         }
 
         duplicateModificationsOrInsertComposites(

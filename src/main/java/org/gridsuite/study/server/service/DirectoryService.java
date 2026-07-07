@@ -103,12 +103,12 @@ public class DirectoryService {
     }
 
     /**
-     *
-     * @param elementsUuids all the element uuids of the shared composites that need to be referenced in directory server
-     * @param userId id of the user who started the insertion
+     * creates references and add them to shared composite modifications stored in directory server
+     * @param elementsUuids element uuids of the shared composites in directory server
+     * @param userId id of the user who creates the references
      * @param targetNodeUuid where the new references will point
      */
-    public void addReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, UUID targetNodeUuid) {
+    public void createsReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, UUID targetNodeUuid) {
         elementsUuids.forEach(elementUuid -> {
             var path = UriComponentsBuilder.fromPath(
                             DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")
@@ -127,7 +127,7 @@ public class DirectoryService {
     }
 
     /**
-     * remove references from the shared modification in directory server
+     * remove reference from the shared modification in directory server
      * @param referenceUuid uuid of the composite or group where the 'Modification reference' is located
      * @param userId id of the user who caused the unreferencing
      * @param sharedElementUuid uuid of the referenced shared element in the directory-server
