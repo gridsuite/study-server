@@ -2101,16 +2101,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-            Map<UUID, UUID> referenceToBeRecreated = networkModificationService.getReferencesData(modificationsUuids);
             networkModificationService.restoreModifications(groupId, modificationsUuids);
-            // if there are references modifications in the unstashed netmods, those references had been removed and must be recreated in directory server
-            if (!referenceToBeRecreated.isEmpty()) {
-                directoryService.addReferencesToSharedComposites(
-                        referenceToBeRecreated.keySet().stream().toList(),
-                        userId,
-                        nodeUuid
-                );
-            }
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -2245,20 +2236,6 @@ public class StudyService {
     public void restoreNodes(UUID studyId, List<UUID> nodeIds, UUID anchorNodeId, String userId) {
         networkModificationTreeService.assertIsRootOrConstructionNode(anchorNodeId);
         networkModificationTreeService.restoreNode(studyId, nodeIds, anchorNodeId);
-
-        // if there are references modifications in the unstashed node, those references had been removed and must be recreated in directory server
-        nodeIds.forEach(nodeId -> {
-            UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeId);
-            Map<UUID, UUID> referenceToBeRecreated = networkModificationService.getReferencesDataFromGroup(groupId);
-            if (!referenceToBeRecreated.isEmpty()) {
-                directoryService.addReferencesToSharedComposites(
-                        referenceToBeRecreated.keySet().stream().toList(),
-                        userId,
-                        nodeId
-                );
-            }
-        });
-
         notificationService.emitElementUpdated(studyId, userId);
     }
 
