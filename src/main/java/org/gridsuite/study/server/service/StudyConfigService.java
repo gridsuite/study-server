@@ -30,7 +30,6 @@ import static org.gridsuite.study.server.StudyConstants.STUDY_CONFIG_API_VERSION
 @Service
 public class StudyConfigService {
     private static final String UUID_PARAM = "/{uuid}";
-    private static final String DUPLICATE_FROM_PARAM = "duplicateFrom";
 
     private static final String NETWORK_VISU_PARAMETERS_URI = "/network-visualizations-params";
     private static final String NETWORK_VISU_PARAMETERS_WITH_ID_URI = NETWORK_VISU_PARAMETERS_URI + UUID_PARAM;
@@ -75,9 +74,8 @@ public class StudyConfigService {
 
     public UUID duplicateNetworkVisualizationParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
-        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI)
-                .queryParam(DUPLICATE_FROM_PARAM, sourceParametersUuid)
-                .buildAndExpand().toUriString();
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI + "/{uuid}/duplicate")
+                .buildAndExpand(sourceParametersUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
