@@ -225,7 +225,9 @@ public class NetworkModificationService {
     }
 
     /**
-     * @return references data of the modificationsUuids as Pair<element uuid in directory server, uuid of its mother composite (null if the modification is at the root level)>
+     * @return references data of the modificationsUuids as Pair of :
+     * - element uuid in directory server
+     * - uuid of its mother composite (null if the modification is at the root level)
      */
     public Map<UUID, UUID> getReferencesData(List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
@@ -249,7 +251,9 @@ public class NetworkModificationService {
     }
 
     /**
-     * @return references data of the modifications in the group as Pair<element uuid in directory server, uuid of its mother composite (null if the modification is at the root level)>
+     * @return references data of the modifications in the group as Pairof :
+     * - element uuid in directory server
+     * - uuid of its mother composite (null if the modification is at the root level)
      */
     public Map<UUID, UUID> getReferencesDataFromGroup(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);

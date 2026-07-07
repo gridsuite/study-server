@@ -743,7 +743,12 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    private void handleInsertCompositeNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, List<CompositesToBeInserted> compositesToBeInserted, String userId, CompositeModificationsActionType action) {
+    private void handleInsertCompositeNetworkModifications(
+            UUID targetStudyUuid,
+            UUID targetNodeUuid,
+            List<CompositesToBeInserted> compositesToBeInserted,
+            String userId,
+            CompositeModificationsActionType action) {
         studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
         studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
         try {
