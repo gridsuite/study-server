@@ -2040,13 +2040,7 @@ public class StudyService {
                 throw new StudyException(NOT_ALLOWED);
             }
             UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeUuid);
-
-            Map<UUID, UUID> referenceToBeDeleted = networkModificationService.getReferencesData(modificationsUuids);
             networkModificationService.stashModifications(groupId, modificationsUuids);
-            // if there are references modifications in the stashed netmods, those references have to be removed from directory server
-            referenceToBeDeleted.forEach((modUuid, refUuid) ->
-                directoryService.removeReference(refUuid != null ? refUuid : nodeUuid, userId, modUuid)
-            );
             invalidateNodeTree(studyUuid, nodeUuid);
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
@@ -2212,14 +2206,7 @@ public class StudyService {
             );
         }
 
-        UUID groupId = networkModificationTreeService.getModificationGroupUuid(nodeId);
         networkModificationTreeService.doStashNode(nodeId, stashChildren);
-
-        Map<UUID, UUID> referenceToBeDeleted = networkModificationService.getReferencesDataFromGroup(groupId);
-        // if there are references modifications in the stashed node, those references have to be removed from directory server
-        referenceToBeDeleted.forEach((modUuid, refUuid) ->
-            directoryService.removeReference(refUuid != null ? refUuid : nodeId, userId, modUuid)
-        );
 
         if (startTime.get() != null) {
             LOGGER.trace("Delete node '{}' of study '{}' : {} seconds", nodeId, studyUuid,
