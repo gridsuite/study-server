@@ -336,10 +336,13 @@ class StudyTestBase {
     }
 
     private void initMockBeansNetworkNotExisting() {
-        when(networkStoreService.cloneNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID, Collections.emptyList())).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
+        when(networkStoreService.cloneNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID,
+                Collections.emptyList())).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
         when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
-        when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID, PreloadingStrategy.COLLECTION)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
-        when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID, PreloadingStrategy.NONE)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
+        when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID,
+                PreloadingStrategy.COLLECTION)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
+        when(networkStoreService.getNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID,
+                PreloadingStrategy.NONE)).thenThrow(new PowsyblException("Network " + StudyTest.NOT_EXISTING_NETWORK_UUID + " not found"));
 
         doNothing().when(networkStoreService).deleteNetwork(StudyTest.NOT_EXISTING_NETWORK_UUID);
     }
@@ -454,7 +457,8 @@ class StudyTestBase {
     }
 
     protected NetworkModificationNode createNetworkModificationNode(UUID studyUuid, UUID parentNodeUuid,
-                                                                    UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType, BuildStatus buildStatus, String userId) throws Exception {
+                                                                    UUID modificationGroupUuid, String variantId, String nodeName, NetworkModificationNodeType nodeType, BuildStatus buildStatus,
+                                                                            String userId) throws Exception {
         NetworkModificationNode modificationNode = NetworkModificationNode.builder().name(nodeName)
             .description("description").modificationGroupUuid(modificationGroupUuid).variantId(variantId)
             .nodeType(nodeType)
@@ -517,17 +521,7 @@ class StudyTestBase {
     }
 
     protected void checkUpdateModelsStatusMessagesReceived(UUID studyUuid, UUID nodeUuid) {
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
-        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        checkUpdateModelStatusMessagesReceived(studyUuid, nodeUuid, NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS);
     }
 
     protected void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
@@ -592,7 +586,8 @@ class StudyTestBase {
                                              UUID stubSpreadsheetConfigDuplicateFromId,
                                              UUID stubNetworkVisualizationParamsDuplicateFromId,
                                              UUID stubWorkspacesConfigDuplicateFromId) {
-        public void verify(WireMockStubs wireMockStubs, ComputationServerStubs computationServerStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests, int networkVisualizationParamsDuplicateFromNbRequests, int workspacesConfigDuplicateFromNbRequests) {
+        public void verify(WireMockStubs wireMockStubs, ComputationServerStubs computationServerStubs, int parametersDuplicateFromNbRequests, int spreadsheetConfigDuplicateFromNbRequests,
+                int networkVisualizationParamsDuplicateFromNbRequests, int workspacesConfigDuplicateFromNbRequests) {
             if (stubParametersDuplicateFromId != null) {
                 computationServerStubs.verifyParametersDuplicateFromAny(stubParametersDuplicateFromId, parametersDuplicateFromNbRequests);
             }
@@ -638,7 +633,8 @@ class StudyTestBase {
         wireMockStubs.stubWorkspacesConfigDefault(mapper.writeValueAsString(UUID.randomUUID()));
     }
 
-    protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests, int workspacesConfigDefaultNbRequests) {
+    protected void verifyCreateParameters(int createParametersNbRequests, int parametersDefaultNbRequests, int spreadsheetConfigDefaultNbRequests, int networkVisualizationParamsDefaultNbRequests,
+            int workspacesConfigDefaultNbRequests) {
         computationServerStubs.verifyParameters(createParametersNbRequests);
         computationServerStubs.verifyParametersDefault(parametersDefaultNbRequests);
         wireMockStubs.verifySpreadsheetConfigDefault(spreadsheetConfigDefaultNbRequests);

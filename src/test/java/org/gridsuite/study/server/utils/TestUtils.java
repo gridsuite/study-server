@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.gridsuite.study.server.notification.NotificationService.UPDATE_TYPE_ALL_COMPUTATION_STATUS;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -52,20 +53,6 @@ import static org.mockito.Mockito.doAnswer;
  */
 @Service
 public final class TestUtils {
-
-    public static final List<String> ALL_COMPUTATION_STATUS = List.of(
-            NotificationService.UPDATE_TYPE_LOADFLOW_STATUS,
-            NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS,
-            NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS,
-            NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
-            NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
-            NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS,
-            NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
-            NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS,
-            NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS,
-            NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS,
-            NotificationService.UPDATE_TYPE_PCC_MIN_STATUS
-    );
 
     //output destinations
     public static final String STUDY_UPDATE_DESTINATION = "study.update";
@@ -205,7 +192,7 @@ public final class TestUtils {
 
     public static StudyEntity createDummyStudy(UUID networkUuid, UUID caseUuid, String caseName, String caseFormat, UUID reportUuid) {
         StudyEntity studyEntity = StudyEntity.builder().id(UUID.randomUUID())
-//            .shortCircuitParametersUuid(UUID.randomUUID())
+            //            .shortCircuitParametersUuid(UUID.randomUUID())
             .build();
         studyEntity.addRootNetwork(RootNetworkEntity.builder().id(UUID.randomUUID()).name("rootNetworkName").tag("dum").caseFormat(caseFormat).caseUuid(caseUuid).caseName(caseName).networkId("netId").networkUuid(networkUuid).reportUuid(reportUuid).build());
 
@@ -220,6 +207,7 @@ public final class TestUtils {
             .children(Collections.emptyList()).build();
     }
 
+    @SuppressWarnings("checkstyle:IllegalCatch")
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {
         try {
             destinations.forEach(destination -> assertNull(output.receive(TIMEOUT, destination), "Should not be any messages in queue " + destination + " : "));
@@ -230,6 +218,7 @@ public final class TestUtils {
         }
     }
 
+    @SuppressWarnings("checkstyle:IllegalCatch")
     public static void assertServerRequestsEmptyThenShutdown(MockWebServer server) throws UncheckedInterruptedException {
         try {
             assertNull(getRequestsDone(1, server), "Should not be any http requests : ");
@@ -305,6 +294,6 @@ public final class TestUtils {
     }
 
     public static void checkUpdateStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, OutputDestination output) {
-        ALL_COMPUTATION_STATUS.forEach(computationStatus -> checkUpdateTypeMessageReceived(studyUuid, nodeUuid, computationStatus, output, STUDY_UPDATE_DESTINATION));
+        checkUpdateTypeMessageReceived(studyUuid, nodeUuid, UPDATE_TYPE_ALL_COMPUTATION_STATUS, output, STUDY_UPDATE_DESTINATION);
     }
 }

@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 /**
- * @author Kevin Le Saulnier <kevin.le-saulnier at rte-france.com
+ * @author Kevin Le Saulnier <kevin.le-saulnier at rte-france.com>
  */
 @SpringBootTest
 @DisableElasticsearch
@@ -97,7 +97,7 @@ class NodeSequenceTest {
         AbstractNode nNode = parentOfSubtree.getChildren().getFirst();
         checkSecuritySequence(nNode, "");
 
-       // verify notifications
+        // verify notifications
         verify(notificationService, times(1)).emitSubtreeInserted(studyUuid, nNode.getId(), parentOfSubtree.getId());
         verify(notificationService, times(1)).emitElementUpdated(studyUuid, userId);
 
@@ -151,7 +151,8 @@ class NodeSequenceTest {
     }
 
     NetworkModificationNode createNode(UUID parentNodeUuid, String name, NetworkModificationNodeType networkModificationNodeType) {
-        return networkModificationTreeService.createNode(studyEntity, parentNodeUuid, NetworkModificationNode.builder().name(name).nodeType(networkModificationNodeType).build(), InsertMode.CHILD, userId);
+        return networkModificationTreeService.createNode(studyEntity, parentNodeUuid, NetworkModificationNode.builder().name(name).nodeType(networkModificationNodeType).build(), InsertMode.CHILD,
+                userId);
     }
 
     void checkSecuritySequence(AbstractNode nNode, String nameSuffix) {

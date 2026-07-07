@@ -44,7 +44,8 @@ public class SupervisionController {
 
     private final RestClient restClient;
 
-    public SupervisionController(SupervisionService supervisionService, StudyService studyService, RootNetworkService rootNetworkService, EquipmentInfosService equipmentInfosService, RestClient restClient) {
+    public SupervisionController(SupervisionService supervisionService, StudyService studyService, RootNetworkService rootNetworkService, EquipmentInfosService equipmentInfosService, RestClient
+            restClient) {
         this.supervisionService = supervisionService;
         this.studyService = studyService;
         this.rootNetworkService = rootNetworkService;

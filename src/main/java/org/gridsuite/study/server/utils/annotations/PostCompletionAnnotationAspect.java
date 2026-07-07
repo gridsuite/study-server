@@ -13,7 +13,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 
 /**
- * @author Nicolas Noir <nicolas.noir at rte-france.com
+ * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @Aspect
 @AllArgsConstructor
@@ -30,7 +30,7 @@ public class PostCompletionAnnotationAspect {
     private static final class PjpAfterCompletionRunnable implements Runnable {
         private final ProceedingJoinPoint pjp;
 
-        public PjpAfterCompletionRunnable(ProceedingJoinPoint pjp) {
+        PjpAfterCompletionRunnable(ProceedingJoinPoint pjp) {
             this.pjp = pjp;
         }
 
