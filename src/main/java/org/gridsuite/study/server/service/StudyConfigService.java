@@ -126,8 +126,7 @@ public class StudyConfigService {
     // Spreadsheet Config Collection
     public UUID duplicateSpreadsheetConfigCollection(UUID sourceUuid) {
         Objects.requireNonNull(sourceUuid);
-        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI)
-                .queryParam(DUPLICATE_FROM_PARAM, sourceUuid)
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI + DELIMITER + sourceUuid + "/duplicate")
                 .buildAndExpand().toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -332,8 +331,7 @@ public class StudyConfigService {
 
     public UUID duplicateWorkspacesConfig(UUID sourceUuid) {
         Objects.requireNonNull(sourceUuid);
-        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_URI)
-                .queryParam(DUPLICATE_FROM_PARAM, sourceUuid)
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_URI + DELIMITER + sourceUuid + "/duplicate")
                 .toUriString();
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }

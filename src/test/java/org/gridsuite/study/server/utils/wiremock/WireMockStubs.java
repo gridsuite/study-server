@@ -264,7 +264,7 @@ public class WireMockStubs {
     }
 
     public void verifyDuplicateModificationGroup(UUID stubId, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + "/.*/duplicate", Map.of("groupUuid", WireMock.matching(".*")), nbRequests);
+        verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + "/.*/duplicate", true, Map.of("groupUuid", WireMock.matching(".*")), nbRequests);
     }
 
     public void verifyNetworkModificationDeleteGroup(UUID stubId, boolean errorOnGroupNotFound) {
@@ -776,11 +776,11 @@ public class WireMockStubs {
     }
 
     public void verifySpreadsheetConfigDuplicateFromAny(UUID stubId, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, "/v1/spreadsheet-config-collections/.*/duplicate", Map.of(), nbRequests);
+        verifyPostRequest(wireMock, stubId, "/v1/spreadsheet-config-collections/.*/duplicate", true, Map.of(), nbRequests);
     }
 
     public void verifyNetworkVisualizationParamsDuplicateFromAny(UUID stubId, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, "/v1/network-visualizations-params/.*/duplicate", Map.of(), nbRequests);
+        verifyPostRequest(wireMock, stubId, "/v1/network-visualizations-params/.*/duplicate", true, Map.of(), nbRequests);
     }
 
     public void verifyNetworkAreaDiagramConfig(UUID stubId) {
@@ -810,7 +810,7 @@ public class WireMockStubs {
     }
 
     public void verifyWorkspacesConfigDuplicateFromAny(UUID stubId, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, "/v1/workspaces-configs/.*/duplicate", Map.of(), nbRequests);
+        verifyPostRequest(wireMock, stubId, "/v1/workspaces-configs/.*/duplicate", true, Map.of(), nbRequests);
     }
 
     public UUID stubDeleteWorkspacesConfig() {

@@ -59,10 +59,10 @@ public class CaseServerStubs {
             .willReturn(WireMock.ok())).getId();
     }
 
-    public void verifyDuplicateCase(UUID stubUuid) {
+    public void verifyDuplicateCase(UUID stubUuid, String caseUuid) {
         HashMap<String, StringValuePattern> params = new HashMap<>();
         params.put("withExpiration", WireMock.matching(".*"));
-        verifyPostRequest(wireMock, stubUuid, CASE_URI, params);
+        verifyPostRequest(wireMock, stubUuid, CASE_URI + "/" + caseUuid + "/duplicate", params);
     }
 
     public UUID stubDuplicateCaseWithBody(String caseUuid, String responseBody) {
@@ -73,10 +73,10 @@ public class CaseServerStubs {
                 .withBody(responseBody))).getId();
     }
 
-    public void verifyDuplicateCase(UUID stubUuid, String withExpiration) {
+    public void verifyDuplicateCase(UUID stubUuid, String caseUuid, String withExpiration) {
         HashMap<String, StringValuePattern> params = new HashMap<>();
         params.put("withExpiration", equalTo(withExpiration));
-        verifyPostRequest(wireMock, stubUuid, CASE_URI, params);
+        verifyPostRequest(wireMock, stubUuid, CASE_URI + "/" + caseUuid + "/duplicate", params);
     }
 
     public UUID stubDeleteCase(String caseUuid) {

@@ -457,7 +457,7 @@ class StudyTest extends StudyTestBase {
         wireMockStubs.networkConversionServer.verifyImportNetwork(postNetworkStubId, CLONED_CASE_UUID_STRING, FIRST_VARIANT_ID);
         createStudyStubs.verify(wireMockStubs);
         verifyCreateParameters(1, 9, 1, 1, 1);
-        wireMockStubs.caseServer.verifyDuplicateCase(stubDuplicateCaseId);
+        wireMockStubs.caseServer.verifyDuplicateCase(stubDuplicateCaseId, caseUuid.toString());
         wireMockStubs.caseServer.verifyDisableCaseExpiration(stubDisableCaseExpirationClonedId, CLONED_CASE_UUID_STRING);
         return studyUuid;
     }
@@ -1215,7 +1215,7 @@ class StudyTest extends StudyTestBase {
         // Verify HTTP requests
         RootNetworkEntity rootNetworkEntity = studyTestUtils.getOneRootNetwork(duplicatedStudy.getId());
         wireMockStubs.verifyReindexAll(stubReindexAllId, rootNetworkEntity.getNetworkUuid().toString());
-        wireMockStubs.caseServer.verifyDuplicateCase(stubDuplicateCaseId, "false");
+        wireMockStubs.caseServer.verifyDuplicateCase(stubDuplicateCaseId, CASE_UUID_STRING, "false");
         if (sourceStudy.getVoltageInitParametersUuid() != null) {
             wireMockStubs.computationServer.verifyParametersDuplicateFrom(sourceStudy.getVoltageInitParametersUuid().toString());
         }

@@ -224,7 +224,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
 
         // --- Success --- //
         // configure mock server response
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + DELIMITER + "duplication"))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + DELIMITER + PARAMETERS_UUID + DELIMITER + "duplicate"))
                     .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(newParameterUuid))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)

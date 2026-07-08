@@ -103,7 +103,7 @@ public class ComputationServerStubs {
     }
 
     public void verifyParametersDuplicateFromAny(UUID stubId, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, "/v1/parameters/.*/duplicate", Map.of(), nbRequests);
+        verifyPostRequest(wireMock, stubId, "/v1/parameters/.*/duplicate", true, Map.of(), nbRequests);
     }
 
     public void verifyParametersDuplicateFrom(String duplicateFromUuid) {
