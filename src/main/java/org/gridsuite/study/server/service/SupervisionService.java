@@ -79,6 +79,8 @@ public class SupervisionService {
 
     private final PccMinService pccMinService;
 
+    private final AsymmetricalLoadService asymmetricalLoadService;
+
     private final ElasticsearchOperations elasticsearchOperations;
 
     private final StudyInfosService studyInfosService;
@@ -104,6 +106,7 @@ public class SupervisionService {
                               EquipmentInfosService equipmentInfosService,
                               StateEstimationService stateEstimationService,
                               PccMinService pccMinService,
+                              AsymmetricalLoadService asymmetricalLoadService,
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
@@ -124,6 +127,7 @@ public class SupervisionService {
         this.equipmentInfosService = equipmentInfosService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
+        this.asymmetricalLoadService = asymmetricalLoadService;
         this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
@@ -153,6 +157,8 @@ public class SupervisionService {
                 dryRun ? stateEstimationService.getStateEstimationResultsCount() : deleteStateEstimationResults();
             case PCC_MIN ->
                 dryRun ? pccMinService.getPccMinResultsCount() : deletePccMinResults();
+            case ASYMMETRICAL_LOAD ->
+                dryRun ? asymmetricalLoadService.getAsymmetricalLoadResultsCount() : deleteAsymmetricalLoadResults();
         };
     }
 
@@ -358,6 +364,22 @@ public class SupervisionService {
         reportService.deleteReports(reportsToDelete);
         pccMinService.deleteAllPccMinResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.PCC_MIN, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
+        return rootNetworkNodeInfoEntities.size();
+    }
+
+    private Integer deleteAsymmetricalLoadResults() {
+        AtomicReference<Long> startTime = new AtomicReference<>();
+        startTime.set(System.nanoTime());
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByAsymmetricalLoadResultUuidNotNull();
+        List<UUID> reportsToDelete = new ArrayList<>();
+        rootNetworkNodeInfoEntities.forEach(rootNetworkNodeInfo -> {
+            rootNetworkNodeInfo.setAsymmetricalLoadResultUuid(null);
+            reportsToDelete.add(rootNetworkNodeInfo.getComputationReports().get(ComputationType.ASYMMETRICAL_LOAD.name()));
+            rootNetworkNodeInfo.getComputationReports().remove(ComputationType.ASYMMETRICAL_LOAD.name());
+        });
+        reportService.deleteReports(reportsToDelete);
+        asymmetricalLoadService.deleteAllAsymmetricalLoadResults();
+        LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.ASYMMETRICAL_LOAD, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }
 

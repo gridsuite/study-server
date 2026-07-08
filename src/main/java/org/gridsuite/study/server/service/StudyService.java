@@ -135,6 +135,7 @@ public class StudyService {
     private final CaseService caseService;
     private final StateEstimationService stateEstimationService;
     private final PccMinService pccMinService;
+    private final AsymmetricalLoadService asymmetricalLoadService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
@@ -154,7 +155,8 @@ public class StudyService {
         DYNAMIC_MARGIN_CALCULATION("DynamicMarginCalculation"),
         VOLTAGE_INITIALIZATION("VoltageInit"),
         STATE_ESTIMATION("StateEstimation"),
-        PCC_MIN("PccMin");
+        PCC_MIN("PccMin"),
+        ASYMMETRICAL_LOAD("AsymmetricalLoad");
 
         public final String reportKey;
 
@@ -199,6 +201,7 @@ public class StudyService {
         FilterService filterService,
         StateEstimationService stateEstimationService,
         PccMinService pccMinService,
+        AsymmetricalLoadService asymmetricalLoadService,
         @Lazy StudyService studyService,
         RootNetworkService rootNetworkService,
         RootNetworkNodeInfoService rootNetworkNodeInfoService,
@@ -236,6 +239,7 @@ public class StudyService {
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
+        this.asymmetricalLoadService = asymmetricalLoadService;
         this.self = studyService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
@@ -719,6 +723,7 @@ public class StudyService {
             .sensitivityAnalysisParametersUuid(duplicatedComputationParameterUUIDs.sensitivityAnalysisParametersUuid())
             .stateEstimationParametersUuid(duplicatedComputationParameterUUIDs.stateEstimationParametersUuid())
             .pccMinParametersUuid(duplicatedComputationParameterUUIDs.pccMinParametersUuid())
+            .asymmetricalLoadParametersUuid(duplicatedComputationParameterUUIDs.asymmetricalLoadParametersUuid())
             .networkVisualizationParametersUuid(copiedNetworkVisualizationParametersUuid)
             .spreadsheetConfigCollectionUuid(copiedSpreadsheetConfigCollectionUuid)
             .workspacesConfigUuid(copiedWorkspacesConfigUuid)
@@ -1488,6 +1493,10 @@ public class StudyService {
 
     public void invalidatePccMinStatusOnAllNodes(UUID studyUuid) {
         pccMinService.invalidatePccMinStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, PCC_MIN));
+    }
+
+    public void invalidateAsymmetricalLoadStatusOnAllNodes(UUID studyUuid) {
+        asymmetricalLoadService.invalidateAsymmetricalLoadStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, PCC_MIN));
     }
 
     private StudyEntity updateRootNetworkIndexationStatus(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, RootNetworkIndexationStatus indexationStatus) {
@@ -3333,6 +3342,14 @@ public class StudyService {
         return handlePccMinRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
     }
 
+    @Transactional
+    public UUID runAsymmetricalLoad(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
+
+        return handleAsymmetricalLoadRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
+    }
+
     private UUID handleStateEstimationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
@@ -3379,6 +3396,31 @@ public class StudyService {
         UUID result = pccMinService.runPccMin(networkUuid, variantId, runPccMinParametersInfos, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, PCC_MIN);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
+        return result;
+    }
+
+    private UUID handleAsymmetricalLoadRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(ASYMMETRICAL_LOAD.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, ASYMMETRICAL_LOAD, reportUuid);
+        String receiver;
+        try {
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ASYMMETRICAL_LOAD);
+        if (prevResultUuid != null) {
+            asymmetricalLoadService.deleteAsymmetricalLoadResults(List.of(prevResultUuid));
+        }
+        var runAsymmetricalLoadParametersInfos = new RunAsymmetricalLoadParametersInfos(studyEntity.getShortCircuitParametersUuid(), studyEntity.getAsymmetricalLoadParametersUuid(), null);
+
+        UUID result = asymmetricalLoadService.runAsymmetricalLoad(networkUuid, variantId, runAsymmetricalLoadParametersInfos, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
+        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, ASYMMETRICAL_LOAD);
+        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS);
         notificationService.emitElementUpdated(studyEntity.getId(), userId);
         return result;
     }
@@ -3447,6 +3489,52 @@ public class StudyService {
             studyEntity.setPccMinParametersUuid(existingPccMinParametersUuid);
         } else {
             pccMinService.updatePccMinParameters(existingPccMinParametersUuid, parameters);
+        }
+        return userProfileIssue;
+    }
+
+    @Transactional
+    public String getAsymmetricalLoadParameters(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return asymmetricalLoadService.getAsymmetricalLoadParameters(asymmetricalLoadService.getAsymmetricalLoadParametersUuidOrElseCreateDefaults(studyEntity));
+    }
+
+    @Transactional
+    public boolean setAsymmetricalLoadParameters(UUID studyUuid, String parameters, String userId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        boolean userProfileIssue = createOrUpdateAsymmetricalLoadParameters(studyEntity, parameters, userId);
+
+        invalidateAsymmetricalLoadStatusOnAllNodes(studyEntity.getId());
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitComputationParamsChanged(studyUuid, ASYMMETRICAL_LOAD);
+        return userProfileIssue;
+    }
+
+    public boolean createOrUpdateAsymmetricalLoadParameters(StudyEntity studyEntity, String parameters, String userId) {
+        UUID existingAsymmetricalLoadParametersUuid = studyEntity.getAsymmetricalLoadParametersUuid();
+        boolean userProfileIssue = false;
+
+        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
+        if (parameters == null && userProfileInfos.getAsymmetricalLoadParameterId() != null) {
+            // reset case, with existing profile, having default asymmetrical load params
+            try {
+                UUID asymmetricalLoadParametersFromProfileUuid = asymmetricalLoadService.duplicateParameters(userProfileInfos.getAsymmetricalLoadParameterId());
+                studyEntity.setAsymmetricalLoadParametersUuid(asymmetricalLoadParametersFromProfileUuid);
+                asymmetricalLoadService.doDeleteComputationParameters(existingAsymmetricalLoadParametersUuid, ASYMMETRICAL_LOAD.getLabel(), LOGGER);
+                return userProfileIssue;
+            } catch (Exception e) {
+                userProfileIssue = true;
+                LOGGER.error(String.format("Could not duplicate asymmetrical load parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                        userProfileInfos.getAsymmetricalLoadParameterId(), userId, userProfileInfos.getName()), e);
+                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
+            }
+        }
+        if (existingAsymmetricalLoadParametersUuid == null) {
+            existingAsymmetricalLoadParametersUuid = asymmetricalLoadService.createAsymmetricalLoadParameters(parameters);
+            studyEntity.setAsymmetricalLoadParametersUuid(existingAsymmetricalLoadParametersUuid);
+        } else {
+            asymmetricalLoadService.updateAsymmetricalLoadParameters(existingAsymmetricalLoadParametersUuid, parameters);
         }
         return userProfileIssue;
     }
@@ -3713,6 +3801,7 @@ public class StudyService {
         allComputationStatus.put(LOAD_FLOW, rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(SECURITY_ANALYSIS, rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(PCC_MIN, rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid));
+        allComputationStatus.put(ASYMMETRICAL_LOAD, rootNetworkNodeInfoService.getAsymmetricalLoadStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(DYNAMIC_MARGIN_CALCULATION, rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(DYNAMIC_SECURITY_ANALYSIS, rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
         allComputationStatus.put(DYNAMIC_SIMULATION, rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid));

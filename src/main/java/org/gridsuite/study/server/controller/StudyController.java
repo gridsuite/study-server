@@ -966,6 +966,29 @@ public class StudyController {
             .body(result);
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/asymmetrical-load/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get a asymmetrical load result as csv")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of asymmetrical load min results"),
+        @ApiResponse(responseCode = "204", description = "No asymmetrical load min has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The asymmetrical load min has not been found")})
+    public ResponseEntity<byte[]> exportAsymmetricalLoadResultsAsCsv(
+            @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+            @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+            @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+            @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
+            Sort sort, @RequestBody String csvHeaders) {
+        byte[] result = rootNetworkNodeInfoService.exportAsymmetricalLoadResultsAsCsv(nodeUuid, rootNetworkUuid, csvHeaders, sort, filters, globalFilters);
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        responseHeaders.setContentDispositionFormData("attachment", "asymmetrical_load_results.zip");
+
+        return ResponseEntity
+                .ok()
+                .headers(responseHeaders)
+                .body(result);
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run")
     @Operation(summary = "run voltage init on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has started"),
@@ -2427,6 +2450,45 @@ public class StudyController {
             ResponseEntity.noContent().build();
     }
 
+    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/asymmetrical-load/run")
+    @Operation(summary = "run asymmetrical load on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The asymmetrical load has started")})
+    public ResponseEntity<Void> runAsymmetricalLoad(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
+                                          @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                          @RequestHeader(HEADER_USER_ID) String userId) {
+
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.runAsymmetricalLoad(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/asymmetrical-load/stop")
+    @Operation(summary = "stop asymmetrical load on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The asymmetrical load has been stopped")})
+    public ResponseEntity<Void> stopAsymmetricalLoad(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
+                                           @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        rootNetworkNodeInfoService.stopAsymmetricalLoad(studyUuid, nodeUuid, rootNetworkUuid);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/asymmetrical-load/result")
+    @Operation(summary = "Get a asymmetrical load result on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min result"),
+        @ApiResponse(responseCode = "204", description = "No pcc min  has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The pcc min  has not been found")})
+    public ResponseEntity<String> getAsymmetricalLoadResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                            @Parameter(description = "rootNetwork Uuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                            @Parameter(description = "node Uuid") @PathVariable("nodeUuid") UUID nodeUuid,
+                                                            @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
+                                                            @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
+                                                            Pageable pageable) {
+        String result = rootNetworkNodeInfoService.getAsymmetricalLoadResult(nodeUuid, rootNetworkUuid, filters, globalFilters, pageable);
+        return result != null ? ResponseEntity.ok().body(result) :
+                ResponseEntity.noContent().build();
+    }
+
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/result")
     @Operation(summary = "Get a state estimation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
@@ -2461,6 +2523,18 @@ public class StudyController {
                                                   @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                   @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
         String status = rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid);
+        return status != null ? ResponseEntity.ok().body(status) : ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/asymmetrical-load/status")
+    @Operation(summary = "Get the asymmetrical load status on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The asymmetrical load status"),
+        @ApiResponse(responseCode = "204", description = "No asymmetrical load has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The asymmetrical load status has not been found")})
+    public ResponseEntity<String> getAsymmetricalLoadStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                  @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
+                                                  @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
+        String status = rootNetworkNodeInfoService.getAsymmetricalLoadStatus(nodeUuid, rootNetworkUuid);
         return status != null ? ResponseEntity.ok().body(status) : ResponseEntity.noContent().build();
     }
 
@@ -2556,6 +2630,25 @@ public class StudyController {
         @RequestBody(required = false) String pccMinParametersInfos,
         @RequestHeader(HEADER_USER_ID) String userId) {
         return studyService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/asymmetrical-load/parameters")
+    @Operation(summary = "Get asymmetrical load parameters on study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The asymmetrical load parameters")})
+    public ResponseEntity<String> getAsymmetricalLoadParameters(
+            @PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().body(studyService.getAsymmetricalLoadParameters(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/asymmetrical-load/parameters")
+    @Operation(summary = "set asymmetrical load parameters on study, reset to default ones if empty body")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The asymmetrical load parameters are set"),
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> setAsymmetricalLoadParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) String asymmetricalLoadParametersInfos,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        return studyService.setAsymmetricalLoadParameters(studyUuid, asymmetricalLoadParametersInfos, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/computations/status")

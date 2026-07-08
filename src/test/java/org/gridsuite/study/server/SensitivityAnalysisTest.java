@@ -401,7 +401,7 @@ class SensitivityAnalysisTest {
         consumeSensitivityAnalysisResult(studyUuid, rootNetworkUuid, nodeUuid, resultUuid);
         sensitivityAnalysisStubs.verifyGetElementIds();
         directoryServerStubs.verifyGetElementNames(Set.of(ELEMENTS_1_UUID));
-        computationServerStubs.verifyComputationRun(
+        computationServerStubs.verifyComputationRunWithBody(
             NETWORK_UUID_STRING,
             Map.of("receiver", WireMock.matching(".*")),
             objectMapper.writeValueAsString(ELEMENTS_ID_NAME_MAP));
