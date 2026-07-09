@@ -396,6 +396,7 @@ public class RootNetworkNodeInfoService {
         }
         rootNetworkNodeInfoEntity.setStateEstimationResultUuid(null);
         rootNetworkNodeInfoEntity.setPccMinResultUuid(null);
+        rootNetworkNodeInfoEntity.setAsymmetricalLoadResultUuid(null);
 
         Map<String, UUID> computationReports = rootNetworkNodeInfoEntity.getComputationReports()
             .entrySet()

@@ -1496,7 +1496,7 @@ public class StudyService {
     }
 
     public void invalidateAsymmetricalLoadStatusOnAllNodes(UUID studyUuid) {
-        asymmetricalLoadService.invalidateAsymmetricalLoadStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, PCC_MIN));
+        asymmetricalLoadService.invalidateAsymmetricalLoadStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, ASYMMETRICAL_LOAD));
     }
 
     private StudyEntity updateRootNetworkIndexationStatus(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, RootNetworkIndexationStatus indexationStatus) {
