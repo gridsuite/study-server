@@ -8,11 +8,13 @@
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityStatus;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 
 import java.util.HashSet;
@@ -105,8 +107,10 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "pccMinResultUuid")
     private UUID pccMinResultUuid;
 
-    @Column(name = "blockedNode")
-    private Boolean blockedNode;
+    @Column(name = "nodeActivityStatus", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private NodeActivityStatus nodeActivityStatus = NodeActivityStatus.IDLE;
 
     @Embedded
     @AttributeOverrides(value = {
@@ -133,6 +137,7 @@ public class RootNetworkNodeInfoEntity {
             .loadFlowResultUuid(loadFlowResultUuid)
             .loadFlowWithRatioTapChangers(loadFlowWithRatioTapChangers)
             .nodeBuildStatus(nodeBuildStatus.toDto())
+            .nodeActivityStatus(nodeActivityStatus)
             .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)
             .securityAnalysisResultUuid(securityAnalysisResultUuid)
             .stateEstimationResultUuid(stateEstimationResultUuid)

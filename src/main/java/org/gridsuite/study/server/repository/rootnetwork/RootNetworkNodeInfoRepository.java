@@ -6,11 +6,12 @@
  */
 package org.gridsuite.study.server.repository.rootnetwork;
 
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
@@ -64,12 +65,44 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     List<RootNetworkNodeInfoEntity> getAllByRootNetworkIdAndNodeInfoIdIn(UUID rootNetworkUuid, List<UUID> nodesUuids);
 
-    @Query(value = "SELECT count(rnni) > 0 FROM RootNetworkNodeInfoEntity rnni WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodesUuids AND rnni.blockedNode = true ")
-    boolean existsByNodeUuidsAndBlockedNode(UUID rootNetworkUuid, List<UUID> nodesUuids);
+    default boolean existsByNodeUuidsAndNotIdle(UUID rootNetworkUuid, List<UUID> nodesUuids) {
+        return existsByNodeUuidsAndNotIdle(rootNetworkUuid, nodesUuids, NodeActivityStatus.IDLE);
+    }
 
-    @Query(value = "SELECT count(rnni) > 0 FROM RootNetworkNodeInfoEntity rnni WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodesUuids AND" +
-        " (rnni.nodeBuildStatus.globalBuildStatus = :buildStatus or rnni.nodeBuildStatus.localBuildStatus = :buildStatus) ")
-    boolean existsByNodeUuidsAndBuildStatus(UUID rootNetworkUuid, List<UUID> nodesUuids, BuildStatus buildStatus);
+    @Query(value = """
+        SELECT count(rnni) > 0 FROM RootNetworkNodeInfoEntity rnni
+        WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodesUuids
+          AND rnni.nodeActivityStatus <> :idle
+        """)
+    boolean existsByNodeUuidsAndNotIdle(UUID rootNetworkUuid, List<UUID> nodesUuids, NodeActivityStatus idle);
+
+    default int setNodeActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> checkSetUuids, NodeActivityStatus activity) {
+        return setNodeActivity(rootNetworkUuid, nodeUuids, checkSetUuids, activity, NodeActivityStatus.IDLE);
+    }
+
+    @Modifying
+    @Query(value = """
+        UPDATE RootNetworkNodeInfoEntity rnni SET rnni.nodeActivityStatus = :activity
+        WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodeUuids
+          AND rnni.nodeActivityStatus = :idle
+          AND NOT EXISTS (
+              SELECT 1 FROM RootNetworkNodeInfoEntity rnni2
+              WHERE rnni2.rootNetwork.id = :rootNetworkUuid AND rnni2.nodeInfo.idNode IN :checkSetUuids
+                AND rnni2.nodeActivityStatus <> :idle
+          )
+        """)
+    int setNodeActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> checkSetUuids, NodeActivityStatus activity, NodeActivityStatus idle);
+
+    default void clearNodeActivity(UUID rootNetworkUuid, List<UUID> nodeUuids) {
+        clearNodeActivity(rootNetworkUuid, nodeUuids, NodeActivityStatus.IDLE);
+    }
+
+    @Modifying
+    @Query(value = """
+        UPDATE RootNetworkNodeInfoEntity rnni SET rnni.nodeActivityStatus = :idle
+        WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodeUuids
+        """)
+    void clearNodeActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, NodeActivityStatus idle);
 
     /**
      * Finds report UUIDs that are still referenced by other RootNetworkNodeInfo entities.

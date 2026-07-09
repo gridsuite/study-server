@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityStatus;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
@@ -38,6 +39,7 @@ public class NotificationService {
     public static final String HEADER_NODE = "node";
     public static final String HEADER_ROOT_NETWORK_UUID = "rootNetworkUuid";
     public static final String HEADER_NODES = "nodes";
+    public static final String HEADER_NODE_ACTIVITY_STATUS = "nodeActivityStatus";
     public static final String HEADER_ROOT_NETWORKS_UUIDS = "rootNetworksUuids";
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_UPDATE_TYPE = "updateType";
@@ -143,6 +145,7 @@ public class NotificationService {
     public static final String NODE_MOVED = "nodeMoved";
     public static final String NODE_EDITED = "nodeEdited";
     public static final String NODE_BUILD_STATUS_UPDATED = "nodeBuildStatusUpdated";
+    public static final String NODE_ACTIVITY_STATUS_UPDATED = "nodeActivityStatusUpdated";
     public static final String SUBTREE_MOVED = "subtreeMoved";
     public static final String NODES_COLUMN_POSITIONS_CHANGED = "nodesColumnPositionsChanged";
     public static final String SUBTREE_CREATED = "subtreeCreated";
@@ -422,6 +425,15 @@ public class NotificationService {
         sendStudyUpdateMessage(studyUuid, NODE_BUILD_STATUS_UPDATED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_NODES, nodes)
                 .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
+        );
+    }
+
+    @PostCompletion
+    public void emitNodeActivityStatusUpdated(UUID studyUuid, List<UUID> nodes, UUID rootNetworkUuid, NodeActivityStatus activity) {
+        sendStudyUpdateMessage(studyUuid, NODE_ACTIVITY_STATUS_UPDATED, MessageBuilder.withPayload("")
+                .setHeader(HEADER_NODES, nodes)
+                .setHeader(HEADER_ROOT_NETWORK_UUID, rootNetworkUuid)
+                .setHeader(HEADER_NODE_ACTIVITY_STATUS, activity)
         );
     }
 

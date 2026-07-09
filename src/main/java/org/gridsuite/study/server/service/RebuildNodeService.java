@@ -7,7 +7,10 @@
 package org.gridsuite.study.server.service;
 
 import lombok.NonNull;
+import org.gridsuite.study.server.StudyConstants.CompositeModificationsActionType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityStatus;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -35,11 +38,7 @@ public class RebuildNodeService {
 
     private void handleCreateNetworkModification(UUID studyUuid, UUID nodeUuid, String modificationAttributes, String userId) {
         studyService.invalidateNodeTreeWithLF(studyUuid, nodeUuid);
-        try {
-            studyService.createNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
-        } finally {
-            studyService.unblockNodeTree(studyUuid, nodeUuid);
-        }
+        studyService.createNetworkModification(studyUuid, nodeUuid, modificationAttributes, userId);
     }
 
     public void updateNetworkModification(UUID studyUuid, String updateModificationAttributes, UUID nodeUuid, UUID modificationUuid, String userId) {
@@ -74,16 +73,32 @@ public class RebuildNodeService {
 
     private void handleMoveNetworkModification(UUID studyUuid, UUID nodeUuid, UUID modificationUuid, UUID beforeUuid, String userId) {
         studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
-        try {
-            studyService.moveNetworkModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, false, userId);
-        } finally {
-            studyService.unblockNodeTree(studyUuid, nodeUuid);
-        }
+        studyService.moveNetworkModifications(studyUuid, nodeUuid, nodeUuid, List.of(modificationUuid), beforeUuid, false, userId);
     }
 
     public void moveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
         handleRebuildNode(studyUuid, targetNodeUuid, originNodeUuid, userId,
             () -> handleMoveNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId));
+    }
+
+    public void duplicateNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsUuids, String userId) {
+        handleRebuildNode(studyUuid, targetNodeUuid, userId,
+            () -> handleDuplicateNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsUuids, userId));
+    }
+
+    private void handleDuplicateNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsUuids, String userId) {
+        studyService.invalidateNodeTreeWithLF(studyUuid, targetNodeUuid);
+        studyService.duplicateNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsUuids, userId);
+    }
+
+    public void insertCompositeNetworkModifications(UUID studyUuid, UUID nodeUuid, List<Pair<UUID, String>> compositesInfos, String userId, CompositeModificationsActionType action) {
+        handleRebuildNode(studyUuid, nodeUuid, userId,
+            () -> handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, compositesInfos, userId, action));
+    }
+
+    private void handleInsertCompositeNetworkModifications(UUID studyUuid, UUID nodeUuid, List<Pair<UUID, String>> compositesInfos, String userId, CompositeModificationsActionType action) {
+        studyService.invalidateNodeTreeWithLF(studyUuid, nodeUuid);
+        studyService.insertCompositeNetworkModifications(studyUuid, nodeUuid, compositesInfos, userId, action);
     }
 
     public void moveSubModification(
@@ -108,13 +123,7 @@ public class RebuildNodeService {
                 userId,
                 () -> {
                     studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
-                    UUID compositeUuid;
-                    try {
-                        compositeUuid = studyService.assembleModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
-                    } finally {
-                        studyService.unblockNodeTree(studyUuid, nodeUuid);
-                    }
-                    return compositeUuid;
+                    return studyService.assembleModificationsIntoComposite(studyUuid, nodeUuid, modificationsUuids, userId);
                 });
     }
 
@@ -126,25 +135,14 @@ public class RebuildNodeService {
                                                   UUID beforeUuid,
                                                   String userId) {
         studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
-        try {
-            studyService.moveSubModification(studyUuid, nodeUuid,
-                    sourceCompositeUuid, targetCompositeUuid,
-                    modificationUuid, beforeUuid, userId);
-        } finally {
-            studyService.unblockNodeTree(studyUuid, nodeUuid);
-        }
+        studyService.moveSubModification(studyUuid, nodeUuid,
+                sourceCompositeUuid, targetCompositeUuid,
+                modificationUuid, beforeUuid, userId);
     }
 
     private void handleMoveNetworkModifications(UUID studyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
         boolean isTargetInDifferentNodeTree = studyService.invalidateNodeTreeWhenMoveModifications(studyUuid, targetNodeUuid, originNodeUuid);
-        try {
-            studyService.moveNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, null, isTargetInDifferentNodeTree, userId);
-        } finally {
-            studyService.unblockNodeTree(studyUuid, originNodeUuid);
-            if (isTargetInDifferentNodeTree) {
-                studyService.unblockNodeTree(studyUuid, targetNodeUuid);
-            }
-        }
+        studyService.moveNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, null, isTargetInDifferentNodeTree, userId);
     }
 
     private void handleRebuildNode(UUID studyUuid, UUID nodeUuid, String userId, Runnable action) {
@@ -164,19 +162,30 @@ public class RebuildNodeService {
 
     private <T> T handleRebuildNodeWithReturn(UUID studyUuid, UUID node1Uuid, UUID node2Uuid, String userId, Supplier<T> action) {
         // if node 1 and 2 are in the same "subtree", rebuild only the highest one - otherwise, rebuild both
-        List<UUID> nodesToReBuild = networkModificationTreeService.getHighestNodeUuids(node1Uuid, node2Uuid).stream()
-            .filter(Predicate.not(networkModificationTreeService::isRootOrConstructionNode)).toList();
+        List<UUID> highestNodeUuids = networkModificationTreeService.getHighestNodeUuids(node1Uuid, node2Uuid);
 
-        if (nodesToReBuild.isEmpty()) {
-            return action.get();
-        }
+        List<UUID> nodesToSetActivity = highestNodeUuids.stream()
+            .filter(Predicate.not(networkModificationTreeService::isRootNode)).toList();
+        // isRootOrConstructionNode is a superset of isRootNode, so nodesToReBuild is always a subset of nodesToSetActivity
+        List<UUID> nodesToReBuild = nodesToSetActivity.stream()
+            .filter(Predicate.not(networkModificationTreeService::isConstructionNode)).toList();
 
         Map<UUID, Set<UUID>> rootNetworkUuidsByNodeBuilt = nodesToReBuild.stream().collect(Collectors.toMap(
             nodeUuid -> nodeUuid,
             nodeUuid -> getRootNetworkWhereNodeIsBuilt(studyUuid, nodeUuid)
         ));
 
-        T result = action.get();
+        T result;
+        if (nodesToSetActivity.isEmpty()) {
+            result = action.get();
+        } else {
+            studyService.setNodeActivityAcrossAllRootNetworks(studyUuid, nodesToSetActivity, NodeActivityStatus.UPDATING);
+            try {
+                result = action.get();
+            } finally {
+                studyService.clearNodeActivityAcrossAllRootNetworks(studyUuid, nodesToSetActivity);
+            }
+        }
 
         rootNetworkUuidsByNodeBuilt.forEach((nodeUuid, rootNetworkUuids) ->
             rootNetworkUuids.stream().forEach(rootNetworkUuid ->

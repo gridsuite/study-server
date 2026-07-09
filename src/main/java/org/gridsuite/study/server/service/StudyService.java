@@ -81,13 +81,13 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.BUS_ID_TO_ICC_VALUES;
 import static org.gridsuite.study.server.StudyConstants.CURRENT_LIMIT_VIOLATIONS_INFOS;
 import static org.gridsuite.study.server.dto.ComputationType.*;
-import static org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
 /**
@@ -392,7 +392,12 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
 
         if (rootNetworkInfos.getCaseInfos() != null && rootNetworkInfos.getCaseInfos().getOriginalCaseUuid() != null) {
-            invalidateNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), rootNetworkInfos.getId(), ALL_WITH_BLOCK_NODES);
+            UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+            List<UUID> nodesToUpdate = nodeUuidsToUpdate(rootNodeUuid);
+            if (!nodesToUpdate.isEmpty()) {
+                rootNetworkNodeInfoService.setNodeActivity(studyUuid, rootNetworkInfos.getId(), nodesToUpdate, nodesToUpdate, NodeActivityStatus.UPDATING);
+            }
+            invalidateNodeTree(studyUuid, rootNodeUuid, rootNetworkInfos.getId(), InvalidateNodeTreeParameters.ALL);
             RootNetworkRequestEntity requestEntity = rootNetworkService.insertModificationRequest(studyEntity.getId(), rootNetworkInfos, userId);
             updateRootNetworkCaseInfos(studyEntity.getId(), rootNetworkInfos, userId, requestEntity);
         } else {
@@ -941,11 +946,15 @@ public class StudyService {
     public void rerunLoadflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, Boolean withRatioTapChangers, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         if (networkModificationTreeService.isSecurityNode(nodeUuid)) {
-            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
-                .invalidationMode(InvalidationMode.ALL)
-                .withBlockedNode(true)
-                .computationsInvalidationMode(ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
-                .build());
+            setNodeActivity(studyUuid, rootNetworkUuid, nodeUuid, NodeActivityStatus.UPDATING);
+            try {
+                invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
+                    .invalidationMode(InvalidationMode.ALL)
+                    .computationsInvalidationMode(ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
+                    .build());
+            } finally {
+                clearNodeActivity(studyUuid, rootNetworkUuid, nodeUuid);
+            }
 
             buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, RerunLoadFlowInfos.builder()
                 .loadflowResultUuid(loadflowResultUuid)
@@ -953,8 +962,10 @@ public class StudyService {
                 .userId(userId)
                 .build());
         } else {
-            networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-            handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+            runComputation(studyUuid, rootNetworkUuid, nodeUuid, () -> {
+                handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+                return null;
+            });
         }
         notificationService.emitElementUpdated(studyEntity.getId(), userId);
     }
@@ -978,23 +989,31 @@ public class StudyService {
     @Transactional
     public void sendLoadflowRequestWorflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+        runComputation(studyUuid, rootNetworkUuid, nodeUuid, () -> {
+            handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+            return null;
+        });
     }
 
     @Transactional
     public void sendLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
         if (networkModificationTreeService.isSecurityNode(nodeUuid)) {
-            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
-                .invalidationMode(InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
-                .withBlockedNode(true)
-                .computationsInvalidationMode(ComputationsInvalidationMode.ALL)
-                .build());
-        } else {
-            networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
+            setNodeActivity(studyUuid, rootNetworkUuid, nodeUuid, NodeActivityStatus.UPDATING);
+            try {
+                invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
+                    .invalidationMode(InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
+                    .computationsInvalidationMode(ComputationsInvalidationMode.ALL)
+                    .build());
+            } finally {
+                clearNodeActivity(studyUuid, rootNetworkUuid, nodeUuid);
+            }
         }
 
-        handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+        runComputation(studyUuid, rootNetworkUuid, nodeUuid, () -> {
+            handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+            return null;
+        });
     }
 
     private void handleLoadflowRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
@@ -1073,22 +1092,13 @@ public class StudyService {
     @Transactional(readOnly = true)
     public void assertCanUpdateNodeInStudy(UUID studyUuid, UUID nodeUuid) {
         assertIsNodeNotReadOnly(nodeUuid);
-        List<UUID> nodesUuids = networkModificationTreeService.getNodeTreeUuids(nodeUuid);
-        getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
-            assertNoBuildNoComputationInTree(rootNetwork.getId(), nodesUuids)
-        );
+        assertTreeIsIdleAcrossAllRootNetworks(studyUuid, nodeUuid);
     }
 
     @Transactional(readOnly = true)
     public void assertCanBuildNode(UUID rootNetworkUuid, UUID nodeUuid) {
         List<UUID> nodesUuids = networkModificationTreeService.getNodeBranchUuids(nodeUuid);
-        rootNetworkNodeInfoService.assertNoBuildingNode(rootNetworkUuid, nodesUuids);
-    }
-
-    private void assertNoBuildNoComputationInTree(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        // TODO modify computations endpoints to test multiple uuids
-        nodesUuids.forEach(uuid -> rootNetworkNodeInfoService.assertComputationNotRunning(uuid, rootNetworkUuid));
-        rootNetworkNodeInfoService.assertNoBuildingNode(rootNetworkUuid, nodesUuids);
+        rootNetworkNodeInfoService.assertTreeIsIdle(rootNetworkUuid, nodesUuids);
     }
 
     public void assertIsStudyAndNodeExist(UUID studyUuid, UUID nodeUuid) {
@@ -1097,16 +1107,82 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public void assertNoBlockedNodeInTree(UUID nodeUuid, UUID rootNetworkUuid) {
-        rootNetworkNodeInfoService.assertNoBlockedNode(rootNetworkUuid, networkModificationTreeService.getNodeTreeUuids(nodeUuid));
+    public void assertTreeIsIdle(UUID nodeUuid, UUID rootNetworkUuid) {
+        rootNetworkNodeInfoService.assertTreeIsIdle(rootNetworkUuid, networkModificationTreeService.getNodeBranchUuids(nodeUuid));
     }
 
     @Transactional(readOnly = true)
-    public void assertNoBlockedNodeInStudy(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
-        List<UUID> nodesUuids = networkModificationTreeService.getNodeTreeUuids(nodeUuid);
-        getStudyRootNetworks(studyUuid).stream().forEach(rootNetwork ->
-            rootNetworkNodeInfoService.assertNoBlockedNode(rootNetwork.getId(), nodesUuids)
+    public void assertTreeIsIdleAcrossAllRootNetworks(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+        List<UUID> nodesUuids = networkModificationTreeService.getNodeBranchUuids(nodeUuid);
+        getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
+            rootNetworkNodeInfoService.assertTreeIsIdle(rootNetwork.getId(), nodesUuids)
         );
+    }
+
+    @Transactional
+    public void setNodeActivityAcrossAllRootNetworks(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, NodeActivityStatus activity) {
+        setNodeActivityAcrossAllRootNetworks(studyUuid, List.of(nodeUuid), activity);
+    }
+
+    @Transactional
+    public void setNodeActivityAcrossAllRootNetworks(@NonNull UUID studyUuid, @NonNull List<UUID> nodeUuids, NodeActivityStatus activity) {
+        List<UUID> checkSetUuids = nodeUuids.stream()
+            .flatMap(nodeUuid -> getActivityCheckSet(nodeUuid, activity).stream())
+            .distinct()
+            .toList();
+        List<RootNetworkEntity> updated = new ArrayList<>();
+        try {
+            for (RootNetworkEntity rootNetwork : getStudyRootNetworks(studyUuid)) {
+                rootNetworkNodeInfoService.setNodeActivity(studyUuid, rootNetwork.getId(), nodeUuids, checkSetUuids, activity);
+                updated.add(rootNetwork);
+            }
+        } catch (StudyException e) {
+            updated.forEach(rootNetwork -> rootNetworkNodeInfoService.clearNodeActivity(studyUuid, rootNetwork.getId(), nodeUuids));
+            throw e;
+        }
+    }
+
+    @Transactional
+    public void clearNodeActivityAcrossAllRootNetworks(@NonNull UUID studyUuid, @NonNull UUID nodeUuid) {
+        clearNodeActivityAcrossAllRootNetworks(studyUuid, List.of(nodeUuid));
+    }
+
+    @Transactional
+    public void clearNodeActivityAcrossAllRootNetworks(@NonNull UUID studyUuid, @NonNull List<UUID> nodeUuids) {
+        getStudyRootNetworks(studyUuid).forEach(rootNetwork ->
+            rootNetworkNodeInfoService.clearNodeActivity(studyUuid, rootNetwork.getId(), nodeUuids)
+        );
+    }
+
+    private void setNodeActivity(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, NodeActivityStatus activity) {
+        List<UUID> checkSetUuids = getActivityCheckSet(nodeUuid, activity);
+        rootNetworkNodeInfoService.setNodeActivity(studyUuid, rootNetworkUuid, List.of(nodeUuid), checkSetUuids, activity);
+    }
+
+    private List<UUID> getActivityCheckSet(UUID nodeUuid, NodeActivityStatus activity) {
+        return (activity == NodeActivityStatus.UPDATING || activity == NodeActivityStatus.BUILDING)
+            ? networkModificationTreeService.getNodeBranchUuids(nodeUuid)
+            : networkModificationTreeService.getNodeAncestorUuids(nodeUuid);
+    }
+
+    private void clearNodeActivity(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid) {
+        rootNetworkNodeInfoService.clearNodeActivity(studyUuid, rootNetworkUuid, List.of(nodeUuid));
+    }
+
+    private <T> T runComputation(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, Supplier<T> request) {
+        setNodeActivity(studyUuid, rootNetworkUuid, nodeUuid, NodeActivityStatus.COMPUTATION_RUNNING);
+        try {
+            return request.get();
+        } catch (Exception e) {
+            clearNodeActivity(studyUuid, rootNetworkUuid, nodeUuid);
+            throw e;
+        }
+    }
+
+    List<UUID> nodeUuidsToUpdate(UUID nodeUuid) {
+        return networkModificationTreeService.isRootNode(nodeUuid)
+            ? networkModificationTreeService.getAllChildrenUuids(nodeUuid)
+            : List.of(nodeUuid);
     }
 
     public void assertRootNodeOrBuiltNode(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
@@ -1322,9 +1398,7 @@ public class StudyService {
     @Transactional
     public UUID runSecurityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
         StudyEntity study = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        return handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
+        return runComputation(studyUuid, rootNetworkUuid, nodeUuid, () -> handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId));
     }
 
     private UUID handleSecurityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
@@ -1693,15 +1767,15 @@ public class StudyService {
             return;
         }
         assertNoMaxBuilds(studyUuid, rootNetworkUuid, userId);
+        setNodeActivity(studyUuid, rootNetworkUuid, nodeUuid, NodeActivityStatus.BUILDING);
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
 
         // Store all reports (inherited + new) for this node
         networkModificationTreeService.setModificationReports(nodeUuid, rootNetworkUuid, buildInfos.getAllReportsAsMap());
-        networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         try {
             networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, workflowInfos);
         } catch (Exception e) {
-            networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+            clearNodeActivity(studyUuid, rootNetworkUuid, nodeUuid);
             throw e;
         }
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -1730,10 +1804,15 @@ public class StudyService {
     public void handleBuildSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NetworkModificationResult networkModificationResult) {
         LOGGER.info("Build completed for node '{}'", nodeUuid);
 
-        networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid,
+        resetNodeBuildStatusAndActivity(studyUuid, nodeUuid, rootNetworkUuid,
             NodeBuildStatus.from(networkModificationResult.getLastGroupApplicationStatus(), networkModificationResult.getApplicationStatus()));
 
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_BUILD_COMPLETED, networkModificationResult.getImpactedSubstationsIds());
+    }
+
+    public void resetNodeBuildStatusAndActivity(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NodeBuildStatus nodeBuildStatus) {
+        networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, nodeBuildStatus);
+        clearNodeActivity(studyUuid, rootNetworkUuid, nodeUuid);
     }
 
     private long getAllowedBuildNodesUpToQuota(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
@@ -1771,18 +1850,28 @@ public class StudyService {
     }
 
     @Transactional
-    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, @NonNull String userId) {
-        doUnbuildNodeTree(studyUuid, rootNodeUuid, withBlockNodes, false, userId);
+    public void unbuildNodeTree(@NonNull UUID studyUuid, UUID rootNodeUuid, boolean withActivitySet, @NonNull String userId) {
+        doUnbuildNodeTree(studyUuid, rootNodeUuid, withActivitySet, false, userId);
     }
 
-    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean withBlockNodes, boolean skipDeleteVariants, @NonNull String userId) {
-        InvalidateNodeTreeParameters invalidateNodeTreeParameters = withBlockNodes
-                ? InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES
-                : InvalidateNodeTreeParameters.ALL;
+    private void doUnbuildNodeTree(UUID studyUuid, UUID rootNodeUuid, boolean withActivitySet, boolean skipDeleteVariants, @NonNull String userId) {
         List<UUID> rootNetworkIds = rootNetworkService.getStudyRootNetworkIds(studyUuid);
+        List<UUID> nodeUuids = nodeUuidsToUpdate(rootNodeUuid);
+        List<UUID> checkSetUuids = nodeUuids;
+        boolean activitySetNeeded = withActivitySet && !nodeUuids.isEmpty();
         List<CompletableFuture<Void>> futures = rootNetworkIds.stream()
-                .map(rnId -> studyServerExecutionService.runAsync(() ->
-                        invalidateNodeTree(studyUuid, rootNodeUuid, rnId, invalidateNodeTreeParameters, skipDeleteVariants)))
+                .map(rnId -> studyServerExecutionService.runAsync(() -> {
+                    if (activitySetNeeded) {
+                        rootNetworkNodeInfoService.setNodeActivity(studyUuid, rnId, nodeUuids, checkSetUuids, NodeActivityStatus.UPDATING);
+                    }
+                    try {
+                        invalidateNodeTree(studyUuid, rootNodeUuid, rnId, InvalidateNodeTreeParameters.ALL, skipDeleteVariants);
+                    } finally {
+                        if (activitySetNeeded) {
+                            rootNetworkNodeInfoService.clearNodeActivity(studyUuid, rnId, nodeUuids);
+                        }
+                    }
+                }))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -1951,7 +2040,6 @@ public class StudyService {
         boolean invalidateAll = networkModificationTreeService.isSecurityNode(nodeUuid) && rootNetworkNodeInfoService.isLoadflowDone(nodeUuid, rootNetworkUuid);
         InvalidateNodeTreeParameters invalidateNodeTreeParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(invalidateAll ? InvalidationMode.ALL : InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
-            .withBlockedNode(true)
             .computationsInvalidationMode(invalidateAll ? ComputationsInvalidationMode.ALL : computationsInvalidationMode)
             .build();
         invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, invalidateNodeTreeParameters);
@@ -1981,13 +2069,6 @@ public class StudyService {
             LOGGER.trace("unbuild node '{}' of study '{}' : {} seconds", nodeUuid, studyUuid,
                 TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         }
-    }
-
-    @Transactional
-    public void unblockNodeTree(UUID studyUuid, UUID nodeUuid) {
-        getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
-            networkModificationTreeService.unblockNodeTree(rootNetworkEntity.getId(), nodeUuid)
-        );
     }
 
     @Transactional
@@ -2599,9 +2680,7 @@ public class StudyService {
     @Transactional
     public UUID runSensitivityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
         StudyEntity study = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        return handleSensitivityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
+        return runComputation(studyUuid, rootNetworkUuid, nodeUuid, () -> handleSensitivityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId));
     }
 
     private UUID handleSensitivityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
@@ -2632,9 +2711,7 @@ public class StudyService {
     @Transactional
     public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Optional<String> busId, boolean debug, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        return handleShortCircuitRequest(studyEntity, nodeUuid, rootNetworkUuid, busId, debug, userId);
+        return runComputation(studyUuid, rootNetworkUuid, nodeUuid, () -> handleShortCircuitRequest(studyEntity, nodeUuid, rootNetworkUuid, busId, debug, userId));
     }
 
     private UUID handleShortCircuitRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, Optional<String> busId, boolean debug, String userId) {
@@ -2659,9 +2736,7 @@ public class StudyService {
     @Transactional
     public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        return handleVoltageInitRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+        return runComputation(studyUuid, rootNetworkUuid, nodeUuid, () -> handleVoltageInitRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId));
     }
 
     private UUID handleVoltageInitRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
@@ -2947,9 +3022,7 @@ public class StudyService {
     public UUID runDynamicSimulation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid,
                                      String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        return handleDynamicSimulationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+        return runComputation(studyUuid, rootNetworkUuid, nodeUuid, () -> handleDynamicSimulationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId));
     }
 
     private UUID handleDynamicSimulationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
@@ -3019,9 +3092,7 @@ public class StudyService {
     @Transactional
     public UUID runDynamicSecurityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        return handleDynamicSecurityAnalysisRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+        return runComputation(studyUuid, rootNetworkUuid, nodeUuid, () -> handleDynamicSecurityAnalysisRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId));
     }
 
     private UUID handleDynamicSecurityAnalysisRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
@@ -3098,9 +3169,7 @@ public class StudyService {
     @Transactional
     public UUID runDynamicMarginCalculation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        return handleDynamicMarginCalculationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+        return runComputation(studyUuid, rootNetworkUuid, nodeUuid, () -> handleDynamicMarginCalculationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId));
     }
 
     private UUID handleDynamicMarginCalculationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
@@ -3173,6 +3242,7 @@ public class StudyService {
 
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
         notificationService.emitStartModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
+        setNodeActivity(studyUuid, rootNetworkUuid, nodeUuid, NodeActivityStatus.UPDATING);
         try {
             checkStudyContainsNode(studyUuid, nodeUuid);
 
@@ -3210,7 +3280,7 @@ public class StudyService {
             // send notification voltage init result has changed
             notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_RESULT);
         } finally {
-            networkModificationTreeService.unblockNodeTree(rootNetworkUuid, nodeUuid);
+            clearNodeActivity(studyUuid, rootNetworkUuid, nodeUuid);
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -3320,17 +3390,13 @@ public class StudyService {
     @Transactional
     public UUID runStateEstimation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        return handleStateEstimationRequest(studyEntity, nodeUuid, rootNetworkUuid, userId, debug);
+        return runComputation(studyUuid, rootNetworkUuid, nodeUuid, () -> handleStateEstimationRequest(studyEntity, nodeUuid, rootNetworkUuid, userId, debug));
     }
 
     @Transactional
     public UUID runPccMin(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        return handlePccMinRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
+        return runComputation(studyUuid, rootNetworkUuid, nodeUuid, () -> handlePccMinRequest(studyEntity, nodeUuid, rootNetworkUuid, userId));
     }
 
     private UUID handleStateEstimationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
