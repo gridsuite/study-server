@@ -183,7 +183,7 @@ class StudyServiceTest {
         when(rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(any(), any())).thenReturn("FAILED");
         when(rootNetworkNodeInfoService.getDynamicSimulationStatus(any(), any())).thenReturn("GOOD");
         when(rootNetworkNodeInfoService.getStateEstimationStatus(any(), any())).thenReturn("OK");
-        when(rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(any(), any(),  eq(ShortcircuitAnalysisType.ONE_BUS))).thenReturn("ONEBUS_OK");
+        when(rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(any(), any(), eq(ShortcircuitAnalysisType.ONE_BUS))).thenReturn("ONEBUS_OK");
         when(rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(any(), any(), eq(ShortcircuitAnalysisType.ALL_BUSES))).thenReturn("ALL_BUS_FAIL");
         when(rootNetworkNodeInfoService.getVoltageInitStatus(any(), any())).thenReturn("GREAT");
 
