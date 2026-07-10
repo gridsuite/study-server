@@ -3755,10 +3755,6 @@ public class StudyService {
         return allComputationStatus;
     }
 
-    private boolean checkOptionalServiceIsUp(Map<String, ServiceStatusInfos> serviceStatusInfos, RemoteServiceName remoteServiceName) {
-        return serviceStatusInfos.containsKey(remoteServiceName.serviceName()) && serviceStatusInfos.get(remoteServiceName.serviceName()).status() == ServiceStatusInfos.ServiceStatus.UP;
-    }
-
     public void invalidateStudyRootNetwork(UUID studyUuid, UUID rootNetworkUuid, String userId) {
         rootNetworkService.assertIsRootNetworkInStudy(studyUuid, rootNetworkUuid);
         var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
