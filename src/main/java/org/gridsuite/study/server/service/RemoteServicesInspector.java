@@ -41,6 +41,8 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -91,6 +93,18 @@ public class RemoteServicesInspector {
             .toList();
         CompletableFuture.allOf(results.toArray(CompletableFuture[]::new)).join();
         return results.stream().map(CompletableFuture::join).toList();
+    }
+
+    public Map<String, ServiceStatusInfos> getOptionalServicesAsMap() {
+        List<CompletableFuture<ServiceStatusInfos>> results = remoteServicesProperties.getServices().stream()
+                .filter(RemoteServicesProperties.Service::isOptional)
+                .map(service -> asyncSelf.isOptionalServiceUp(service).thenApply(isUp -> ServiceStatusInfos.builder()
+                        .name(service.getName())
+                        .status(Boolean.TRUE.equals(isUp) ? ServiceStatus.UP : ServiceStatus.DOWN)
+                        .build()))
+                .toList();
+        CompletableFuture.allOf(results.toArray(CompletableFuture[]::new)).join();
+        return results.stream().map(CompletableFuture::join).collect(Collectors.toMap(ServiceStatusInfos::name, Function.identity()));
     }
 
     /**
