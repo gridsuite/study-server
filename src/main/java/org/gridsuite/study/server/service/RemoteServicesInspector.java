@@ -83,20 +83,23 @@ public class RemoteServicesInspector {
     }
 
     public List<ServiceStatusInfos> getOptionalServices() {
-        return getOptionalServicesAsMap().values().stream().toList();
-    }
-
-    public Map<String, ServiceStatusInfos> getOptionalServicesAsMap() {
         // parallel health status check for all services marked as "optional: true" in application.yaml
         List<CompletableFuture<ServiceStatusInfos>> results = remoteServicesProperties.getServices().stream()
-            .filter(RemoteServicesProperties.Service::isOptional)
-            .map(service -> asyncSelf.isOptionalServiceUp(service).thenApply(isUp -> ServiceStatusInfos.builder()
-                .name(service.getName())
-                .status(Boolean.TRUE.equals(isUp) ? ServiceStatus.UP : ServiceStatus.DOWN)
-                .build()))
-            .toList();
+                .filter(RemoteServicesProperties.Service::isOptional)
+                .map(service -> asyncSelf.isOptionalServiceUp(service).thenApply(isUp -> ServiceStatusInfos.builder()
+                        .name(service.getName())
+                        .status(Boolean.TRUE.equals(isUp) ? ServiceStatus.UP : ServiceStatus.DOWN)
+                        .build()))
+                .toList();
         CompletableFuture.allOf(results.toArray(CompletableFuture[]::new)).join();
-        return results.stream().map(CompletableFuture::join).collect(Collectors.toMap(ServiceStatusInfos::name, Function.identity()));
+        return results.stream().map(CompletableFuture::join).toList();
+    }
+
+    public Set<String> getRunningOptionalServices() {
+        return getOptionalServices().stream()
+                .filter(service -> service.status() == ServiceStatus.UP)
+                .map(ServiceStatusInfos::name)
+                .collect(Collectors.toSet());
     }
 
     /**

@@ -3714,36 +3714,43 @@ public class StudyService {
 
     public Map<ComputationType, String> getAllComputationsStatus(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull UUID nodeUuid) {
         assertIsStudyExist(studyUuid);
-        Map<String, ServiceStatusInfos> serviceStatusInfos = remoteServicesInspector.getOptionalServicesAsMap();
         Map<ComputationType, String> allComputationStatus = new EnumMap<>(ComputationType.class);
+        // loadflow is not optional
         allComputationStatus.put(LOAD_FLOW, rootNetworkNodeInfoService.getLoadFlowStatus(nodeUuid, rootNetworkUuid));
-        if (checkOptionalServiceIsUp(serviceStatusInfos, SECURITY_ANALYSIS_SERVER)) {
-            allComputationStatus.put(SECURITY_ANALYSIS, rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
-        }
-        if (checkOptionalServiceIsUp(serviceStatusInfos, PCC_MIN_SERVER)) {
-            allComputationStatus.put(PCC_MIN, rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid));
-        }
-        if (checkOptionalServiceIsUp(serviceStatusInfos, DYNAMIC_MARGIN_CALCULATION_SERVER)) {
-            allComputationStatus.put(DYNAMIC_MARGIN_CALCULATION, rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid));
-        }
-        if (checkOptionalServiceIsUp(serviceStatusInfos, DYNAMIC_SECURITY_ANALYSIS_SERVER)) {
-            allComputationStatus.put(DYNAMIC_SECURITY_ANALYSIS, rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
-        }
-        if (checkOptionalServiceIsUp(serviceStatusInfos, DYNAMIC_SIMULATION_SERVER)) {
-            allComputationStatus.put(DYNAMIC_SIMULATION, rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid));
-        }
-        if (checkOptionalServiceIsUp(serviceStatusInfos, STATE_ESTIMATION_SERVER)) {
-            allComputationStatus.put(STATE_ESTIMATION, rootNetworkNodeInfoService.getStateEstimationStatus(nodeUuid, rootNetworkUuid));
-        }
-        if (checkOptionalServiceIsUp(serviceStatusInfos, SENSITIVITY_ANALYSIS_SERVER)) {
-            allComputationStatus.put(SENSITIVITY_ANALYSIS, rootNetworkNodeInfoService.getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid));
-        }
-        if (checkOptionalServiceIsUp(serviceStatusInfos, SHORTCIRCUIT_SERVER)) {
-            allComputationStatus.put(SHORT_CIRCUIT_ONE_BUS, rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ONE_BUS));
-            allComputationStatus.put(SHORT_CIRCUIT, rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ALL_BUSES));
-        }
-        if (checkOptionalServiceIsUp(serviceStatusInfos, VOLTAGE_INIT_SERVER)) {
-            allComputationStatus.put(VOLTAGE_INITIALIZATION, rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid));
+        Set<String> runningOptionalServices = remoteServicesInspector.getRunningOptionalServices();
+        for (String runningOptionalServiceName : runningOptionalServices) {
+            switch (valueOfServiceName(runningOptionalServiceName)) {
+                case SECURITY_ANALYSIS_SERVER:
+                    allComputationStatus.put(SECURITY_ANALYSIS, rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
+                    break;
+                case PCC_MIN_SERVER:
+                    allComputationStatus.put(PCC_MIN, rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid));
+                    break;
+                case DYNAMIC_MARGIN_CALCULATION_SERVER:
+                    allComputationStatus.put(DYNAMIC_MARGIN_CALCULATION, rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid));
+                    break;
+                case DYNAMIC_SECURITY_ANALYSIS_SERVER:
+                    allComputationStatus.put(DYNAMIC_SECURITY_ANALYSIS, rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid));
+                    break;
+                case DYNAMIC_SIMULATION_SERVER:
+                    allComputationStatus.put(DYNAMIC_SIMULATION, rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid));
+                    break;
+                case STATE_ESTIMATION_SERVER:
+                    allComputationStatus.put(STATE_ESTIMATION, rootNetworkNodeInfoService.getStateEstimationStatus(nodeUuid, rootNetworkUuid));
+                    break;
+                case SENSITIVITY_ANALYSIS_SERVER:
+                    allComputationStatus.put(SENSITIVITY_ANALYSIS, rootNetworkNodeInfoService.getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid));
+                    break;
+                case SHORTCIRCUIT_SERVER:
+                    allComputationStatus.put(SHORT_CIRCUIT_ONE_BUS,
+                            rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ONE_BUS));
+                    allComputationStatus.put(SHORT_CIRCUIT,
+                            rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ALL_BUSES));
+                    break;
+                case VOLTAGE_INIT_SERVER:
+                    allComputationStatus.put(VOLTAGE_INITIALIZATION, rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid));
+                    break;
+            }
         }
         return allComputationStatus;
     }
