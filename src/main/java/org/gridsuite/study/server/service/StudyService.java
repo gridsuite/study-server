@@ -3723,7 +3723,7 @@ public class StudyService {
         if (checkOptionalServiceIsUp(serviceStatusInfos, PCC_MIN_SERVER)) {
             allComputationStatus.put(PCC_MIN, rootNetworkNodeInfoService.getPccMinStatus(nodeUuid, rootNetworkUuid));
         }
-        if (checkOptionalServiceIsUp(serviceStatusInfos, DYNAMIC_MAPPING_SERVER)) {
+        if (checkOptionalServiceIsUp(serviceStatusInfos, DYNAMIC_MARGIN_CALCULATION_SERVER)) {
             allComputationStatus.put(DYNAMIC_MARGIN_CALCULATION, rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid));
         }
         if (checkOptionalServiceIsUp(serviceStatusInfos, DYNAMIC_SECURITY_ANALYSIS_SERVER)) {
@@ -3743,7 +3743,7 @@ public class StudyService {
             allComputationStatus.put(SHORT_CIRCUIT, rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, ShortcircuitAnalysisType.ALL_BUSES));
         }
         if (checkOptionalServiceIsUp(serviceStatusInfos, VOLTAGE_INIT_SERVER)) {
-        allComputationStatus.put(VOLTAGE_INITIALIZATION, rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid));
+            allComputationStatus.put(VOLTAGE_INITIALIZATION, rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid));
         }
         return allComputationStatus;
     }
