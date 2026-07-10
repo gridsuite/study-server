@@ -8,7 +8,7 @@ package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.OperationType;
+import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
@@ -84,7 +84,7 @@ class StudyServiceTest {
          */
 
         // quota not reached, all first level children of N1 will be built
-        doReturn(Map.of(OperationType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
+        doReturn(Map.of(QuotaType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
         doReturn(0L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
         mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
@@ -125,7 +125,7 @@ class StudyServiceTest {
          */
 
         // quota already reached, nothing will be built
-        doReturn(Map.of(OperationType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
+        doReturn(Map.of(QuotaType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
         doReturn(10L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
         studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
@@ -161,7 +161,7 @@ class StudyServiceTest {
          */
 
         // quota will be reached, only one child will be built
-        doReturn(Map.of(OperationType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
+        doReturn(Map.of(QuotaType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
         doReturn(9L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
         mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
@@ -194,8 +194,8 @@ class StudyServiceTest {
         String userId = "userId";
         ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", true);
 
-        doReturn(Map.of(OperationType.SHORT_CIRCUIT, 5)).when(userAdminService).getUserMaxQuota(userId);
-        doReturn(Map.of(OperationType.SHORT_CIRCUIT, 2)).when(userAdminService).getUserCurrentQuota(userId);
+        doReturn(Map.of(QuotaType.SHORT_CIRCUIT, 5)).when(userAdminService).getUserMaxQuota(userId);
+        doReturn(Map.of(QuotaType.SHORT_CIRCUIT, 2)).when(userAdminService).getUserCurrentQuota(userId);
 
         assertDoesNotThrow(() -> studyService.assertOnQuotasAvailability(ComputationType.SHORT_CIRCUIT, userId));
     }
@@ -205,8 +205,8 @@ class StudyServiceTest {
         String userId = "userId";
         ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", true);
 
-        doReturn(Map.of(OperationType.SHORT_CIRCUIT, 5)).when(userAdminService).getUserMaxQuota(userId);
-        doReturn(Map.of(OperationType.SHORT_CIRCUIT, 5)).when(userAdminService).getUserCurrentQuota(userId);
+        doReturn(Map.of(QuotaType.SHORT_CIRCUIT, 5)).when(userAdminService).getUserMaxQuota(userId);
+        doReturn(Map.of(QuotaType.SHORT_CIRCUIT, 5)).when(userAdminService).getUserCurrentQuota(userId);
 
         StudyException exception = assertThrows(StudyException.class,
                 () -> studyService.assertOnQuotasAvailability(ComputationType.SHORT_CIRCUIT, userId));
@@ -220,8 +220,8 @@ class StudyServiceTest {
         String userId = "userId";
         ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", true);
 
-        doReturn(Map.of(OperationType.SHORT_CIRCUIT, 5)).when(userAdminService).getUserMaxQuota(userId);
-        doReturn(Map.of(OperationType.SHORT_CIRCUIT, 6)).when(userAdminService).getUserCurrentQuota(userId);
+        doReturn(Map.of(QuotaType.SHORT_CIRCUIT, 5)).when(userAdminService).getUserMaxQuota(userId);
+        doReturn(Map.of(QuotaType.SHORT_CIRCUIT, 6)).when(userAdminService).getUserCurrentQuota(userId);
 
         assertThrows(StudyException.class, () -> studyService.assertOnQuotasAvailability(ComputationType.SHORT_CIRCUIT, userId));
     }
@@ -232,8 +232,8 @@ class StudyServiceTest {
         ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", true);
 
         // max quotas map has no entry at all for SHORT_CIRCUIT (only for another operation)
-        doReturn(Map.of(OperationType.LOAD_FLOW, 5)).when(userAdminService).getUserMaxQuota(userId);
-        doReturn(Map.of(OperationType.SHORT_CIRCUIT, 100)).when(userAdminService).getUserCurrentQuota(userId);
+        doReturn(Map.of(QuotaType.LOAD_FLOW, 5)).when(userAdminService).getUserMaxQuota(userId);
+        doReturn(Map.of(QuotaType.SHORT_CIRCUIT, 100)).when(userAdminService).getUserCurrentQuota(userId);
 
         assertDoesNotThrow(() -> studyService.assertOnQuotasAvailability(ComputationType.SHORT_CIRCUIT, userId));
     }
@@ -243,7 +243,7 @@ class StudyServiceTest {
         String userId = "userId";
         ReflectionTestUtils.setField(studyService, "shouldCheckOperationQuotas", true);
 
-        doReturn(Map.of(OperationType.SHORT_CIRCUIT, 5)).when(userAdminService).getUserMaxQuota(userId);
+        doReturn(Map.of(QuotaType.SHORT_CIRCUIT, 5)).when(userAdminService).getUserMaxQuota(userId);
         // current quotas map has no entry at all for SHORT_CIRCUIT (nothing running yet)
         doReturn(Map.of()).when(userAdminService).getUserCurrentQuota(userId);
 

@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server;
 
-import org.gridsuite.study.server.dto.OperationType;
+import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.sequence.SecuritySequence;
 import org.gridsuite.study.server.error.StudyException;
@@ -84,7 +84,7 @@ class NodeSequenceTest {
         studyEntity = studyRepository.save(study);
         studyUuid = studyEntity.getId();
 
-        doReturn(Map.of(OperationType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
+        doReturn(Map.of(QuotaType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
     }
 
     @Test

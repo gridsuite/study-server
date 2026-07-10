@@ -167,7 +167,7 @@ public class StudyService {
     private final StudyService self;
 
     @Value("${study.enable-operation-quotas}")
-    private boolean shouldCheckOperationQuotas = true;
+    private boolean shouldCheckOperationQuotas;
 
     @Autowired
     public StudyService(
@@ -1013,7 +1013,7 @@ public class StudyService {
                 new LoadFlowService.ParametersInfos(lfParametersUuid, withRatioTapChangers, isSecurityNode), lfReportUuid, userId);
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
 
-        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(LOAD_FLOW), result);
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(LOAD_FLOW), result);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         notificationService.emitElementUpdated(studyEntity.getId(), userId);
     }
@@ -1331,7 +1331,7 @@ public class StudyService {
 
         UUID result = handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
 
-        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(SECURITY_ANALYSIS), result);
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SECURITY_ANALYSIS), result);
         return result;
     }
 
@@ -1745,19 +1745,19 @@ public class StudyService {
     }
 
     private long getAllowedBuildNodesUpToQuota(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
-        Map<OperationType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
+        Map<QuotaType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
 
-        return Optional.ofNullable(userMaxQuotas.get(OperationType.BUILD)).map(maxBuilds -> {
+        return Optional.ofNullable(userMaxQuotas.get(QuotaType.BUILD)).map(maxBuilds -> {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
             return maxBuilds - nbBuiltNodes;
         }).orElse(Long.MAX_VALUE);
     }
 
     public void assertNoMaxBuilds(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
-        Map<OperationType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
+        Map<QuotaType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
 
         // check restrictions on node builds number
-        Integer maxBuilds = userMaxQuotas.get(OperationType.BUILD);
+        Integer maxBuilds = userMaxQuotas.get(QuotaType.BUILD);
         if (maxBuilds != null) {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
             if (nbBuiltNodes >= maxBuilds) {
@@ -2616,7 +2616,7 @@ public class StudyService {
 
         UUID result = handleSensitivityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
 
-        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(SENSITIVITY_ANALYSIS), result);
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SENSITIVITY_ANALYSIS), result);
         return result;
     }
 
@@ -2652,7 +2652,7 @@ public class StudyService {
 
         UUID result = handleShortCircuitRequest(studyEntity, nodeUuid, rootNetworkUuid, busId, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(SHORT_CIRCUIT), result);
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SHORT_CIRCUIT), result);
         return result;
     }
 
@@ -2682,7 +2682,7 @@ public class StudyService {
 
         UUID result = handleVoltageInitRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(VOLTAGE_INITIALIZATION), result);
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(VOLTAGE_INITIALIZATION), result);
         return result;
     }
 
@@ -2973,7 +2973,7 @@ public class StudyService {
 
         UUID result = handleDynamicSimulationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(DYNAMIC_SIMULATION), result);
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_SIMULATION), result);
         return result;
     }
 
@@ -3048,7 +3048,7 @@ public class StudyService {
 
         UUID result = handleDynamicSecurityAnalysisRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(DYNAMIC_SECURITY_ANALYSIS), result);
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_SECURITY_ANALYSIS), result);
         return result;
     }
 
@@ -3130,7 +3130,7 @@ public class StudyService {
 
         UUID result = handleDynamicMarginCalculationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(DYNAMIC_MARGIN_CALCULATION), result);
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_MARGIN_CALCULATION), result);
         return result;
     }
 
@@ -3355,7 +3355,7 @@ public class StudyService {
 
         UUID result = handleStateEstimationRequest(studyEntity, nodeUuid, rootNetworkUuid, userId, debug);
 
-        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(STATE_ESTIMATION), result);
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(STATE_ESTIMATION), result);
         return result;
     }
 
@@ -3366,7 +3366,7 @@ public class StudyService {
 
         UUID result = handlePccMinRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
 
-        userAdminService.startOperationWithQuota(userId, OperationType.mapFromComputationType(PCC_MIN), result);
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(PCC_MIN), result);
         return result;
     }
 
@@ -3777,9 +3777,9 @@ public class StudyService {
             return;
         }
 
-        Map<OperationType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
-        Map<OperationType, Integer> userCurrentQuotas = userAdminService.getUserCurrentQuota(userId);
-        OperationType quotaType = OperationType.mapFromComputationType(computationType);
+        Map<QuotaType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
+        Map<QuotaType, Integer> userCurrentQuotas = userAdminService.getUserCurrentQuota(userId);
+        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
 
         Integer maxComputation = userMaxQuotas.get(quotaType);
         Integer currentComputation = userCurrentQuotas.get(quotaType);

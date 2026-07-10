@@ -52,5 +52,5 @@ public class UserProfileInfos {
 
     private UUID workspaceId;
 
-    private Map<OperationType, Integer> maxComputationQuotas;
+    private Map<QuotaType, Integer> maxComputationQuotas;
 }
