@@ -26,6 +26,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
@@ -189,6 +190,19 @@ class StudyServiceTest {
 
         Map<ComputationType, String> allComputationsStatus = studyService.getAllComputationsStatus(studyUuid, rootNetworkUuid, nodeUuid);
         assertEquals(11, allComputationsStatus.size());
+    }
+
+    @Test
+    void testGetAllComputationWithUnknowServer() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID rootNetworkUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        when(studyRepository.existsById(studyUuid)).thenReturn(true);
+        when(remoteServicesInspector.getRunningOptionalServices()).thenReturn(Set.of("actions_server"));
+        Map<ComputationType, String> allComputationsStatus = studyService.getAllComputationsStatus(studyUuid, rootNetworkUuid, nodeUuid);
+        // loadflow is always running
+        assertEquals(1, allComputationsStatus.size());
+        assertTrue(allComputationsStatus.containsKey(ComputationType.LOAD_FLOW));
     }
 
     private void mockNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {

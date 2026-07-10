@@ -3749,6 +3749,9 @@ public class StudyService {
                 case VOLTAGE_INIT_SERVER:
                     allComputationStatus.put(VOLTAGE_INITIALIZATION, rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid));
                     break;
+                default:
+                    // optional server with no computation
+                    break;
             }
         }
         return allComputationStatus;
