@@ -109,6 +109,8 @@ public class DirectoryService {
      * @param targetNodeUuid where the new references will point
      */
     public void createsReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, UUID targetNodeUuid) {
+        // TODO : instead of multiple calls, an endpoint in directory server should be created to handle multiple references creation
+        // OR if not, turn this into simultaneous asynchrone calls
         elementsUuids.forEach(elementUuid -> {
             var path = UriComponentsBuilder.fromPath(
                             DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/{elementUuid}/references")

@@ -24,7 +24,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
-import org.gridsuite.study.server.dto.modification.CompositesToBeInserted;
+import org.gridsuite.study.server.dto.modification.CompositeInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
@@ -735,24 +735,24 @@ public class StudyController {
     public ResponseEntity<Void> insertCompositeModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestParam("action") CompositeModificationsActionType action,
-                                                         @RequestBody List<CompositesToBeInserted> compositesToBeInserted,
+                                                         @RequestBody List<CompositeInfos> compositeInfos,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, compositesToBeInserted, userId, action);
+        handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, compositeInfos, userId, action);
         return ResponseEntity.ok().build();
     }
 
     private void handleInsertCompositeNetworkModifications(
             UUID targetStudyUuid,
             UUID targetNodeUuid,
-            List<CompositesToBeInserted> compositesToBeInserted,
+            List<CompositeInfos> compositeInfos,
             String userId,
             CompositeModificationsActionType action) {
         studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
         studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
         try {
-            studyService.insertCompositeNetworkModifications(targetStudyUuid, targetNodeUuid, compositesToBeInserted, userId, action);
+            studyService.insertCompositeNetworkModifications(targetStudyUuid, targetNodeUuid, compositeInfos, userId, action);
         } finally {
             studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
         }

@@ -2192,9 +2192,9 @@ class NetworkModificationTest {
         NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
         UUID nodeUuid1 = node1.getId();
-        CompositesToBeInserted modification1 = new CompositesToBeInserted(UUID.randomUUID(), "composite 1", false);
+        CompositeInfos modification1 = new CompositeInfos(UUID.randomUUID(), "composite 1", false);
         UUID sharedNetModId = UUID.randomUUID();
-        CompositesToBeInserted modification2 = new CompositesToBeInserted(sharedNetModId, "composite 2", true);
+        CompositeInfos modification2 = new CompositeInfos(sharedNetModId, "composite 2", true);
         String compositesData = mapper.writeValueAsString(
                 Arrays.asList(
                         modification1,
@@ -2227,7 +2227,7 @@ class NetworkModificationTest {
         checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
         checkElementUpdatedMessageSent(studyUuid, userId);
 
-        Pair<List<CompositesToBeInserted>, List<ModificationApplicationContext>> modificationBody =
+        Pair<List<CompositeInfos>, List<ModificationApplicationContext>> modificationBody =
                 Pair.of(
                         List.of(modification1, modification2),
                         List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)

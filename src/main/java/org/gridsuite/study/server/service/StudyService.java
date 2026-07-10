@@ -2395,13 +2395,13 @@ public class StudyService {
     public void insertCompositeNetworkModifications(
         UUID targetStudyUuid,
         UUID targetNodeUuid,
-        List<CompositesToBeInserted> compositesInfos,
+        List<CompositeInfos> compositesInfos,
         String userId,
         StudyConstants.CompositeModificationsActionType action) {
         // is some of the inserted modifications are shared, references have to be created in directory server
         List<UUID> sharedCompositeUuids = compositesInfos.stream()
-                .filter(CompositesToBeInserted::isShared)
-                .map(CompositesToBeInserted::id)
+                .filter(CompositeInfos::isShared)
+                .map(CompositeInfos::id)
                 .toList();
         if (action == StudyConstants.CompositeModificationsActionType.INSERT && !sharedCompositeUuids.isEmpty()) {
             directoryService.createsReferencesToSharedComposites(sharedCompositeUuids, userId, targetNodeUuid);
