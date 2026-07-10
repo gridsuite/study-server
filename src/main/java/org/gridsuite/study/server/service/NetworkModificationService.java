@@ -225,11 +225,11 @@ public class NetworkModificationService {
     }
 
     /**
-     * @return references data of the modificationsUuids as Pair of :
+     * @return references of the modificationsUuids as Pair of :
      * - element uuid in directory server
      * - uuid of its mother composite (null if the modification is at the root level)
      */
-    public Map<UUID, UUID> getReferencesData(List<UUID> modificationsUuids) {
+    public Map<UUID, UUID> getReferences(List<UUID> modificationsUuids) {
         Objects.requireNonNull(modificationsUuids);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + "references")
@@ -255,7 +255,7 @@ public class NetworkModificationService {
      * - element uuid in directory server
      * - uuid of its mother composite (null if the modification is at the root level)
      */
-    public Map<UUID, UUID> getReferencesDataFromGroup(UUID groupUuid) {
+    public Map<UUID, UUID> getReferencesFromGroup(UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "references");
 
