@@ -238,6 +238,17 @@ public class WireMockStubs {
         ).getId();
     }
 
+    public UUID stubGetAllReferencesDataFromGroup() {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*/references"))
+                .willReturn(WireMock.ok()
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody("{}"))).getId();
+    }
+
+    public void verifyGetReferencesDataFromGroup(UUID getReferencesUuid) {
+        verifyGetRequest(wireMock, getReferencesUuid, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*/references", true, Map.of(), 1);
+    }
+
     public UUID stubNetworkModificationDeleteIndex() {
         return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION + DELIMITER + "index.*"))
             .willReturn(WireMock.ok())

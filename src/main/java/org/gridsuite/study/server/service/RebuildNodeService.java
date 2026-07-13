@@ -8,10 +8,10 @@ package org.gridsuite.study.server.service;
 
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyConstants.CompositeModificationsActionType;
+import org.gridsuite.study.server.dto.modification.CompositeInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityCheckScope;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityStatus;
-import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -97,12 +97,12 @@ public class RebuildNodeService {
         studyService.duplicateNetworkModifications(studyUuid, targetNodeUuid, originNodeUuid, modificationsUuids, userId);
     }
 
-    public void insertCompositeNetworkModifications(UUID studyUuid, UUID nodeUuid, List<Pair<UUID, String>> compositesInfos, String userId, CompositeModificationsActionType action) {
+    public void insertCompositeNetworkModifications(UUID studyUuid, UUID nodeUuid, List<CompositeInfos> compositesInfos, String userId, CompositeModificationsActionType action) {
         handleRebuildNode(studyUuid, nodeUuid, userId,
             () -> handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, compositesInfos, userId, action));
     }
 
-    private void handleInsertCompositeNetworkModifications(UUID studyUuid, UUID nodeUuid, List<Pair<UUID, String>> compositesInfos, String userId, CompositeModificationsActionType action) {
+    private void handleInsertCompositeNetworkModifications(UUID studyUuid, UUID nodeUuid, List<CompositeInfos> compositesInfos, String userId, CompositeModificationsActionType action) {
         studyService.invalidateNodeTreeWithLF(studyUuid, nodeUuid);
         studyService.insertCompositeNetworkModifications(studyUuid, nodeUuid, compositesInfos, userId, action);
     }
