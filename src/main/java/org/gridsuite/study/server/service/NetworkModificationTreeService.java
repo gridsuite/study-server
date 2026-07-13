@@ -395,10 +395,18 @@ public class NetworkModificationTreeService {
         return nodesUuids;
     }
 
+    public List<UUID> getNodeBranchUuids(List<UUID> nodeUuids) {
+        return nodeUuids.stream().flatMap(nodeUuid -> getNodeBranchUuids(nodeUuid).stream()).distinct().toList();
+    }
+
     public List<UUID> getNodeAncestorUuids(UUID nodeUuid) {
         List<UUID> nodesUuids = nodesRepository.findAllAncestorsUuids(nodeUuid);
         nodesUuids.add(nodeUuid);
         return nodesUuids;
+    }
+
+    public List<UUID> getNodeAncestorUuids(List<UUID> nodeUuids) {
+        return nodeUuids.stream().flatMap(nodeUuid -> getNodeAncestorUuids(nodeUuid).stream()).distinct().toList();
     }
 
     public List<UUID> getAllChildrenUuids(UUID parentUuid) {

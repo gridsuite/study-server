@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 import lombok.NonNull;
 import org.gridsuite.study.server.StudyConstants.CompositeModificationsActionType;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityCheckScope;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityStatus;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
@@ -25,10 +26,15 @@ import java.util.stream.Collectors;
 public class RebuildNodeService {
     private final StudyService studyService;
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final RootNetworkService rootNetworkService;
+    private final NodeActivityGuardService nodeActivityGuardService;
 
-    public RebuildNodeService(StudyService studyService, NetworkModificationTreeService networkModificationTreeService) {
+    public RebuildNodeService(StudyService studyService, NetworkModificationTreeService networkModificationTreeService,
+                              RootNetworkService rootNetworkService, NodeActivityGuardService nodeActivityGuardService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.rootNetworkService = rootNetworkService;
+        this.nodeActivityGuardService = nodeActivityGuardService;
     }
 
     public void createNetworkModification(UUID studyUuid, UUID nodeUuid, String modificationAttributes, String userId) {
@@ -161,6 +167,8 @@ public class RebuildNodeService {
     }
 
     private <T> T handleRebuildNodeWithReturn(UUID studyUuid, UUID node1Uuid, UUID node2Uuid, String userId, Supplier<T> action) {
+        studyService.assertIsNodeNotReadOnly(node1Uuid);
+
         // if node 1 and 2 are in the same "subtree", rebuild only the highest one - otherwise, rebuild both
         List<UUID> highestNodeUuids = networkModificationTreeService.getHighestNodeUuids(node1Uuid, node2Uuid);
 
@@ -179,12 +187,8 @@ public class RebuildNodeService {
         if (nodesToSetActivity.isEmpty()) {
             result = action.get();
         } else {
-            studyService.setNodeActivityAcrossAllRootNetworks(studyUuid, nodesToSetActivity, NodeActivityStatus.UPDATING);
-            try {
-                result = action.get();
-            } finally {
-                studyService.clearNodeActivityAcrossAllRootNetworks(studyUuid, nodesToSetActivity);
-            }
+            List<UUID> rootNetworkUuids = rootNetworkService.getStudyRootNetworkIds(studyUuid);
+            result = nodeActivityGuardService.runGuarded(studyUuid, rootNetworkUuids, nodesToSetActivity, NodeActivityCheckScope.BRANCH, NodeActivityStatus.UPDATING, action);
         }
 
         rootNetworkUuidsByNodeBuilt.forEach((nodeUuid, rootNetworkUuids) ->

@@ -67,6 +67,7 @@ public class ConsumerService {
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final NodeActivityGuardService nodeActivityGuardService;
     private final DirectoryService directoryService;
     private final ComputationParametersService computationParametersService;
 
@@ -78,6 +79,7 @@ public class ConsumerService {
                            NetworkModificationTreeService networkModificationTreeService,
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                           NodeActivityGuardService nodeActivityGuardService,
                            DirectoryService directoryService,
                            ComputationParametersService computationParametersService) {
         this.objectMapper = objectMapper;
@@ -88,6 +90,7 @@ public class ConsumerService {
         this.networkModificationTreeService = networkModificationTreeService;
         this.studyConfigService = studyConfigService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.nodeActivityGuardService = nodeActivityGuardService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
     }
@@ -255,11 +258,7 @@ public class ConsumerService {
                 studyService.deleteStudyIfNotCreationInProgress(studyUuid);
             }
             if (caseImportAction == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
-                UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-                List<UUID> nodesToUpdate = studyService.nodeUuidsToUpdate(rootNodeUuid);
-                if (!nodesToUpdate.isEmpty()) {
-                    rootNetworkNodeInfoService.clearNodeActivity(studyUuid, rootNetworkUuid, nodesToUpdate);
-                }
+                releaseRootNetworkModificationActivity(studyUuid, rootNetworkUuid);
             }
             LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
                 TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
@@ -360,6 +359,10 @@ public class ConsumerService {
                     } else {
                         if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_CREATION) {
                             studyService.deleteRootNetworkRequest(rootNetworkUuid);
+                        } else if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
+                            // the case import never reached consumeCaseImportSucceeded, so its finally-block
+                            // release never ran, release the UPDATING guard acquired by updateRootNetworkRequest here instead
+                            releaseRootNetworkModificationActivity(studyUuid, rootNetworkUuid);
                         }
                         notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
                     }
@@ -458,7 +461,13 @@ public class ConsumerService {
     }
 
     private void handleClearNodeActivity(UUID studyUuid, NodeReceiver receiverObj) {
-        rootNetworkNodeInfoService.clearNodeActivity(studyUuid, receiverObj.getRootNetworkUuid(), List.of(receiverObj.getNodeUuid()));
+        nodeActivityGuardService.releaseActivity(studyUuid, List.of(receiverObj.getRootNetworkUuid()), List.of(receiverObj.getNodeUuid()));
+    }
+
+    private void releaseRootNetworkModificationActivity(UUID studyUuid, UUID rootNetworkUuid) {
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        List<UUID> nodesToUpdate = studyService.nodeUuidsToUpdate(rootNodeUuid);
+        nodeActivityGuardService.releaseActivity(studyUuid, List.of(rootNetworkUuid), nodesToUpdate);
     }
 
     public void consumeCalculationDebug(Message<String> msg, ComputationType computationType) {
