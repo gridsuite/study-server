@@ -13,6 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.modification.CompositeInfos;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
@@ -68,7 +69,7 @@ public class NetworkModificationService {
     }
 
     public void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
-        this.networkModificationServerBaseUri = networkModificationServerBaseUri + DELIMITER;
+        this.networkModificationServerBaseUri = networkModificationServerBaseUri;
     }
 
     private String getNetworkModificationServerURI(boolean addNetworksPart) {
@@ -223,6 +224,54 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
+    /**
+     * @return references of the modificationsUuids as Pair of :
+     * - element uuid in directory server
+     * - uuid of its mother composite (null if the modification is at the root level)
+     */
+    public Map<UUID, UUID> getReferences(List<UUID> modificationsUuids) {
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + "references")
+                .queryParam(UUIDS, modificationsUuids)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<UUID, UUID>> httpEntity = new HttpEntity<>(headers);
+
+        return restTemplate.exchange(
+                path,
+                HttpMethod.GET,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+        ).getBody();
+    }
+
+    /**
+     * @return references data of the modifications in the group as Pairof :
+     * - element uuid in directory server
+     * - uuid of its mother composite (null if the modification is at the root level)
+     */
+    public Map<UUID, UUID> getReferencesFromGroup(UUID groupUuid) {
+        Objects.requireNonNull(groupUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "references");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<UUID, UUID>> httpEntity = new HttpEntity<>(headers);
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
+                HttpMethod.GET,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+        ).getBody();
+    }
+
     public void buildNode(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos, AbstractWorkflowInfos workflowInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String receiver = buildReceiver(nodeUuid, rootNetworkUuid);
@@ -286,13 +335,13 @@ public class NetworkModificationService {
 
     public NetworkModificationsResult insertCompositeModifications(UUID groupUuid,
                                                                    CompositeModificationsActionType action,
-                                                                   Pair<List<Pair<UUID, String>>, List<ModificationApplicationContext>> modificationContextInfos) {
+                                                                   Pair<List<CompositeInfos>, List<ModificationApplicationContext>> modificationContextInfos) {
         var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + GROUP_PATH)
                 .queryParam(QUERY_PARAM_ACTION, action.name());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Pair<List<Pair<UUID, String>>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
+        HttpEntity<Pair<List<CompositeInfos>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
 
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
