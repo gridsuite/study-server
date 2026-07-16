@@ -13,6 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
+import org.gridsuite.study.server.dto.modification.CompositeInfos;
 import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
@@ -38,7 +39,7 @@ import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
 
 /**
- * @author Slimane amar <slimane.amar at rte-france.com
+ * @author Slimane amar <slimane.amar at rte-france.com>
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
@@ -68,7 +69,7 @@ public class NetworkModificationService {
     }
 
     public void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
-        this.networkModificationServerBaseUri = networkModificationServerBaseUri + DELIMITER;
+        this.networkModificationServerBaseUri = networkModificationServerBaseUri;
     }
 
     private String getNetworkModificationServerURI(boolean addNetworksPart) {
@@ -223,6 +224,54 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, httpEntity, Void.class);
     }
 
+    /**
+     * @return references of the modificationsUuids as Pair of :
+     * - element uuid in directory server
+     * - uuid of its mother composite (null if the modification is at the root level)
+     */
+    public Map<UUID, UUID> getReferences(List<UUID> modificationsUuids) {
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + "references")
+                .queryParam(UUIDS, modificationsUuids)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<UUID, UUID>> httpEntity = new HttpEntity<>(headers);
+
+        return restTemplate.exchange(
+                path,
+                HttpMethod.GET,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+        ).getBody();
+    }
+
+    /**
+     * @return references data of the modifications in the group as Pairof :
+     * - element uuid in directory server
+     * - uuid of its mother composite (null if the modification is at the root level)
+     */
+    public Map<UUID, UUID> getReferencesFromGroup(UUID groupUuid) {
+        Objects.requireNonNull(groupUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "references");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<UUID, UUID>> httpEntity = new HttpEntity<>(headers);
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
+                HttpMethod.GET,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+        ).getBody();
+    }
+
     public void buildNode(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos, AbstractWorkflowInfos workflowInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String receiver = buildReceiver(nodeUuid, rootNetworkUuid);
@@ -257,7 +306,8 @@ public class NetworkModificationService {
         restTemplate.put(getNetworkModificationServerURI(false) + path, null);
     }
 
-    public NetworkModificationsResult moveModifications(UUID originGroupUuid, UUID targetGroupUuid, UUID beforeUuid, Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos, boolean buildTargetNode) {
+    public NetworkModificationsResult moveModifications(UUID originGroupUuid, UUID targetGroupUuid, UUID beforeUuid, Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos,
+            boolean buildTargetNode) {
         var path = UriComponentsBuilder.fromPath(GROUP_PATH)
             .queryParam(QUERY_PARAM_ACTION, ModificationsActionType.MOVE.name())
             .queryParam("originGroupUuid", originGroupUuid)
@@ -284,19 +334,37 @@ public class NetworkModificationService {
 
     public NetworkModificationsResult insertCompositeModifications(UUID groupUuid,
                                                                    CompositeModificationsActionType action,
-                                                                   Pair<List<Pair<UUID, String>>, List<ModificationApplicationContext>> modificationContextInfos) {
+                                                                   Pair<List<CompositeInfos>, List<ModificationApplicationContext>> modificationContextInfos) {
         var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + GROUP_PATH)
                 .queryParam(QUERY_PARAM_ACTION, action.name());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Pair<List<Pair<UUID, String>>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
+        HttpEntity<Pair<List<CompositeInfos>, List<ModificationApplicationContext>>> httpEntity = new HttpEntity<>(modificationContextInfos, headers);
 
         return restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
                 HttpMethod.PUT,
                 httpEntity,
                 NetworkModificationsResult.class
+        ).getBody();
+    }
+
+    public UUID assembleModificationsIntoComposite(@NonNull List<UUID> modificationsUuids) {
+        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<List<UUID>> httpEntity = new HttpEntity<>(
+                modificationsUuids,
+                headers
+        );
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path.toUriString(),
+                HttpMethod.POST,
+                httpEntity,
+                UUID.class
         ).getBody();
     }
 
@@ -405,5 +473,65 @@ public class NetworkModificationService {
                         new ParameterizedTypeReference<Map<UUID, Object>>() {
                         }).getBody();
 
+    }
+
+    public void moveSubModification(
+            UUID groupUuid,
+            UUID sourceCompositeUuid,
+            UUID targetCompositeUuid,
+            UUID modificationUuid,
+            UUID beforeUuid) {
+
+        var path = UriComponentsBuilder.fromPath(
+                COMPOSITE_PATH + GROUP_PATH + DELIMITER
+                        + "sub-modifications" + DELIMITER
+                        + "{modificationUuid}");
+
+        if (sourceCompositeUuid != null) {
+            path.queryParam("sourceCompositeUuid", sourceCompositeUuid);
+        }
+        if (targetCompositeUuid != null) {
+            path.queryParam("targetCompositeUuid", targetCompositeUuid);
+        }
+        if (beforeUuid != null) {
+            path.queryParam("beforeUuid", beforeUuid);
+        }
+
+        restTemplate.put(
+                getNetworkModificationServerURI(false)
+                        + path.buildAndExpand(groupUuid, modificationUuid).toUriString(),
+                null);
+    }
+
+    /**
+     * @return modificationUuids plus the uuids of all the modifications contained into the composite modifications that they reference
+     */
+    public Set<UUID> expandToLeafUuids(List<UUID> modificationUuids) {
+        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "children-uuids")
+                .queryParam("uuids", modificationUuids)
+                .toUriString();
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Set<UUID>>() { }
+        ).getBody();
+    }
+
+    public List<UUID> findAllChildrenUuids(List<UUID> compositeUuids) {
+        if (compositeUuids.isEmpty()) {
+            return List.of();
+        }
+        var path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "children-uuids")
+                .queryParam("uuids", compositeUuids)
+                .toUriString();
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<UUID>>() { }
+        ).getBody();
     }
 }

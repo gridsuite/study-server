@@ -15,8 +15,6 @@ import com.powsybl.timeseries.TimeSeries;
 import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.MappingInfos;
-import org.gridsuite.study.server.dto.dynamicmapping.ModelInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
@@ -24,7 +22,6 @@ import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.client.dynamicmapping.DynamicMappingClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -50,18 +47,14 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     private final ObjectMapper objectMapper;
 
-    private final DynamicMappingClient dynamicMappingClient;
-
     private final TimeSeriesClient timeSeriesClient;
 
     private final DynamicSimulationClient dynamicSimulationClient;
 
     public DynamicSimulationServiceImpl(ObjectMapper objectMapper,
-                                        DynamicMappingClient dynamicMappingClient,
                                         TimeSeriesClient timeSeriesClient,
                                         DynamicSimulationClient dynamicSimulationClient) {
         this.objectMapper = objectMapper;
-        this.dynamicMappingClient = dynamicMappingClient;
         this.timeSeriesClient = timeSeriesClient;
         this.dynamicSimulationClient = dynamicSimulationClient;
     }
@@ -239,15 +232,5 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         if (DynamicSimulationStatus.RUNNING == status) {
             throw new StudyException(COMPUTATION_RUNNING);
         }
-    }
-
-    @Override
-    public List<MappingInfos> getMappings(UUID studyUuid) {
-        return dynamicMappingClient.getAllMappings();
-    }
-
-    @Override
-    public List<ModelInfos> getModels(String mapping) {
-        return dynamicMappingClient.getModels(mapping);
     }
 }

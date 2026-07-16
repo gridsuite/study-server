@@ -28,7 +28,7 @@ public enum ElementType {
         GENERATOR,
         BATTERY,
         SHUNT_COMPENSATOR,
-        DANGLING_LINE,
+        BOUNDARY_LINE,
         STATIC_VAR_COMPENSATOR,
         LCC_CONVERTER_STATION,
         VSC_CONVERTER_STATION

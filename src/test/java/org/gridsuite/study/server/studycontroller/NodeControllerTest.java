@@ -52,10 +52,13 @@ class NodeControllerTest extends StudyTestBase {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(study1Uuid);
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
+        assertEquals(0, rootNode.getChildren().get(0).getColumnPosition());
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID, "node1", userId);
         NetworkModificationNode node2 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, VARIANT_ID_2, "node2", userId);
         NetworkModificationNode emptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", userId);
-
+        assertEquals(0, node1.getColumnPosition());
+        assertEquals(1, node2.getColumnPosition());
+        assertEquals(1, emptyNode.getColumnPosition());
         /*
          *              rootNode
          *              /      \
@@ -66,7 +69,10 @@ class NodeControllerTest extends StudyTestBase {
          */
 
         // add modification on node "node1"
-        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION
+                + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\","
+                        + "\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\","
+                                + "\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), firstRootNetworkUuid)
                 .content(createTwoWindingsTransformerAttributes).contentType(MediaType.APPLICATION_JSON)
@@ -76,11 +82,14 @@ class NodeControllerTest extends StudyTestBase {
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
-        Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
+        Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes,
+                List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         // add modification on node "node2"
-        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION
+                + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\","
+                        + "\"busId\":\"idBus1\"}";
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), firstRootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -109,7 +118,10 @@ class NodeControllerTest extends StudyTestBase {
 
         // cut the node1 and paste it after node2
         cutAndPasteNode(study1Uuid, node1, node2.getId(), InsertMode.AFTER, 0, userId);
-
+        allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
+        Map<UUID, AbstractNode> allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
         /*
          *              rootNode
          *              /      \
@@ -121,7 +133,6 @@ class NodeControllerTest extends StudyTestBase {
          */
 
         //node2 should now have 1 child : node 1
-        allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
         assertEquals(List.of(node1.getId()), allNodes.stream()
             .filter(nodeEntity ->
                 nodeEntity.getParentNode() != null
@@ -140,7 +151,11 @@ class NodeControllerTest extends StudyTestBase {
         // cut and paste the node2 before emptyNode
         cutAndPasteNode(study1Uuid, node2, emptyNode.getId(), InsertMode.BEFORE, 1, userId);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
-
+        allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(emptyNode.getId()).getColumnPosition());
         /*
          *              rootNode
          *              /      \
@@ -176,7 +191,11 @@ class NodeControllerTest extends StudyTestBase {
         //cut and paste node2 in a new branch starting from modificationNode
         cutAndPasteNode(study1Uuid, node2, modificationNodeUuid, InsertMode.CHILD, 1, userId);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
-
+        allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(emptyNode.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(2, allNodesInfos.get(node2.getId()).getColumnPosition());
         /*
          *              rootNode
          *              /      \
@@ -323,9 +342,20 @@ class NodeControllerTest extends StudyTestBase {
         RootNode rootNode = networkModificationTreeService.getStudyTree(study1Uuid, null);
         UUID modificationNodeUuid = rootNode.getChildren().get(0).getId();
         NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, modificationNodeUuid, UUID.randomUUID(), VARIANT_ID, "node1", BuildStatus.BUILT, userId);
-
         NetworkModificationNode emptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", BuildStatus.BUILT, userId);
         NetworkModificationNode emptyNodeChild = createNetworkModificationNode(study1Uuid, emptyNode.getId(), UUID.randomUUID(), VARIANT_ID_3, "emptyNodeChild", BuildStatus.BUILT, userId);
+
+        assertEquals(0, rootNode.getChildren().get(0).getColumnPosition());
+        assertEquals(1, emptyNode.getColumnPosition());
+        assertEquals(0, node1.getColumnPosition());
+        assertEquals(0, emptyNodeChild.getColumnPosition());
+        /*
+         *              rootNode
+         *              /      \
+         * modificationNode   emptyNode
+         *     /                    \
+         *  node1              emptyNodeChild
+         */
 
         mockMvc.perform(post(STUDIES_URL +
                     "/{studyUuid}/tree/subtrees?subtreeToCutParentNodeUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}",
@@ -333,6 +363,7 @@ class NodeControllerTest extends StudyTestBase {
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isForbidden());
 
+        // cut and paste emptyNode branch in after node 1
         UUID deleteModificationIndexStub = wireMockStubs.stubNetworkModificationDeleteIndex();
         UUID stubDeleteReportsId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
             .willReturn(WireMock.ok())).getId();
@@ -342,6 +373,23 @@ class NodeControllerTest extends StudyTestBase {
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
         wireMockStubs.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
+
+        Map<UUID, AbstractNode> allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(emptyNode.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(emptyNodeChild.getId()).getColumnPosition());
+        /*
+         *              rootNode
+         *              /
+         * modificationNode
+         *     /
+         *  node1
+         *    /
+         *  emptyNode
+         *    /
+         *  emptyNodeChild
+         */
 
         checkNodeBuildStatusUpdatedMessageReceived(study1Uuid, List.of(emptyNode.getId(), emptyNodeChild.getId()));
         checkComputationStatusMessageReceived();
@@ -366,6 +414,7 @@ class NodeControllerTest extends StudyTestBase {
             .header(USER_ID_HEADER, "userId")).andExpect(status().isNotFound());
     }
 
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
     private void cutAndPasteNode(UUID studyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, int childCount, String userId) throws Exception {
         UUID stubUuid = wireMockStubs.stubNetworkModificationCountGet(nodeToCopy.getModificationGroupUuid().toString(),
             EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
@@ -402,28 +451,7 @@ class NodeControllerTest extends StudyTestBase {
         if (wasBuilt) {
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         }
-        //loadflow_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //securityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //sensitivityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //shortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //oneBusShortCircuitAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicSimulation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicSecurityAnalysis_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //dynamicMarginCalculation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //voltageInit_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //stateEstimation_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        //pccMin_status
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        checkComputationStatusMessageReceived();
 
         if (!nodeHasModifications) {
             return;
@@ -437,28 +465,7 @@ class NodeControllerTest extends StudyTestBase {
             if (wasBuilt) {
                 assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
             }
-            //loadflow_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //securityAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //sensitivityAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //shortCircuitAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //oneBusShortCircuitAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //dynamicSimulation_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //dynamicSecurityAnalysis_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //dynamicMarginCalculation_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //voltageInit_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //stateEstimation_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-            //pccMin_status
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            checkComputationStatusMessageReceived();
         });
 
         if (wasBuilt) {
@@ -478,8 +485,23 @@ class NodeControllerTest extends StudyTestBase {
         NetworkModificationNode node3 = createNetworkModificationNode(study1Uuid, rootNode.getId(), UUID.randomUUID(), VARIANT_ID, "node3", BuildStatus.BUILT, userId);
         NetworkModificationNode emptyNode = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", userId);
 
+        assertEquals(0, rootNode.getChildren().get(0).getColumnPosition());
+        assertEquals(1, node3.getColumnPosition());
+        assertEquals(0, node1.getColumnPosition());
+        assertEquals(1, node2.getColumnPosition());
+        /*
+         *              rootNode
+         *              /      \
+         * modificationNode   node3
+         *     /        \
+         *  node1      node2
+         */
+
         // add modification on node "node1"
-        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION
+                + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\","
+                        + "\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\","
+                                + "\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), firstRootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -490,11 +512,14 @@ class NodeControllerTest extends StudyTestBase {
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
-        Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
+        Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes,
+                List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         // add modification on node "node2"
-        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION
+                + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\","
+                        + "\"busId\":\"idBus1\"}";
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), firstRootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -524,6 +549,22 @@ class NodeControllerTest extends StudyTestBase {
         // duplicate the node1 after node2
         UUID duplicatedNodeUuid = duplicateNode(study1Uuid, study1Uuid, node1, node2.getId(), InsertMode.AFTER, true, userId);
 
+        Map<UUID, AbstractNode> allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node3.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(duplicatedNodeUuid).getColumnPosition());
+        /*
+         *              rootNode
+         *              /      \
+         * modificationNode   node3
+         *     /        \
+         *  node1      node2
+         *              \
+         *              duplicatedNode
+         */
+
         //node2 should now have 1 child
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
         assertEquals(1, allNodes.stream()
@@ -542,6 +583,23 @@ class NodeControllerTest extends StudyTestBase {
             .count());
 
         //now the tree looks like root -> modificationNode -> duplicatedNode2 -> node1 -> node2 -> duplicatedNode1
+        allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node3.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(duplicatedNodeUuid2).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(duplicatedNodeUuid).getColumnPosition());
+        /*
+         *              rootNode
+         *              /      \
+         * modificationNode   node3
+         *     /                \
+         *  duplicatedNode2      node2
+         *     /                  \
+         *   node1                duplicatedNode
+         */
+
         //duplicate node1 in a new branch starting from duplicatedNode2
         UUID duplicatedNodeUuid3 = duplicateNode(study1Uuid, study1Uuid, node1, duplicatedNodeUuid2, InsertMode.CHILD, true, userId);
         allNodes = networkModificationTreeService.getAllNodes(study1Uuid);
@@ -553,6 +611,24 @@ class NodeControllerTest extends StudyTestBase {
             .count());
         //and expect that no other node has the new branch create node as parent
         assertEquals(0, allNodes.stream().filter(nodeEntity -> nodeEntity.getParentNode() != null && nodeEntity.getParentNode().getIdNode().equals(duplicatedNodeUuid3)).count());
+
+        allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        assertEquals(0, allNodesInfos.get(modificationNodeUuid).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node3.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(duplicatedNodeUuid2).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(node1.getId()).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(duplicatedNodeUuid3).getColumnPosition());
+        assertEquals(1, allNodesInfos.get(node2.getId()).getColumnPosition());
+        assertEquals(0, allNodesInfos.get(duplicatedNodeUuid).getColumnPosition());
+        /*
+         *                 rootNode
+         *              /           \
+         * modificationNode         node3
+         *     /                        \
+         *  duplicatedNode2             node2
+         *     /        \                   \
+         *   node1  duplicatedNodeUuid3    duplicatedNode
+         */
 
         //try copy non-existing node and expect not found
         mockMvc.perform(post(STUDIES_URL +
@@ -594,17 +670,28 @@ class NodeControllerTest extends StudyTestBase {
         NetworkModificationNode node3 = createNetworkModificationNode(study1Uuid, node2.getId(), UUID.randomUUID(), VARIANT_ID, "node3", BuildStatus.BUILT, userId);
         NetworkModificationNode node4 = createNetworkModificationNode(study1Uuid, rootNode.getId(), EMPTY_MODIFICATION_GROUP_UUID, VARIANT_ID_2, "emptyNode", userId);
 
-        /*tree state
-            root
-            ├── root children
-            │   └── node 1
-            │       └── node 2
-            │           └── node 3
-            └── node 4
+        assertEquals(0, rootNode.getChildren().get(0).getColumnPosition());
+        assertEquals(1, node4.getColumnPosition());
+        assertEquals(0, node1.getColumnPosition());
+        assertEquals(0, node2.getColumnPosition());
+        assertEquals(0, node3.getColumnPosition());
+        /*
+         *              rootNode
+         *              /      \
+         * modificationNode   node4
+         *      /
+         *  node1
+         *     /
+         *  node2
+         *     /
+         *   node3
          */
 
         // add modification on node "node1" (not built) -> invalidation of node 3
-        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION
+                + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\","
+                        + "\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\","
+                                + "\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         UUID deleteModificationIndexStub = wireMockStubs.stubNetworkModificationDeleteIndex();
         UUID stubDeleteReportsId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
             .willReturn(WireMock.ok())).getId();
@@ -620,7 +707,8 @@ class NodeControllerTest extends StudyTestBase {
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
-        Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
+        Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes,
+                List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
         wireMockStubs.verifyNetworkModificationDeleteIndex(deleteModificationIndexStub);
 
@@ -630,7 +718,9 @@ class NodeControllerTest extends StudyTestBase {
         wireMockStubs.verifyDeleteReports(stubDeleteReportsId, 1);
 
         // add modification on node "node2"
-        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION
+                + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\","
+                        + "\"busId\":\"idBus1\"}";
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), firstRootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -676,16 +766,20 @@ class NodeControllerTest extends StudyTestBase {
         checkElementUpdatedMessageSent(study1Uuid, userId);
         wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateUuid, 3);
 
-        /*tree state
-            root
-            ├── root children
-            │   └── node 1
-            │       └── node 2
-            │           └── node 3
-            └── node 4
-                └── node 1 duplicated
-                    └── node 2 duplicated
-                        └── node 3 duplicated
+        Map<UUID, AbstractNode> allNodesInfos = networkModificationTreeService.getAllStudyNodesByUuid(study1Uuid);
+        networkModificationTreeService.getAllChildrenUuids(node4.getId()).forEach(childUuid ->
+            assertEquals(0, allNodesInfos.get(childUuid).getColumnPosition())
+        );
+        /*
+         *              rootNode
+         *              /      \
+         * modificationNode   node4
+         *      /               \
+         *  node1               duplicate node1
+         *     /                    \
+         *  node2               duplicate node2
+         *     /                    \
+         *   node3              duplicate node3
          */
 
         mockMvc.perform(get(STUDIES_URL +
@@ -751,7 +845,10 @@ class NodeControllerTest extends StudyTestBase {
 
         // add modification on study 1 node "node1"
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
-        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\",\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\",\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
+        String createTwoWindingsTransformerAttributes = "{\"type\":\"" + ModificationType.TWO_WINDINGS_TRANSFORMER_CREATION
+                + "\",\"equipmentId\":\"2wtId\",\"equipmentName\":\"2wtName\",\"seriesResistance\":\"10\",\"seriesReactance\":\"10\",\"magnetizingConductance\":\"100\","
+                        + "\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\","
+                                + "\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node1.getId(), firstRootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createTwoWindingsTransformerAttributes)
@@ -761,12 +858,15 @@ class NodeControllerTest extends StudyTestBase {
         checkEquipmentCreatingMessagesReceived(study1Uuid, node1.getId());
         checkEquipmentUpdatingFinishedMessagesReceived(study1Uuid, node1.getId());
         checkElementUpdatedMessageSent(study1Uuid, userId);
-        Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes, List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
+        Pair<String, List<ModificationApplicationContext>> modificationBody = Pair.of(createTwoWindingsTransformerAttributes,
+                List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
         wireMockStubs.verifyNetworkModificationPostWithVariant(getModificationContextJsonString(mapper, modificationBody));
 
         // add modification on node "node2"
         wireMockStubs.stubNetworkModificationPost(mapper.writeValueAsString(new NetworkModificationsResult(List.of(UUID.randomUUID()), List.of(Optional.empty()))));
-        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\",\"busId\":\"idBus1\"}";
+        String createLoadAttributes = "{\"type\":\"" + ModificationType.LOAD_CREATION
+                + "\",\"loadId\":\"loadId1\",\"loadName\":\"loadName1\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\","
+                        + "\"busId\":\"idBus1\"}";
         mockMvc.perform(post(URI_NETWORK_MODIF, study1Uuid, node2.getId(), firstRootNetworkUuid)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createLoadAttributes)
@@ -795,7 +895,8 @@ class NodeControllerTest extends StudyTestBase {
             .count());
     }
 
-    private UUID duplicateNode(UUID sourceStudyUuid, UUID targetStudyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, boolean checkMessagesForStatusModels, String userId) throws Exception {
+    private UUID duplicateNode(UUID sourceStudyUuid, UUID targetStudyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, boolean checkMessagesForStatusModels,
+            String userId) throws Exception {
         List<UUID> allNodesBeforeDuplication = networkModificationTreeService.getAllNodes(targetStudyUuid).stream().map(NodeEntity::getIdNode).collect(Collectors.toList());
         UUID stubGetCountUuid = wireMockStubs.stubNetworkModificationCountGet(nodeToCopy.getModificationGroupUuid().toString(),
             EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
@@ -840,7 +941,8 @@ class NodeControllerTest extends StudyTestBase {
 
         wireMockStubs.stubGetReportsLogs(mapper.writeValueAsString(REPORT_PAGE));
 
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?reportId=" + REPORT_ID, studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?reportId=" + REPORT_ID, studyUuid, firstRootNetworkUuid,
+                rootNodeUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk()).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<ReportLog> reportLogs = mapper.readValue(resultAsString, new TypeReference<ReportPage>() { }).content();
@@ -849,7 +951,8 @@ class NodeControllerTest extends StudyTestBase {
         wireMockStubs.verifyGetReportLogs(REPORT_ID.toString());
 
         //test with severityFilter and messageFilter param
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?reportId=" + REPORT_ID + "&severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?reportId=" + REPORT_ID + "&severityLevels=WARN&message=testMsgFilter",
+                studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk()).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         reportLogs = mapper.readValue(resultAsString, new TypeReference<ReportPage>() { }).content();
@@ -866,12 +969,14 @@ class NodeControllerTest extends StudyTestBase {
 
         wireMockStubs.stubGetReportsLogs(mapper.writeValueAsString(REPORT_PAGE));
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?reportId=" + REPORT_ID + "&paged=true&page=1&size=10", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?reportId=" + REPORT_ID + "&paged=true&page=1&size=10", studyUuid,
+                firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         wireMockStubs.verifyGetReportLogsPaged(REPORT_ID.toString(), 1, 10);
 
         //test with severityFilter and messageFilter param
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?reportId=" + REPORT_ID + "&paged=true&page=1&size=10&severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?reportId=" + REPORT_ID
+                + "&paged=true&page=1&size=10&severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, rootNodeUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         wireMockStubs.verifyGetReportLogsPaged(REPORT_ID.toString(), 1, 10, "WARN", "testMsgFilter");
     }
@@ -905,7 +1010,8 @@ class NodeControllerTest extends StudyTestBase {
         //     node2  node3
 
         //get logs of node2 and all its parents (should not get node3 logs)
-        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs", studyUuid, firstRootNetworkUuid, node2.getId()).header(USER_ID_HEADER, "userId"))
+        MvcResult mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs", studyUuid, firstRootNetworkUuid,
+                node2.getId()).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk()).andReturn();
         String resultAsString = mvcResult.getResponse().getContentAsString();
         List<ReportLog> reportLogs = mapper.readValue(resultAsString, new TypeReference<ReportPage>() { }).content();
@@ -913,7 +1019,8 @@ class NodeControllerTest extends StudyTestBase {
         wireMockStubs.verifyGetReportLogs(stubGetReportLogsId, List.of(rootNodeReportId, modificationNodeReportId, node1ReportId, node2ReportId));
 
         //get logs of node2 and all its parents (should not get node3 logs) with severityFilter and messageFilter param
-        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, node2.getId()).header(USER_ID_HEADER, "userId"))
+        mvcResult = mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs?severityLevels=WARN&message=testMsgFilter", studyUuid,
+                firstRootNetworkUuid, node2.getId()).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk()).andReturn();
         resultAsString = mvcResult.getResponse().getContentAsString();
         reportLogs = mapper.readValue(resultAsString, new TypeReference<ReportPage>() { }).content();
@@ -940,33 +1047,14 @@ class NodeControllerTest extends StudyTestBase {
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .withBody(mapper.writeValueAsString(REPORT_PAGE)))).getId();
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs/search?searchTerm=testTerm&pageSize=10&severityLevels=WARN&message=testMsgFilter", studyUuid, firstRootNetworkUuid, node2.getId()).header(USER_ID_HEADER, "userId"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/report/logs/search?searchTerm=testTerm&pageSize=10&severityLevels=WARN&message=testMsgFilter",
+                studyUuid, firstRootNetworkUuid, node2.getId()).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
         wireMockStubs.verifyGetReportLogsSearch(stubGetReportLogsSearchId, List.of(rootNodeReportId, modificationNodeReportId, node1ReportId, node2ReportId));
     }
 
     protected void checkComputationStatusMessageReceived() {
-        //loadflow_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //securityAnalysis_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //sensitivityAnalysis_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //shortCircuitAnalysis_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //oneBusShortCircuitAnalysis_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //dynamicSimulation_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //dynamicSecurityAnalysis_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //dynamicMarginCalculation_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //voltageInit_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //stateEstimation_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
-        //pccMin_status
+        // all_computation_status
         assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
     }
 

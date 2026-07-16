@@ -31,7 +31,7 @@ import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.*;
 
 /**
  * /!\ STOP ADDING new methods in this file
- *  @Deprecated Do a local method on a test or create a dedicated file (for stub and verify)
+ * @deprecated Do a local method on a test or create a dedicated file (for stub and verify)
  */
 
 @Deprecated
@@ -41,7 +41,6 @@ public class WireMockStubs {
     public static final String URI_NETWORK_DATA = "/v1/networks";
 
     private static final String URI_NETWORK_MODIFICATION = "/v1/network-modifications";
-    private static final String URI_NETWORK_AREA_DIAGRAM = "/v1/network-area-diagram/config/positions";
 
     private static final String URI_NETWORK_MODIFICATION_GROUPS = "/v1/groups";
 
@@ -239,6 +238,17 @@ public class WireMockStubs {
         ).getId();
     }
 
+    public UUID stubGetAllReferencesDataFromGroup() {
+        return wireMock.stubFor(WireMock.get(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*/references"))
+                .willReturn(WireMock.ok()
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody("{}"))).getId();
+    }
+
+    public void verifyGetReferencesDataFromGroup(UUID getReferencesUuid) {
+        verifyGetRequest(wireMock, getReferencesUuid, URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*/references", true, Map.of(), 1);
+    }
+
     public UUID stubNetworkModificationDeleteIndex() {
         return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION + DELIMITER + "index.*"))
             .willReturn(WireMock.ok())
@@ -278,7 +288,8 @@ public class WireMockStubs {
     }
 
     public void verifyNetworkModificationDeleteIndex(UUID stubId, int nbRequests) {
-        verifyDeleteRequest(wireMock, stubId, URI_NETWORK_MODIFICATION + DELIMITER + "index.*", true, Map.of("networkUuid", WireMock.matching(".*"), "groupUuids", WireMock.matching(".*")), nbRequests);
+        verifyDeleteRequest(wireMock, stubId, URI_NETWORK_MODIFICATION + DELIMITER + "index.*", true, Map.of("networkUuid", WireMock.matching(".*"), "groupUuids", WireMock.matching(".*")),
+                nbRequests);
     }
 
     public UUID stubBranchOr3WTVoltageLevelIdGet(String networkUuid, String equipmentId, String responseBody) {
@@ -524,24 +535,6 @@ public class WireMockStubs {
         verifyGetRequest(wireMock, stubUuid, "/v1/network-modifications/indexation-infos",
                 Map.of(NETWORK_UUID, WireMock.equalTo(networkUuid),
                         "userInput", WireMock.equalTo(userInput)));
-    }
-
-    public UUID stubCreatePositionsFromCsv() {
-        MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK_AREA_DIAGRAM))
-                .withHeader("Content-Type", WireMock.containing("multipart/form-data"))
-                .withMultipartRequestBody(WireMock.aMultipart()
-                        .withName("file")
-                        .withHeader("Content-Disposition", WireMock.containing("filename=\"positions.csv\""))
-                )
-                .withMultipartRequestBody(WireMock.aMultipart()
-                        .withName("file_name")
-                        .withBody(WireMock.equalTo("positions.csv"))
-                );
-        return wireMock.stubFor(mappingBuilder.willReturn(WireMock.ok().withHeader("Content-Type", "application/json"))).getId();
-    }
-
-    public void verifyStubCreatePositionsFromCsv(UUID stubUuid) {
-        verifyPostRequest(wireMock, stubUuid, URI_NETWORK_AREA_DIAGRAM, true, Map.of(), null);
     }
 
     public UUID stubPccMinRun(String networkUuid, String variantId, String resultUuid) {

@@ -6,10 +6,12 @@
  */
 package org.gridsuite.study.server.dto;
 
+import java.util.Map;
+import java.util.UUID;
+
 /**
  * @author Radouane KHOUADRI {@literal <redouane.khouadri at rte-france.com>}
  */
 public record ContingencyCount(
-        int contingencies,
-        int notFoundElements
+    Map<UUID, ContingencyCountByContingencyList> countByContingencyList
 ) { }

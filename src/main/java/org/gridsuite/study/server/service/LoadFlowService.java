@@ -11,10 +11,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
@@ -22,7 +23,6 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 
@@ -38,7 +37,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATIO
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class LoadFlowService extends AbstractComputationService {
+public class LoadFlowService extends AbstractComputationService implements ComputationParameters {
     private static final String QUERY_PARAM_APPLY_SOLVED_VALUES = "applySolvedValues";
     private static final String RESULT_UUID = "resultUuid";
 
@@ -254,8 +253,8 @@ public class LoadFlowService extends AbstractComputationService {
         return restTemplate.postForObject(loadFlowServerBaseUri + path, httpEntity, UUID.class);
     }
 
-    public UUID duplicateLoadFlowParameters(UUID sourceParametersUuid) {
-
+    @Override
+    public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
 
         var path = UriComponentsBuilder
@@ -280,16 +279,18 @@ public class LoadFlowService extends AbstractComputationService {
         restTemplate.put(loadFlowServerBaseUri + path, httpEntity);
     }
 
-    public void deleteLoadFlowParameters(UUID uuid) {
-        Objects.requireNonNull(uuid);
+    @Override
+    public void deleteParameters(UUID parametersUuid) {
+        Objects.requireNonNull(parametersUuid);
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
-                .buildAndExpand(uuid)
+                .buildAndExpand(parametersUuid)
                 .toUriString();
 
         restTemplate.delete(loadFlowServerBaseUri + path);
     }
 
-    public UUID createDefaultLoadFlowParameters() {
+    @Override
+    public UUID createDefaultParameters() {
 
         var path = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/default")
@@ -301,7 +302,7 @@ public class LoadFlowService extends AbstractComputationService {
 
     public UUID getLoadFlowParametersOrDefaultsUuid(StudyEntity studyEntity) {
         if (studyEntity.getLoadFlowParametersUuid() == null) {
-            studyEntity.setLoadFlowParametersUuid(createDefaultLoadFlowParameters());
+            studyEntity.setLoadFlowParametersUuid(createDefaultParameters());
         }
         return studyEntity.getLoadFlowParametersUuid();
     }

@@ -15,7 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * @author Nicolas Noir <nicolas.noir at rte-france.com
+ * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @Component
 public class PostCompletionAdapter implements TransactionSynchronization {

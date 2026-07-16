@@ -6,13 +6,11 @@
  */
 package org.gridsuite.study.server.repository.dynamicsimulation.entity;
 
+import jakarta.persistence.*;
 import lombok.*;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventPropertyInfos;
 import org.gridsuite.study.server.repository.AbstractManuallyAssignedIdentifierEntity;
 import org.gridsuite.study.server.utils.PropertyType;
-
-import jakarta.persistence.*;
-
 import java.io.Serializable;
 import java.util.UUID;
 

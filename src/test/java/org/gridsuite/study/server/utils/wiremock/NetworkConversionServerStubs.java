@@ -27,7 +27,7 @@ import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 import static org.gridsuite.study.server.utils.wiremock.WireMockUtils.verifyPostRequest;
 
 /**
- * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 public class NetworkConversionServerStubs {
 
@@ -61,7 +61,8 @@ public class NetworkConversionServerStubs {
         verifyImportNetwork(stubUuid, caseUuid, variantId, null);
     }
 
-    public UUID stubImportNetworkWithPostAction(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String variantId, String caseFormat, String caseName, CountDownLatch countDownLatch) {
+    public UUID stubImportNetworkWithPostAction(String caseUuid, Map<String, Object> importParameters, String networkUuid, String networkId, String variantId, String caseFormat, String caseName,
+            CountDownLatch countDownLatch) {
         MappingBuilder mappingBuilder = WireMock.post(WireMock.urlPathEqualTo(URI_NETWORK))
             .withQueryParam("caseUuid", equalTo(caseUuid))
             .withQueryParam("receiver", WireMock.matching(".*"));

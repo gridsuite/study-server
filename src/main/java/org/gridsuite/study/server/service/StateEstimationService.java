@@ -11,12 +11,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.StateEstimationStatus;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -26,14 +27,12 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 
@@ -41,7 +40,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATIO
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class StateEstimationService extends AbstractComputationService {
+public class StateEstimationService extends AbstractComputationService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -155,12 +154,13 @@ public class StateEstimationService extends AbstractComputationService {
 
     public UUID getStateEstimationParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
         if (studyEntity.getStateEstimationParametersUuid() == null) {
-            studyEntity.setStateEstimationParametersUuid(createDefaultStateEstimationParameters());
+            studyEntity.setStateEstimationParametersUuid(createDefaultParameters());
         }
         return studyEntity.getStateEstimationParametersUuid();
     }
 
-    public UUID createDefaultStateEstimationParameters() {
+    @Override
+    public UUID createDefaultParameters() {
         var path = UriComponentsBuilder
             .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/parameters/default")
             .buildAndExpand()
@@ -202,7 +202,8 @@ public class StateEstimationService extends AbstractComputationService {
         return restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
     }
 
-    public UUID duplicateStateEstimationParameters(UUID sourceParametersUuid) {
+    @Override
+    public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
 
         String path = UriComponentsBuilder
@@ -218,7 +219,8 @@ public class StateEstimationService extends AbstractComputationService {
         return restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public void deleteStateEstimationParameters(UUID uuid) {
+    @Override
+    public void deleteParameters(UUID uuid) {
         Objects.requireNonNull(uuid);
 
         String path = UriComponentsBuilder

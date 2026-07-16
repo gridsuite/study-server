@@ -26,8 +26,8 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
-import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,9 +46,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
-
 import java.util.*;
-
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -63,7 +61,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @ExtendWith(MockWebServerExtension.class)
 @AutoConfigureMockMvc
@@ -158,7 +156,7 @@ class StudyControllerCreationTest {
         wireMockStubs.networkConversionServer.verifyImportNetwork(importCaseStub, duplicateCaseUuid.toString(), FIRST_VARIANT_ID);
 
         UUID newStudyCreationRequestId = studyCreationRequestRepository.findAll().getFirst().getId();
-        assertStudyUpdateMessageReceived(newStudyCreationRequestId, userId);
+        assertStudyCreationStartedMessageReceived(newStudyCreationRequestId, userId);
     }
 
     @Test
@@ -180,7 +178,7 @@ class StudyControllerCreationTest {
         wireMockStubs.networkConversionServer.verifyImportNetwork(importCaseStub, caseUuid.toString(), FIRST_VARIANT_ID, importParametersAsJson);
 
         UUID newStudyCreationRequestId = studyCreationRequestRepository.findAll().getFirst().getId();
-        assertStudyUpdateMessageReceived(newStudyCreationRequestId, userId);
+        assertStudyCreationStartedMessageReceived(newStudyCreationRequestId, userId);
     }
 
     @Test
@@ -207,11 +205,11 @@ class StudyControllerCreationTest {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow();
         UUID rootNetworkUUID = testUtils.getOneRootNetworkUuid(studyEntity.getId());
 
-        Map<String, String> expectedImportParameters = new HashMap<>();
-        importParameters.forEach((key, value) -> expectedImportParameters.put(key, value.toString()));
+        Map<String, Object> expectedImportParameters = new HashMap<>();
+        importParameters.forEach(expectedImportParameters::put);
         assertThat(rootNetworkService.getImportParameters(rootNetworkUUID)).usingRecursiveComparison().isEqualTo(expectedImportParameters);
 
-        assertStudyUpdateMessageReceived(studyUuid, userId);
+        assertStudyCreationFinishedMessageReceived(studyUuid, userId);
         assertTrue(studyRepository.findById(studyUuid).isPresent());
     }
 
@@ -251,13 +249,13 @@ class StudyControllerCreationTest {
 
     private void verifyMockCallsAfterStudyCreation() {
         verify(reportService, Mockito.times(1)).sendReport(any(UUID.class), any(ReportNode.class));
-        verify(loadFlowService, Mockito.times(1)).createDefaultLoadFlowParameters();
-        verify(shortCircuitService, Mockito.times(1)).createParameters(null);
-        verify(securityAnalysisService, Mockito.times(1)).createDefaultSecurityAnalysisParameters();
-        verify(sensitivityAnalysisService, Mockito.times(1)).createDefaultSensitivityAnalysisParameters();
-        verify(voltageInitService, Mockito.times(1)).createVoltageInitParameters(null);
-        verify(dynamicSecurityAnalysisService, Mockito.times(1)).createDefaultParameters();
-        verify(stateEstimationService, Mockito.times(1)).createDefaultStateEstimationParameters();
+        verify(loadFlowService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(shortCircuitService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(securityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(sensitivityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(voltageInitService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(dynamicSecurityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(stateEstimationService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(studyConfigService, Mockito.times(1)).createDefaultSpreadsheetConfigCollection();
     }
 
@@ -309,14 +307,21 @@ class StudyControllerCreationTest {
         return importParameters;
     }
 
-    private void assertStudyUpdateMessageReceived(UUID studyUuid, String userId) {
-        // assert that the broker message has been sent a study creation request message
+    private void assertStudyCreationStartedMessageReceived(UUID studyUuid, String userId) {
+        assertStudyCreationMessageReceived(studyUuid, userId, NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED);
+    }
+
+    private void assertStudyCreationFinishedMessageReceived(UUID studyUuid, String userId) {
+        assertStudyCreationMessageReceived(studyUuid, userId, NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED);
+    }
+
+    private void assertStudyCreationMessageReceived(UUID studyUuid, String userId, String expectedUpdateType) {
         Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(expectedUpdateType, headers.get(HEADER_UPDATE_TYPE));
     }
 
     @AfterEach

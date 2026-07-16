@@ -27,7 +27,7 @@ import java.time.Instant;
 import java.util.*;
 
 /**
- * @author Nicolas Noir <nicolas.noir at rte-france.com
+ * @author Nicolas Noir <nicolas.noir at rte-france.com>
  */
 @Service
 public class NotificationService {
@@ -57,6 +57,8 @@ public class NotificationService {
     public static final String HEADER_CLIENT_ID = "clientId";
     public static final String NETWORK_EXPORT_FINISHED = "networkExportFinished";
 
+    public static final String UPDATE_TYPE_ALL_COMPUTATION_STATUS = "all_computation_status";
+    public static final String UPDATE_TYPE_ALL_COMPUTATION_STATUS_WITHOUT_LOADFLOW = "all_computation_status_without_loadflow";
     public static final String UPDATE_TYPE_BUILD_CANCELLED = "buildCancelled";
     public static final String UPDATE_TYPE_BUILD_COMPLETED = "buildCompleted";
     public static final String UPDATE_TYPE_BUILD_FAILED = "buildFailed";
@@ -88,7 +90,8 @@ public class NotificationService {
     public static final String UPDATE_TYPE_VOLTAGE_INIT_STATUS = "voltageInit_status";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_FAILED = "voltageInit_failed";
     public static final String UPDATE_TYPE_VOLTAGE_INIT_CANCEL_FAILED = "voltageInit_cancel_failed";
-    public static final String UPDATE_TYPE_STUDIES = "studies";
+    public static final String UPDATE_TYPE_STUDY_CREATION_STARTED = "studyCreationStarted";
+    public static final String UPDATE_TYPE_STUDY_CREATION_FINISHED = "studyCreationFinished";
     public static final String UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE = "study_network_recreation_done";
     public static final String UPDATE_TYPE_STUDY = "study";
     public static final String UPDATE_TYPE_STUDY_METADATA_UPDATED = "metadata_updated";
@@ -176,8 +179,15 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitStudiesChanged(UUID studyUuid, String userId) {
-        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_STUDIES, MessageBuilder.withPayload("")
+    public void emitStudyCreationFinished(UUID studyUuid, String userId) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_STUDY_CREATION_FINISHED, MessageBuilder.withPayload("")
+                .setHeader(HEADER_USER_ID, userId)
+        );
+    }
+
+    @PostCompletion
+    public void emitStudyCreationStarted(UUID studyUuid, String userId) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_STUDY_CREATION_STARTED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
         );
     }
@@ -287,7 +297,7 @@ public class NotificationService {
     }
 
     public void emitStudyCreationError(UUID studyUuid, String userId, String errorMessage) {
-        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_STUDIES, MessageBuilder.withPayload("")
+        sendStudyUpdateMessage(studyUuid, UPDATE_TYPE_STUDY_CREATION_FINISHED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_USER_ID, userId)
                 // an error message is needed in order for this message to be interpreted later as an error notification
                 .setHeader(HEADER_ERROR, (errorMessage == null || errorMessage.isEmpty()) ?

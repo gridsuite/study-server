@@ -20,6 +20,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -32,7 +33,7 @@ public class ActionsService {
     private static final String NETWORK_UUID = "networkUuid";
     private static final String CONTINGENCY_LIST_IDS = "ids";
 
-    public static final ContingencyCount EMPTY_CONTINGENCY_COUNT = new ContingencyCount(0, 0);
+    public static final ContingencyCount EMPTY_CONTINGENCY_COUNT = new ContingencyCount(Map.of());
 
     private String actionsServerBaseUri;
 

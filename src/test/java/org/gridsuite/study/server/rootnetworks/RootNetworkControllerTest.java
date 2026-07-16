@@ -187,7 +187,8 @@ class RootNetworkControllerTest {
 
         UUID caseExistsStubId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
+        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst",
+                null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockStubs.caseServer.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
@@ -234,7 +235,8 @@ class RootNetworkControllerTest {
 
         UUID caseExistsStubId = wireMockStubs.caseServer.stubCaseExists(CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(CASE_UUID_STRING, newImportParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
+        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(CASE_UUID_STRING, newImportParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst",
+                null, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockStubs.caseServer.stubDisableCaseExpiration(CASE_UUID.toString());
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/network", studyUuid, firstRootNetworkUuid)
@@ -283,10 +285,11 @@ class RootNetworkControllerTest {
         // mock API calls
         UUID caseExistsStubId = wireMockStubs.caseServer.stubCaseExists(RootNetworkControllerTest.CASE_UUID.toString(), true);
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(RootNetworkControllerTest.CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(), "20140116_0830_2D4_UX1_pst", WireMockStubs.FIRST_VARIANT_ID, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
+        UUID postNetworkStubId = wireMockStubs.networkConversionServer.stubImportNetworkWithPostAction(RootNetworkControllerTest.CASE_UUID.toString(), importParameters, NETWORK_UUID.toString(),
+                "20140116_0830_2D4_UX1_pst", WireMockStubs.FIRST_VARIANT_ID, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockStubs.caseServer.stubDisableCaseExpiration(RootNetworkControllerTest.CASE_UUID.toString());
         reportServerStubs.stubSendReport();
-        when(loadFlowService.createDefaultLoadFlowParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
+        when(loadFlowService.createDefaultParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
         when(studyConfigService.createDefaultSpreadsheetConfigCollection()).thenReturn(SPREADSHEET_CONFIG_COLLECTION_UUID);
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", RootNetworkControllerTest.CASE_UUID)
@@ -320,7 +323,7 @@ class RootNetworkControllerTest {
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(USER_ID_HEADER));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a study creation message for creation
         message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
@@ -328,7 +331,7 @@ class RootNetworkControllerTest {
         headers = message.getHeaders();
         assertEquals(userId, headers.get(USER_ID_HEADER));
         assertEquals(studyUuid, headers.get(NotificationService.HEADER_STUDY_UUID));
-        assertEquals(NotificationService.UPDATE_TYPE_STUDIES, headers.get(HEADER_UPDATE_TYPE));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, headers.get(HEADER_UPDATE_TYPE));
         assertEquals(errorMessage.length != 0 ? errorMessage[0] : null, headers.get(NotificationService.HEADER_ERROR));
 
         assertTrue(studyRepository.findById(studyUuid).isPresent());

@@ -14,11 +14,11 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
@@ -51,18 +51,25 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-
 import java.util.*;
 import java.util.function.Consumer;
-
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR;
+import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS;
+import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
+import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
-import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -144,6 +151,8 @@ class RootNetworkTest {
 
     @MockitoSpyBean
     private StudyService studyService;
+    @MockitoSpyBean
+    private StudyServerExecutionService studyServerExecutionService;
 
     @MockitoBean
     private ReportService reportService;
@@ -201,7 +210,8 @@ class RootNetworkTest {
         UUID stubId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/networks"))
             .willReturn(WireMock.ok())).getId();
         Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(caseUuid, true);
-        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().name("rootNetworkName2").tag("rn2").caseInfos(new CaseInfos(null, caseUuid, null, caseFormat)).importParametersRaw(importParameters).build();
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().name("rootNetworkName2").tag("rn2")
+                .caseInfos(new CaseInfos(null, caseUuid, null, caseFormat)).importParameters(importParameters).build();
 
         // request execution - returns RootNetworkRequestInfos
         String response = mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
@@ -255,7 +265,7 @@ class RootNetworkTest {
         Mockito.doReturn(DUPLICATE_CASE_UUID).when(caseService).duplicateCase(caseUuid, true);
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().name("rootNetworkName2").tag("rn2").caseInfos(new CaseInfos(null, caseUuid, null, caseFormat)).build();
 
-         // request execution - returns RootNetworkRequestInfos
+        // request execution - returns RootNetworkRequestInfos
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
                 .header("userId", USER_ID)
                .content(objectMapper.writeValueAsString(rootNetworkInfos))
@@ -286,7 +296,8 @@ class RootNetworkTest {
         studyRepository.save(studyEntity);
 
         // insert a creation request for the same study entity
-        rootNetworkService.insertCreationRequest(studyEntity.getId(), RootNetworkInfos.builder().id(UUID.randomUUID()).name("rootNetworkName4").tag("rn4").description("rn4 description").build(), USER_ID);
+        rootNetworkService.insertCreationRequest(studyEntity.getId(), RootNetworkInfos.builder().id(UUID.randomUUID()).name("rootNetworkName4").tag("rn4").description("rn4 description").build(),
+                USER_ID);
         // request execution - fails since there is already too many root networks + root network creation requests for this study
         UUID caseUuid = UUID.randomUUID();
         String caseFormat = "newCaseFormat";
@@ -383,10 +394,12 @@ class RootNetworkTest {
 
         // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
-        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, CASE_UUID, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
-        Map<String, String> importParameters = new HashMap<>();
+        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(),
+                newRootNetworkUuid, CASE_UUID2, CASE_UUID, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
+        Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "value1");
-        importParameters.put("param2", "value2");
+        importParameters.put("param2", true);
+        importParameters.put("param3", null);
         Map<String, Object> headers = createConsumeCaseImportSucceededHeaders(NETWORK_UUID2.toString(), NETWORK_ID2, CASE_FORMAT2, CASE_NAME2, caseImportReceiver, importParameters);
 
         // send message to consumer
@@ -397,7 +410,8 @@ class RootNetworkTest {
         StudyEntity updatedStudyEntity = studyRepository.findWithRootNetworksById(studyEntity.getId()).orElseThrow(() -> new StudyException(NOT_FOUND));
         assertEquals(2, updatedStudyEntity.getRootNetworks().size());
 
-        RootNetworkEntity rootNetworkEntity = updatedStudyEntity.getRootNetworks().stream().filter(rne -> rne.getId().equals(newRootNetworkUuid)).findFirst().orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkEntity rootNetworkEntity = updatedStudyEntity.getRootNetworks().stream().filter(rne -> rne.getId().equals(newRootNetworkUuid)).findFirst().orElseThrow(() -> new StudyException(
+                NOT_FOUND, "Root network not found"));
         assertEquals(newRootNetworkUuid, rootNetworkEntity.getId());
         assertEquals(NETWORK_UUID2, rootNetworkEntity.getNetworkUuid());
         assertEquals(NETWORK_ID2, rootNetworkEntity.getNetworkId());
@@ -418,8 +432,10 @@ class RootNetworkTest {
     private void createAndConsumeMessageCaseImport(UUID studyUuid, RootNetworkInfos rootNetworkInfos, CaseImportAction caseImportAction) throws Exception {
         // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
-        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getCaseInfos().getCaseUuid(), rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), rootNetworkInfos.getReportUuid(), USER_ID, 0L, caseImportAction);
-        Map<String, Object> headers = createConsumeCaseImportSucceededHeaders(rootNetworkInfos.getNetworkInfos().getNetworkUuid().toString(), rootNetworkInfos.getNetworkInfos().getNetworkId(), rootNetworkInfos.getCaseInfos().getCaseFormat(), rootNetworkInfos.getCaseInfos().getCaseName(), caseImportReceiver, rootNetworkInfos.getImportParameters());
+        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getCaseInfos().getCaseUuid(), rootNetworkInfos.getCaseInfos(
+                ).getOriginalCaseUuid(), rootNetworkInfos.getReportUuid(), USER_ID, 0L, caseImportAction);
+        Map<String, Object> headers = createConsumeCaseImportSucceededHeaders(rootNetworkInfos.getNetworkInfos().getNetworkUuid().toString(), rootNetworkInfos.getNetworkInfos().getNetworkId(),
+                rootNetworkInfos.getCaseInfos().getCaseFormat(), rootNetworkInfos.getCaseInfos().getCaseName(), caseImportReceiver, rootNetworkInfos.getImportParameters());
 
         // send message to consumer
         Mockito.doNothing().when(caseService).disableCaseExpiration(rootNetworkInfos.getCaseInfos().getCaseUuid());
@@ -439,7 +455,8 @@ class RootNetworkTest {
 
         // prepare all headers that will be sent to consumer supposed to receive "caseImportFailed" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportFailed();
-        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, CASE_UUID, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
+        CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, CASE_UUID, REPORT_UUID2, USER_ID, 0L,
+                CaseImportAction.ROOT_NETWORK_CREATION);
         Map<String, Object> headers = createConsumeCaseImportFailedHeaders(caseImportReceiver);
 
         // send message to consumer
@@ -458,6 +475,10 @@ class RootNetworkTest {
         // create study with first root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
+
+        // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
+        // completes before the test verifies it, removes the race condition.
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
 
         // DO NOT insert creation request - it means root network won't be created and remote resources will be deleted
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(UUID.randomUUID()).name("newRootNetworkName").tag("newT")
@@ -528,6 +549,10 @@ class RootNetworkTest {
 
         // before deletion, check we have 2 root networks for study
         assertEquals(2, studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
+
+        // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
+        // completes before the test verifies it, removes the race condition.
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
                 .contentType(APPLICATION_JSON)
@@ -677,7 +702,6 @@ class RootNetworkTest {
         // create a second root network
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(UUID.randomUUID()).tag("oldT").name("oldName")
                 .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), "oldCaseName", "oldCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "oldNetworkId"))
-                .importParametersRaw(Map.of("param1", "oldValue1", "param2", "oldValue2"))
                 .importParameters(Map.of("param1", "oldValue1", "param2", "oldValue2"))
                 .reportUuid(UUID.randomUUID())
                 .build();
@@ -693,7 +717,6 @@ class RootNetworkTest {
         final UUID newCaseUuid = UUID.randomUUID();
         RootNetworkInfos rootNetworkUpdateInfos = RootNetworkInfos.builder().id(rootNetworkInfos.getId()).name("newRootNetworkName").tag("newT")
             .caseInfos(new CaseInfos(null, newCaseUuid, "newCaseName", "newCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "newNetworkId"))
-            .importParametersRaw(Map.of("param1", "newValue1", "param2", "newValue2", "param3", "value3"))
             .importParameters(Map.of("param1", "newValue1", "param2", "newValue2", "param3", "value3"))
             .reportUuid(UUID.randomUUID())
             .build();
@@ -719,13 +742,14 @@ class RootNetworkTest {
                         "caseUuid", WireMock.equalTo(DUPLICATE_CASE_UUID.toString()),
                         "caseFormat", WireMock.equalTo(rootNetworkUpdateInfos.getCaseInfos().getCaseFormat())
                 ),
-                objectMapper.writeValueAsString(rootNetworkUpdateInfos.getImportParametersRaw())
+                objectMapper.writeValueAsString(rootNetworkUpdateInfos.getImportParameters())
         );
 
         // verify that the node is blocked
         // build is forbidden, for example
         assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), true);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyEntity.getId(), rootNetworkInfos.getId(), modificationNode.getId()).header(HEADER_USER_ID, USER_ID))
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyEntity.getId(), rootNetworkInfos.getId(), modificationNode.getId()).header(
+                HEADER_USER_ID, USER_ID))
             .andExpect(status().isForbidden());
 
         rootNetworkService.insertModificationRequest(studyEntity.getId(), rootNetworkUpdateInfos, USER_ID);
@@ -751,7 +775,7 @@ class RootNetworkTest {
         assertEquals(rootNetworkInfos.getCaseInfos().getCaseUuid(), rootNetworkEntity.getCaseUuid());
         assertEquals(rootNetworkInfos.getCaseInfos().getCaseFormat(), rootNetworkEntity.getCaseFormat());
         assertEquals(rootNetworkInfos.getReportUuid(), rootNetworkEntity.getReportUuid());
-        assertEquals(rootNetworkInfos.getImportParametersRaw(), rootNetworkService.getImportParameters(rootNetworkInfos.getId()));
+        assertEquals(rootNetworkInfos.getImportParameters(), rootNetworkService.getImportParameters(rootNetworkInfos.getId()));
     }
 
     @Test
@@ -793,9 +817,11 @@ class RootNetworkTest {
         List<BasicRootNetworkInfos> result = objectMapper.readValue(response, new TypeReference<>() { });
         assertEquals(3, result.size());
 
-        BasicRootNetworkInfos requestRootNetwork = result.stream().filter(rootNetworkMinimalInfos -> rootNetworkMinimalInfos.rootNetworkUuid().equals(requestUuid)).findFirst().orElseThrow(() -> new Exception("this should be in the results"));
+        BasicRootNetworkInfos requestRootNetwork = result.stream().filter(rootNetworkMinimalInfos -> rootNetworkMinimalInfos.rootNetworkUuid().equals(requestUuid)).findFirst().orElseThrow(() -> new
+                Exception("this should be in the results"));
         assertTrue(requestRootNetwork.isCreating());
-        BasicRootNetworkInfos createdRootNetwork = result.stream().filter(rootNetworkMinimalInfos -> rootNetworkMinimalInfos.rootNetworkUuid().equals(rootNetworkUuid)).findFirst().orElseThrow(() -> new Exception("this should be in the results"));
+        BasicRootNetworkInfos createdRootNetwork = result.stream().filter(rootNetworkMinimalInfos -> rootNetworkMinimalInfos.rootNetworkUuid().equals(rootNetworkUuid)).findFirst().orElseThrow(
+                () -> new Exception("this should be in the results"));
         assertFalse(createdRootNetwork.isCreating());
     }
 
@@ -835,7 +861,7 @@ class RootNetworkTest {
         assertEquals("dummyRootNetwork2", result.get(2).name());
 
         // delete the 2nd root network
-        studyService.deleteRootNetworks(studyEntity.getId(), List.of(result.get(1).rootNetworkUuid()));
+        studyService.deleteRootNetworks(studyEntity.getId(), List.of(result.get(1).rootNetworkUuid()), USER_ID);
 
         // check "dummyRootNetwork2" root network order have been updated correctly
         List<BasicRootNetworkInfos> resultAfterDeletion = studyService.getExistingBasicRootNetworkInfos(studyEntity.getId());
@@ -845,7 +871,8 @@ class RootNetworkTest {
 
         // create new root network
         UUID rootNetworkUuid = UUID.randomUUID();
-        rootNetworkService.insertCreationRequest(studyEntity.getId(), RootNetworkInfos.builder().id(rootNetworkUuid).name("dummyRootNetwork3").tag("RN_3").description("rn3 description").build(), USER_ID);
+        rootNetworkService.insertCreationRequest(studyEntity.getId(), RootNetworkInfos.builder().id(rootNetworkUuid).name("dummyRootNetwork3").tag("RN_3").description("rn3 description").build(),
+                USER_ID);
         studyService.createRootNetwork(studyEntity.getId(), RootNetworkInfos.builder()
             .name(CASE_NAME2)
             .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2))
@@ -863,7 +890,8 @@ class RootNetworkTest {
         assertEquals("dummyRootNetwork3", resultAfterCreation.get(2).name());
     }
 
-    private Map<String, Object> createConsumeCaseImportSucceededHeaders(String networkUuid, String networkId, String caseFormat, String caseName, CaseImportReceiver caseImportReceiver, Map<String, String> importParameters) throws JsonProcessingException {
+    private Map<String, Object> createConsumeCaseImportSucceededHeaders(
+            String networkUuid, String networkId, String caseFormat, String caseName, CaseImportReceiver caseImportReceiver, Map<String, Object> importParameters) throws JsonProcessingException {
         Map<String, Object> headers = new HashMap<>();
         headers.put("networkUuid", networkUuid);
         headers.put("networkId", networkId);
@@ -882,7 +910,7 @@ class RootNetworkTest {
     }
 
     private void createDummyRootNetwork(StudyEntity studyEntity, RootNetworkInfos rootNetworkInfos) {
-        studyEntity.addRootNetwork(rootNetworkInfos.toEntity());
+        studyEntity.addRootNetwork(rootNetworkInfos.toEntity(objectMapper));
     }
 
     private void createDummyRootNetwork(StudyEntity studyEntity, String name) {
@@ -893,7 +921,7 @@ class RootNetworkTest {
             .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
             .reportUuid(UUID.randomUUID())
             .tag("dum")
-            .build().toEntity();
+            .build().toEntity(objectMapper);
         studyEntity.addRootNetwork(rootNetworkEntity);
     }
 

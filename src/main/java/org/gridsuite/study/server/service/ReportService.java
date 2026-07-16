@@ -39,7 +39,7 @@ import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_REPORT_SEVER
 import static org.gridsuite.study.server.StudyConstants.REPORT_API_VERSION;
 
 /**
- * @author Slimane amar <slimane.amar at rte-france.com
+ * @author Slimane amar <slimane.amar at rte-france.com>
  */
 @Service
 public class ReportService {

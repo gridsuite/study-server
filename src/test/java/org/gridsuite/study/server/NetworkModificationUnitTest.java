@@ -12,7 +12,6 @@ import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
-import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.error.StudyException;
@@ -57,13 +56,14 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_INFOS;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_WORKFLOW_TYPE;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import static org.gridsuite.study.server.utils.TestUtils.ELEMENT_UPDATE_DESTINATION;
 import static org.gridsuite.study.server.utils.TestUtils.checkUpdateStatusMessagesReceived;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
+ * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @SpringBootTest
 @DisableElasticsearch
@@ -161,7 +161,7 @@ class NetworkModificationUnitTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
 
         // Unbuild security node without LF -> no children invalidation
-        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node1Uuid);
+        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node1Uuid, USER_ID_HEADER);
         /*       rootNode
          *          |
          *        node1
@@ -176,11 +176,12 @@ class NetworkModificationUnitTest {
         assertNodeBuildStatus(node4Uuid, BuildStatus.BUILT);
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid));
         checkUpdateStatusMessagesReceived(studyUuid, node1Uuid, output);
+        checkElementUpdatedMessageSent(studyUuid, USER_ID_HEADER);
         Mockito.verify(networkService).deleteVariants(NETWORK_UUID, List.of(VARIANT_1));
 
         // Unbuild security node with LF -> children invalidation
         when(rootNetworkNodeInfoService.isLoadflowDone(node2Uuid, firstRootNetworkUuid)).thenReturn(true);
-        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node2Uuid);
+        studyController.unbuildNode(studyUuid, firstRootNetworkUuid, node2Uuid, USER_ID_HEADER);
         /*       rootNode
          *          |
          *        node1
@@ -195,11 +196,13 @@ class NetworkModificationUnitTest {
         assertNodeBuildStatus(node4Uuid, BuildStatus.NOT_BUILT);
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node2Uuid, node4Uuid));
         checkUpdateStatusMessagesReceived(studyUuid, node2Uuid, output);
+        checkElementUpdatedMessageSent(studyUuid, USER_ID_HEADER);
         Mockito.verify(networkService).deleteVariants(NETWORK_UUID, List.of(VARIANT_4, VARIANT_2));
     }
 
     private void assertNodeBuildStatus(UUID nodeUuid, BuildStatus buildStatus) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeInfoId(nodeUuid).stream().findFirst().orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findAllByNodeInfoId(nodeUuid).stream().findFirst().orElseThrow(() -> new StudyException(NOT_FOUND,
+                "Root network not found"));
         assertEquals(buildStatus, rootNetworkNodeInfoEntity.getNodeBuildStatus().getLocalBuildStatus());
     }
 
@@ -209,7 +212,7 @@ class NetworkModificationUnitTest {
         UUID modificationUuid = UUID.randomUUID();
         List<UUID> childrenNodes = List.of(node2Uuid, node4Uuid, node3Uuid);
 
-        NetworkModificationMetadata metadata = new NetworkModificationMetadata(null, "new description", null);
+        NetworkModificationMetadata metadata = new NetworkModificationMetadata(null, "new description", null, null);
         studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, List.of(modificationUuid), metadata, USER_ID_HEADER);
 
         checkModificationUpdatedMessageReceived(studyUuid, node1Uuid, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
@@ -269,9 +272,9 @@ class NetworkModificationUnitTest {
     void unbuildAllNodes() {
         setupWithTwoRootNetwork();
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        List<UUID> rootNetworkUuids = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid).stream().map(RootNetworkInfos::getId).toList();
+        List<UUID> rootNetworkUuids = rootNetworkRepository.findAllWithInfosByStudyId(studyUuid).stream().map(RootNetworkEntity::getId).toList();
 
-        studyController.unbuildAllNodes(studyUuid);
+        studyController.unbuildAllNodes(studyUuid, USER_ID_HEADER);
 
         ArgumentCaptor<UUID> rootNetworkUuidCaptor = ArgumentCaptor.forClass(UUID.class);
         verify(networkModificationTreeService, times(2)).invalidateNodeTree(eq(rootNodeUuid), rootNetworkUuidCaptor.capture(), eq(InvalidateNodeTreeParameters.ALL_WITH_BLOCK_NODES));
@@ -280,10 +283,11 @@ class NetworkModificationUnitTest {
         // one for each root network
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid, node2Uuid, node4Uuid));
+        checkElementUpdatedMessageSent(studyUuid, USER_ID_HEADER);
     }
 
     private void updateNetworkModificationActivationStatus(List<UUID> networkModificationUuids, UUID nodeWithModification, List<UUID> childrenNodes, List<UUID> nodesToUnbuild, boolean activated) {
-        NetworkModificationMetadata metadata = new NetworkModificationMetadata(activated, null, null);
+        NetworkModificationMetadata metadata = new NetworkModificationMetadata(activated, null, null, null);
         studyController.updateNetworkModificationsMetadata(studyUuid, node1Uuid, networkModificationUuids, metadata, USER_ID_HEADER);
 
         checkModificationUpdatedMessageReceived(studyUuid, nodeWithModification, childrenNodes, NotificationService.MODIFICATIONS_UPDATING_IN_PROGRESS);
@@ -331,9 +335,11 @@ class NetworkModificationUnitTest {
             .build();
     }
 
-    private NodeEntity insertNode(StudyEntity study, UUID nodeId, NetworkModificationNodeType nodeType, String variantId, UUID reportUuid, NodeEntity parentNode, List<RootNetworkEntity> rootNetworkEntities, BuildStatus buildStatus) {
+    private NodeEntity insertNode(StudyEntity study, UUID nodeId, NetworkModificationNodeType nodeType, String variantId, UUID reportUuid, NodeEntity parentNode,
+            List<RootNetworkEntity> rootNetworkEntities, BuildStatus buildStatus) {
         NodeEntity nodeEntity = nodeRepository.save(new NodeEntity(nodeId, parentNode, NodeType.NETWORK_MODIFICATION, study, false, null, new ArrayList<>()));
-        NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).nodeType(nodeType).modificationGroupUuid(UUID.randomUUID()).build());
+        NetworkModificationNodeInfoEntity modificationNodeInfoEntity = networkModificationNodeInfoRepository.save(
+                NetworkModificationNodeInfoEntity.builder().idNode(nodeEntity.getIdNode()).nodeType(nodeType).modificationGroupUuid(UUID.randomUUID()).build());
         rootNetworkEntities.forEach(rn -> {
             createNodeLinks(rn, modificationNodeInfoEntity, variantId, reportUuid, buildStatus);
         });
@@ -343,7 +349,8 @@ class NetworkModificationUnitTest {
     // We can't use the method RootNetworkNodeInfoService::createNodeLinks because there is no transaction in a session
     private void createNodeLinks(RootNetworkEntity rootNetworkEntity, NetworkModificationNodeInfoEntity modificationNodeInfoEntity,
                                  String variantId, UUID reportUuid, BuildStatus buildStatus) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = RootNetworkNodeInfoEntity.builder().variantId(variantId).modificationReports(Map.of(modificationNodeInfoEntity.getId(), reportUuid)).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).build();
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = RootNetworkNodeInfoEntity.builder().variantId(variantId).modificationReports(Map.of(modificationNodeInfoEntity.getId(),
+                reportUuid)).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).build();
         modificationNodeInfoEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
@@ -437,7 +444,14 @@ class NetworkModificationUnitTest {
         node4Uuid = node4.getIdNode();
     }
 
+    private void checkElementUpdatedMessageSent(UUID elementUuid, String userId) {
+        Message<byte[]> message = output.receive(TIMEOUT, ELEMENT_UPDATE_DESTINATION);
+        assertEquals(elementUuid, message.getHeaders().get(NotificationService.HEADER_ELEMENT_UUID));
+        assertEquals(userId, message.getHeaders().get(NotificationService.HEADER_MODIFIED_BY));
+    }
+
     @AfterEach
+    @SuppressWarnings("checkstyle:IllegalCatch")
     void tearDown() {
         List<String> destinations = List.of(STUDY_UPDATE_DESTINATION);
         try {

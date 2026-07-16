@@ -6,7 +6,7 @@
  */
 package org.gridsuite.study.server.dto;
 
-import com.powsybl.security.LimitViolationType;
+import com.powsybl.contingency.violations.LimitViolationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
