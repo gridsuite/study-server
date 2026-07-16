@@ -115,6 +115,14 @@ public class NetworkModificationTreeService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<NodeInfos> getNodesInfos(List<UUID> nodeUuids) {
+        // unknown node uuids are simply absent from the result
+        return networkModificationNodeInfoRepository.findAllByIdIn(nodeUuids).stream()
+                .map(nodeInfo -> new NodeInfos(nodeInfo.getId(), nodeInfo.getName(), nodeInfo.getNode().getStudy().getId()))
+                .toList();
+    }
+
     private NetworkModificationNode createAndInsertNode(StudyEntity study, UUID nodeId, NetworkModificationNode nodeInfo, InsertMode insertMode) {
         NodeEntity reference = getNodeEntity(nodeId);
 

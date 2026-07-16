@@ -1548,6 +1548,17 @@ public class StudyController {
                 .body(studyService.searchModifications(rootNetworkUuid, userInput));
     }
 
+    @PostMapping(value = "/nodes/infos", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the name and the study of each given node")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Infos of the found nodes, unknown nodes are omitted"),
+    })
+    public ResponseEntity<List<NodeInfos>> getNodesInfos(
+            @Parameter(description = "Node UUIDs") @RequestBody List<UUID> nodeUuids) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(networkModificationTreeService.getNodesInfos(nodeUuids));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
     @Operation(summary = "Create a node as before / after the given node ID")
     @ApiResponses(value = {
