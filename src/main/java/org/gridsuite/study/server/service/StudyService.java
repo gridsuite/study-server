@@ -1095,7 +1095,7 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public void assertCanBuildNode(UUID rootNetworkUuid, UUID nodeUuid) {
+    public void assertNoBuildingNode(UUID rootNetworkUuid, UUID nodeUuid) {
         List<UUID> nodesUuids = networkModificationTreeService.getNodeBranchUuids(nodeUuid);
         rootNetworkNodeInfoService.assertNoBuildingNode(rootNetworkUuid, nodesUuids);
     }
