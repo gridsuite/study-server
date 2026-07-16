@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.loadflow;
 
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.controller.StudyController;
+import org.gridsuite.study.server.controller.loadflow.LoadFlowController;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
@@ -46,7 +46,7 @@ import static org.mockito.Mockito.*;
 class LoadFLowUnitTest {
 
     @Autowired
-    private StudyController controller;
+    private LoadFlowController controller;
 
     @MockitoSpyBean
     private StudyService studyService;
