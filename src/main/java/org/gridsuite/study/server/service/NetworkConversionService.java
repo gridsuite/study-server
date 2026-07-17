@@ -105,11 +105,13 @@ public class NetworkConversionService {
         return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public UUID exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, NodeExportInfos exportInfos, String format, String userId, String parametersJson) {
+    public UUID exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, NodeExportInfos exportInfos, String format, String compression, String userId, String parametersJson) {
 
         try {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
                 + "/networks/{networkUuid}/export/{format}");
+
+            uriComponentsBuilder.queryParam("compression", compression);
             if (!StringUtils.isEmpty(variantId)) {
                 uriComponentsBuilder.queryParam("variantId", variantId);
             }
