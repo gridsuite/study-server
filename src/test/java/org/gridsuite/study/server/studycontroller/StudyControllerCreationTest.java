@@ -24,6 +24,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -88,7 +89,7 @@ class StudyControllerCreationTest {
 
     // All these computation services need to be mocked because apps try to create default parameters for each computation app on study creation
     @MockitoBean
-    private LoadFlowService loadFlowService;
+    private LoadFlowServiceRest loadFlowServiceRest;
     @MockitoBean
     private ShortCircuitService shortCircuitService;
     @MockitoBean
@@ -249,7 +250,7 @@ class StudyControllerCreationTest {
 
     private void verifyMockCallsAfterStudyCreation() {
         verify(reportService, Mockito.times(1)).sendReport(any(UUID.class), any(ReportNode.class));
-        verify(loadFlowService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(loadFlowServiceRest, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(shortCircuitService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(securityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(sensitivityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());

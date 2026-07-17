@@ -44,6 +44,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.SendInput;
@@ -205,7 +206,7 @@ class NetworkModificationTest {
     private SecurityAnalysisService securityAnalysisService;
 
     @Autowired
-    private LoadFlowService loadFlowService;
+    private LoadFlowServiceRest loadFlowServiceRest;
 
     @Autowired
     private SensitivityAnalysisService sensitivityAnalysisService;
@@ -294,7 +295,7 @@ class NetworkModificationTest {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         String baseUrl = wireMockServer.baseUrl();
         reportService.setReportServerBaseUri(baseUrl);
-        loadFlowService.setLoadFlowServerBaseUri(baseUrl);
+        loadFlowServiceRest.setLoadFlowServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);

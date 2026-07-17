@@ -32,6 +32,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -168,7 +169,7 @@ class LoadFlowTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
     @Autowired
-    private LoadFlowService loadFlowService;
+    private LoadFlowServiceRest loadFlowServiceRest;
     @Autowired
     private StudyRepository studyRepository;
     @MockitoSpyBean
@@ -208,7 +209,7 @@ class LoadFlowTest {
         wireMockStubs = new WireMockStubs(wireMockServer);
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
-        loadFlowService.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
+        loadFlowServiceRest.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
         networkModificationService.setNetworkModificationServerBaseUri(wireMockServer.baseUrl());
 
         List<LimitViolationInfos> limitViolations = List.of(LimitViolationInfos.builder()
@@ -840,7 +841,7 @@ class LoadFlowTest {
     void testGetStatusNotFound() {
         UUID notExistingNetworkUuid = UUID.fromString(LOADFLOW_ERROR_RESULT_UUID);
         wireMockStubs.loadflowServer.stubGetLoadflowStatus(UUID.fromString(LOADFLOW_ERROR_RESULT_UUID), null, true);
-        assertThrows(HttpClientErrorException.NotFound.class, () -> loadFlowService.getLoadFlowStatus(notExistingNetworkUuid), NOT_FOUND.name());
+        assertThrows(HttpClientErrorException.NotFound.class, () -> loadFlowServiceRest.getLoadFlowStatus(notExistingNetworkUuid), NOT_FOUND.name());
         wireMockStubs.loadflowServer.verifyGetLoadflowStatus(UUID.fromString(LOADFLOW_ERROR_RESULT_UUID));
     }
 

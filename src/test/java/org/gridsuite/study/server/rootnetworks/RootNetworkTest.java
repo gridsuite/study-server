@@ -33,6 +33,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -171,7 +172,7 @@ class RootNetworkTest {
     @MockitoBean
     private SecurityAnalysisService securityAnalysisService;
     @MockitoBean
-    private LoadFlowService loadFlowService;
+    private LoadFlowServiceRest loadFlowServiceRest;
     @MockitoBean
     private ShortCircuitService shortCircuitService;
     @MockitoBean
@@ -574,7 +575,7 @@ class RootNetworkTest {
         verify(dynamicSecurityAnalysisService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
         verify(dynamicMarginCalculationService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
         // check LOADFLOW_RESULT_UUID2 is also deleted
-        verify(loadFlowService, times(1)).deleteLoadFlowResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
+        verify(loadFlowServiceRest, times(1)).deleteLoadFlowResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
         verify(securityAnalysisService, times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
         verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
         verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));

@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -55,7 +56,7 @@ class SingleLineDiagramWiremockTest {
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
-    private LoadFlowService loadFlowService;
+    private LoadFlowServiceRest loadFlowServiceRest;
     @MockitoBean
     private RootNetworkService rootNetworkService;
     @MockitoBean
@@ -141,6 +142,6 @@ class SingleLineDiagramWiremockTest {
         doReturn(shortcircuitResultUuid).when(rootNetworkNodeInfoService).getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SHORT_CIRCUIT);
         List<CurrentLimitViolationInfos> currentLimitViolationInfos = (List<CurrentLimitViolationInfos>) sldRequestInfos.get(CURRENT_LIMIT_VIOLATIONS_INFOS);
         List<LimitViolationInfos> violations = currentLimitViolationInfos.stream().map(clv -> LimitViolationInfos.builder().subjectId(clv.equipmentId()).build()).toList();
-        doReturn(violations).when(loadFlowService).getCurrentLimitViolations(loadflowResultUuid);
+        doReturn(violations).when(loadFlowServiceRest).getCurrentLimitViolations(loadflowResultUuid);
     }
 }

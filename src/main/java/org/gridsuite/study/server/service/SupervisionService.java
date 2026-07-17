@@ -21,6 +21,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +56,7 @@ public class SupervisionService {
 
     private final ReportService reportService;
 
-    private final LoadFlowService loadFlowService;
+    private final LoadFlowServiceRest loadFlowServiceRest;
 
     private final DynamicSimulationService dynamicSimulationService;
 
@@ -93,7 +94,7 @@ public class SupervisionService {
                               NetworkModificationTreeService networkModificationTreeService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                               ReportService reportService,
-                              LoadFlowService loadFlowService,
+                              LoadFlowServiceRest loadFlowServiceRest,
                               DynamicSimulationService dynamicSimulationService,
                               DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                               DynamicMarginCalculationService dynamicMarginCalculationService,
@@ -113,7 +114,7 @@ public class SupervisionService {
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.reportService = reportService;
-        this.loadFlowService = loadFlowService;
+        this.loadFlowServiceRest = loadFlowServiceRest;
         this.dynamicSimulationService = dynamicSimulationService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.dynamicMarginCalculationService = dynamicMarginCalculationService;
@@ -134,7 +135,7 @@ public class SupervisionService {
     @Transactional
     public Integer deleteComputationResults(ComputationType computationType, boolean dryRun) {
         return switch (computationType) {
-            case LOAD_FLOW -> dryRun ? loadFlowService.getLoadFlowResultsCount() : deleteLoadflowResults();
+            case LOAD_FLOW -> dryRun ? loadFlowServiceRest.getLoadFlowResultsCount() : deleteLoadflowResults();
             case DYNAMIC_SIMULATION ->
                 dryRun ? dynamicSimulationService.getResultsCount() : deleteDynamicSimulationResults();
             case DYNAMIC_SECURITY_ANALYSIS ->

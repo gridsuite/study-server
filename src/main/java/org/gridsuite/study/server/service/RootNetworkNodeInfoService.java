@@ -31,6 +31,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
@@ -62,7 +63,7 @@ public class RootNetworkNodeInfoService {
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
     private final StudyServerExecutionService studyServerExecutionService;
-    private final LoadFlowService loadFlowService;
+    private final LoadFlowServiceRest loadFlowServiceRest;
     private final SecurityAnalysisService securityAnalysisService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final ShortCircuitService shortCircuitService;
@@ -77,7 +78,7 @@ public class RootNetworkNodeInfoService {
     public RootNetworkNodeInfoService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                                       NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                                       StudyServerExecutionService studyServerExecutionService,
-                                      LoadFlowService loadFlowService,
+                                      LoadFlowServiceRest loadFlowServiceRest,
                                       SecurityAnalysisService securityAnalysisService,
                                       SensitivityAnalysisService sensitivityAnalysisService,
                                       ShortCircuitService shortCircuitService,
@@ -91,7 +92,7 @@ public class RootNetworkNodeInfoService {
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.studyServerExecutionService = studyServerExecutionService;
-        this.loadFlowService = loadFlowService;
+        this.loadFlowServiceRest = loadFlowServiceRest;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
@@ -612,7 +613,7 @@ public class RootNetworkNodeInfoService {
     public List<CompletableFuture<?>> getRemoteDeletions(RemoteDeletionInfos infos) {
         return List.of(
             studyServerExecutionService.runAsync(() -> reportService.deleteReports(infos.getReportUuids())),
-            studyServerExecutionService.runAsync(() -> loadFlowService.deleteLoadFlowResults(infos.getLoadFlowResultUuids())),
+            studyServerExecutionService.runAsync(() -> loadFlowServiceRest.deleteLoadFlowResults(infos.getLoadFlowResultUuids())),
             studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(infos.getSecurityAnalysisResultUuids())),
             studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(infos.getSensitivityAnalysisResultUuids())),
             studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getShortCircuitAnalysisResultUuids())),
@@ -671,7 +672,7 @@ public class RootNetworkNodeInfoService {
     }
 
     public void assertComputationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        loadFlowService.assertLoadFlowNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW));
+        loadFlowServiceRest.assertLoadFlowNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW));
         securityAnalysisService.assertSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS));
         dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
         dynamicSecurityAnalysisService.assertDynamicSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS));
@@ -690,7 +691,7 @@ public class RootNetworkNodeInfoService {
     @Transactional(readOnly = true)
     public String getLoadFlowResult(UUID nodeUuid, UUID rootNetworkUuid, String filters, Sort sort) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
-        return loadFlowService.getLoadFlowResult(resultUuid, filters, sort);
+        return loadFlowServiceRest.getLoadFlowResult(resultUuid, filters, sort);
     }
 
     @Transactional(readOnly = true)
@@ -833,7 +834,7 @@ public class RootNetworkNodeInfoService {
 
     private LoadFlowStatus getBasicLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
-        return loadFlowService.getLoadFlowStatus(resultUuid);
+        return loadFlowServiceRest.getLoadFlowStatus(resultUuid);
     }
 
     public LoadFlowComputationInfos getLoadFlowComputationInfos(UUID nodeUuid, UUID rootNetworkUuid) {
@@ -853,7 +854,7 @@ public class RootNetworkNodeInfoService {
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result of loadflow was not found");
         }
-        return loadFlowService.getLoadFlowModifications(resultUuid);
+        return loadFlowServiceRest.getLoadFlowModifications(resultUuid);
     }
 
     @Transactional(readOnly = true)
@@ -920,7 +921,7 @@ public class RootNetworkNodeInfoService {
     @Transactional
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
-        loadFlowService.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+        loadFlowServiceRest.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
     }
 
     @Transactional

@@ -14,6 +14,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +49,7 @@ public class ComputationParametersService {
 
     public ComputationParametersService(SecurityAnalysisService securityAnalysisService,
                                         SensitivityAnalysisService sensitivityAnalysisService,
-                                        LoadFlowService loadFlowService,
+                                        LoadFlowServiceRest loadFlowServiceRest,
                                         ShortCircuitService shortCircuitService,
                                         VoltageInitService voltageInitService,
                                         DynamicSimulationService dynamicSimulationService,
@@ -64,7 +65,7 @@ public class ComputationParametersService {
                         ComputationType.LOAD_FLOW,
                         StudyEntity::getLoadFlowParametersUuid,
                         UserProfileInfos::getLoadFlowParameterId,
-                        loadFlowService,
+                    loadFlowServiceRest,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::loadFlowParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.SHORT_CIRCUIT,

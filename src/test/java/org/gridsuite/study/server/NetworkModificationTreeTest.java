@@ -47,6 +47,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -167,7 +168,7 @@ class NetworkModificationTreeTest {
     private SingleLineDiagramService singleLineDiagramService;
 
     @Autowired
-    private LoadFlowService loadflowService;
+    private LoadFlowServiceRest loadflowServiceRest;
 
     @Autowired
     private GeoDataService geoDataService;
@@ -265,7 +266,7 @@ class NetworkModificationTreeTest {
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
         geoDataService.setGeoDataServerBaseUri(baseUrl);
         networkMapService.setNetworkMapServerBaseUri(baseUrl);
-        loadflowService.setLoadFlowServerBaseUri(baseUrl);
+        loadflowServiceRest.setLoadFlowServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         actionsService.setActionsServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);

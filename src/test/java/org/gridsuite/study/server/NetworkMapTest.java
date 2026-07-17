@@ -31,6 +31,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -139,7 +140,7 @@ class NetworkMapTest {
     private FilterService filterService;
 
     @Autowired
-    private LoadFlowService loadFlowService;
+    private LoadFlowServiceRest loadFlowServiceRest;
 
     @Autowired
     private ReportService reportService;
@@ -169,7 +170,7 @@ class NetworkMapTest {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         networkMapService.setNetworkMapServerBaseUri(baseUrl);
-        loadFlowService.setLoadFlowServerBaseUri(baseUrl);
+        loadFlowServiceRest.setLoadFlowServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         filterService.setBaseUri(wireMockServer.baseUrl());
 

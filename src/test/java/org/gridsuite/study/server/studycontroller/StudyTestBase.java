@@ -40,6 +40,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -251,7 +252,7 @@ class StudyTestBase {
     protected VoltageInitService voltageInitService;
 
     @Autowired
-    protected LoadFlowService loadflowService;
+    protected LoadFlowServiceRest loadflowServiceRest;
 
     @Autowired
     protected ShortCircuitService shortCircuitService;
@@ -378,7 +379,7 @@ class StudyTestBase {
         userAdminService.setUserAdminServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         voltageInitService.setVoltageInitServerBaseUri(baseUrl);
-        loadflowService.setLoadFlowServerBaseUri(baseUrl);
+        loadflowServiceRest.setLoadFlowServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         dynamicSimulationClient.setBaseUri(baseUrl);
         dynamicSecurityAnalysisClient.setBaseUri(baseUrl);

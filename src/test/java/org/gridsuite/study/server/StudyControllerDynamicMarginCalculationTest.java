@@ -20,12 +20,12 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -112,7 +112,7 @@ class StudyControllerDynamicMarginCalculationTest {
     StudyService spyStudyService;
 
     @MockitoBean
-    private LoadFlowService mockLoadFlowService;
+    private LoadFlowServiceRest mockLoadFlowServiceRest;
 
     @MockitoSpyBean
     private DynamicMarginCalculationService spyDynamicMarginCalculationService;
@@ -225,7 +225,7 @@ class StudyControllerDynamicMarginCalculationTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(mockLoadFlowServiceRest.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
 
         // setup DynamicMarginCalculationService spy
         doAnswer(invocation -> RESULT_UUID)
@@ -331,7 +331,7 @@ class StudyControllerDynamicMarginCalculationTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(mockLoadFlowServiceRest.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
 
         // setup DynamicMarginCalculationService mock
         doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(
@@ -407,7 +407,7 @@ class StudyControllerDynamicMarginCalculationTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(mockLoadFlowServiceRest.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
 
         // setup DynamicMarginCalculationService mock
         doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(

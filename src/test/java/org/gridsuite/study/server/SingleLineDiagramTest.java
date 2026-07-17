@@ -32,6 +32,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -128,7 +129,7 @@ class SingleLineDiagramTest {
     private NetworkStoreService networkStoreService;
 
     @MockitoBean
-    private LoadFlowService loadFlowService;
+    private LoadFlowServiceRest loadFlowServiceRest;
     @Autowired
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     @Autowired
@@ -163,13 +164,13 @@ class SingleLineDiagramTest {
         when(networkStoreService.getVariantsInfos(UUID.fromString(NETWORK_UUID_VARIANT_ERROR_STRING)))
             .thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
 
-        when(loadFlowService.getLoadFlowParameters(LOADFLOW_PARAMETERS_UUID))
+        when(loadFlowServiceRest.getLoadFlowParameters(LOADFLOW_PARAMETERS_UUID))
             .thenReturn(LoadFlowParametersInfos.builder()
                 .commonParameters(LoadFlowParameters.load())
                 .specificParametersPerProvider(Map.of())
                 .build());
 
-        when(loadFlowService.getLoadFlowParametersOrDefaultsUuid(any()))
+        when(loadFlowServiceRest.getLoadFlowParametersOrDefaultsUuid(any()))
             .thenReturn(LOADFLOW_PARAMETERS_UUID);
 
         final Dispatcher dispatcher = new Dispatcher() {
