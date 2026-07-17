@@ -14,6 +14,7 @@ import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,11 +28,13 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 public class LoadFlowControllerParameters {
     private final StudyService studyService;
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final LoadFlowService loadFlowService;
 
     public LoadFlowControllerParameters(StudyService studyService,
-                                        NetworkModificationTreeService networkModificationTreeService) {
+                                        NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.loadFlowService = loadFlowService;
     }
 
     @PostMapping(value = "/parameters")
@@ -51,7 +54,7 @@ public class LoadFlowControllerParameters {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters")})
     public ResponseEntity<LoadFlowParametersInfos> getLoadflowParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getLoadFlowParametersInfos(studyUuid));
+        return ResponseEntity.ok().body(loadFlowService.getLoadFlowParametersInfos(studyUuid));
     }
 
     @GetMapping(value = "/parameters/id")
@@ -61,7 +64,7 @@ public class LoadFlowControllerParameters {
         @ApiResponse(responseCode = "404", description = "The study is not found")
     })
     public ResponseEntity<UUID> getLoadflowParametersId(@PathVariable("studyUuid") UUID studyUuid) {
-        UUID parametersId = studyService.getLoadFlowParametersId(studyUuid);
+        UUID parametersId = loadFlowService.getLoadFlowParametersId(studyUuid);
         return ResponseEntity.ok().body(parametersId);
     }
 
@@ -69,6 +72,6 @@ public class LoadFlowControllerParameters {
     @Operation(summary = "Get loadflow provider for a specified study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow provider is returned")})
     public ResponseEntity<String> getLoadFlowProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getLoadFlowProvider(studyUuid));
+        return ResponseEntity.ok().body(loadFlowService.getLoadFlowProvider(studyUuid));
     }
 }

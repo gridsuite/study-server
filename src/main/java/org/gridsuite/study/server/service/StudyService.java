@@ -55,6 +55,7 @@ import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMargin
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
@@ -118,6 +119,7 @@ public class StudyService {
     private final StudyInfosService studyInfosService;
     private final EquipmentInfosService equipmentInfosService;
     private final LoadFlowServiceRest loadflowServiceRest;
+    private final LoadFlowService loadFlowService;
     private final ShortCircuitService shortCircuitService;
     private final VoltageInitService voltageInitService;
     private final SingleLineDiagramService singleLineDiagramService;
@@ -182,6 +184,7 @@ public class StudyService {
         StudyServerExecutionService studyServerExecutionService,
         NotificationService notificationService,
         LoadFlowServiceRest loadflowServiceRest,
+        LoadFlowService loadFlowService,
         ShortCircuitService shortCircuitService,
         SingleLineDiagramService singleLineDiagramService,
         NetworkConversionService networkConversionService,
@@ -218,6 +221,7 @@ public class StudyService {
         this.objectMapper = objectMapper;
         this.studyServerExecutionService = studyServerExecutionService;
         this.notificationService = notificationService;
+        this.loadFlowService = loadFlowService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.loadflowServiceRest = loadflowServiceRest;
         this.shortCircuitService = shortCircuitService;
@@ -814,7 +818,7 @@ public class StudyService {
                                           List<Double> nominalVoltages) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         StudyEntity studyEntity = getStudy(studyUuid);
-        LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
+        LoadFlowParameters loadFlowParameters = loadFlowService.getLoadFlowParameters(studyEntity);
         return networkMapService.getElementsInfos(
             rootNetworkService.getNetworkUuid(rootNetworkUuid),
             networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
@@ -834,7 +838,7 @@ public class StudyService {
                                          boolean inUpstreamBuiltParentNode) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         StudyEntity studyEntity = getStudy(studyUuid);
-        LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
+        LoadFlowParameters loadFlowParameters = loadFlowService.getLoadFlowParameters(studyEntity);
         return networkMapService.getElementInfos(
             rootNetworkService.getNetworkUuid(rootNetworkUuid),
             networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
@@ -918,7 +922,7 @@ public class StudyService {
 
     public String getAllMapData(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, List<String> substationsIds) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
+        LoadFlowParameters loadFlowParameters = loadFlowService.getLoadFlowParameters(studyEntity);
         Map<String, Map<String, String>> optionalParameters = new HashMap<>();
         Stream.of(
             String.valueOf(ElementType.BRANCH),
@@ -982,13 +986,6 @@ public class StudyService {
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         return loadflowResultUuid;
-    }
-
-    @Transactional
-    public void deleteLoadflowResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid) {
-        loadflowServiceRest.deleteLoadFlowResults(List.of(loadflowResultUuid));
-        rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, null, null);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
     }
 
     @Transactional
@@ -1065,11 +1062,6 @@ public class StudyService {
         }
     }
 
-    public String getLoadFlowProvider(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return loadflowServiceRest.getLoadFlowProvider(studyEntity.getLoadFlowParametersUuid());
-    }
-
     public void assertIsNodeExist(UUID studyUuid, UUID nodeUuid) {
         boolean exists = networkModificationTreeService.getAllNodes(studyUuid).stream()
                 .anyMatch(nodeEntity -> nodeUuid.equals(nodeEntity.getIdNode()));
@@ -1130,28 +1122,6 @@ public class StudyService {
                 || networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt())) {
             throw new StudyException(NODE_NOT_BUILT);
         }
-    }
-
-    public LoadFlowParameters getLoadFlowParameters(StudyEntity studyEntity) {
-        LoadFlowParametersInfos lfParameters = getLoadFlowParametersInfos(studyEntity);
-        return lfParameters.getCommonParameters();
-    }
-
-    @Transactional
-    public LoadFlowParametersInfos getLoadFlowParametersInfos(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return getLoadFlowParametersInfos(studyEntity);
-    }
-
-    @Transactional(readOnly = true)
-    public UUID getLoadFlowParametersId(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return loadflowServiceRest.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-    }
-
-    public LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity studyEntity) {
-        UUID loadFlowParamsUuid = loadflowServiceRest.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-        return loadflowServiceRest.getLoadFlowParameters(loadFlowParamsUuid);
     }
 
     private <T> boolean setComputationParameters(UUID studyUuid, T parameters, String userId,
@@ -3323,7 +3293,7 @@ public class StudyService {
         // Get the requested info for the filtered equipment ids
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, true);
         StudyEntity studyEntity = getStudy(studyUuid);
-        LoadFlowParameters loadFlowParameters = getLoadFlowParameters(studyEntity);
+        LoadFlowParameters loadFlowParameters = loadFlowService.getLoadFlowParameters(studyEntity);
 
         return networkMapService.getElementsInfosByIds(
             rootNetworkService.getNetworkUuid(rootNetworkUuid),
