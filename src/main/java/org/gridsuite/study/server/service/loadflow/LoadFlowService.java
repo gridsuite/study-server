@@ -59,6 +59,7 @@ public class LoadFlowService {
         return loadflowServiceRest.getLoadFlowParameters(loadFlowParamsUuid);
     }
 
+    @Transactional
     public LoadFlowParameters getLoadFlowParameters(StudyEntity studyEntity) {
         LoadFlowParametersInfos lfParameters = getLoadFlowParametersInfos(studyEntity);
         return lfParameters.getCommonParameters();
@@ -69,6 +70,15 @@ public class LoadFlowService {
         loadflowServiceRest.deleteLoadFlowResults(List.of(loadflowResultUuid));
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, null, null);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
+    }
+
+    @Transactional
+    public UUID createLoadflowRunningStatus(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers) {
+        // since invalidating and building nodes can be long, we create loadflow result status before execution long operations
+        UUID loadflowResultUuid = loadflowServiceRest.createRunningStatus();
+        rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
+        return loadflowResultUuid;
     }
 
 }
