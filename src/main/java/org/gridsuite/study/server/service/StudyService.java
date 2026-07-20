@@ -3745,11 +3745,4 @@ public class StudyService {
         rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
         notificationService.emitRootNetworksUpdated(studyUuid);
     }
-
-    @Transactional
-    public void deleteLoadflowResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid) {
-        loadflowServiceRest.deleteLoadFlowResults(List.of(loadflowResultUuid));
-        rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, null, null);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
-    }
 }
