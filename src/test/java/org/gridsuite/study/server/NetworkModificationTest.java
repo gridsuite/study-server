@@ -2192,9 +2192,9 @@ class NetworkModificationTest {
         NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
         UUID nodeUuid1 = node1.getId();
-        CompositeInfos modification1 = new CompositeInfos(UUID.randomUUID(), "composite 1", false);
+        CompositeInfos modification1 = new CompositeInfos(UUID.randomUUID(), "composite 1", false, "description1");
         UUID sharedNetModId = UUID.randomUUID();
-        CompositeInfos modification2 = new CompositeInfos(sharedNetModId, "composite 2", true);
+        CompositeInfos modification2 = new CompositeInfos(sharedNetModId, "composite 2", true, "description2");
         String compositesData = mapper.writeValueAsString(
                 Arrays.asList(
                         modification1,
