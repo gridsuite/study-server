@@ -159,10 +159,6 @@ class SpreadsheetConfigCollectionTest {
                 } else if ("/v1/spreadsheet-config-collections/non-existing-collection".equals(path)) {
                     return new MockResponse(404);
                 } else if (path.matches("/v1/spreadsheet-config-collections/.*/duplicate") && "POST".equals(method)) {
-                    String collectionId = path.substring(path.lastIndexOf("=") + 1);
-                    if ("non-existing-collection".equals(collectionId)) {
-                        return new MockResponse(404);
-                    }
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
                 } else if (path.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "/append\\?sourceCollection=.*")) {
                     return new MockResponse(200);
