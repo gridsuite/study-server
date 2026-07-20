@@ -21,27 +21,24 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 public class LoadFlowService {
     private final StudyRepository studyRepository;
     private final LoadFlowServiceRest loadflowServiceRest;
-    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    private final NotificationService notificationService;
 
     @Autowired
-    public LoadFlowService(StudyRepository studyRepository, LoadFlowServiceRest loadflowServiceRest, RootNetworkNodeInfoService rootNetworkNodeInfoService, NotificationService notificationService) {
+    public LoadFlowService(StudyRepository studyRepository, LoadFlowServiceRest loadflowServiceRest) {
         this.studyRepository = studyRepository;
         this.loadflowServiceRest = loadflowServiceRest;
-        this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
-        this.notificationService = notificationService;
     }
 
     private StudyEntity getStudy(UUID studyUuid) {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public UUID getLoadFlowParametersId(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return loadflowServiceRest.getLoadFlowParametersOrDefaultsUuid(studyEntity);
     }
 
+    @Transactional
     public String getLoadFlowProvider(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return loadflowServiceRest.getLoadFlowProvider(studyEntity.getLoadFlowParametersUuid());
@@ -61,12 +58,5 @@ public class LoadFlowService {
     public LoadFlowParameters getLoadFlowParameters(StudyEntity studyEntity) {
         LoadFlowParametersInfos lfParameters = getLoadFlowParametersInfos(studyEntity);
         return lfParameters.getCommonParameters();
-    }
-
-    @Transactional
-    public void deleteLoadflowResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid) {
-        loadflowServiceRest.deleteLoadFlowResults(List.of(loadflowResultUuid));
-        rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, null, null);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
     }
 }

@@ -56,7 +56,7 @@ class WorkflowTest {
     private StudyService studyService;
     @MockitoBean
     private NotificationService notificationService;
-    @Autowired
+    @MockitoBean
     private LoadFlowService loadFlowService;
 
     @Test
@@ -111,6 +111,6 @@ class WorkflowTest {
 
         // check loadflow is actually ran after build is completed
         verify(notificationService, times(1)).emitNodeBuildFailed(studyUuid, nodeUuid, rootNetworkUuid, errorMessage);
-        verify(loadFlowService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid);
+        verify(studyService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid);
     }
 }
