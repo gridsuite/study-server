@@ -7,15 +7,15 @@
 package org.gridsuite.study.server;
 
 import org.gridsuite.study.server.dto.BuildInfos;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
-import org.gridsuite.study.server.service.NetworkModificationService;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.UserAdminService;
+import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,10 +23,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
@@ -35,6 +35,8 @@ import static org.mockito.Mockito.*;
 class StudyServiceTest {
     @Autowired
     private NodeRepository nodeRepository;
+    @MockitoBean
+    private StudyRepository studyRepository;
     @Autowired
     private StudyService studyService;
     @MockitoBean
@@ -43,6 +45,10 @@ class StudyServiceTest {
     private NetworkModificationTreeService networkModificationTreeService;
     @MockitoBean
     private NetworkModificationService networkModificationService;
+    @MockitoBean
+    private RemoteServicesInspector remoteServicesInspector;
+    @MockitoBean
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     @Test
     void testBuildFirstLevelChildren() {
@@ -158,6 +164,45 @@ class StudyServiceTest {
         // 1 to check how many children will be built, then 1 for each built children
         verify(userAdminService, times(2)).getUserMaxAllowedBuilds(userId);
         verify(networkModificationTreeService, times(2)).countBuiltNodes(studyUuid, rootNetworkUuid);
+    }
+
+    @Test
+    void testGetAllComputationsStatus() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID rootNetworkUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        when(studyRepository.existsById(studyUuid)).thenReturn(true);
+        when(remoteServicesInspector.getRunningOptionalServices()).thenReturn(
+                Set.of("security_analysis_server", "pcc_min_server", "dynamic_margin_calculation_server", "dynamic_security_analysis_server",
+                        "dynamic_simulation_server", "state_estimation_server", "sensitivity_analysis_server",
+                        "shortcircuit_server", "voltage_init_server"));
+        when(rootNetworkNodeInfoService.getLoadFlowStatus(any(), any())).thenReturn("CONVERGED");
+        when(rootNetworkNodeInfoService.getSecurityAnalysisStatus(any(), any())).thenReturn("FAILED");
+        when(rootNetworkNodeInfoService.getSensitivityAnalysisStatus(any(), any())).thenReturn("CONVERGED");
+        when(rootNetworkNodeInfoService.getPccMinStatus(any(), any())).thenReturn("SUCCESS");
+        when(rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(any(), any())).thenReturn("SUCCESS");
+        when(rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(any(), any())).thenReturn("FAILED");
+        when(rootNetworkNodeInfoService.getDynamicSimulationStatus(any(), any())).thenReturn("GOOD");
+        when(rootNetworkNodeInfoService.getStateEstimationStatus(any(), any())).thenReturn("OK");
+        when(rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(any(), any(), eq(ShortcircuitAnalysisType.ONE_BUS))).thenReturn("ONEBUS_OK");
+        when(rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(any(), any(), eq(ShortcircuitAnalysisType.ALL_BUSES))).thenReturn("ALL_BUS_FAIL");
+        when(rootNetworkNodeInfoService.getVoltageInitStatus(any(), any())).thenReturn("GREAT");
+
+        Map<ComputationType, String> allComputationsStatus = studyService.getAllComputationsStatus(studyUuid, rootNetworkUuid, nodeUuid);
+        assertEquals(11, allComputationsStatus.size());
+    }
+
+    @Test
+    void testGetAllComputationWithUnknowServer() {
+        UUID studyUuid = UUID.randomUUID();
+        UUID rootNetworkUuid = UUID.randomUUID();
+        UUID nodeUuid = UUID.randomUUID();
+        when(studyRepository.existsById(studyUuid)).thenReturn(true);
+        when(remoteServicesInspector.getRunningOptionalServices()).thenReturn(Set.of("actions_server"));
+        Map<ComputationType, String> allComputationsStatus = studyService.getAllComputationsStatus(studyUuid, rootNetworkUuid, nodeUuid);
+        // loadflow is always running
+        assertEquals(1, allComputationsStatus.size());
+        assertTrue(allComputationsStatus.containsKey(ComputationType.LOAD_FLOW));
     }
 
     private void mockNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {

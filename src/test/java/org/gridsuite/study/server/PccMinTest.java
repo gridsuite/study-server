@@ -49,6 +49,7 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
@@ -57,6 +58,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -73,10 +75,8 @@ class PccMinTest {
     private static final String PCC_MIN_ERROR_RESULT_UUID = "25222222-9994-4e55-8ec7-07ea965d24eb";
     private static final UUID PCCMIN_PARAMETERS_UUID = UUID.fromString("0c0f1efd-bd22-4a75-83d3-9e530245c7f2");
     private static final String PCC_MIN_STATUS_JSON = "{\"status\":\"COMPLETED\"}";
-    private static final String ALL_COMPUTATION_STATUS_JSON = "{\"LOAD_FLOW\":null,\"SECURITY_ANALYSIS\":null," +
-            "\"SENSITIVITY_ANALYSIS\":null,\"SHORT_CIRCUIT\":null,\"SHORT_CIRCUIT_ONE_BUS\":null," +
-            "\"VOLTAGE_INITIALIZATION\":null,\"DYNAMIC_SIMULATION\":null,\"DYNAMIC_SECURITY_ANALYSIS\":null," +
-            "\"DYNAMIC_MARGIN_CALCULATION\":null,\"STATE_ESTIMATION\":null,\"PCC_MIN\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\"}";
+    private static final String ALL_COMPUTATION_STATUS_JSON =
+            "{\"LOAD_FLOW\":null,\"PCC_MIN\":\"{\\\"status\\\":\\\"COMPLETED\\\"}\"}";
     private static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
@@ -138,6 +138,8 @@ class PccMinTest {
     private TestUtils studyTestUtils;
     @Autowired
     private ConsumerService consumerService;
+    @MockitoBean
+    private RemoteServicesInspector remoteServicesInspector;
 
     private WireMockServer wireMockServer;
     private WireMockStubs wireMockStubs;
@@ -157,7 +159,7 @@ class PccMinTest {
         pccMinService.setPccMinServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
-
+        when(remoteServicesInspector.getRunningOptionalServices()).thenReturn(Set.of("pcc_min_server"));
     }
 
     @AfterEach

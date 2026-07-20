@@ -41,6 +41,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -91,6 +92,13 @@ public class RemoteServicesInspector {
             .toList();
         CompletableFuture.allOf(results.toArray(CompletableFuture[]::new)).join();
         return results.stream().map(CompletableFuture::join).toList();
+    }
+
+    public Set<String> getRunningOptionalServices() {
+        return getOptionalServices().stream()
+                .filter(service -> service.status() == ServiceStatus.UP)
+                .map(ServiceStatusInfos::name)
+                .collect(Collectors.toSet());
     }
 
     /**
