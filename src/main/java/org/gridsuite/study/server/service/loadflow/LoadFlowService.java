@@ -7,7 +7,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +23,6 @@ public class LoadFlowService {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final NotificationService notificationService;
 
-    @Autowired
     public LoadFlowService(StudyRepository studyRepository, LoadFlowServiceRest loadflowServiceRest, RootNetworkNodeInfoService rootNetworkNodeInfoService, NotificationService notificationService) {
         this.studyRepository = studyRepository;
         this.loadflowServiceRest = loadflowServiceRest;
@@ -42,7 +40,7 @@ public class LoadFlowService {
         return loadflowServiceRest.getLoadFlowParametersOrDefaultsUuid(studyEntity);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public String getLoadFlowProvider(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return loadflowServiceRest.getLoadFlowProvider(studyEntity.getLoadFlowParametersUuid());
@@ -54,7 +52,7 @@ public class LoadFlowService {
         return getLoadFlowParametersInfos(studyEntity);
     }
 
-    public LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity studyEntity) {
+    private LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity studyEntity) {
         UUID loadFlowParamsUuid = loadflowServiceRest.getLoadFlowParametersOrDefaultsUuid(studyEntity);
         return loadflowServiceRest.getLoadFlowParameters(loadFlowParamsUuid);
     }

@@ -808,6 +808,7 @@ public class StudyService {
         return geoDataService.getSubstationsGraphics(networkUuid, variantId, substationsIds);
     }
 
+    @Transactional
     public String getNetworkElementsInfos(UUID studyUuid,
                                           UUID nodeUuid,
                                           UUID rootNetworkUuid,
@@ -829,6 +830,7 @@ public class StudyService {
             getOptionalParameters(elementType, studyEntity, loadFlowParameters));
     }
 
+    @Transactional
     public String getNetworkElementInfos(UUID studyUuid,
                                          UUID nodeUuid,
                                          UUID rootNetworkUuid,
@@ -920,6 +922,7 @@ public class StudyService {
         return networkMapService.getBranchOr3WTVoltageLevelId(networkUuid, variantId, equipmentId, side);
     }
 
+    @Transactional
     public String getAllMapData(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, List<String> substationsIds) {
         StudyEntity studyEntity = getStudy(studyUuid);
         LoadFlowParameters loadFlowParameters = loadFlowService.getLoadFlowParameters(studyEntity);
@@ -3276,7 +3279,7 @@ public class StudyService {
         );
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public String getNetworkElementsInfosByGlobalFilter(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, EquipmentType equipmentType, String infoType, GlobalFilter filter) {
         // Get the list of equipment ids that match the filter
         List<String> equipmentIds = self.evaluateGlobalFilter(nodeUuid, rootNetworkUuid, List.of(equipmentType), filter);
