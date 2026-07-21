@@ -21,8 +21,8 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -56,7 +56,7 @@ public class SupervisionService {
 
     private final ReportService reportService;
 
-    private final LoadFlowServiceRest loadFlowServiceRest;
+    private final LoadFlowServiceRestRest loadFlowServiceRest;
 
     private final DynamicSimulationService dynamicSimulationService;
 
@@ -64,21 +64,21 @@ public class SupervisionService {
 
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
 
-    private final SecurityAnalysisService securityAnalysisService;
+    private final SecurityAnalysisServiceRest securityAnalysisService;
 
-    private final SensitivityAnalysisService sensitivityAnalysisService;
+    private final SensitivityAnalysisServiceRest sensitivityAnalysisService;
 
-    private final ShortCircuitService shortCircuitService;
+    private final ShortCircuitServiceRest shortCircuitService;
 
-    private final VoltageInitService voltageInitService;
+    private final VoltageInitServiceRest voltageInitService;
 
     private final EquipmentInfosService equipmentInfosService;
 
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
-    private final StateEstimationService stateEstimationService;
+    private final StateEstimationServiceRest stateEstimationService;
 
-    private final PccMinService pccMinService;
+    private final PccMinServiceRest pccMinService;
 
     private final ElasticsearchOperations elasticsearchOperations;
 
@@ -94,17 +94,17 @@ public class SupervisionService {
                               NetworkModificationTreeService networkModificationTreeService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                               ReportService reportService,
-                              LoadFlowServiceRest loadFlowServiceRest,
+                              LoadFlowServiceRestRest loadFlowServiceRest,
                               DynamicSimulationService dynamicSimulationService,
                               DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                               DynamicMarginCalculationService dynamicMarginCalculationService,
-                              SecurityAnalysisService securityAnalysisService,
-                              SensitivityAnalysisService sensitivityAnalysisService,
-                              ShortCircuitService shortCircuitService,
-                              VoltageInitService voltageInitService,
+                              SecurityAnalysisServiceRest securityAnalysisService,
+                              SensitivityAnalysisServiceRest sensitivityAnalysisService,
+                              ShortCircuitServiceRest shortCircuitService,
+                              VoltageInitServiceRest voltageInitService,
                               EquipmentInfosService equipmentInfosService,
-                              StateEstimationService stateEstimationService,
-                              PccMinService pccMinService,
+                              StateEstimationServiceRest stateEstimationService,
+                              PccMinServiceRest pccMinService,
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,

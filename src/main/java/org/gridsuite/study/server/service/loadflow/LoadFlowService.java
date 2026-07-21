@@ -19,11 +19,11 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 @Service
 public class LoadFlowService {
     private final StudyRepository studyRepository;
-    private final LoadFlowServiceRest loadflowServiceRest;
+    private final LoadFlowServiceRestRest loadflowServiceRest;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final NotificationService notificationService;
 
-    public LoadFlowService(StudyRepository studyRepository, LoadFlowServiceRest loadflowServiceRest, RootNetworkNodeInfoService rootNetworkNodeInfoService, NotificationService notificationService) {
+    public LoadFlowService(StudyRepository studyRepository, LoadFlowServiceRestRest loadflowServiceRest, RootNetworkNodeInfoService rootNetworkNodeInfoService, NotificationService notificationService) {
         this.studyRepository = studyRepository;
         this.loadflowServiceRest = loadflowServiceRest;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;

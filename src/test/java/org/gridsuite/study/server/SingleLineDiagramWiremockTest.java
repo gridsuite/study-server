@@ -10,8 +10,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +48,7 @@ class SingleLineDiagramWiremockTest {
     @Autowired
     private SingleLineDiagramService singleLineDiagramService;
     @Autowired
-    private ShortCircuitService shortCircuitService;
+    private ShortCircuitServiceRest shortCircuitService;
 
     @Autowired
     public ObjectMapper mapper;
@@ -56,7 +56,7 @@ class SingleLineDiagramWiremockTest {
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowServiceRestRest loadFlowServiceRest;
     @MockitoBean
     private RootNetworkService rootNetworkService;
     @MockitoBean

@@ -19,7 +19,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,7 +70,7 @@ class LoadFLowUnitTest {
     @MockitoBean
     private NetworkModificationService networkModificationService;
     @MockitoBean
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowServiceRestRest loadFlowServiceRest;
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean

@@ -29,7 +29,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -125,7 +125,7 @@ class LoadFLowIntegrationTest {
     @MockitoSpyBean
     NetworkModificationTreeService networkModificationTreeService;
     @MockitoSpyBean
-    LoadFlowServiceRest loadFlowServiceRest;
+    LoadFlowServiceRestRest loadFlowServiceRest;
 
     private WireMockServer wireMockServer;
     private WireMockStubs wireMockStubs;

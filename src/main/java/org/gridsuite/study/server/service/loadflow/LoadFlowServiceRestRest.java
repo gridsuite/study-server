@@ -15,7 +15,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.AbstractComputationServiceRest;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Sort;
@@ -38,7 +38,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATIO
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class LoadFlowServiceRest extends AbstractComputationService implements ComputationParameters {
+public class LoadFlowServiceRestRest extends AbstractComputationServiceRest implements ComputationParameters {
     private static final String QUERY_PARAM_APPLY_SOLVED_VALUES = "applySolvedValues";
     private static final String RESULT_UUID = "resultUuid";
 
@@ -54,9 +54,9 @@ public class LoadFlowServiceRest extends AbstractComputationService implements C
     ) {
     }
 
-    public LoadFlowServiceRest(RemoteServicesProperties remoteServicesProperties,
-                               ObjectMapper objectMapper,
-                               RestTemplate restTemplate) {
+    public LoadFlowServiceRestRest(RemoteServicesProperties remoteServicesProperties,
+                                   ObjectMapper objectMapper,
+                                   RestTemplate restTemplate) {
         this.loadFlowServerBaseUri = remoteServicesProperties.getServiceUri("loadflow-server");
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;

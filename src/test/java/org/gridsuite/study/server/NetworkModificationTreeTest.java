@@ -47,8 +47,8 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -144,7 +144,7 @@ class NetworkModificationTreeTest {
     private NetworkModificationService networkModificationService;
 
     @Autowired
-    private SensitivityAnalysisService sensitivityAnalysisService;
+    private SensitivityAnalysisServiceRest sensitivityAnalysisService;
 
     @Autowired
     private NetworkMapService networkMapService;
@@ -153,22 +153,22 @@ class NetworkModificationTreeTest {
     private ReportService reportService;
 
     @Autowired
-    private SecurityAnalysisService securityAnalysisService;
+    private SecurityAnalysisServiceRest securityAnalysisService;
 
     @Autowired
-    private ShortCircuitService shortCircuitService;
+    private ShortCircuitServiceRest shortCircuitService;
 
     @Autowired
-    private StateEstimationService stateEstimationService;
+    private StateEstimationServiceRest stateEstimationService;
 
     @Autowired
-    private PccMinService pccMinService;
+    private PccMinServiceRest pccMinService;
 
     @Autowired
     private SingleLineDiagramService singleLineDiagramService;
 
     @Autowired
-    private LoadFlowServiceRest loadflowServiceRest;
+    private LoadFlowServiceRestRest loadflowServiceRest;
 
     @Autowired
     private GeoDataService geoDataService;

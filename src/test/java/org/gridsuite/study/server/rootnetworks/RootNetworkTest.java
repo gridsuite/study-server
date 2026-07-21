@@ -33,8 +33,8 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
@@ -170,21 +170,21 @@ class RootNetworkTest {
     @MockitoBean
     private DynamicMarginCalculationService dynamicMarginCalculationService;
     @MockitoBean
-    private SecurityAnalysisService securityAnalysisService;
+    private SecurityAnalysisServiceRest securityAnalysisService;
     @MockitoBean
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowServiceRestRest loadFlowServiceRest;
     @MockitoBean
-    private ShortCircuitService shortCircuitService;
+    private ShortCircuitServiceRest shortCircuitService;
     @MockitoBean
-    private SensitivityAnalysisService sensitivityAnalysisService;
+    private SensitivityAnalysisServiceRest sensitivityAnalysisService;
     @MockitoBean
-    private StateEstimationService stateEstimationService;
+    private StateEstimationServiceRest stateEstimationService;
     @MockitoBean
-    private VoltageInitService voltageInitService;
+    private VoltageInitServiceRest voltageInitService;
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
-    private PccMinService pccMinService;
+    private PccMinServiceRest pccMinService;
 
     @BeforeEach
     void setUp() {

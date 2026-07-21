@@ -27,7 +27,7 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -114,7 +114,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
     StudyService spyStudyService;
 
     @MockitoBean
-    private LoadFlowServiceRest mockLoadFlowServiceRest;
+    private LoadFlowServiceRestRest mockLoadFlowServiceRest;
 
     @MockitoBean
     private DynamicSimulationService mockDynamicSimulationService;

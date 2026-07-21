@@ -27,7 +27,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -236,13 +236,13 @@ class SecurityAnalysisTest {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
-    private SecurityAnalysisService securityAnalysisService;
+    private SecurityAnalysisServiceRest securityAnalysisService;
 
     @Autowired
     private ActionsService actionsService;
 
     @Autowired
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowServiceRestRest loadFlowServiceRest;
 
     @Autowired
     private UserAdminService userAdminService;

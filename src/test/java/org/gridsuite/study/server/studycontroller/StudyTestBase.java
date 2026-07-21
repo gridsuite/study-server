@@ -40,8 +40,8 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -243,19 +243,19 @@ class StudyTestBase {
     protected UserAdminService userAdminService;
 
     @Autowired
-    protected SensitivityAnalysisService sensitivityAnalysisService;
+    protected SensitivityAnalysisServiceRest sensitivityAnalysisService;
 
     @Autowired
-    protected SecurityAnalysisService securityAnalysisService;
+    protected SecurityAnalysisServiceRest securityAnalysisService;
 
     @Autowired
-    protected VoltageInitService voltageInitService;
+    protected VoltageInitServiceRest voltageInitService;
 
     @Autowired
-    protected LoadFlowServiceRest loadflowServiceRest;
+    protected LoadFlowServiceRestRest loadflowServiceRest;
 
     @Autowired
-    protected ShortCircuitService shortCircuitService;
+    protected ShortCircuitServiceRest shortCircuitService;
 
     @Autowired
     protected DynamicSimulationClient dynamicSimulationClient;
@@ -267,10 +267,10 @@ class StudyTestBase {
     protected DynamicMarginCalculationClient dynamicMarginCalculationClient;
 
     @Autowired
-    protected StateEstimationService stateEstimationService;
+    protected StateEstimationServiceRest stateEstimationService;
 
     @Autowired
-    protected PccMinService pccMinService;
+    protected PccMinServiceRest pccMinService;
 
     @Autowired
     protected StudyConfigService studyConfigService;

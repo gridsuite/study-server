@@ -25,7 +25,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -143,7 +143,7 @@ class ShortCircuitTest implements WithAssertions {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
-    private ShortCircuitService shortCircuitService;
+    private ShortCircuitServiceRest shortCircuitService;
 
     @Autowired
     private UserAdminService userAdminService;

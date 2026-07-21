@@ -13,7 +13,7 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.SingleLineDiagramService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,7 +63,7 @@ class NetworkAreaDiagramTest {
     private RootNetworkService rootNetworkService;
 
     @MockitoBean
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowServiceRestRest loadFlowServiceRest;
 
     @MockitoBean
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;

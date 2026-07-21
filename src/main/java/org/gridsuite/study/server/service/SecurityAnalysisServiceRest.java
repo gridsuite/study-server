@@ -17,7 +17,7 @@ import org.gridsuite.study.server.dto.RunSecurityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.AbstractComputationServiceRest;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,7 +41,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class SecurityAnalysisService extends AbstractComputationService implements ComputationParameters {
+public class SecurityAnalysisServiceRest extends AbstractComputationServiceRest implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -55,8 +55,8 @@ public class SecurityAnalysisService extends AbstractComputationService implemen
     private String securityAnalysisServerBaseUri;
 
     @Autowired
-    public SecurityAnalysisService(RemoteServicesProperties remoteServicesProperties,
-                                   ObjectMapper objectMapper, RestTemplate restTemplate) {
+    public SecurityAnalysisServiceRest(RemoteServicesProperties remoteServicesProperties,
+                                       ObjectMapper objectMapper, RestTemplate restTemplate) {
         this.securityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("security-analysis-server");
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;

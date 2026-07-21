@@ -49,8 +49,8 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -224,25 +224,25 @@ class VoltageInitTest {
     private ReportService reportService;
 
     @MockitoSpyBean
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowServiceRestRest loadFlowServiceRest;
 
     @Autowired
-    private SecurityAnalysisService securityAnalysisService;
+    private SecurityAnalysisServiceRest securityAnalysisService;
 
     @Autowired
-    private SensitivityAnalysisService sensitivityAnalysisService;
+    private SensitivityAnalysisServiceRest sensitivityAnalysisService;
 
     @Autowired
-    private ShortCircuitService shortCircuitService;
+    private ShortCircuitServiceRest shortCircuitService;
 
     @Autowired
-    private StateEstimationService stateEstimationService;
+    private StateEstimationServiceRest stateEstimationService;
 
     @Autowired
-    private PccMinService pccMinService;
+    private PccMinServiceRest pccMinService;
 
     @Autowired
-    private VoltageInitService voltageInitService;
+    private VoltageInitServiceRest voltageInitService;
 
     @MockitoSpyBean
     private UserAdminService userAdminService;

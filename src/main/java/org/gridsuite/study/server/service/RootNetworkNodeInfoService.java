@@ -31,10 +31,10 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.data.domain.Pageable;
@@ -63,31 +63,31 @@ public class RootNetworkNodeInfoService {
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
     private final StudyServerExecutionService studyServerExecutionService;
-    private final LoadFlowServiceRest loadFlowServiceRest;
-    private final SecurityAnalysisService securityAnalysisService;
-    private final SensitivityAnalysisService sensitivityAnalysisService;
-    private final ShortCircuitService shortCircuitService;
-    private final VoltageInitService voltageInitService;
+    private final LoadFlowServiceRestRest loadFlowServiceRest;
+    private final SecurityAnalysisServiceRest securityAnalysisService;
+    private final SensitivityAnalysisServiceRest sensitivityAnalysisService;
+    private final ShortCircuitServiceRest shortCircuitService;
+    private final VoltageInitServiceRest voltageInitService;
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
-    private final StateEstimationService stateEstimationService;
-    private final PccMinService pccMinService;
+    private final StateEstimationServiceRest stateEstimationService;
+    private final PccMinServiceRest pccMinService;
     private final ReportService reportService;
 
     public RootNetworkNodeInfoService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                                       NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                                       StudyServerExecutionService studyServerExecutionService,
-                                      LoadFlowServiceRest loadFlowServiceRest,
-                                      SecurityAnalysisService securityAnalysisService,
-                                      SensitivityAnalysisService sensitivityAnalysisService,
-                                      ShortCircuitService shortCircuitService,
-                                      VoltageInitService voltageInitService,
+                                      LoadFlowServiceRestRest loadFlowServiceRest,
+                                      SecurityAnalysisServiceRest securityAnalysisService,
+                                      SensitivityAnalysisServiceRest sensitivityAnalysisService,
+                                      ShortCircuitServiceRest shortCircuitService,
+                                      VoltageInitServiceRest voltageInitService,
                                       DynamicSimulationService dynamicSimulationService,
                                       DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                                       DynamicMarginCalculationService dynamicMarginCalculationService,
-                                      StateEstimationService stateEstimationService,
-                                      PccMinService pccMinService,
+                                      StateEstimationServiceRest stateEstimationService,
+                                      PccMinServiceRest pccMinService,
                                       ReportService reportService) {
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;

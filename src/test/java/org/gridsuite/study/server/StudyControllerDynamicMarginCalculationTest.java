@@ -25,7 +25,7 @@ import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -112,7 +112,7 @@ class StudyControllerDynamicMarginCalculationTest {
     StudyService spyStudyService;
 
     @MockitoBean
-    private LoadFlowServiceRest mockLoadFlowServiceRest;
+    private LoadFlowServiceRestRest mockLoadFlowServiceRest;
 
     @MockitoSpyBean
     private DynamicMarginCalculationService spyDynamicMarginCalculationService;

@@ -27,7 +27,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -65,7 +65,7 @@ public class ConsumerService {
     private final NotificationService notificationService;
     private final StudyService studyService;
     private final CaseService caseService;
-    private final LoadFlowServiceRest loadFlowServiceRest;
+    private final LoadFlowServiceRestRest loadFlowServiceRest;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
@@ -77,7 +77,7 @@ public class ConsumerService {
                            NotificationService notificationService,
                            StudyService studyService,
                            CaseService caseService,
-                           LoadFlowServiceRest loadFlowServiceRest,
+                           LoadFlowServiceRestRest loadFlowServiceRest,
                            NetworkModificationTreeService networkModificationTreeService,
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
