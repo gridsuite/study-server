@@ -410,6 +410,8 @@ class VoltageInitTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), objectMapper.writeValueAsString(VOLTAGE_INIT_PARAMETERS_UUID));
                 } else if (path.matches("/v1/network-modifications/index\\?networkUuid=.*") && "DELETE".equals(method)) {
                     return new MockResponse(200);
+                } else if (path.matches("/v1/users/.*/quota/.*") && "POST".equals(method)) {
+                    return new MockResponse(200);
                 } else {
                     LOGGER.error("Unhandled method+path: {} {}", request.getMethod(), request.getPath());
                     return new MockResponse.Builder().code(418).body("Unhandled method+path: " + request.getMethod() + " " + request.getPath()).build();
