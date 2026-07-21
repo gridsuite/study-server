@@ -19,10 +19,18 @@ import java.util.UUID;
  */
 
 public class UserAdminServerStubs {
+    public static final String QUOTA_START_URL_PATTERN = "/v1/users/.*/quota/.*/start";
+    public static final String QUOTA_END_URL_PATTERN = "/v1/users/.*/quota/.*/end";
+
     private final WireMockServer wireMock;
 
     public UserAdminServerStubs(WireMockServer wireMock) {
         this.wireMock = wireMock;
+        // Stub the startOperationWithQuota and endOperationWithQuota endpoints used by all computation runs
+        wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(QUOTA_START_URL_PATTERN))
+            .willReturn(WireMock.ok()));
+        wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(QUOTA_END_URL_PATTERN))
+            .willReturn(WireMock.ok()));
     }
 
     public void verifyGetUserProfile(String userId) {

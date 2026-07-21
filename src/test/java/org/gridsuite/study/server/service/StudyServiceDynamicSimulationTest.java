@@ -67,6 +67,9 @@ class StudyServiceDynamicSimulationTest {
     @MockitoBean
     private DynamicSimulationService dynamicSimulationService;
 
+    @MockitoBean
+    private UserAdminService userAdminService;
+
     @Autowired
     private StudyService studyService;
 
