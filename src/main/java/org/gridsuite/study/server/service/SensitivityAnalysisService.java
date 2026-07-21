@@ -70,6 +70,14 @@ public class SensitivityAnalysisService extends AbstractComputationService imple
         this.sensitivityAnalysisServerBaseUri = sensitivityAnalysisServerBaseUri + DELIMITER;
     }
 
+    public String getProviders() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/providers")
+            .toUriString();
+
+        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
+    }
+
     public UUID runSensitivityAnalysis(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
                                        String variantId,
                                        UUID reportUuid,

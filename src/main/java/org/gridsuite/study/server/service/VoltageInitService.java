@@ -20,6 +20,7 @@ import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParamete
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -118,6 +119,15 @@ public class VoltageInitService extends AbstractComputationService implements Co
 
     public String getVoltageInitResult(UUID resultUuid, UUID networkUuid, String variantId, String globalFilters) {
         return getVoltageInitResultOrStatus(resultUuid, "", networkUuid, variantId, globalFilters);
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/download-debug-file")
+            .buildAndExpand(resultUuid)
+            .toUriString();
+
+        return restTemplate.exchange(voltageInitServerBaseUri + path, HttpMethod.GET, null, Resource.class);
     }
 
     public String getVoltageInitStatus(UUID resultUuid) {

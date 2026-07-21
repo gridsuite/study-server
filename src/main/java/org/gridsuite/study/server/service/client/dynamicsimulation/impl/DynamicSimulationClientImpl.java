@@ -16,9 +16,12 @@ import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -53,6 +56,12 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     // --- Parameters related methods --- //
+
+    @Override
+    public String getProviders() {
+        String url = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, "providers");
+        return getRestTemplate().getForObject(url, String.class);
+    }
 
     @Override
     public String getProvider(@NonNull UUID parametersUuid) {
@@ -252,5 +261,16 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         var uriComponents = UriComponentsBuilder.fromUriString(endPointUrl);
         // call dynamic-simulation REST API
         return getRestTemplate().getForObject(uriComponents.toUriString(), Integer.class);
+    }
+
+    @Override
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        Objects.requireNonNull(resultUuid);
+        String endPointUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        String url = UriComponentsBuilder.fromUriString(endPointUrl + "/{resultUuid}/download-debug-file")
+            .buildAndExpand(resultUuid)
+            .toUriString();
+
+        return getRestTemplate().exchange(url, HttpMethod.GET, null, Resource.class);
     }
 }

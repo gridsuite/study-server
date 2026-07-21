@@ -220,6 +220,22 @@ public class SecurityAnalysisService extends AbstractComputationService implemen
         }
     }
 
+    public String getProviders() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/providers")
+            .toUriString();
+
+        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
+    }
+
+    public String getDefaultLimitReductions() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default-limit-reductions")
+            .toUriString();
+
+        return restTemplate.getForObject(securityAnalysisServerBaseUri + path, String.class);
+    }
+
     public void assertSecurityAnalysisNotRunning(UUID resultUuid) {
         SecurityAnalysisStatus sas = getSecurityAnalysisStatus(resultUuid);
         if (sas == SecurityAnalysisStatus.RUNNING) {

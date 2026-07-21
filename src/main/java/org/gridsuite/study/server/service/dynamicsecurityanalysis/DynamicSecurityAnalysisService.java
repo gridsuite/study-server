@@ -47,6 +47,10 @@ public class DynamicSecurityAnalysisService implements ComputationParameters {
         return dynamicSecurityAnalysisClient.getParameters(parametersUuid);
     }
 
+    public String getProviders() {
+        return dynamicSecurityAnalysisClient.getProviders();
+    }
+
     public UUID createParameters(String parameters) {
         return dynamicSecurityAnalysisClient.createParameters(parameters);
     }

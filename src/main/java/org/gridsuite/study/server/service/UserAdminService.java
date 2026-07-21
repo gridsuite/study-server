@@ -9,6 +9,8 @@ package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.UserProfileInfos;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -23,6 +25,8 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @Service
 public class UserAdminService {
     private static final String USERS_PROFILE_URI = "/users/{sub}/profile";
+    private static final String USERS_DETAIL_URI = "/users/{sub}/detail";
+    private static final String CURRENT_ANNOUNCEMENT_URI = "/announcements/current";
 
     private static final String USERS_MAX_ALLOWED_BUILDS_URI = USERS_PROFILE_URI + "/max-builds";
     private final RestTemplate restTemplate;
@@ -47,5 +51,17 @@ public class UserAdminService {
         String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_MAX_ALLOWED_BUILDS_URI)
             .buildAndExpand(sub).toUriString();
         return Optional.ofNullable(restTemplate.getForObject(userAdminServerBaseUri + path, Integer.class));
+    }
+
+    public ResponseEntity<String> getUserDetail(String sub) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_DETAIL_URI)
+            .buildAndExpand(sub).toUriString();
+        return restTemplate.exchange(userAdminServerBaseUri + path, HttpMethod.GET, null, String.class);
+    }
+
+    public ResponseEntity<String> getCurrentAnnouncement() {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + CURRENT_ANNOUNCEMENT_URI)
+            .toUriString();
+        return restTemplate.exchange(userAdminServerBaseUri + path, HttpMethod.GET, null, String.class);
     }
 }

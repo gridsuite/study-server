@@ -186,6 +186,30 @@ public class LoadFlowService extends AbstractComputationService implements Compu
         return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
     }
 
+    public String getProviders() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/providers")
+            .toUriString();
+
+        return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
+    }
+
+    public String getSpecificParameters() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/specific-parameters")
+            .toUriString();
+
+        return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
+    }
+
+    public String getDefaultLimitReductions() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/default-limit-reductions")
+            .toUriString();
+
+        return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
+    }
+
     public void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
     }

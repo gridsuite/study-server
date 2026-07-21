@@ -19,10 +19,12 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -71,6 +73,15 @@ public class StateEstimationService extends AbstractComputationService implement
         String path = pathBuilder.buildAndExpand(resultUuid).toUriString();
 
         return restTemplate.getForObject(stateEstimationServerServerBaseUri + path, String.class);
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}/download-debug-file")
+            .buildAndExpand(resultUuid)
+            .toUriString();
+
+        return restTemplate.exchange(stateEstimationServerServerBaseUri + path, HttpMethod.GET, null, Resource.class);
     }
 
     public UUID runStateEstimation(UUID networkUuid, String variantId, UUID parametersUuid, ReportInfos reportInfos, String receiver, String userId, boolean debug) {

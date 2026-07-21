@@ -105,6 +105,14 @@ public class NetworkConversionService {
         return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
+    public String getCaseImportParameters(UUID caseUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/cases/{caseUuid}/import-parameters")
+            .buildAndExpand(caseUuid)
+            .toUriString();
+
+        return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.GET, null, String.class).getBody();
+    }
+
     public UUID exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, NodeExportInfos exportInfos, String format, String userId, String parametersJson) {
 
         try {

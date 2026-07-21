@@ -22,6 +22,7 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.utils.ResultParameters;
+import org.springframework.core.io.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Pageable;
@@ -108,6 +109,23 @@ public class ShortCircuitService extends AbstractComputationService implements C
         HttpEntity<ShortCircuitParameters> httpEntity = new HttpEntity<>(headers);
 
         return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/download-debug-file")
+            .buildAndExpand(resultUuid)
+            .toUriString();
+
+        return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.GET, null, Resource.class);
+    }
+
+    public String getSpecificParameters() {
+        String path = UriComponentsBuilder
+            .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/parameters/specific-parameters")
+            .toUriString();
+
+        return restTemplate.getForObject(shortCircuitServerBaseUri + path, String.class);
     }
 
     private String getShortCircuitAnalysisResultResourcePath(UUID resultUuid) {

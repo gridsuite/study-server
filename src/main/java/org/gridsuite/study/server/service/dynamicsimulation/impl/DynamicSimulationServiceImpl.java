@@ -60,6 +60,11 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
     }
 
     @Override
+    public String getProviders() {
+        return dynamicSimulationClient.getProviders();
+    }
+
+    @Override
     public String getProvider(UUID parametersUuid) {
         return dynamicSimulationClient.getProvider(parametersUuid);
     }
