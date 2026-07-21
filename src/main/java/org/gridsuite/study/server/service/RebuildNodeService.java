@@ -6,6 +6,9 @@
  */
 package org.gridsuite.study.server.service;
 
+import org.gridsuite.study.server.dto.modification.ModificationContainerInfos;
+import org.gridsuite.study.server.dto.modification.ModificationContainerType;
+import org.gridsuite.study.server.dto.modification.MoveModificationInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.springframework.stereotype.Service;
 
@@ -93,7 +96,11 @@ public class RebuildNodeService {
         try {
             UUID sourceContainerId = networkModificationTreeService.getModificationGroupUuid(originNodeUuid);
             UUID targetContainerId = networkModificationTreeService.getModificationGroupUuid(targetNodeUuid);
-            studyService.moveNetworkModifications(studyUuid, targetNodeUuid, targetContainerId, sourceContainerId, modificationsToCopyUuidList, null, isTargetInDifferentNodeTree, userId);
+            MoveModificationInfos moveModificationInfos = new MoveModificationInfos(
+                    new ModificationContainerInfos(sourceContainerId, ModificationContainerType.GROUP),
+                    new ModificationContainerInfos(targetContainerId, ModificationContainerType.GROUP),
+                    null);
+            studyService.moveNetworkModifications(studyUuid, targetNodeUuid, modificationsToCopyUuidList, moveModificationInfos, isTargetInDifferentNodeTree, userId);
         } finally {
             studyService.unblockNodeTree(studyUuid, originNodeUuid);
             if (isTargetInDifferentNodeTree) {
@@ -105,9 +112,9 @@ public class RebuildNodeService {
     public void moveNetworkModification(
             UUID studyUuid,
             UUID nodeUuid,
-            UUID targetContainerId,
-            UUID sourceContainerId,
-            UUID modificationUuid, UUID beforeUuid, String userId) {
+            UUID modificationUuid,
+            MoveModificationInfos moveModificationInfos,
+            String userId) {
         handleRebuildNode(studyUuid, nodeUuid, userId,
                 () -> {
                     studyService.invalidateNodeTreeWhenMoveModification(studyUuid, nodeUuid);
@@ -115,10 +122,10 @@ public class RebuildNodeService {
                         studyService.moveNetworkModifications(
                                 studyUuid,
                                 nodeUuid,
-                                targetContainerId,
-                                sourceContainerId,
-                                List.of(modificationUuid), beforeUuid,
-                                false, userId);
+                                List.of(modificationUuid),
+                                moveModificationInfos,
+                                false,
+                                userId);
                     } finally {
                         studyService.unblockNodeTree(studyUuid, nodeUuid);
                     }

@@ -23,10 +23,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
-import org.gridsuite.study.server.dto.modification.CompositeInfos;
-import org.gridsuite.study.server.dto.modification.ModificationType;
-import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
-import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
+import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
@@ -60,7 +57,7 @@ import java.beans.PropertyEditorSupport;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.dto.ComputationType.*;
+import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
 
 /**
@@ -656,25 +653,11 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("modificationUuid") UUID modificationUuid,
-            @Parameter(description = "source container UUID; for GROUP source the node's group is used when absent")
-                @RequestParam(value = "sourceContainerId", required = false) UUID sourceContainerId,
-            @Parameter(description = "target container UUID; for GROUP target the node's group is used when absent")
-                @RequestParam(value = "targetContainerId", required = false) UUID targetContainerId,
-            @Parameter(description = "insert before this modification (empty = at end)") @RequestParam(value = "beforeUuid", required = false) UUID beforeUuid,
+            @RequestBody MoveModificationInfos moveModificationInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
         studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-        // For GROUP containers without an explicit id, fall back to the node's group.
-        UUID resolvedSourceId = sourceContainerId == null
-                ? networkModificationTreeService.getModificationGroupUuid(nodeUuid) : sourceContainerId;
-        UUID resolvedTargetId = targetContainerId == null
-                ? networkModificationTreeService.getModificationGroupUuid(nodeUuid) : targetContainerId;
-        rebuildNodeService.moveNetworkModification(
-                studyUuid,
-                nodeUuid,
-                resolvedTargetId,
-                resolvedSourceId,
-                modificationUuid, beforeUuid, userId);
+        rebuildNodeService.moveNetworkModification(studyUuid, nodeUuid, modificationUuid, moveModificationInfos, userId);
         return ResponseEntity.ok().build();
     }
 

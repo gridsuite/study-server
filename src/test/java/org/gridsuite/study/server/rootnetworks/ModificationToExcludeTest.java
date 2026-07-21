@@ -10,8 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
-import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
+import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.ExcludedNetworkModifications;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
@@ -39,12 +38,17 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.server.ResponseStatusException;
+
 import java.util.*;
 import java.util.stream.Collectors;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -820,11 +824,15 @@ class ModificationToExcludeTest {
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo1Entity);
 
         // try to execute modification move - if modification move fails, they should not be moved from a node to another in exludedModifications
-        Mockito.doThrow(new RuntimeException()).when(networkModificationService).moveModifications(any(), any(), any(), any(), eq(false));
+        Mockito.doThrow(new RuntimeException()).when(networkModificationService).moveModifications(any(), any(), eq(false));
         List<UUID> modificationsToMove = List.of(MODIFICATIONS_TO_EXCLUDE_RN_1.stream().findFirst().orElseThrow());
         var secondNodeGroupUuid = secondNode.getModificationGroupUuid();
         var firstNodeGroupUuid = firstNode.getModificationGroupUuid();
-        assertThrows(RuntimeException.class, () -> studyService.moveNetworkModifications(studyUuid, firstNodeUuid, secondNodeGroupUuid, firstNodeGroupUuid, modificationsToMove, null, false, USER_ID));
+        MoveModificationInfos moveModificationInfos = new MoveModificationInfos(
+                new ModificationContainerInfos(firstNodeGroupUuid, ModificationContainerType.GROUP),
+                new ModificationContainerInfos(secondNodeGroupUuid, ModificationContainerType.GROUP),
+                null);
+        assertThrows(RuntimeException.class, () -> studyService.moveNetworkModifications(studyUuid, firstNodeUuid, modificationsToMove, moveModificationInfos, false, USER_ID));
 
         // assert origin node still have all excluded modifications
         Set<UUID> excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid,
@@ -840,17 +848,20 @@ class ModificationToExcludeTest {
 
         // if it returned OK, then they should be moved from one node to another's excluded modifications
         Mockito.doReturn(new NetworkModificationsResult(modificationsToMove, List.of(Optional.of(NetworkModificationResult.builder()
-            .applicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK)
-            .lastGroupApplicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK)
-            .networkImpacts(List.of())
-            .build())))).when(networkModificationService).moveModifications(any(), any(), any(), any(), eq(true));
+                .applicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK)
+                .lastGroupApplicationStatus(NetworkModificationResult.ApplicationStatus.ALL_OK)
+                .networkImpacts(List.of())
+                .build())))).when(networkModificationService).moveModifications(any(), any(), eq(true));
 
         // Expands the moved UUIDs to leaves before remapping exclusions:
         // stub expandToLeafUuids to return exactly the moved UUIDs (no composites involved here)
         Mockito.doReturn(new HashSet<>(modificationsToMove)).when(networkModificationService).expandToLeafUuids(modificationsToMove);
 
-        studyService.moveNetworkModifications(studyUuid, secondNodeUuid, secondNodeGroupUuid, firstNodeGroupUuid, modificationsToMove, null, true, USER_ID);
-
+        MoveModificationInfos moveModificationInfos2 = new MoveModificationInfos(
+                new ModificationContainerInfos(firstNodeGroupUuid, ModificationContainerType.GROUP),
+                new ModificationContainerInfos(secondNodeGroupUuid, ModificationContainerType.GROUP),
+                null);
+        studyService.moveNetworkModifications(studyUuid, secondNodeUuid, modificationsToMove, moveModificationInfos2, true, USER_ID);
         // assert origin node still have all excluded modifications, except the moved one
         excludedModifications = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(firstNodeUuid,
                 rootNetworkBasicInfos.getFirst().rootNetworkUuid()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")).getModificationsUuidsToExclude();

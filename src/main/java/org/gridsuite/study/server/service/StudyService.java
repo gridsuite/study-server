@@ -2278,13 +2278,12 @@ public class StudyService {
     public void moveNetworkModifications(
             @NonNull UUID studyUuid,
             @NonNull UUID targetNodeUuid,
-            @NonNull UUID targetContainerId,
-            @NonNull UUID sourceContainerId,
             List<UUID> modificationUuidList,
-            UUID beforeUuid,
+            @NonNull MoveModificationInfos moveModificationInfos,
             boolean isTargetInDifferentNodeTree,
             String userId) {
-        UUID originNodeUuid = networkModificationTreeService.getNodeUuidByModificationGroup(sourceContainerId);
+        MoveModificationInfos resolvedInfos = resolveContainers(moveModificationInfos, targetNodeUuid);
+        UUID originNodeUuid = networkModificationTreeService.getNodeUuidByModificationGroup(resolvedInfos.source().id());
         boolean isTargetDifferentNode = !targetNodeUuid.equals(originNodeUuid);
 
         List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(targetNodeUuid);
@@ -2303,9 +2302,7 @@ public class StudyService {
                     .toList();
 
             NetworkModificationsResult result = networkModificationService.moveModifications(
-                    sourceContainerId,
-                    targetContainerId,
-                    beforeUuid,
+                    resolvedInfos,
                     Pair.of(modificationUuidList, applicationContexts),
                     isTargetInDifferentNodeTree);
 
@@ -2321,9 +2318,22 @@ public class StudyService {
             if (isTargetDifferentNode && originNodeUuid != null) {
                 notificationService.emitEndModificationEquipmentNotification(studyUuid, originNodeUuid, originNodeChildrenUuids);
             }
-
         }
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    private MoveModificationInfos resolveContainers(MoveModificationInfos infos, UUID nodeUuid) {
+        return new MoveModificationInfos(
+                resolveContainer(infos.source(), nodeUuid),
+                resolveContainer(infos.target(), nodeUuid),
+                infos.beforeUuid());
+    }
+
+    private ModificationContainerInfos resolveContainer(ModificationContainerInfos container, UUID nodeUuid) {
+        if (container != null && container.id() != null) {
+            return container;
+        }
+        return new ModificationContainerInfos(networkModificationTreeService.getModificationGroupUuid(nodeUuid), ModificationContainerType.GROUP);
     }
 
     private void emitNetworkModificationImpactsForAllRootNetworks(List<Optional<NetworkModificationResult>> modificationResults, StudyEntity studyEntity, UUID impactedNode) {

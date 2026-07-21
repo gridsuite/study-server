@@ -13,10 +13,7 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.modification.CompositeInfos;
-import org.gridsuite.study.server.dto.modification.ModificationApplicationContext;
-import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
-import org.gridsuite.study.server.dto.modification.NetworkModificationsResult;
+import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -48,6 +45,7 @@ public class NetworkModificationService {
     private static final String DELIMITER = "/";
     private static final String COMPOSITE_PATH = "network-composite-modifications" + DELIMITER;
     private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
+    private static final String CONTAINER_PATH = "containers" + DELIMITER + "{containerId}";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String QUERY_PARAM_ACTION = "action";
@@ -307,13 +305,18 @@ public class NetworkModificationService {
     }
 
     public NetworkModificationsResult moveModifications(
-            UUID sourceContainerId, UUID targetContainerId,
-            UUID beforeUuid,
+            MoveModificationInfos moveModificationInfos,
             Pair<List<UUID>, List<ModificationApplicationContext>> body,
             boolean buildTargetNode) {
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
+        UUID sourceContainerId = moveModificationInfos.source().id();
+        UUID targetContainerId = moveModificationInfos.target().id();
+        UUID beforeUuid = moveModificationInfos.beforeUuid();
+
+        var path = UriComponentsBuilder.fromPath(CONTAINER_PATH)
                 .queryParam(QUERY_PARAM_ACTION, ModificationsActionType.MOVE.name())
-                .queryParam("originGroupUuid", sourceContainerId)
+                .queryParam("sourceContainerId", sourceContainerId)
+                .queryParam("sourceContainerType", moveModificationInfos.source().type())
+                .queryParam("targetContainerType", moveModificationInfos.target().type())
                 .queryParam("build", buildTargetNode);
         if (beforeUuid != null) {
             path.queryParam("before", beforeUuid);
@@ -371,11 +374,11 @@ public class NetworkModificationService {
 
     private NetworkModificationsResult handleModifications(UUID groupUuid, UUID originGroupUuid, ModificationsActionType action,
                                                            Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH)
+        var path = UriComponentsBuilder.fromPath(CONTAINER_PATH)
             .queryParam(QUERY_PARAM_ACTION, action.name());
 
         if (originGroupUuid != null) {
-            path.queryParam("originGroupUuid", originGroupUuid);
+            path.queryParam("sourceContainerId", originGroupUuid);
         }
 
         HttpHeaders headers = new HttpHeaders();
@@ -474,34 +477,6 @@ public class NetworkModificationService {
                         new ParameterizedTypeReference<Map<UUID, Object>>() {
                         }).getBody();
 
-    }
-
-    public void moveSubModification(
-            UUID groupUuid,
-            UUID sourceCompositeUuid,
-            UUID targetCompositeUuid,
-            UUID modificationUuid,
-            UUID beforeUuid) {
-
-        var path = UriComponentsBuilder.fromPath(
-                COMPOSITE_PATH + GROUP_PATH + DELIMITER
-                        + "sub-modifications" + DELIMITER
-                        + "{modificationUuid}");
-
-        if (sourceCompositeUuid != null) {
-            path.queryParam("sourceCompositeUuid", sourceCompositeUuid);
-        }
-        if (targetCompositeUuid != null) {
-            path.queryParam("targetCompositeUuid", targetCompositeUuid);
-        }
-        if (beforeUuid != null) {
-            path.queryParam("beforeUuid", beforeUuid);
-        }
-
-        restTemplate.put(
-                getNetworkModificationServerURI(false)
-                        + path.buildAndExpand(groupUuid, modificationUuid).toUriString(),
-                null);
     }
 
     /**
