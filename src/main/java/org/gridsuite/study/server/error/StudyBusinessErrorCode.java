@@ -31,7 +31,9 @@ public enum StudyBusinessErrorCode implements BusinessErrorCode {
     TOO_MANY_NAD_CONFIGS("study.tooManyNadConfigs"),
     TOO_MANY_MAP_CARDS("study.tooManyMapCards"),
     ELEMENT_ALREADY_EXISTS("study.elementAlreadyExists"),
-    UNPROCESSABLE_IMPORT_PARAMETER("study.unprocessableImportParameter");
+    UNPROCESSABLE_IMPORT_PARAMETER("study.unprocessableImportParameter"),
+    EXPORT_STUDY_ERROR("study.exportStudyError"),
+    IMPORT_STUDY_ERROR("study.importStudyError");
 
     private final String value;
 

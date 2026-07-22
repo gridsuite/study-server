@@ -30,6 +30,10 @@ import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.studyexport.CaseExportInfos;
+import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
+import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
+import org.gridsuite.study.server.dto.studyexport.StudyExportInfos;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
@@ -3733,5 +3737,144 @@ public class StudyService {
         rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkService.getRootNetworkInfos(rootNetworkUuid)), true, false);
         rootNetworkService.updateRootNetworkIndexationStatus(studyUuid, rootNetworkUuid, RootNetworkIndexationStatus.NOT_INDEXED);
         notificationService.emitRootNetworksUpdated(studyUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public StudyExportInfos exportStudy(UUID studyUuid) {
+        assertIsStudyExist(studyUuid);
+        List<RootNetworkInfos> rootNetworkInfosList = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
+        if (rootNetworkInfosList.isEmpty()) {
+            throw new StudyException(NOT_FOUND, "No root network found for study " + studyUuid);
+        }
+        List<RootNetworkExportInfos> rootNetworks = rootNetworkInfosList.stream().map(this::toRootNetworkExportInfos).toList();
+        AbstractNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, null);
+        NodeTreeExportInfos nodeTree = toNodeTreeExportInfos(rootNode);
+        return new StudyExportInfos(studyUuid, rootNetworks, nodeTree);
+    }
+
+    private RootNetworkExportInfos toRootNetworkExportInfos(RootNetworkInfos rootNetworkInfos) {
+        return new RootNetworkExportInfos(
+                rootNetworkInfos.getName(),
+                rootNetworkInfos.getTag(),
+                rootNetworkInfos.getCaseInfos().getCaseFormat(),
+                new CaseExportInfos(rootNetworkInfos.getCaseInfos().getCaseUuid(), rootNetworkInfos.getCaseInfos().getCaseName()),
+                rootNetworkInfos.getImportParameters()
+        );
+    }
+
+    private NodeTreeExportInfos toNodeTreeExportInfos(AbstractNode node) {
+        List<NodeTreeExportInfos> children = node.getChildren().stream().map(this::toNodeTreeExportInfos).toList();
+        UUID modificationGroupUuid = null;
+        String buildStatus = null;
+        if (node instanceof NetworkModificationNode modificationNode) {
+            modificationGroupUuid = modificationNode.getModificationGroupUuid();
+            if (modificationNode.getNodeBuildStatus() != null) {
+                buildStatus = modificationNode.getNodeBuildStatus().getGlobalBuildStatus().name();
+            }
+        }
+        return new NodeTreeExportInfos(
+                node.getId(),
+                node.getName(),
+                node.getType().name(),
+                modificationGroupUuid,
+                buildStatus,
+                children
+        );
+    }
+
+    @Transactional
+    public void importStudy(UUID studyUuid, StudyExportInfos studyExportInfos, String userId) {
+        LOGGER.info("Importing study {}: {} root networks, node tree present: {}",
+                studyUuid, studyExportInfos.rootNetworks().size(), studyExportInfos.nodeTree() != null);
+
+        // Import node tree
+        if (studyExportInfos.nodeTree() != null) {
+            LOGGER.info("Importing node tree for study {}", studyUuid);
+            importNodeTree(studyUuid, studyExportInfos.nodeTree(), userId);
+        }
+
+        // Import additional root networks (skip first one as it's already imported)
+        if (studyExportInfos.rootNetworks().size() > 1) {
+            LOGGER.info("Importing {} additional root networks for study {}",
+                    studyExportInfos.rootNetworks().size() - 1, studyUuid);
+            StudyEntity studyEntity = getStudy(studyUuid);
+            for (int i = 1; i < studyExportInfos.rootNetworks().size(); i++) {
+                RootNetworkExportInfos rootNetworkExport = studyExportInfos.rootNetworks().get(i);
+                LOGGER.info("Importing root network {}: name={}, tag={}", i, rootNetworkExport.name(), rootNetworkExport.tag());
+
+                // Assert can create root network
+                rootNetworkService.assertCanCreateRootNetwork(studyUuid, rootNetworkExport.name(), rootNetworkExport.tag());
+
+                // Convert RootNetworkExportInfos to RootNetworkInfos
+                CaseInfos caseInfos = new CaseInfos(
+                        rootNetworkExport.caseInfos().uuid(),
+                        rootNetworkExport.caseInfos().uuid(),
+                        rootNetworkExport.caseInfos().name(),
+                        rootNetworkExport.caseFormat()
+                );
+
+                RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder()
+                        .id(UUID.randomUUID())
+                        .name(rootNetworkExport.name())
+                        .tag(rootNetworkExport.tag())
+                        .importParameters(rootNetworkExport.importParameters())
+                        .caseInfos(caseInfos)
+                        .build();
+
+                // Insert creation request
+                RootNetworkRequestEntity rootNetworkRequestEntity = rootNetworkService.insertCreationRequest(studyEntity.getId(), rootNetworkInfos, userId);
+
+                try {
+                    // Import the network from the case (this populates networkUuid and networkId)
+                    persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkExport.importParameters(), CaseImportAction.ROOT_NETWORK_CREATION);
+
+                    // Create the root network with the imported network info
+                    rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
+
+                    // Delete the creation request
+                    rootNetworkService.deleteRootNetworkRequest(rootNetworkRequestEntity);
+                } catch (Exception e) {
+                    rootNetworkService.deleteRootNetworkRequest(rootNetworkRequestEntity);
+                    throw e;
+                }
+            }
+
+            // Update study entity to multi-root if needed
+            if (studyEntity.getRootNetworks().size() > 1) {
+                studyEntity.setMonoRoot(false);
+            }
+
+            // Notify
+            notificationService.emitRootNetworksUpdated(studyUuid);
+            notificationService.emitElementUpdated(studyUuid, userId);
+        }
+    }
+
+    @Transactional
+    public void importNodeTree(UUID studyUuid, NodeTreeExportInfos nodeTree, String userId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+        nodeTree.children().forEach(child -> createNodeRecursively(studyEntity, rootNodeUuid, child, userId));
+    }
+
+    private void createNodeRecursively(StudyEntity studyEntity, UUID parentNodeUuid, NodeTreeExportInfos exportNode, String userId) {
+        UUID newGroupUuid = null;
+        if (exportNode.modificationGroupUuid() != null) {
+            newGroupUuid = UUID.randomUUID();
+            networkModificationService.duplicateModificationsGroup(exportNode.modificationGroupUuid(), newGroupUuid);
+        }
+
+        NetworkModificationNode newNode = networkModificationTreeService.createNode(
+                studyEntity,
+                parentNodeUuid,
+                NetworkModificationNode.builder()
+                        .name(exportNode.name())
+                        .modificationGroupUuid(newGroupUuid)
+                        .build(),
+                InsertMode.CHILD,
+                userId
+        );
+
+        exportNode.children().forEach(child -> createNodeRecursively(studyEntity, newNode.getId(), child, userId));
     }
 }

@@ -31,6 +31,8 @@ import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
+import org.gridsuite.study.server.dto.studyexport.StudyExportInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
@@ -43,6 +45,7 @@ import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResul
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.ResultParameters;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -82,6 +85,7 @@ public class StudyController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
     private final RebuildNodeService rebuildNodeService;
+    private final StudyExportArchiveService studyExportArchiveService;
 
     public StudyController(StudyService studyService,
                            NetworkService networkStoreService,
@@ -93,9 +97,11 @@ public class StudyController {
                            RootNetworkService rootNetworkService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            SensitivityAnalysisService sensitivityAnalysisService,
-                           RebuildNodeService rebuildNodeService) {
+                           RebuildNodeService rebuildNodeService,
+                           StudyExportArchiveService studyExportArchiveService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.studyExportArchiveService = studyExportArchiveService;
         this.networkStoreService = networkStoreService;
         this.singleLineDiagramService = singleLineDiagramService;
         this.networkConversionService = networkConversionService;
@@ -2565,5 +2571,50 @@ public class StudyController {
                                                                                  @Parameter(description = "Root network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                  @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllComputationsStatus(studyUuid, rootNetworkUuid, nodeUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/export", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Export a study as a JSON descriptor (root networks + node tree)")
+    @ApiResponse(responseCode = "200", description = "The study export infos")
+    @ApiResponse(responseCode = "404", description = "Study or root network not found")
+    public ResponseEntity<StudyExportInfos> exportStudy(@PathVariable("studyUuid") UUID studyUuid){
+        return ResponseEntity.ok(studyService.exportStudy(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/node-tree/import", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Import a node tree into an existing study, duplicating modification groups")
+    public ResponseEntity<Void> importNodeTree(@PathVariable("studyUuid") UUID studyUuid,
+                                               @RequestBody NodeTreeExportInfos nodeTree,
+                                               @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.importNodeTree(studyUuid, nodeTree, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/export-archive", produces = "application/gzip")
+    @Operation(summary = "Export a study as a gzip archive containing study.json and case files")
+    @ApiResponse(responseCode = "200", description = "The study archive as gzip")
+    @ApiResponse(responseCode = "404", description = "Study or root network not found")
+    public ResponseEntity<Resource> exportStudyArchive(@PathVariable("studyUuid") UUID studyUuid) {
+        InputStreamResource resource = studyExportArchiveService.exportStudyArchive(studyUuid);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=study-" + studyUuid + ".gz");
+        headers.add(HttpHeaders.CONTENT_TYPE, "application/gzip");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(resource);
+    }
+
+    @PostMapping(value = "/studies/import")
+    @Operation(summary = "Import node tree and additional root networks to an existing study")
+    @ApiResponse(responseCode = "200", description = "Study import successful")
+    @ApiResponse(responseCode = "404", description = "Study not found")
+    public ResponseEntity<Void> importStudy(
+            @Parameter(description = "Study UUID") @RequestParam("studyUuid") UUID studyUuid,
+            @Parameter(description = "Study export data") @RequestBody StudyExportInfos studyExportInfos,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.importStudy(studyUuid, studyExportInfos, userId);
+        return ResponseEntity.ok().build();
     }
 }
