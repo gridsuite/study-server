@@ -883,7 +883,7 @@ class ModificationToExcludeTest {
         rootNetwork0NodeInfo2Entity.setModificationsUuidsToExclude(MODIFICATIONS_TO_EXCLUDE_RN_2);
         rootNetworkNodeInfoRepository.save(rootNetwork0NodeInfo2Entity);
 
-        Mockito.doReturn(Optional.of(3)).when(userAdminService).getUserMaxAllowedBuilds("userId");
+        Mockito.doReturn(Map.of(QuotaType.BUILD, 3)).when(userAdminService).getUserMaxQuota("userId");
         studyService.buildNode(studyEntity.getId(), secondNode.getId(), rootNetworkBasicInfos.getFirst().rootNetworkUuid(), "userId");
 
         ArgumentCaptor<BuildInfos> buildInfosCaptor = ArgumentCaptor.forClass(BuildInfos.class);
