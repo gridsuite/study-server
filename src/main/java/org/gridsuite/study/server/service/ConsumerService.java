@@ -84,8 +84,8 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            DirectoryService directoryService,
                            ComputationParametersService computationParametersService,
-                           UserAdminService userAdminService) {
-                           ComputationParametersService computationParametersService, LoadFlowService loadFlowService) {
+                           UserAdminService userAdminService,
+                           LoadFlowService loadFlowService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
