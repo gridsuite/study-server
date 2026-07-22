@@ -1,11 +1,18 @@
+/**
+ * Copyright (c) 20226, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 package org.gridsuite.study.server.service.loadflow;
 
 import com.powsybl.loadflow.LoadFlowParameters;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.AbstractComputationService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,24 +21,24 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+
+/**
+ * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
+ */
 
 @Service
-public class LoadFlowService {
-    private final StudyRepository studyRepository;
+public class LoadFlowService extends AbstractComputationService {
     private final LoadFlowServiceRestRest loadflowServiceRest;
-    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final NotificationService notificationService;
+    public final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
-    public LoadFlowService(StudyRepository studyRepository, LoadFlowServiceRestRest loadflowServiceRest, RootNetworkNodeInfoService rootNetworkNodeInfoService, NotificationService notificationService) {
-        this.studyRepository = studyRepository;
+    public LoadFlowService(StudyRepository studyRepository,
+                           LoadFlowServiceRestRest loadflowServiceRest,
+                           NotificationService notificationService, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+        super(studyRepository);
         this.loadflowServiceRest = loadflowServiceRest;
-        this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.notificationService = notificationService;
-    }
-
-    private StudyEntity getStudy(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
+        this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
     @Transactional
@@ -78,5 +85,4 @@ public class LoadFlowService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         return loadflowResultUuid;
     }
-
 }
