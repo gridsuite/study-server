@@ -256,9 +256,8 @@ public class PccMinService extends AbstractComputationService implements Computa
         Objects.requireNonNull(sourceParametersUuid);
 
         String path = UriComponentsBuilder
-            .fromPath(PARAMETERS_URI)
-            .queryParam("duplicateFrom", sourceParametersUuid)
-            .buildAndExpand()
+            .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
+            .buildAndExpand(sourceParametersUuid)
             .toUriString();
 
         HttpHeaders headers = new HttpHeaders();

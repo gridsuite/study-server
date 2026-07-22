@@ -231,8 +231,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
 
         // --- Success --- //
         // configure mock server response
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL))
-                    .withQueryParam("duplicateFrom", equalTo(PARAMETERS_UUID.toString()))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + "/" + PARAMETERS_UUID + "/duplicate"))
                     .willReturn(WireMock.ok()
                         .withBody(objectMapper.writeValueAsString(newParameterUuid))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -245,8 +244,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
 
         // --- Not Found --- //
         // configure mock server response
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL))
-                .withQueryParam("duplicateFrom", equalTo(PARAMETERS_UUID.toString()))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + "/" + PARAMETERS_UUID + "/duplicate"))
                 .willReturn(WireMock.notFound()));
 
         // check result
@@ -256,8 +254,7 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         );
 
         // --- Error --- //
-        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL))
-                .withQueryParam("duplicateFrom", equalTo(PARAMETERS_UUID.toString()))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathTemplate(PARAMETERS_BASE_URL + "/" + PARAMETERS_UUID + "/duplicate"))
                 .willReturn(WireMock.serverError()));
 
         // check result
