@@ -14,6 +14,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.AbstractComputationService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,16 +30,14 @@ import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 @Service
 public class LoadFlowService extends AbstractComputationService {
     private final LoadFlowRestService loadflowRestService;
-    private final NotificationService notificationService;
-    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     public LoadFlowService(StudyRepository studyRepository,
                            LoadFlowRestService loadflowRestService,
-                           NotificationService notificationService, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
-        super(studyRepository);
+                           NotificationService notificationService,
+                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                           ComputationParametersService computationParametersService) {
+        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
         this.loadflowRestService = loadflowRestService;
-        this.notificationService = notificationService;
-        this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
     @Transactional
@@ -73,16 +72,16 @@ public class LoadFlowService extends AbstractComputationService {
     @Transactional
     public void deleteLoadflowResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid) {
         loadflowRestService.deleteLoadFlowResults(List.of(loadflowResultUuid));
-        rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, null, null);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
+        getRootNetworkNodeInfoService().updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, null, null);
+        getNotificationService().emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
     }
 
     @Transactional
     public UUID createLoadflowRunningStatus(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers) {
         // since invalidating and building nodes can be long, we create loadflow result status before execution long operations
         UUID loadflowResultUuid = loadflowRestService.createRunningStatus();
-        rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers);
-        notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
+        getRootNetworkNodeInfoService().updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers);
+        getNotificationService().emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         return loadflowResultUuid;
     }
 }

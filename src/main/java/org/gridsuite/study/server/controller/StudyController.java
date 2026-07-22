@@ -39,7 +39,6 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.ResultParameters;
@@ -995,52 +994,6 @@ public class StudyController {
         return networkConversionService.downloadExportedNetworkFile(exportUuid, userId);
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/run")
-    @Operation(summary = "run security analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has started")})
-    public ResponseEntity<Void> runSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                          @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                          @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(SECURITY_ANALYSIS, userId);
-        studyService.runSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result")
-    @Operation(summary = "Get a security analysis result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result"),
-        @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
-    public ResponseEntity<String> getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                  @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                  @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                  @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
-                                                                  @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
-                                                                  @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
-                                                                  Pageable pageable) {
-        String result = rootNetworkNodeInfoService.getSecurityAnalysisResult(nodeUuid, rootNetworkUuid, resultType, filters, globalFilters, pageable);
-        return result != null ? ResponseEntity.ok().body(result) :
-               ResponseEntity.noContent().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/result/csv")
-    @Operation(summary = "Get a security analysis result on study - CSV export")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis result csv export"),
-        @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The security analysis has not been found")})
-    public byte[] getSecurityAnalysisResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                            @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                            @Parameter(description = "result type") @RequestParam(name = "resultType") SecurityAnalysisResultType resultType,
-                                            @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
-                                            @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
-                                            @Parameter(description = "Csv translation (JSON)") @RequestBody String csvTranslations,
-                                            @Parameter(description = "Sort parameters") Sort sort) {
-        return rootNetworkNodeInfoService.getSecurityAnalysisResultCsv(nodeUuid, rootNetworkUuid, resultType, globalFilters, filters, sort, csvTranslations);
-    }
-
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/contingency-count")
     @Operation(summary = "Get contingency count for a list of contingency list on a study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The contingency count")})
@@ -1156,29 +1109,6 @@ public class StudyController {
         String result = studyService.generateNetworkAreaDiagram(nodeUuid, rootNetworkUuid, nadRequestInfos);
         return result != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result) :
             ResponseEntity.noContent().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/status")
-    @Operation(summary = "Get the security analysis status on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis status"),
-        @ApiResponse(responseCode = "204", description = "No security analysis has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The security analysis status has not been found")})
-    public ResponseEntity<String> getSecurityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                  @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                  @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String status = rootNetworkNodeInfoService.getSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
-        return status != null ? ResponseEntity.ok().body(status) : ResponseEntity.noContent().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/security-analysis/stop")
-    @Operation(summary = "stop security analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has been stopped")})
-    public ResponseEntity<Void> stopSecurityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                     @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                     @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkNodeInfoService.stopSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
-        return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/parent-nodes-report", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -2022,25 +1952,6 @@ public class StudyController {
     }
 
     // --- Dynamic Margin Calculation Endpoints END --- //
-
-    @GetMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
-    @Operation(summary = "Get security analysis parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters")})
-    public ResponseEntity<String> getSecurityAnalysisParametersValues(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSecurityAnalysisParametersValues(studyUuid));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/security-analysis/parameters")
-    @Operation(summary = "set security analysis parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
-    public ResponseEntity<Void> setSecurityAnalysisParametersValues(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String securityAnalysisParametersValues,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return studyService.setSecurityAnalysisParametersValues(studyUuid, securityAnalysisParametersValues, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
-    }
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get the voltage init modifications from a node")
