@@ -24,7 +24,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/loadflow")
-@Tag(name = "Study server - Load flow")
+@Tag(name = "Study server - Load flow parameters")
 public class LoadFlowControllerParameters {
     private final StudyService studyService;
     private final NetworkModificationTreeService networkModificationTreeService;

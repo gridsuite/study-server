@@ -24,7 +24,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 public abstract class AbstractComputationService {
     private final StudyRepository studyRepository;
 
-    public AbstractComputationService(StudyRepository studyRepository) {
+    protected AbstractComputationService(StudyRepository studyRepository) {
         this.studyRepository = studyRepository;
     }
 
