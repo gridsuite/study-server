@@ -48,6 +48,7 @@ import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.*;
@@ -63,6 +64,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -145,7 +147,7 @@ class ShortCircuitTest implements WithAssertions {
     @Autowired
     private ShortCircuitService shortCircuitService;
 
-    @Autowired
+    @MockitoSpyBean
     private UserAdminService userAdminService;
 
     @Autowired
@@ -195,6 +197,10 @@ class ShortCircuitTest implements WithAssertions {
         shortCircuitService.setShortCircuitServerBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
+
+        // Stub quota operations to avoid HTTP latency inside @Transactional causing race conditions with @PostCompletion notifications
+        doNothing().when(userAdminService).startOperationWithQuota(any(), any(), any());
+        doNothing().when(userAdminService).endOperationWithQuota(any(), any(), any());
     }
 
     @Test

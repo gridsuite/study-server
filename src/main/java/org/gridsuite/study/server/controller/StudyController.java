@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
+import org.gridsuite.study.server.dto.modification.CompositeInfos;
 import org.gridsuite.study.server.dto.modification.ModificationType;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
@@ -160,12 +161,12 @@ public class StudyController {
         return ResponseEntity.ok().body(createStudy);
     }
 
-    @PostMapping(value = "/studies", params = "duplicateFrom")
+    @PostMapping(value = "/studies/{studyUuid}/duplicate")
     @Operation(summary = "create a study from an existing one")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The study was successfully created"),
         @ApiResponse(responseCode = "404", description = "The source study doesn't exist")})
-    public ResponseEntity<UUID> duplicateStudy(@RequestParam("duplicateFrom") UUID studyId,
+    public ResponseEntity<UUID> duplicateStudy(@PathVariable("studyUuid") UUID studyId,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         UUID newStudyId = studyService.duplicateStudy(studyId, userId);
         return newStudyId != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(newStudyId) :
@@ -184,8 +185,9 @@ public class StudyController {
     @DeleteMapping(value = "/studies/{studyUuid}")
     @Operation(summary = "delete the study")
     @ApiResponse(responseCode = "200", description = "Study deleted")
-    public ResponseEntity<Void> deleteStudy(@PathVariable("studyUuid") UUID studyUuid) {
-        studyService.deleteStudyIfNotCreationInProgress(studyUuid);
+    public ResponseEntity<Void> deleteStudy(@PathVariable("studyUuid") UUID studyUuid,
+                                            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -733,29 +735,30 @@ public class StudyController {
         return ResponseEntity.ok().body(newCompositeUuid);
     }
 
-    /**
-     * @param modificationsToInsert pair of the composite uuid and its name
-     */
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-modifications", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "For a list of composite network modifications passed in body, insert them into the target node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The composite modification list has been inserted.")})
     public ResponseEntity<Void> insertCompositeModifications(@PathVariable("studyUuid") UUID studyUuid,
                                                          @PathVariable("nodeUuid") UUID nodeUuid,
                                                          @RequestParam("action") CompositeModificationsActionType action,
-                                                         @RequestBody List<Pair<UUID, String>> modificationsToInsert,
+                                                         @RequestBody List<CompositeInfos> compositeInfos,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, modificationsToInsert, userId, action);
+        handleInsertCompositeNetworkModifications(studyUuid, nodeUuid, compositeInfos, userId, action);
         return ResponseEntity.ok().build();
     }
 
-    private void handleInsertCompositeNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, List<Pair<UUID, String>> modificationsToCopy, String userId,
+    private void handleInsertCompositeNetworkModifications(
+            UUID targetStudyUuid,
+            UUID targetNodeUuid,
+            List<CompositeInfos> compositeInfos,
+            String userId,
             CompositeModificationsActionType action) {
         studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
         studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
         try {
-            studyService.insertCompositeNetworkModifications(targetStudyUuid, targetNodeUuid, modificationsToCopy, userId, action);
+            studyService.insertCompositeNetworkModifications(targetStudyUuid, targetNodeUuid, compositeInfos, userId, action);
         } finally {
             studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
         }
@@ -781,6 +784,7 @@ public class StudyController {
             @RequestParam(value = "withRatioTapChangers", required = false, defaultValue = "false") boolean withRatioTapChangers,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(LOAD_FLOW, userId);
         studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNA_FLOW_PROVIDER), studyService::getLoadFlowProvider);
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
@@ -879,6 +883,7 @@ public class StudyController {
             @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(SHORT_CIRCUIT, userId);
         studyService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, debug, userId);
         return ResponseEntity.ok().build();
     }
@@ -983,6 +988,7 @@ public class StudyController {
             @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(VOLTAGE_INITIALIZATION, userId);
         studyService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().build();
     }
@@ -1102,6 +1108,7 @@ public class StudyController {
                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(SECURITY_ANALYSIS, userId);
         studyService.runSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -1460,7 +1467,7 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications", params = "stashed")
-    @Operation(summary = "Stash network modifications for a node")
+    @Operation(summary = "Stash or restore network modifications for a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications were stashed / restored "), @ApiResponse(responseCode = "404",
             description = "The study/node is not found")})
     public ResponseEntity<Void> stashNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
@@ -1805,6 +1812,7 @@ public class StudyController {
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(SENSITIVITY_ANALYSIS, userId);
         studyService.runSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -1986,6 +1994,7 @@ public class StudyController {
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(DYNAMIC_SIMULATION, userId);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSimulationProvider);
         studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
@@ -2077,6 +2086,7 @@ public class StudyController {
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(DYNAMIC_SECURITY_ANALYSIS, userId);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSecurityAnalysisProvider);
         studyService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
@@ -2129,6 +2139,7 @@ public class StudyController {
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestHeader(HEADER_USER_ID) String userId) throws JsonProcessingException {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(DYNAMIC_MARGIN_CALCULATION, userId);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicMarginCalculationProvider);
         studyService.runDynamicMarginCalculation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
@@ -2390,6 +2401,7 @@ public class StudyController {
                                                     @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(STATE_ESTIMATION, userId);
         studyService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().build();
     }
@@ -2403,6 +2415,7 @@ public class StudyController {
                                           @RequestHeader(HEADER_USER_ID) String userId) {
 
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(PCC_MIN, userId);
         studyService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }

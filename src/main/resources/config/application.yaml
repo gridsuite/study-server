@@ -253,3 +253,4 @@ gridsuite:
 
 study:
   max-root-network-by-study: 4
+  enable-operation-quotas: false

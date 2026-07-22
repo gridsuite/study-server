@@ -158,11 +158,7 @@ class SpreadsheetConfigCollectionTest {
                     }
                 } else if ("/v1/spreadsheet-config-collections/non-existing-collection".equals(path)) {
                     return new MockResponse(404);
-                } else if (path.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=.*") && "POST".equals(method)) {
-                    String collectionId = path.substring(path.lastIndexOf("=") + 1);
-                    if ("non-existing-collection".equals(collectionId)) {
-                        return new MockResponse(404);
-                    }
+                } else if (path.matches("/v1/spreadsheet-config-collections/.*/duplicate") && "POST".equals(method)) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_JSON);
                 } else if (path.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING + "/append\\?sourceCollection=.*")) {
                     return new MockResponse(200);
@@ -219,7 +215,7 @@ class SpreadsheetConfigCollectionTest {
 
         // Verify the HTTP requests made to the server
         var requests = TestUtils.getRequestsDone(3, server);
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + SPREADSHEET_CONFIG_COLLECTION_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID + "/duplicate")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING)));
     }
@@ -275,7 +271,7 @@ class SpreadsheetConfigCollectionTest {
 
         // Verify the HTTP requests made to the server
         var requests = TestUtils.getRequestsDone(2, server);
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + APPENDED_SPREADSHEET_CONFIG_COLLECTION_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + APPENDED_SPREADSHEET_CONFIG_COLLECTION_UUID + "/duplicate")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING)));
     }
 
@@ -303,7 +299,7 @@ class SpreadsheetConfigCollectionTest {
 
         // Verify the HTTP requests made to the server
         var requests = TestUtils.getRequestsDone(3, server);
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=" + SPREADSHEET_CONFIG_COLLECTION_UUID)));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID + "/duplicate")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + ERROR_DELETE_COLLECTION_UUID_STRING)));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + NEW_SPREADSHEET_CONFIG_COLLECTION_UUID_STRING)));
     }
@@ -404,7 +400,7 @@ class SpreadsheetConfigCollectionTest {
         // Verify HTTP requests made to the server - should duplicate from a profile collection
         var requests = TestUtils.getRequestsDone(3, server);
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/users/" + VALID_PROFILE_USER_ID + "/profile")));
-        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections\\?duplicateFrom=.*")));
+        assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/.*/duplicate")));
         assertTrue(requests.stream().anyMatch(r -> r.matches("/v1/spreadsheet-config-collections/" + SPREADSHEET_CONFIG_COLLECTION_UUID_STRING))); // delete old collection
 
     }

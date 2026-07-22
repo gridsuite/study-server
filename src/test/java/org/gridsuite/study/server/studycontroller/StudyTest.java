@@ -242,12 +242,14 @@ class StudyTest extends StudyTestBase {
         UUID stubUuid = wireMockStubs.stubNetworkModificationDeleteGroup();
         UUID stubDeleteCaseId = wireMockStubs.caseServer.stubDeleteCase(CASE_UUID_STRING);
         DeleteStudyStubs deleteStudyStubs = setupDeleteStudyStubs();
+        UUID stubReferencesUuid = wireMockStubs.stubGetAllReferencesDataFromGroup();
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk());
 
         assertTrue(studyRepository.findById(studyUuid).isEmpty());
 
+        wireMockStubs.verifyGetReferencesDataFromGroup(stubReferencesUuid);
         wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid, false);
         wireMockStubs.caseServer.verifyDeleteCase(stubDeleteCaseId, CASE_UUID_STRING);
         deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 10); // voltageInit, loadFlow, securityAnalysis, sensitivityAnalysis, stateEstimation, pccMin, dynamic, shortCircuit
@@ -276,11 +278,13 @@ class StudyTest extends StudyTestBase {
         }).when(caseService).deleteCase(any());
         UUID stubUuid = wireMockStubs.stubNetworkModificationDeleteGroup();
         DeleteStudyStubs deleteStudyStubs = setupDeleteStudyStubs();
+        UUID stubReferencesUuid = wireMockStubs.stubGetAllReferencesDataFromGroup();
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}", studyUuid).header(USER_ID_HEADER, "userId"))
             .andExpectAll(status().isOk());
         assertTrue(capturedOutput.getOut().contains(StudyServerExecutionService.class.getName() + " - " + CompletionException.class.getName() + ": " + InterruptedException.class.getName()));
 
+        wireMockStubs.verifyGetReferencesDataFromGroup(stubReferencesUuid);
         wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid, false);
         deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 3); // loadflow, security, sensitivity, stateEstimation, shortCircuit, pccMin
     }
@@ -291,6 +295,7 @@ class StudyTest extends StudyTestBase {
         UUID nonExistingCaseUuid = UUID.randomUUID();
 
         UUID stubUuid = wireMockStubs.stubNetworkModificationDeleteGroup();
+        UUID stubReferencesUuid = wireMockStubs.stubGetAllReferencesDataFromGroup();
 
         // Changing the study case uuid with a non-existing case
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElse(null);
@@ -307,6 +312,7 @@ class StudyTest extends StudyTestBase {
 
         assertTrue(studyRepository.findById(studyUuid).isEmpty());
 
+        wireMockStubs.verifyGetReferencesDataFromGroup(stubReferencesUuid);
         wireMockStubs.verifyNetworkModificationDeleteGroup(stubUuid, false);
         wireMockStubs.caseServer.verifyDeleteCase(stubDeleteCaseId, nonExistingCaseUuid.toString());
         deleteStudyStubs.verify(wireMockStubs, computationServerStubs, 10);
@@ -1023,7 +1029,7 @@ class StudyTest extends StudyTestBase {
         assertEquals(1, networkVariants.size(), "Network should be cloned with only one variant");
 
         //Test duplication from a non-existing source study
-        mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID())
+        mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", UUID.randomUUID())
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isNotFound());
     }
@@ -1085,7 +1091,7 @@ class StudyTest extends StudyTestBase {
             throw new RuntimeException();
         }).when(caseService).duplicateCase(any(), any());
 
-        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
+        String response = mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", studyUuid)
                 .param(CASE_FORMAT, "XIIDM")
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
@@ -1120,7 +1126,7 @@ class StudyTest extends StudyTestBase {
         UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromAny(DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
         UUID stubWorkspacesConfigDuplicateFromId = wireMockStubs.stubWorkspacesConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
 
-        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
+        String response = mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", studyUuid)
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         String newUuid = mapper.readValue(response, String.class);

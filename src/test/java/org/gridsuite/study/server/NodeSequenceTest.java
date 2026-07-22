@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server;
 
+import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.sequence.SecuritySequence;
 import org.gridsuite.study.server.error.StudyException;
@@ -34,7 +35,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.util.Optional;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -83,7 +84,7 @@ class NodeSequenceTest {
         studyEntity = studyRepository.save(study);
         studyUuid = studyEntity.getId();
 
-        doReturn(Optional.of(10)).when(userAdminService).getUserMaxAllowedBuilds(userId);
+        doReturn(Map.of(QuotaType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
     }
 
     @Test
