@@ -344,30 +344,36 @@ public class ConsumerService {
         return message -> {
             String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
             String errorMessage = message.getHeaders().get(StudyConstants.HEADER_ERROR_MESSAGE, String.class);
-
             if (receiverString != null) {
-                CaseImportReceiver receiver;
                 try {
-                    receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8),
-                        CaseImportReceiver.class);
-                    UUID studyUuid = receiver.getStudyUuid();
-                    String userId = receiver.getUserId();
-                    UUID rootNetworkUuid = receiver.getRootNetworkUuid();
-
-                    if (receiver.getCaseImportAction() == CaseImportAction.STUDY_CREATION) {
-                        studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
-                        notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
-                    } else {
-                        if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_CREATION) {
-                            studyService.deleteRootNetworkRequest(rootNetworkUuid);
-                        }
-                        notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
-                    }
+                    handleCaseImportFailed(receiverString, errorMessage);
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 }
             }
         };
+    }
+
+    private void handleCaseImportFailed(String receiverString, String errorMessage) throws JsonProcessingException {
+        CaseImportReceiver receiver = objectMapper.readValue(URLDecoder.decode(receiverString, StandardCharsets.UTF_8),
+            CaseImportReceiver.class);
+        UUID studyUuid = receiver.getStudyUuid();
+        String userId = receiver.getUserId();
+        UUID rootNetworkUuid = receiver.getRootNetworkUuid();
+
+        if (receiver.getCaseImportAction() == CaseImportAction.STUDY_CREATION) {
+            try {
+                studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+            } catch (Exception e) {
+                LOGGER.warn("Could not delete study during case import failure handling: {}", e.getMessage());
+            }
+            notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
+        } else {
+            if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_CREATION) {
+                studyService.deleteRootNetworkRequest(rootNetworkUuid);
+            }
+            notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
+        }
     }
 
     /**
