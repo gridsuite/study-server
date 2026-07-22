@@ -30,7 +30,6 @@ import static org.gridsuite.study.server.StudyConstants.STUDY_CONFIG_API_VERSION
 @Service
 public class StudyConfigService {
     private static final String UUID_PARAM = "/{uuid}";
-    private static final String DUPLICATE_FROM_PARAM = "duplicateFrom";
 
     private static final String NETWORK_VISU_PARAMETERS_URI = "/network-visualizations-params";
     private static final String NETWORK_VISU_PARAMETERS_WITH_ID_URI = NETWORK_VISU_PARAMETERS_URI + UUID_PARAM;
@@ -75,9 +74,8 @@ public class StudyConfigService {
 
     public UUID duplicateNetworkVisualizationParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
-        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI)
-                .queryParam(DUPLICATE_FROM_PARAM, sourceParametersUuid)
-                .buildAndExpand().toUriString();
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + NETWORK_VISU_PARAMETERS_URI + "/{uuid}/duplicate")
+                .buildAndExpand(sourceParametersUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
@@ -128,8 +126,7 @@ public class StudyConfigService {
     // Spreadsheet Config Collection
     public UUID duplicateSpreadsheetConfigCollection(UUID sourceUuid) {
         Objects.requireNonNull(sourceUuid);
-        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI)
-                .queryParam(DUPLICATE_FROM_PARAM, sourceUuid)
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + SPREADSHEET_CONFIG_COLLECTION_URI + DELIMITER + sourceUuid + "/duplicate")
                 .buildAndExpand().toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -334,8 +331,7 @@ public class StudyConfigService {
 
     public UUID duplicateWorkspacesConfig(UUID sourceUuid) {
         Objects.requireNonNull(sourceUuid);
-        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_URI)
-                .queryParam(DUPLICATE_FROM_PARAM, sourceUuid)
+        var path = UriComponentsBuilder.fromPath(DELIMITER + STUDY_CONFIG_API_VERSION + WORKSPACES_CONFIG_URI + DELIMITER + sourceUuid + "/duplicate")
                 .toUriString();
         return restTemplate.exchange(studyConfigServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
