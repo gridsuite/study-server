@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping(value = "/" + StudyApi.API_VERSION + "/network-modification")
+@RequestMapping(value = "/" + StudyApi.API_VERSION)
 public class NetworkModificationController {
     private final NetworkModificationService networkModificationService;
 
