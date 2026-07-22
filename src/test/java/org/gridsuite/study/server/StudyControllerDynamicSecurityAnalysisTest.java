@@ -24,6 +24,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -115,6 +116,9 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
     @MockitoBean
     private LoadFlowServiceRestRest mockLoadFlowServiceRest;
+
+    @MockitoBean
+    private UserAdminService userAdminService;
 
     @MockitoBean
     private DynamicSimulationService mockDynamicSimulationService;

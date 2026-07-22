@@ -23,6 +23,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
@@ -113,6 +114,9 @@ class StudyControllerDynamicMarginCalculationTest {
 
     @MockitoBean
     private LoadFlowServiceRestRest mockLoadFlowServiceRest;
+
+    @MockitoBean
+    private UserAdminService userAdminService;
 
     @MockitoSpyBean
     private DynamicMarginCalculationService spyDynamicMarginCalculationService;

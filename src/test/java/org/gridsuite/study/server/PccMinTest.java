@@ -345,8 +345,7 @@ class PccMinTest {
         UUID studyUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
-        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters"))
-            .withQueryParam("duplicateFrom", equalTo(PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING))
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/parameters/" + PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING + "/duplicate"))
             .willReturn(ok()
                 .withBody(DUPLICATED_PARAMS_JSON)
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -355,8 +354,7 @@ class PccMinTest {
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
-        wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters"))
-            .withQueryParam("duplicateFrom", equalTo(PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING))
+        wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/parameters/" + PROFILE_PCC_MIN_VALID_PARAMETERS_UUID_STRING + "/duplicate"))
         );
     }
 

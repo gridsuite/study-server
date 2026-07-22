@@ -256,9 +256,8 @@ public class PccMinServiceRest extends AbstractComputationServiceRest implements
         Objects.requireNonNull(sourceParametersUuid);
 
         String path = UriComponentsBuilder
-            .fromPath(PARAMETERS_URI)
-            .queryParam("duplicateFrom", sourceParametersUuid)
-            .buildAndExpand()
+            .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
+            .buildAndExpand(sourceParametersUuid)
             .toUriString();
 
         HttpHeaders headers = new HttpHeaders();

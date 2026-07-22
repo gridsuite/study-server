@@ -242,9 +242,8 @@ public class SecurityAnalysisServiceRest extends AbstractComputationServiceRest 
     public UUID duplicateParameters(UUID sourceParametersUuid) {
         Objects.requireNonNull(sourceParametersUuid);
 
-        var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
-                .queryParam("duplicateFrom", sourceParametersUuid)
-                .buildAndExpand().toUriString();
+        var path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
+                .buildAndExpand(sourceParametersUuid).toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

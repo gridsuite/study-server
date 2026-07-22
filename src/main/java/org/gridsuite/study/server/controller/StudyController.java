@@ -153,12 +153,12 @@ public class StudyController {
         return ResponseEntity.ok().body(createStudy);
     }
 
-    @PostMapping(value = "/studies", params = "duplicateFrom")
+    @PostMapping(value = "/studies/{studyUuid}/duplicate")
     @Operation(summary = "create a study from an existing one")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The study was successfully created"),
         @ApiResponse(responseCode = "404", description = "The source study doesn't exist")})
-    public ResponseEntity<UUID> duplicateStudy(@RequestParam("duplicateFrom") UUID studyId,
+    public ResponseEntity<UUID> duplicateStudy(@PathVariable("studyUuid") UUID studyId,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         UUID newStudyId = studyService.duplicateStudy(studyId, userId);
         return newStudyId != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(newStudyId) :
@@ -777,6 +777,7 @@ public class StudyController {
             @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(SHORT_CIRCUIT, userId);
         studyService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, debug, userId);
         return ResponseEntity.ok().build();
     }
@@ -881,6 +882,7 @@ public class StudyController {
             @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(VOLTAGE_INITIALIZATION, userId);
         studyService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().build();
     }
@@ -1000,6 +1002,7 @@ public class StudyController {
                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(SECURITY_ANALYSIS, userId);
         studyService.runSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -1672,6 +1675,7 @@ public class StudyController {
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(SENSITIVITY_ANALYSIS, userId);
         studyService.runSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -1853,6 +1857,7 @@ public class StudyController {
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(DYNAMIC_SIMULATION, userId);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSimulationProvider);
         studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
@@ -1944,6 +1949,7 @@ public class StudyController {
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(DYNAMIC_SECURITY_ANALYSIS, userId);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSecurityAnalysisProvider);
         studyService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
@@ -1996,6 +2002,7 @@ public class StudyController {
                                                      @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                      @RequestHeader(HEADER_USER_ID) String userId) throws JsonProcessingException {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(DYNAMIC_MARGIN_CALCULATION, userId);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicMarginCalculationProvider);
         studyService.runDynamicMarginCalculation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
@@ -2257,6 +2264,7 @@ public class StudyController {
                                                     @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(STATE_ESTIMATION, userId);
         studyService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().build();
     }
@@ -2270,6 +2278,7 @@ public class StudyController {
                                           @RequestHeader(HEADER_USER_ID) String userId) {
 
         studyService.assertIsNodeNotReadOnly(nodeUuid);
+        studyService.assertOnQuotasAvailability(PCC_MIN, userId);
         studyService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
