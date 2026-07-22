@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -56,7 +56,7 @@ class SingleLineDiagramWiremockTest {
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
-    private LoadFlowServiceRestRest loadFlowServiceRest;
+    private LoadFlowServiceRest loadFlowServiceRest;
     @MockitoBean
     private RootNetworkService rootNetworkService;
     @MockitoBean

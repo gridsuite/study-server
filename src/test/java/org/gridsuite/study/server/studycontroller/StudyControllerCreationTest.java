@@ -24,7 +24,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -89,7 +89,7 @@ class StudyControllerCreationTest {
 
     // All these computation services need to be mocked because apps try to create default parameters for each computation app on study creation
     @MockitoBean
-    private LoadFlowServiceRestRest loadFlowServiceRest;
+    private LoadFlowServiceRest loadFlowServiceRest;
     @MockitoBean
     private ShortCircuitServiceRest shortCircuitService;
     @MockitoBean

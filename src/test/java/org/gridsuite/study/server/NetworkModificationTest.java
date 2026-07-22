@@ -44,7 +44,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.SendInput;
@@ -206,7 +206,7 @@ class NetworkModificationTest {
     private SecurityAnalysisServiceRest securityAnalysisService;
 
     @Autowired
-    private LoadFlowServiceRestRest loadFlowServiceRest;
+    private LoadFlowServiceRest loadFlowServiceRest;
 
     @Autowired
     private SensitivityAnalysisServiceRest sensitivityAnalysisService;

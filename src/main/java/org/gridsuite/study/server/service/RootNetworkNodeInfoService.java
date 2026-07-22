@@ -31,7 +31,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
@@ -63,7 +63,7 @@ public class RootNetworkNodeInfoService {
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
     private final StudyServerExecutionService studyServerExecutionService;
-    private final LoadFlowServiceRestRest loadFlowServiceRest;
+    private final LoadFlowServiceRest loadFlowServiceRest;
     private final SecurityAnalysisServiceRest securityAnalysisService;
     private final SensitivityAnalysisServiceRest sensitivityAnalysisService;
     private final ShortCircuitServiceRest shortCircuitService;
@@ -78,7 +78,7 @@ public class RootNetworkNodeInfoService {
     public RootNetworkNodeInfoService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                                       NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                                       StudyServerExecutionService studyServerExecutionService,
-                                      LoadFlowServiceRestRest loadFlowServiceRest,
+                                      LoadFlowServiceRest loadFlowServiceRest,
                                       SecurityAnalysisServiceRest securityAnalysisService,
                                       SensitivityAnalysisServiceRest sensitivityAnalysisService,
                                       ShortCircuitServiceRest shortCircuitService,

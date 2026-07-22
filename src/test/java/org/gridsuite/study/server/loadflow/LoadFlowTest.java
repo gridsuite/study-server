@@ -32,7 +32,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -169,7 +169,7 @@ class LoadFlowTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
     @Autowired
-    private LoadFlowServiceRestRest loadFlowServiceRest;
+    private LoadFlowServiceRest loadFlowServiceRest;
     @Autowired
     private StudyRepository studyRepository;
     @MockitoSpyBean

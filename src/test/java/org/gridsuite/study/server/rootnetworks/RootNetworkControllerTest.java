@@ -17,7 +17,7 @@ import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -115,7 +115,7 @@ class RootNetworkControllerTest {
     private NetworkStoreService networkStoreService;
 
     @MockitoBean
-    private LoadFlowServiceRestRest loadFlowServiceRest;
+    private LoadFlowServiceRest loadFlowServiceRest;
 
     @MockitoBean
     private ShortCircuitServiceRest shortCircuitService;

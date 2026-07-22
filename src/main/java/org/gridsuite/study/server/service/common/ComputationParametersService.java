@@ -14,7 +14,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +49,7 @@ public class ComputationParametersService {
 
     public ComputationParametersService(SecurityAnalysisServiceRest securityAnalysisService,
                                         SensitivityAnalysisServiceRest sensitivityAnalysisService,
-                                        LoadFlowServiceRestRest loadFlowServiceRest,
+                                        LoadFlowServiceRest loadFlowServiceRest,
                                         ShortCircuitServiceRest shortCircuitService,
                                         VoltageInitServiceRest voltageInitService,
                                         DynamicSimulationService dynamicSimulationService,

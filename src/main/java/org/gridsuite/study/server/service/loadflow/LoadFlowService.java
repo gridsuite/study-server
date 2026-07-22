@@ -28,12 +28,12 @@ import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 
 @Service
 public class LoadFlowService extends AbstractComputationService {
-    private final LoadFlowServiceRestRest loadflowServiceRest;
+    private final LoadFlowServiceRest loadflowServiceRest;
     private final NotificationService notificationService;
     public final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     public LoadFlowService(StudyRepository studyRepository,
-                           LoadFlowServiceRestRest loadflowServiceRest,
+                           LoadFlowServiceRest loadflowServiceRest,
                            NotificationService notificationService, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
         super(studyRepository);
         this.loadflowServiceRest = loadflowServiceRest;

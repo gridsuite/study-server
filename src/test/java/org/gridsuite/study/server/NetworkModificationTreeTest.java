@@ -47,7 +47,7 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -168,7 +168,7 @@ class NetworkModificationTreeTest {
     private SingleLineDiagramService singleLineDiagramService;
 
     @Autowired
-    private LoadFlowServiceRestRest loadflowServiceRest;
+    private LoadFlowServiceRest loadflowServiceRest;
 
     @Autowired
     private GeoDataService geoDataService;

@@ -56,7 +56,7 @@ import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurit
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.ElementType;
@@ -119,7 +119,7 @@ public class StudyService {
     private final UserAdminService userAdminService;
     private final StudyInfosService studyInfosService;
     private final EquipmentInfosService equipmentInfosService;
-    private final LoadFlowServiceRestRest loadflowServiceRest;
+    private final LoadFlowServiceRest loadflowServiceRest;
     private final LoadFlowService loadFlowService;
     private final ShortCircuitServiceRest shortCircuitService;
     private final VoltageInitServiceRest voltageInitService;
@@ -187,7 +187,7 @@ public class StudyService {
         ObjectMapper objectMapper,
         StudyServerExecutionService studyServerExecutionService,
         NotificationService notificationService,
-        LoadFlowServiceRestRest loadflowServiceRest,
+        LoadFlowServiceRest loadflowServiceRest,
         LoadFlowService loadFlowService,
         ShortCircuitServiceRest shortCircuitService,
         SingleLineDiagramService singleLineDiagramService,
@@ -1017,7 +1017,7 @@ public class StudyService {
         boolean isSecurityNode = networkModificationTreeService.isSecurityNode(nodeUuid);
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
         UUID result = loadflowServiceRest.runLoadFlow(new NodeReceiver(nodeUuid, rootNetworkUuid), loadflowResultUuid, new VariantInfos(networkUuid, variantId),
-                new LoadFlowServiceRestRest.ParametersInfos(lfParametersUuid, withRatioTapChangers, isSecurityNode), lfReportUuid, userId);
+                new LoadFlowServiceRest.ParametersInfos(lfParametersUuid, withRatioTapChangers, isSecurityNode), lfReportUuid, userId);
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
 
         userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(LOAD_FLOW), result);

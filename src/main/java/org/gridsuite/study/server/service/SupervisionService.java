@@ -21,7 +21,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRestRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +56,7 @@ public class SupervisionService {
 
     private final ReportService reportService;
 
-    private final LoadFlowServiceRestRest loadFlowServiceRest;
+    private final LoadFlowServiceRest loadFlowServiceRest;
 
     private final DynamicSimulationService dynamicSimulationService;
 
@@ -94,7 +94,7 @@ public class SupervisionService {
                               NetworkModificationTreeService networkModificationTreeService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                               ReportService reportService,
-                              LoadFlowServiceRestRest loadFlowServiceRest,
+                              LoadFlowServiceRest loadFlowServiceRest,
                               DynamicSimulationService dynamicSimulationService,
                               DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                               DynamicMarginCalculationService dynamicMarginCalculationService,
