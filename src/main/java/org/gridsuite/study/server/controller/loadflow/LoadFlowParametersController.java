@@ -25,12 +25,12 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/loadflow")
 @Tag(name = "Study server - Load flow parameters")
-public class LoadFlowControllerParameters {
+public class LoadFlowParametersController {
     private final StudyService studyService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final LoadFlowService loadFlowService;
 
-    public LoadFlowControllerParameters(StudyService studyService,
+    public LoadFlowParametersController(StudyService studyService,
                                         NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
