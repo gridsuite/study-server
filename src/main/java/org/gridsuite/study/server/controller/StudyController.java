@@ -39,6 +39,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
@@ -59,6 +60,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.beans.PropertyEditorSupport;
 import java.util.*;
+import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
@@ -261,10 +263,18 @@ public class StudyController {
                                               @RequestHeader(HEADER_USER_ID) String userId) {
         //if the source study is not set we assume it's the same as the target study
         UUID sourceStudy = sourceStudyUuid == null ? targetStudyUuid : sourceStudyUuid;
-        nodeActivityGuardService.runGuarded(targetStudyUuid, rootNetworkService.getStudyRootNetworkIds(targetStudyUuid), List.of(referenceNodeUuid),
-            NodeActivityCheckScope.BRANCH, NodeActivityStatus.UPDATING,
+        nodeActivityGuardService.runWithSharedActivity(targetStudyUuid, destinationNodesToGuard(referenceNodeUuid, insertMode),
+            NodeCheckScope.BRANCH, SharedActivityStatus.CREATING,
             () -> studyService.duplicateStudyNode(sourceStudy, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode, userId));
         return ResponseEntity.ok().build();
+    }
+
+    private List<UUID> destinationNodesToGuard(UUID referenceNodeUuid, InsertMode insertMode) {
+        return switch (insertMode) {
+            case CHILD -> List.of();
+            case BEFORE -> List.of(referenceNodeUuid);
+            case AFTER -> networkModificationTreeService.getChildren(referenceNodeUuid).stream().map(NodeEntity::getIdNode).toList();
+        };
     }
 
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes", params = {"nodeToCutUuid", "referenceNodeUuid", "insertMode"})
@@ -279,8 +289,8 @@ public class StudyController {
                                               @Parameter(description = "The position where the node will be pasted relative to the reference node")
                                                     @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        List<UUID> nodesToGuard = networkModificationTreeService.getHighestNodeUuids(nodeToCutUuid, referenceNodeUuid);
-        nodeActivityGuardService.runGuarded(studyUuid, rootNetworkService.getStudyRootNetworkIds(studyUuid), nodesToGuard, NodeActivityCheckScope.BRANCH, NodeActivityStatus.UPDATING,
+        List<UUID> nodesToGuard = Stream.concat(Stream.of(nodeToCutUuid), destinationNodesToGuard(referenceNodeUuid, insertMode).stream()).distinct().toList();
+        nodeActivityGuardService.runWithSharedActivity(studyUuid, nodesToGuard, NodeCheckScope.BRANCH, SharedActivityStatus.UPDATING,
             () -> studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId));
         return ResponseEntity.ok().build();
     }
@@ -349,8 +359,9 @@ public class StudyController {
                                                 @Parameter(description = "The parent node of the subtree we want to cut") @RequestParam("subtreeToCutParentNodeUuid") UUID subtreeToCutParentNodeUuid,
                                                 @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        List<UUID> nodesToGuard = networkModificationTreeService.getHighestNodeUuids(subtreeToCutParentNodeUuid, referenceNodeUuid);
-        nodeActivityGuardService.runGuarded(studyUuid, rootNetworkService.getStudyRootNetworkIds(studyUuid), nodesToGuard, NodeActivityCheckScope.BRANCH, NodeActivityStatus.UPDATING,
+        // subtree moves always attach as CHILD, referenceNodeUuid is never reparented, so only the moved subtree needs guarding
+        nodeActivityGuardService.runWithSharedActivity(studyUuid, List.of(subtreeToCutParentNodeUuid),
+            NodeCheckScope.BRANCH, SharedActivityStatus.UPDATING,
             () -> studyService.moveStudySubtree(studyUuid, subtreeToCutParentNodeUuid, referenceNodeUuid, userId));
         return ResponseEntity.ok().build();
     }
@@ -367,9 +378,9 @@ public class StudyController {
                                                      @RequestParam("subtreeToCopyParentNodeUuid") UUID subtreeToCopyParentNodeUuid,
                                                  @Parameter(description = "The reference node to where we want to paste") @RequestParam("referenceNodeUuid") UUID referenceNodeUuid,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeActivityGuardService.runGuarded(targetStudyUuid, rootNetworkService.getStudyRootNetworkIds(targetStudyUuid), List.of(referenceNodeUuid),
-            NodeActivityCheckScope.BRANCH, NodeActivityStatus.UPDATING,
-            () -> studyService.duplicateStudySubtree(sourceStudyUuid, targetStudyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId));
+        // subtree duplication always attaches as CHILD (nothing at the destination is reparented) and the
+        // origin subtree is only read, never invalidated, nothing here needs to be guarded
+        studyService.duplicateStudySubtree(sourceStudyUuid, targetStudyUuid, subtreeToCopyParentNodeUuid, referenceNodeUuid, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -845,7 +856,7 @@ public class StudyController {
             @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityGuardService.runGuardedComputation(studyUuid, rootNetworkUuid, nodeUuid,
+        nodeActivityGuardService.runComputation(studyUuid, rootNetworkUuid, nodeUuid,
             () -> studyService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, debug, userId));
         return ResponseEntity.ok().build();
     }
@@ -950,7 +961,7 @@ public class StudyController {
             @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityGuardService.runGuardedComputation(studyUuid, rootNetworkUuid, nodeUuid,
+        nodeActivityGuardService.runComputation(studyUuid, rootNetworkUuid, nodeUuid,
             () -> studyService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().build();
     }
@@ -1070,7 +1081,7 @@ public class StudyController {
                                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityGuardService.runGuardedComputation(studyUuid, rootNetworkUuid, nodeUuid,
+        nodeActivityGuardService.runComputation(studyUuid, rootNetworkUuid, nodeUuid,
             () -> studyService.runSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
@@ -1151,7 +1162,6 @@ public class StudyController {
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) String lfParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertTreeIsIdleAcrossAllRootNetworks(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid));
         return studyService.setLoadFlowParameters(studyUuid, lfParameter, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
@@ -1418,8 +1428,7 @@ public class StudyController {
                                                            @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                            @Parameter(description = "Network modification UUIDs") @RequestParam(name = "uuids", required = false) List<UUID> networkModificationUuids,
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
+        rebuildNodeService.deleteNetworkModifications(studyUuid, nodeUuid, networkModificationUuids, userId);
 
         return ResponseEntity.ok().build();
     }
@@ -1522,9 +1531,7 @@ public class StudyController {
                                                                  defaultValue = "CHILD") InsertMode insertMode,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
 
-        NetworkModificationNode newNode = nodeActivityGuardService.runGuarded(studyUuid, rootNetworkService.getStudyRootNetworkIds(studyUuid),
-            List.of(referenceId), NodeActivityCheckScope.SELF, NodeActivityStatus.UPDATING,
-            () -> studyService.createNode(studyUuid, referenceId, node, insertMode, userId));
+        NetworkModificationNode newNode = studyService.createNode(studyUuid, referenceId, node, insertMode, userId);
         studyService.createNodePostAction(studyUuid, referenceId, newNode, userId);
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(newNode);
@@ -1540,9 +1547,7 @@ public class StudyController {
                                                               @Parameter(description = "parent id of the node created") @PathVariable(name = "id") UUID referenceId,
                                                               @Parameter(description = "sequence to create") @RequestParam("sequenceType") NodeSequenceType nodeSequenceType,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        NetworkModificationNode sequenceParentNode = nodeActivityGuardService.runGuarded(studyUuid, rootNetworkService.getStudyRootNetworkIds(studyUuid),
-            List.of(referenceId), NodeActivityCheckScope.SELF, NodeActivityStatus.UPDATING,
-            () -> studyService.createSequence(studyUuid, referenceId, nodeSequenceType, userId));
+        NetworkModificationNode sequenceParentNode = studyService.createSequence(studyUuid, referenceId, nodeSequenceType, userId);
         studyService.createSequencePostAction(studyUuid, sequenceParentNode.getId(), nodeSequenceType, userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sequenceParentNode);
     }
@@ -1556,7 +1561,7 @@ public class StudyController {
                                            @Parameter(description = "ids of children to remove") @RequestParam("ids") List<UUID> nodeIds,
                                            @Parameter(description = "deleteChildren") @RequestParam(value = "deleteChildren", defaultValue = "false") boolean deleteChildren,
                                            @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeActivityGuardService.runGuarded(studyUuid, rootNetworkService.getStudyRootNetworkIds(studyUuid), nodeIds, NodeActivityCheckScope.BRANCH, NodeActivityStatus.UPDATING,
+        nodeActivityGuardService.runWithSharedActivity(studyUuid, nodeIds, NodeCheckScope.BRANCH, SharedActivityStatus.DELETING,
             () -> studyService.deleteNodes(studyUuid, nodeIds, deleteChildren, userId));
         return ResponseEntity.ok().build();
     }
@@ -1571,8 +1576,8 @@ public class StudyController {
                                                  @Parameter(description = "id of child to delete (move to trash)") @PathVariable("id") UUID nodeId,
                                                  @Parameter(description = "to stash a node with its children") @RequestParam(value = "stashChildren", defaultValue = "false") boolean stashChildren,
                                                  @RequestHeader(HEADER_USER_ID) String userId) {
-        nodeActivityGuardService.runGuarded(studyUuid, rootNetworkService.getStudyRootNetworkIds(studyUuid), List.of(nodeId),
-            NodeActivityCheckScope.BRANCH, NodeActivityStatus.UPDATING,
+        nodeActivityGuardService.runWithSharedActivity(studyUuid, List.of(nodeId),
+            NodeCheckScope.BRANCH, SharedActivityStatus.STASHING,
             () -> studyService.stashNode(studyUuid, nodeId, stashChildren, userId));
         return ResponseEntity.ok().build();
     }
@@ -1707,7 +1712,10 @@ public class StudyController {
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
         if (networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()) {
-            nodeActivityGuardService.runGuarded(studyUuid, List.of(rootNetworkUuid), List.of(nodeUuid), NodeActivityCheckScope.SELF, NodeActivityStatus.UPDATING,
+            // unbuildStudyNode only cascades to descendants when it's a security node with loadflow already
+            // done, only then do they need guarding too
+            NodeCheckScope scope = studyService.isSecurityNodeWithLoadflowDone(nodeUuid, rootNetworkUuid) ? NodeCheckScope.BRANCH : NodeCheckScope.SELF;
+            nodeActivityGuardService.runWithLocalActivity(studyUuid, List.of(rootNetworkUuid), List.of(nodeUuid), scope, LocalActivityStatus.UNBUILDING,
                 () -> studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
         }
         return ResponseEntity.ok().build();
@@ -1763,7 +1771,7 @@ public class StudyController {
                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityGuardService.runGuardedComputation(studyUuid, rootNetworkUuid, nodeUuid,
+        nodeActivityGuardService.runComputation(studyUuid, rootNetworkUuid, nodeUuid,
             () -> studyService.runSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
@@ -1903,7 +1911,7 @@ public class StudyController {
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
         return ResponseEntity.ok().build();
     }
@@ -1917,7 +1925,7 @@ public class StudyController {
                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
         return ResponseEntity.ok().build();
     }
@@ -1931,7 +1939,7 @@ public class StudyController {
                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                               @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids);
         return ResponseEntity.ok().build();
     }
@@ -1946,7 +1954,7 @@ public class StudyController {
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSimulationProvider);
-        nodeActivityGuardService.runGuardedComputation(studyUuid, rootNetworkUuid, nodeUuid,
+        nodeActivityGuardService.runComputation(studyUuid, rootNetworkUuid, nodeUuid,
             () -> studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
@@ -2038,7 +2046,7 @@ public class StudyController {
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSecurityAnalysisProvider);
-        nodeActivityGuardService.runGuardedComputation(studyUuid, rootNetworkUuid, nodeUuid,
+        nodeActivityGuardService.runComputation(studyUuid, rootNetworkUuid, nodeUuid,
             () -> studyService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
@@ -2091,7 +2099,7 @@ public class StudyController {
                                                      @RequestHeader(HEADER_USER_ID) String userId) throws JsonProcessingException {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicMarginCalculationProvider);
-        nodeActivityGuardService.runGuardedComputation(studyUuid, rootNetworkUuid, nodeUuid,
+        nodeActivityGuardService.runComputation(studyUuid, rootNetworkUuid, nodeUuid,
             () -> studyService.runDynamicMarginCalculation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
@@ -2350,7 +2358,7 @@ public class StudyController {
                                                     @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityGuardService.runGuardedComputation(studyUuid, rootNetworkUuid, nodeUuid,
+        nodeActivityGuardService.runComputation(studyUuid, rootNetworkUuid, nodeUuid,
             () -> studyService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().build();
     }
@@ -2364,7 +2372,7 @@ public class StudyController {
                                           @RequestHeader(HEADER_USER_ID) String userId) {
 
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityGuardService.runGuardedComputation(studyUuid, rootNetworkUuid, nodeUuid,
+        nodeActivityGuardService.runComputation(studyUuid, rootNetworkUuid, nodeUuid,
             () -> studyService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }

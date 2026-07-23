@@ -60,7 +60,11 @@ public class NetworkModificationNode extends AbstractNode {
 
     private NodeBuildStatus nodeBuildStatus;
 
-    private NodeActivityStatus nodeActivityStatus;
+    private LocalActivityStatus localActivityStatus;
+
+    private SharedActivityStatus sharedActivityStatus;
+
+    private RootNetworkActivity activityInAnotherRootNetwork;
 
     @Builder.Default
     private NetworkModificationNodeType nodeType = NetworkModificationNodeType.CONSTRUCTION;
@@ -80,7 +84,7 @@ public class NetworkModificationNode extends AbstractNode {
         this.setStateEstimationResultUuid(rootNetworkNodeInfoEntity.getStateEstimationResultUuid());
         this.setPccMinResultUuid(rootNetworkNodeInfoEntity.getPccMinResultUuid());
         this.setNodeBuildStatus(rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto());
-        this.setNodeActivityStatus(rootNetworkNodeInfoEntity.getNodeActivityStatus());
+        this.setLocalActivityStatus(rootNetworkNodeInfoEntity.getActivityStatus());
         this.setComputationsReports(new HashMap<>(rootNetworkNodeInfoEntity.getComputationReports()));
         this.setModificationReports(new HashMap<>(rootNetworkNodeInfoEntity.getModificationReports()));
     }

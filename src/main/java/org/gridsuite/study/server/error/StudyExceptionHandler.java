@@ -37,6 +37,7 @@ public class StudyExceptionHandler extends AbstractBusinessExceptionHandler<Stud
                 -> HttpStatus.NOT_FOUND;
             case COMPUTATION_RUNNING,
                  NOT_ALLOWED,
+                 NODE_ACTIVITY_CONFLICT,
                  BAD_NODE_TYPE,
                  NODE_NAME_ALREADY_EXIST,
                  ROOT_NETWORK_DELETE_FORBIDDEN,

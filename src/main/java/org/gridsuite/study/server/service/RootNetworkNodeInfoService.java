@@ -20,7 +20,8 @@ import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.LocalActivityStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.RootNetworkActivity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
@@ -492,26 +493,27 @@ public class RootNetworkNodeInfoService {
         return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyIdAndNodeInfoNodeTypeAndLoadFlowResultUuidNotNull(studyUuid, NetworkModificationNodeType.SECURITY);
     }
 
-    @Transactional(readOnly = true)
-    public void assertTreeIsIdle(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndNotIdle(rootNetworkUuid, nodesUuids)) {
-            throw new StudyException(NOT_ALLOWED, "Another action is in progress in this branch !");
-        }
-    }
-
     @Transactional
-    public void setNodeActivity(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> checkSetUuids, NodeActivityStatus activity) {
-        int updated = rootNetworkNodeInfoRepository.setNodeActivity(rootNetworkUuid, nodeUuids, checkSetUuids, activity);
+    public void acquireActivity(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> strictCheckSetUuids, List<UUID> sharedCheckSetUuids, LocalActivityStatus activity) {
+        int updated = rootNetworkNodeInfoRepository.acquireActivity(rootNetworkUuid, nodeUuids, strictCheckSetUuids, sharedCheckSetUuids, activity);
         if (updated != nodeUuids.size()) {
-            throw new StudyException(NOT_ALLOWED, "Another action is in progress in this branch !");
+            throw new StudyException(NODE_ACTIVITY_CONFLICT, "Another action is in progress in this branch !");
         }
-        notificationService.emitNodeActivityStatusUpdated(studyUuid, nodeUuids, rootNetworkUuid, activity);
+        notificationService.emitNodeActivityStatusUpdated(studyUuid, nodeUuids, rootNetworkUuid);
     }
 
     @Transactional
-    public void clearNodeActivity(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
-        rootNetworkNodeInfoRepository.clearNodeActivity(rootNetworkUuid, nodeUuids);
-        notificationService.emitNodeActivityStatusUpdated(studyUuid, nodeUuids, rootNetworkUuid, NodeActivityStatus.IDLE);
+    public void releaseActivity(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
+        rootNetworkNodeInfoRepository.releaseActivity(rootNetworkUuid, nodeUuids);
+        notificationService.emitNodeActivityStatusUpdated(studyUuid, nodeUuids, rootNetworkUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, RootNetworkActivity> getActivityInAnotherRootNetwork(UUID studyUuid, UUID currentRootNetworkUuid) {
+        Map<UUID, RootNetworkActivity> result = new HashMap<>();
+        rootNetworkNodeInfoRepository.findNonIdleActivityInOtherRootNetworks(studyUuid, currentRootNetworkUuid).forEach(row ->
+            result.putIfAbsent(row.getNodeUuid(), new RootNetworkActivity(row.getRootNetworkUuid(), row.getStatus())));
+        return result;
     }
 
     private void addLink(NetworkModificationNodeInfoEntity nodeInfoEntity, RootNetworkEntity rootNetworkEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {

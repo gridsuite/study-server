@@ -361,7 +361,7 @@ public class ConsumerService {
                             studyService.deleteRootNetworkRequest(rootNetworkUuid);
                         } else if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
                             // the case import never reached consumeCaseImportSucceeded, so its finally-block
-                            // release never ran, release the UPDATING guard acquired by updateRootNetworkRequest here instead
+                            // release never ran - release the REIMPORTING_CASE guard acquired by updateRootNetworkRequest here instead
                             releaseRootNetworkModificationActivity(studyUuid, rootNetworkUuid);
                         }
                         notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
@@ -461,13 +461,13 @@ public class ConsumerService {
     }
 
     private void handleClearNodeActivity(UUID studyUuid, NodeReceiver receiverObj) {
-        nodeActivityGuardService.releaseActivity(studyUuid, List.of(receiverObj.getRootNetworkUuid()), List.of(receiverObj.getNodeUuid()));
+        nodeActivityGuardService.releaseLocalActivity(studyUuid, List.of(receiverObj.getRootNetworkUuid()), List.of(receiverObj.getNodeUuid()));
     }
 
     private void releaseRootNetworkModificationActivity(UUID studyUuid, UUID rootNetworkUuid) {
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         List<UUID> nodesToUpdate = studyService.nodeUuidsToUpdate(rootNodeUuid);
-        nodeActivityGuardService.releaseActivity(studyUuid, List.of(rootNetworkUuid), nodesToUpdate);
+        nodeActivityGuardService.releaseLocalActivity(studyUuid, List.of(rootNetworkUuid), nodesToUpdate);
     }
 
     public void consumeCalculationDebug(Message<String> msg, ComputationType computationType) {

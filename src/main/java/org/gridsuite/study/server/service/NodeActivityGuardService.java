@@ -7,14 +7,19 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.error.StudyException;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityCheckScope;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.LocalActivityStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.NodeCheckScope;
+import org.gridsuite.study.server.networkmodificationtree.dto.SharedActivityStatus;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NODE_ACTIVITY_CONFLICT;
 
 /**
  * @author Ayoub Labidi <ayoub.labidi_externe at rte-france.com>
@@ -23,83 +28,136 @@ import java.util.function.Supplier;
 public class NodeActivityGuardService {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final NetworkModificationTreeService networkModificationTreeService;
+    private final NotificationService notificationService;
 
-    public NodeActivityGuardService(RootNetworkNodeInfoService rootNetworkNodeInfoService, NetworkModificationTreeService networkModificationTreeService) {
+    public NodeActivityGuardService(RootNetworkNodeInfoService rootNetworkNodeInfoService, NetworkModificationTreeService networkModificationTreeService,
+                                     NotificationService notificationService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.notificationService = notificationService;
     }
 
-    private List<UUID> resolveCheckSet(List<UUID> nodeUuids, NodeActivityCheckScope checkScope) {
-        return switch (checkScope) {
-            case SELF -> nodeUuids;
-            case BRANCH -> networkModificationTreeService.getNodeBranchUuids(nodeUuids);
-            case ANCESTORS -> networkModificationTreeService.getNodeAncestorUuids(nodeUuids);
+    private record CheckSet(List<UUID> strict, List<UUID> loose) {
+    }
+
+    private CheckSet resolveCheckSet(List<UUID> nodeUuids, NodeCheckScope scope) {
+        return switch (scope) {
+            case SELF -> new CheckSet(nodeUuids, List.of());
+            case ANCESTORS -> new CheckSet(List.of(), networkModificationTreeService.getNodeAncestorUuids(nodeUuids));
+            case BRANCH -> {
+                List<UUID> strict = Stream.concat(nodeUuids.stream(), networkModificationTreeService.getAllChildrenUuids(nodeUuids).stream()).distinct().toList();
+                yield new CheckSet(strict, networkModificationTreeService.getNodeAncestorUuids(nodeUuids));
+            }
         };
     }
 
-    public List<UUID> acquireActivity(UUID studyUuid, List<UUID> rootNetworkUuids, List<UUID> nodeUuids, NodeActivityCheckScope checkScope, NodeActivityStatus activity) {
+    private List<UUID> sharedCheckSet(List<UUID> nodeUuids, CheckSet checkSet) {
+        return Stream.of(nodeUuids, checkSet.strict(), checkSet.loose()).flatMap(List::stream).distinct().toList();
+    }
+
+    private static Supplier<Void> asSupplier(Runnable action) {
+        return () -> {
+            action.run();
+            return null;
+        };
+    }
+
+    // Shared: study-wide, one value per node
+    public <T> T runWithSharedActivity(UUID studyUuid, List<UUID> nodeUuids, NodeCheckScope scope, SharedActivityStatus reason, Supplier<T> action) {
+        acquireSharedActivity(studyUuid, nodeUuids, scope, reason);
+        try {
+            return action.get();
+        } finally {
+            releaseSharedActivity(studyUuid, nodeUuids);
+        }
+    }
+
+    public void runWithSharedActivity(UUID studyUuid, List<UUID> nodeUuids, NodeCheckScope scope, SharedActivityStatus reason, Runnable action) {
+        runWithSharedActivity(studyUuid, nodeUuids, scope, reason, asSupplier(action));
+    }
+
+    private void acquireSharedActivity(UUID studyUuid, List<UUID> nodeUuids, NodeCheckScope scope, SharedActivityStatus reason) {
+        if (nodeUuids.isEmpty()) {
+            return;
+        }
+        CheckSet checkSet = resolveCheckSet(nodeUuids, scope);
+        int updated = networkModificationTreeService.acquireSharedActivity(nodeUuids, checkSet.strict(), sharedCheckSet(nodeUuids, checkSet), reason);
+        if (updated != nodeUuids.size()) {
+            throw new StudyException(NODE_ACTIVITY_CONFLICT, "Another action is in progress on this node !");
+        }
+        notificationService.emitSharedActivityUpdated(studyUuid, nodeUuids);
+    }
+
+    private void releaseSharedActivity(UUID studyUuid, List<UUID> nodeUuids) {
+        if (nodeUuids.isEmpty()) {
+            return;
+        }
+        networkModificationTreeService.releaseSharedActivity(nodeUuids);
+        notificationService.emitSharedActivityUpdated(studyUuid, nodeUuids);
+    }
+
+    // Local: build/computation state, scoped to one root network
+    public List<UUID> acquireLocalActivity(UUID studyUuid, List<UUID> rootNetworkUuids, List<UUID> nodeUuids, NodeCheckScope scope, LocalActivityStatus activity) {
         if (nodeUuids.isEmpty()) {
             return List.of();
         }
-        List<UUID> checkSetUuids = resolveCheckSet(nodeUuids, checkScope);
+        CheckSet checkSet = resolveCheckSet(nodeUuids, scope);
+        List<UUID> sharedCheckSet = sharedCheckSet(nodeUuids, checkSet);
         List<UUID> acquired = new ArrayList<>();
         try {
             for (UUID rootNetworkUuid : rootNetworkUuids) {
-                rootNetworkNodeInfoService.setNodeActivity(studyUuid, rootNetworkUuid, nodeUuids, checkSetUuids, activity);
+                rootNetworkNodeInfoService.acquireActivity(studyUuid, rootNetworkUuid, nodeUuids, checkSet.strict(), sharedCheckSet, activity);
                 acquired.add(rootNetworkUuid);
             }
             return acquired;
         } catch (StudyException e) {
-            acquired.forEach(rootNetworkUuid -> rootNetworkNodeInfoService.clearNodeActivity(studyUuid, rootNetworkUuid, nodeUuids));
+            releaseLocalActivity(studyUuid, acquired, nodeUuids);
             throw e;
         }
     }
 
-    public void releaseActivity(UUID studyUuid, List<UUID> rootNetworkUuids, List<UUID> nodeUuids) {
+    public void releaseLocalActivity(UUID studyUuid, List<UUID> rootNetworkUuids, List<UUID> nodeUuids) {
         if (nodeUuids.isEmpty()) {
             return;
         }
-        rootNetworkUuids.forEach(rootNetworkUuid -> rootNetworkNodeInfoService.clearNodeActivity(studyUuid, rootNetworkUuid, nodeUuids));
+        rootNetworkUuids.forEach(rootNetworkUuid -> rootNetworkNodeInfoService.releaseActivity(studyUuid, rootNetworkUuid, nodeUuids));
     }
 
-    public <T> T runGuarded(UUID studyUuid, List<UUID> rootNetworkUuids, List<UUID> nodeUuids, NodeActivityCheckScope checkScope, NodeActivityStatus activity, Supplier<T> action) {
-        List<UUID> acquired = acquireActivity(studyUuid, rootNetworkUuids, nodeUuids, checkScope, activity);
+    public <T> T runWithLocalActivity(UUID studyUuid, List<UUID> rootNetworkUuids, List<UUID> nodeUuids, NodeCheckScope scope, LocalActivityStatus activity, Supplier<T> action) {
+        List<UUID> acquired = acquireLocalActivity(studyUuid, rootNetworkUuids, nodeUuids, scope, activity);
         try {
             return action.get();
         } finally {
-            releaseActivity(studyUuid, acquired, nodeUuids);
+            releaseLocalActivity(studyUuid, acquired, nodeUuids);
         }
     }
 
-    public void runGuarded(UUID studyUuid, List<UUID> rootNetworkUuids, List<UUID> nodeUuids, NodeActivityCheckScope checkScope, NodeActivityStatus activity, Runnable action) {
-        runGuarded(studyUuid, rootNetworkUuids, nodeUuids, checkScope, activity, () -> {
-            action.run();
-            return null;
-        });
+    public void runWithLocalActivity(UUID studyUuid, List<UUID> rootNetworkUuids, List<UUID> nodeUuids, NodeCheckScope scope, LocalActivityStatus activity, Runnable action) {
+        runWithLocalActivity(studyUuid, rootNetworkUuids, nodeUuids, scope, activity, asSupplier(action));
     }
 
-    public <T> T runGuardedAsync(UUID studyUuid, List<UUID> rootNetworkUuids, List<UUID> nodeUuids, NodeActivityCheckScope checkScope, NodeActivityStatus activity, Supplier<T> action) {
-        List<UUID> acquired = acquireActivity(studyUuid, rootNetworkUuids, nodeUuids, checkScope, activity);
+    // Async variant: release only if dispatch itself fails, the caller releases later,
+    // when the remote result (build/computation) actually completes.
+    public <T> T runWithLocalActivityAsync(UUID studyUuid, List<UUID> rootNetworkUuids, List<UUID> nodeUuids, NodeCheckScope scope,
+                                            LocalActivityStatus activity, Supplier<T> action) {
+        List<UUID> acquired = acquireLocalActivity(studyUuid, rootNetworkUuids, nodeUuids, scope, activity);
         try {
             return action.get();
         } catch (Exception e) {
-            releaseActivity(studyUuid, acquired, nodeUuids);
+            releaseLocalActivity(studyUuid, acquired, nodeUuids);
             throw e;
         }
     }
 
-    public void runGuardedAsync(UUID studyUuid, List<UUID> rootNetworkUuids, List<UUID> nodeUuids, NodeActivityCheckScope checkScope, NodeActivityStatus activity, Runnable action) {
-        runGuardedAsync(studyUuid, rootNetworkUuids, nodeUuids, checkScope, activity, () -> {
-            action.run();
-            return null;
-        });
+    public void runWithLocalActivityAsync(UUID studyUuid, List<UUID> rootNetworkUuids, List<UUID> nodeUuids, NodeCheckScope scope, LocalActivityStatus activity, Runnable action) {
+        runWithLocalActivityAsync(studyUuid, rootNetworkUuids, nodeUuids, scope, activity, asSupplier(action));
     }
 
-    public <T> T runGuardedComputation(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, Supplier<T> action) {
-        return runGuardedAsync(studyUuid, List.of(rootNetworkUuid), List.of(nodeUuid), NodeActivityCheckScope.ANCESTORS, NodeActivityStatus.COMPUTATION_RUNNING, action);
+    public <T> T runComputation(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, Supplier<T> action) {
+        return runWithLocalActivityAsync(studyUuid, List.of(rootNetworkUuid), List.of(nodeUuid), NodeCheckScope.ANCESTORS, LocalActivityStatus.COMPUTATION_RUNNING, action);
     }
 
-    public void runGuardedComputation(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, Runnable action) {
-        runGuardedAsync(studyUuid, List.of(rootNetworkUuid), List.of(nodeUuid), NodeActivityCheckScope.ANCESTORS, NodeActivityStatus.COMPUTATION_RUNNING, action);
+    public void runComputation(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid, Runnable action) {
+        runWithLocalActivityAsync(studyUuid, List.of(rootNetworkUuid), List.of(nodeUuid), NodeCheckScope.ANCESTORS, LocalActivityStatus.COMPUTATION_RUNNING, action);
     }
 }

@@ -11,6 +11,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.SharedActivityStatus;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +36,11 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Enumerated(EnumType.STRING)
     private NetworkModificationNodeType nodeType;
 
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private SharedActivityStatus sharedActivityStatus = SharedActivityStatus.IDLE;
+
     @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo", cascade = CascadeType.ALL)
     @Builder.Default
     protected List<RootNetworkNodeInfoEntity> rootNetworkNodeInfos = new ArrayList<>();
@@ -53,6 +59,7 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
             .description(this.getDescription())
             .columnPosition(this.getColumnPosition())
             .readOnly(this.getReadOnly())
+            .sharedActivityStatus(sharedActivityStatus)
             .build();
     }
 }

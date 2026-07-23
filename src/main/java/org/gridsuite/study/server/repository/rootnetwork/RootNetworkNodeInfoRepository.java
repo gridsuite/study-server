@@ -6,7 +6,8 @@
  */
 package org.gridsuite.study.server.repository.rootnetwork;
 
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.LocalActivityStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.SharedActivityStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -65,44 +66,60 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     List<RootNetworkNodeInfoEntity> getAllByRootNetworkIdAndNodeInfoIdIn(UUID rootNetworkUuid, List<UUID> nodesUuids);
 
-    default boolean existsByNodeUuidsAndNotIdle(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        return existsByNodeUuidsAndNotIdle(rootNetworkUuid, nodesUuids, NodeActivityStatus.IDLE);
-    }
-
-    @Query(value = """
-        SELECT count(rnni) > 0 FROM RootNetworkNodeInfoEntity rnni
-        WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodesUuids
-          AND rnni.nodeActivityStatus <> :idle
-        """)
-    boolean existsByNodeUuidsAndNotIdle(UUID rootNetworkUuid, List<UUID> nodesUuids, NodeActivityStatus idle);
-
-    default int setNodeActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> checkSetUuids, NodeActivityStatus activity) {
-        return setNodeActivity(rootNetworkUuid, nodeUuids, checkSetUuids, activity, NodeActivityStatus.IDLE);
+    default int acquireActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> strictCheckSetUuids, List<UUID> sharedCheckSetUuids, LocalActivityStatus activity) {
+        return acquireActivity(rootNetworkUuid, nodeUuids, strictCheckSetUuids, sharedCheckSetUuids, activity, LocalActivityStatus.IDLE, SharedActivityStatus.IDLE);
     }
 
     @Modifying
     @Query(value = """
-        UPDATE RootNetworkNodeInfoEntity rnni SET rnni.nodeActivityStatus = :activity
+        UPDATE RootNetworkNodeInfoEntity rnni SET rnni.activityStatus = :activity
         WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodeUuids
-          AND rnni.nodeActivityStatus = :idle
+          AND rnni.activityStatus = :idle
           AND NOT EXISTS (
               SELECT 1 FROM RootNetworkNodeInfoEntity rnni2
-              WHERE rnni2.rootNetwork.id = :rootNetworkUuid AND rnni2.nodeInfo.idNode IN :checkSetUuids
-                AND rnni2.nodeActivityStatus <> :idle
+              WHERE rnni2.rootNetwork.id = :rootNetworkUuid AND rnni2.nodeInfo.idNode IN :strictCheckSetUuids
+                AND rnni2.activityStatus <> :idle
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM NetworkModificationNodeInfoEntity n
+              WHERE n.idNode IN :sharedCheckSetUuids AND n.sharedActivityStatus <> :sharedIdle
           )
         """)
-    int setNodeActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> checkSetUuids, NodeActivityStatus activity, NodeActivityStatus idle);
+    int acquireActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> strictCheckSetUuids, List<UUID> sharedCheckSetUuids,
+                         LocalActivityStatus activity, LocalActivityStatus idle, SharedActivityStatus sharedIdle);
 
-    default void clearNodeActivity(UUID rootNetworkUuid, List<UUID> nodeUuids) {
-        clearNodeActivity(rootNetworkUuid, nodeUuids, NodeActivityStatus.IDLE);
+    default void releaseActivity(UUID rootNetworkUuid, List<UUID> nodeUuids) {
+        releaseActivity(rootNetworkUuid, nodeUuids, LocalActivityStatus.IDLE);
     }
 
     @Modifying
     @Query(value = """
-        UPDATE RootNetworkNodeInfoEntity rnni SET rnni.nodeActivityStatus = :idle
+        UPDATE RootNetworkNodeInfoEntity rnni SET rnni.activityStatus = :idle
         WHERE rnni.rootNetwork.id = :rootNetworkUuid AND rnni.nodeInfo.idNode IN :nodeUuids
         """)
-    void clearNodeActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, NodeActivityStatus idle);
+    void releaseActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, LocalActivityStatus idle);
+
+    default List<NodeActivityInRootNetwork> findNonIdleActivityInOtherRootNetworks(UUID studyUuid, UUID excludedRootNetworkUuid) {
+        return findNonIdleActivityInOtherRootNetworks(studyUuid, excludedRootNetworkUuid, LocalActivityStatus.IDLE);
+    }
+
+    @Query("""
+        SELECT rnni.nodeInfo.idNode as nodeUuid, rnni.rootNetwork.id as rootNetworkUuid, rnni.activityStatus as status
+        FROM RootNetworkNodeInfoEntity rnni
+        WHERE rnni.rootNetwork.study.id = :studyUuid
+          AND rnni.rootNetwork.id <> :excludedRootNetworkUuid
+          AND rnni.activityStatus <> :idle
+        ORDER BY rnni.rootNetwork.id
+        """)
+    List<NodeActivityInRootNetwork> findNonIdleActivityInOtherRootNetworks(UUID studyUuid, UUID excludedRootNetworkUuid, LocalActivityStatus idle);
+
+    interface NodeActivityInRootNetwork {
+        UUID getNodeUuid();
+
+        UUID getRootNetworkUuid();
+
+        LocalActivityStatus getStatus();
+    }
 
     /**
      * Finds report UUIDs that are still referenced by other RootNetworkNodeInfo entities.

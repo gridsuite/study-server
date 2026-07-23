@@ -389,16 +389,6 @@ public class NetworkModificationTreeService {
         return nodesUuids;
     }
 
-    public List<UUID> getNodeBranchUuids(UUID nodeUuid) {
-        List<UUID> nodesUuids = getNodeAncestorUuids(nodeUuid);
-        nodesUuids.addAll(getAllChildrenUuids(nodeUuid));
-        return nodesUuids;
-    }
-
-    public List<UUID> getNodeBranchUuids(List<UUID> nodeUuids) {
-        return nodeUuids.stream().flatMap(nodeUuid -> getNodeBranchUuids(nodeUuid).stream()).distinct().toList();
-    }
-
     public List<UUID> getNodeAncestorUuids(UUID nodeUuid) {
         List<UUID> nodesUuids = nodesRepository.findAllAncestorsUuids(nodeUuid);
         nodesUuids.add(nodeUuid);
@@ -411,6 +401,20 @@ public class NetworkModificationTreeService {
 
     public List<UUID> getAllChildrenUuids(UUID parentUuid) {
         return nodesRepository.findAllChildrenUuids(parentUuid);
+    }
+
+    public List<UUID> getAllChildrenUuids(List<UUID> parentUuids) {
+        return parentUuids.stream().flatMap(parentUuid -> getAllChildrenUuids(parentUuid).stream()).distinct().toList();
+    }
+
+    @Transactional
+    public int acquireSharedActivity(List<UUID> nodeUuids, List<UUID> strictSet, List<UUID> sharedCheckSet, SharedActivityStatus reason) {
+        return networkModificationNodeInfoRepository.acquireSharedActivity(nodeUuids, strictSet, sharedCheckSet, reason);
+    }
+
+    @Transactional
+    public void releaseSharedActivity(List<UUID> nodeUuids) {
+        networkModificationNodeInfoRepository.releaseSharedActivity(nodeUuids);
     }
 
     // TODO Remove this method and use getAllChildrenUuids
@@ -477,12 +481,15 @@ public class NetworkModificationTreeService {
 
     private void completeNodeInfos(List<AbstractNode> nodes, UUID rootNetworkUuid) {
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        Map<UUID, RootNetworkActivity> activityInAnotherRootNetworkByNode = rootNetworkNodeInfoService.getActivityInAnotherRootNetwork(rootNetworkEntity.getStudy().getId(), rootNetworkUuid);
         nodes.forEach(nodeInfo -> {
             if (nodeInfo instanceof RootNode rootNode) {
                 rootNode.setReportUuid(rootNetworkEntity.getReportUuid());
             } else {
-                ((NetworkModificationNode) nodeInfo).completeDtoFromRootNetworkNodeInfo(rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeInfo.getId(),
+                NetworkModificationNode modificationNode = (NetworkModificationNode) nodeInfo;
+                modificationNode.completeDtoFromRootNetworkNodeInfo(rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeInfo.getId(),
                         rootNetworkEntity.getId()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")));
+                modificationNode.setActivityInAnotherRootNetwork(activityInAnotherRootNetworkByNode.get(nodeInfo.getId()));
             }
         });
     }

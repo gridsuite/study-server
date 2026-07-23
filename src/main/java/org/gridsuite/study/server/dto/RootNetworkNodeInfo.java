@@ -9,7 +9,7 @@ package org.gridsuite.study.server.dto;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeActivityStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.LocalActivityStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeExportEmbeddable;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
@@ -57,7 +57,7 @@ public class RootNetworkNodeInfo {
 
     private NodeBuildStatus nodeBuildStatus;
 
-    private NodeActivityStatus nodeActivityStatus;
+    private LocalActivityStatus activityStatus;
 
     private List<NodeExportEmbeddable> nodeExportNetwork;
 

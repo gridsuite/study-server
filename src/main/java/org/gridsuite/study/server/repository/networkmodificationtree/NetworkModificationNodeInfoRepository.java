@@ -7,8 +7,11 @@
 
 package org.gridsuite.study.server.repository.networkmodificationtree;
 
+import org.gridsuite.study.server.networkmodificationtree.dto.LocalActivityStatus;
+import org.gridsuite.study.server.networkmodificationtree.dto.SharedActivityStatus;
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
@@ -28,4 +31,36 @@ public interface NetworkModificationNodeInfoRepository extends NodeInfoRepositor
 
     @Query(value = "SELECT n FROM NetworkModificationNodeInfoEntity n WHERE n.idNode IN (?1) ORDER BY n.columnPosition")
     List<NetworkModificationNodeInfoEntity> findAllByIdIn(List<UUID> uuids);
+
+    @Modifying
+    @Query(value = """
+        UPDATE NetworkModificationNodeInfoEntity n SET n.sharedActivityStatus = :reason
+        WHERE n.idNode IN :nodeUuids AND n.sharedActivityStatus = :sharedIdle
+          AND NOT EXISTS (
+              SELECT 1 FROM NetworkModificationNodeInfoEntity n2
+              WHERE n2.idNode IN :strictSet AND n2.sharedActivityStatus <> :sharedIdle
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM RootNetworkNodeInfoEntity rnni
+              WHERE rnni.nodeInfo.idNode IN :strictSet AND rnni.activityStatus <> :idle
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM NetworkModificationNodeInfoEntity n3
+              WHERE n3.idNode IN :looseSet AND n3.sharedActivityStatus <> :sharedIdle
+          )
+        """)
+    int acquireSharedActivity(List<UUID> nodeUuids, List<UUID> strictSet, List<UUID> looseSet, SharedActivityStatus reason,
+                               LocalActivityStatus idle, SharedActivityStatus sharedIdle);
+
+    default int acquireSharedActivity(List<UUID> nodeUuids, List<UUID> strictSet, List<UUID> looseSet, SharedActivityStatus reason) {
+        return acquireSharedActivity(nodeUuids, strictSet, looseSet, reason, LocalActivityStatus.IDLE, SharedActivityStatus.IDLE);
+    }
+
+    @Modifying
+    @Query("UPDATE NetworkModificationNodeInfoEntity n SET n.sharedActivityStatus = :idle WHERE n.idNode IN :nodeUuids")
+    void releaseSharedActivity(List<UUID> nodeUuids, SharedActivityStatus idle);
+
+    default void releaseSharedActivity(List<UUID> nodeUuids) {
+        releaseSharedActivity(nodeUuids, SharedActivityStatus.IDLE);
+    }
 }
