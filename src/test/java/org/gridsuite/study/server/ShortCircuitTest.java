@@ -26,6 +26,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -145,7 +146,7 @@ class ShortCircuitTest implements WithAssertions {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
-    private ShortCircuitRestService shortCircuitService;
+    private ShortCircuitRestService shortCircuitRestService;
 
     @MockitoSpyBean
     private UserAdminService userAdminService;
@@ -194,7 +195,7 @@ class ShortCircuitTest implements WithAssertions {
         computationServerStubs = new ComputationServerStubs(wireMockServer);
         reportServerStubs = new ReportServerStubs(wireMockServer);
 
-        shortCircuitService.setShortCircuitServerBaseUri(wireMockServer.baseUrl());
+        shortCircuitRestService.setShortCircuitServerBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
 
@@ -605,12 +606,12 @@ class ShortCircuitTest implements WithAssertions {
         assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
         assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
 
-        StudyService studyService = Mockito.mock(StudyService.class);
+        ShortCircuitService shortCircuitService = Mockito.mock(ShortCircuitService.class);
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), shortCircuitAnalysisFailedDestination);
             return resultUuid;
-        }).when(studyService).runShortCircuit(any(), any(), any(), any(), anyBoolean(), any());
-        studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, Optional.empty(), false, "user_1");
+        }).when(shortCircuitService).runShortCircuit(any(), any(), any(), any(), anyBoolean(), any());
+        shortCircuitService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, Optional.empty(), false, "user_1");
 
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));

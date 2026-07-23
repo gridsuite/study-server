@@ -57,7 +57,6 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEve
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
-import org.gridsuite.study.server.service.pccmin.PccMinService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
@@ -142,7 +141,6 @@ public class StudyService {
     private final ActionsService actionsService;
     private final CaseService caseService;
     private final StateEstimationRestService stateEstimationService;
-    private final PccMinService pccMinService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
@@ -212,7 +210,6 @@ public class StudyService {
         NadConfigService nadConfigService,
         FilterService filterService,
         StateEstimationRestService stateEstimationService,
-        PccMinService pccMinService,
         @Lazy StudyService studyService,
         RootNetworkService rootNetworkService,
         RootNetworkNodeInfoService rootNetworkNodeInfoService,
@@ -250,7 +247,6 @@ public class StudyService {
         this.nadConfigService = nadConfigService;
         this.filterService = filterService;
         this.stateEstimationService = stateEstimationService;
-        this.pccMinService = pccMinService;
         this.self = studyService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
@@ -1254,36 +1250,6 @@ public class StudyService {
     public String getDynamicMarginCalculationProvider(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return dynamicMarginCalculationService.getProvider(studyEntity.getDynamicMarginCalculationParametersUuid());
-    }
-
-    @Transactional
-    public String getShortCircuitParametersInfo(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        if (studyEntity.getShortCircuitParametersUuid() == null) {
-            studyEntity.setShortCircuitParametersUuid(shortCircuitService.createParameters(null));
-            studyRepository.save(studyEntity);
-        }
-        return shortCircuitService.getParameters(studyEntity.getShortCircuitParametersUuid());
-    }
-
-    @Transactional
-    public boolean setShortCircuitParameters(UUID studyUuid, @Nullable String shortCircuitParametersInfos, String userId) {
-        return setComputationParameters(
-                studyUuid,
-                shortCircuitParametersInfos,
-                userId,
-                StudyEntity::getShortCircuitParametersUuid,
-                StudyEntity::setShortCircuitParametersUuid,
-                UserProfileInfos::getShortcircuitParameterId,
-                shortCircuitService,
-                shortCircuitService::createParameters,
-                shortCircuitService::updateParameters,
-                SHORT_CIRCUIT,
-                List.of(this::invalidateShortCircuitStatusOnAllNodes, pccMinService::invalidatePccMinStatusOnAllNodes),
-                NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
-                NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
-                NotificationService.UPDATE_TYPE_PCC_MIN_STATUS
-        );
     }
 
     public ContingencyCount getContingencyCount(UUID studyUuid, List<UUID> contingencyListIds, UUID nodeUuid, UUID rootNetworkUuid) {
@@ -2587,36 +2553,6 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Optional<String> busId, boolean debug, String userId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        UUID result = handleShortCircuitRequest(studyEntity, nodeUuid, rootNetworkUuid, busId, debug, userId);
-
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SHORT_CIRCUIT), result);
-        return result;
-    }
-
-    private UUID handleShortCircuitRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, Optional<String> busId, boolean debug, String userId) {
-        ComputationType computationType = busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS;
-        UUID shortCircuitResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, computationType);
-        if (shortCircuitResultUuid != null) {
-            shortCircuitService.deleteShortCircuitAnalysisResults(List.of(shortCircuitResultUuid));
-        }
-        UUID scReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(computationType.name(), UUID.randomUUID());
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, computationType, scReportUuid);
-        final UUID result = shortCircuitService.runShortCircuit(rootNetworkUuid, new VariantInfos(networkUuid, variantId), busId.orElse(null), studyEntity.getShortCircuitParametersUuid(),
-                new ReportInfos(scReportUuid, nodeUuid), userId, debug);
-        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, computationType);
-        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid,
-                busId.isEmpty() ? NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS : NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        notificationService.emitElementUpdated(studyEntity.getId(), userId);
-        return result;
-    }
-
-    @Transactional
     public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
@@ -3211,13 +3147,6 @@ public class StudyService {
                 List.of(this::invalidateSensitivityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS
         );
-    }
-
-    public void invalidateShortCircuitStatusOnAllNodes(UUID studyUuid) {
-        shortCircuitService.invalidateShortCircuitStatus(Stream.concat(
-            rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT).stream(),
-            rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT_ONE_BUS).stream()
-        ).toList());
     }
 
     private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode computationsInvalidationMode) {

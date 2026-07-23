@@ -39,9 +39,6 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
-import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
-import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -766,88 +763,6 @@ public class StudyController {
         }
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/run")
-    @Operation(summary = "run short circuit analysis on study")
-    @ApiResponse(responseCode = "200", description = "The short circuit analysis has started")
-    public ResponseEntity<Void> runShortCircuit(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestParam(value = "busId", required = false) Optional<String> busId,
-            @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(SHORT_CIRCUIT, userId);
-        studyService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, debug, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/stop")
-    @Operation(summary = "stop security analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis has been stopped")})
-    public ResponseEntity<Void> stopShortCircuitAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                         @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                         @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                         @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkNodeInfoService.stopShortCircuitAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result")
-    @Operation(summary = "Get a short circuit analysis result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis result"),
-        @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
-    public ResponseEntity<String> getShortCircuitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                        @Parameter(description = "root network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                        @Parameter(description = "node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                        @Parameter(description = "BASIC (faults without limits and feeders), " +
-                                                            "FULL (faults with both), " +
-                                                            "WITH_LIMIT_VIOLATIONS (like FULL but only those with limit violations) or " +
-                                                            "NONE (no fault)") @RequestParam(name = "mode", required = false, defaultValue = "FULL") FaultResultsMode mode,
-                                                        @Parameter(description = "type") @RequestParam(value = "type", required = false, defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type,
-                                                        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
-                                                        @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
-                                                        @Parameter(description = "If we wanted the paged version of the results or not") @RequestParam(name = "paged", required = false,
-                                                                defaultValue = "false") boolean paged,
-                                                        Pageable pageable) {
-        String result = rootNetworkNodeInfoService.getShortCircuitAnalysisResult(new ResultParameters(rootNetworkUuid, nodeUuid), mode, type, filters, globalFilters, paged, pageable);
-        return result != null ? ResponseEntity.ok().body(result) :
-                ResponseEntity.noContent().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/status")
-    @Operation(summary = "Get the short circuit analysis status on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis status"),
-        @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The short circuit analysis status has not been found")})
-    public ResponseEntity<String> getShortCircuitAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                @Parameter(description = "type") @RequestParam(value = "type", required = false,
-                                                                        defaultValue = "ALL_BUSES") ShortcircuitAnalysisType type) {
-        String result = rootNetworkNodeInfoService.getShortCircuitAnalysisStatus(nodeUuid, rootNetworkUuid, type);
-        return result != null ? ResponseEntity.ok().body(result) :
-                ResponseEntity.noContent().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/shortcircuit/result/csv")
-    @Operation(summary = "Get a short circuit analysis csv result")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short circuit analysis csv export"),
-        @ApiResponse(responseCode = "204", description = "No short circuit analysis has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The short circuit analysis has not been found")})
-    public ResponseEntity<byte[]> getShortCircuitAnalysisCsvResult(
-            @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "type") @RequestParam(value = "type") ShortcircuitAnalysisType type,
-            @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
-            @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
-            @Parameter(description = "headersCsv") @RequestBody String headersCsv,
-            Sort sort) {
-        return ResponseEntity.ok().body(rootNetworkNodeInfoService.getShortCircuitAnalysisCsvResult(nodeUuid, rootNetworkUuid, type, filters, globalFilters, sort, headersCsv));
-    }
-
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run")
     @Operation(summary = "run voltage init on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has started"),
@@ -1025,24 +940,6 @@ public class StudyController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation provider is returned")})
     public ResponseEntity<String> getDynamicMarginCalculationProvider(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok().body(studyService.getDynamicMarginCalculationProvider(studyUuid));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "set short-circuit analysis parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
-    public ResponseEntity<Void> setShortCircuitParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String shortCircuitParametersInfos,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return studyService.setShortCircuitParameters(studyUuid, shortCircuitParametersInfos, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/short-circuit-analysis/parameters", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get short-circuit analysis parameters on study")
-    @ApiResponse(responseCode = "200", description = "The short-circuit analysis parameters return by shortcircuit-server")
-    public ResponseEntity<String> getShortCircuitParameters(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getShortCircuitParametersInfo(studyUuid));
     }
 
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")

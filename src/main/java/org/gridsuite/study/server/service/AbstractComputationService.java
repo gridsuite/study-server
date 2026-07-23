@@ -33,6 +33,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 @Service
 public abstract class AbstractComputationService {
+    @Getter
     private final StudyRepository studyRepository;
     private final ComputationParametersService computationParametersService;
     @Getter
