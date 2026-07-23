@@ -54,23 +54,20 @@ public class CaseServerStubs {
     }
 
     public UUID stubDuplicateCase(String caseUuid) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(CASE_URI))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(CASE_URI + "/" + caseUuid + "/duplicate"))
                 .withQueryParam("withExpiration", WireMock.matching(".*"))
-                .withQueryParam("duplicateFrom", equalTo(caseUuid))
             .willReturn(WireMock.ok())).getId();
     }
 
     public void verifyDuplicateCase(UUID stubUuid, String caseUuid) {
         HashMap<String, StringValuePattern> params = new HashMap<>();
         params.put("withExpiration", WireMock.matching(".*"));
-        params.put("duplicateFrom", equalTo(caseUuid));
-        verifyPostRequest(wireMock, stubUuid, CASE_URI, params);
+        verifyPostRequest(wireMock, stubUuid, CASE_URI + "/" + caseUuid + "/duplicate", params);
     }
 
     public UUID stubDuplicateCaseWithBody(String caseUuid, String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(CASE_URI))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo(CASE_URI + "/" + caseUuid + "/duplicate"))
             .withQueryParam("withExpiration", WireMock.matching(".*"))
-            .withQueryParam("duplicateFrom", equalTo(caseUuid))
             .willReturn(WireMock.ok()
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .withBody(responseBody))).getId();
@@ -79,8 +76,7 @@ public class CaseServerStubs {
     public void verifyDuplicateCase(UUID stubUuid, String caseUuid, String withExpiration) {
         HashMap<String, StringValuePattern> params = new HashMap<>();
         params.put("withExpiration", equalTo(withExpiration));
-        params.put("duplicateFrom", equalTo(caseUuid));
-        verifyPostRequest(wireMock, stubUuid, CASE_URI, params);
+        verifyPostRequest(wireMock, stubUuid, CASE_URI + "/" + caseUuid + "/duplicate", params);
     }
 
     public UUID stubDeleteCase(String caseUuid) {

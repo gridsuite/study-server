@@ -304,9 +304,8 @@ public class SensitivityAnalysisService extends AbstractComputationService imple
         Objects.requireNonNull(sourceParametersUuid);
 
         var path = UriComponentsBuilder
-            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
-                .queryParam("duplicateFrom", sourceParametersUuid)
-            .buildAndExpand()
+            .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + "/{uuid}/duplicate")
+            .buildAndExpand(sourceParametersUuid)
             .toUriString();
 
         return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, null, UUID.class);

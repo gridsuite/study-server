@@ -282,8 +282,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
         Objects.requireNonNull(sourceParametersUuid);
 
         var path = UriComponentsBuilder
-                .fromPath(DELIMITER + LOADFLOW_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
-                .queryParam("duplicateFrom", sourceParametersUuid)
+                .fromPath(DELIMITER + LOADFLOW_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
                 .buildAndExpand(sourceParametersUuid).toUriString();
 
         return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);

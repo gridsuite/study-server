@@ -127,9 +127,8 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
         String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_PARAMETER);
 
         String url = UriComponentsBuilder
-                .fromUriString(parametersBaseUrl)
-                .queryParam("duplicateFrom", sourceParametersUuid)
-                .buildAndExpand()
+                .fromUriString(parametersBaseUrl + "/{uuid}/duplicate")
+                .buildAndExpand(sourceParametersUuid)
                 .toUriString();
 
         return getRestTemplate().postForObject(url, null, UUID.class);

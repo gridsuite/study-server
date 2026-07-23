@@ -218,9 +218,8 @@ public class StateEstimationService extends AbstractComputationService implement
         Objects.requireNonNull(sourceParametersUuid);
 
         String path = UriComponentsBuilder
-            .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
-            .queryParam("duplicateFrom", sourceParametersUuid)
-            .buildAndExpand()
+            .fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
+            .buildAndExpand(sourceParametersUuid)
             .toUriString();
 
         HttpHeaders headers = new HttpHeaders();

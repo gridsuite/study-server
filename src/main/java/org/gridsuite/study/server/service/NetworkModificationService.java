@@ -479,10 +479,9 @@ public class NetworkModificationService {
     public Map<UUID, UUID> duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
-        var path = UriComponentsBuilder.fromPath("groups")
-                .queryParam("duplicateFrom", sourceGroupUuid)
+        var path = UriComponentsBuilder.fromPath("groups/{uuid}/duplicate")
                 .queryParam("groupUuid", groupUuid)
-                .buildAndExpand(groupUuid)
+                .buildAndExpand(sourceGroupUuid)
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();

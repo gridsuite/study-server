@@ -117,9 +117,8 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
 
         String parametersBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SECURITY_ANALYSIS_API_VERSION, DYNAMIC_SECURITY_ANALYSIS_END_POINT_PARAMETER);
 
-        String url = UriComponentsBuilder.fromUriString(parametersBaseUrl)
-                .queryParam("duplicateFrom", sourceParametersUuid)
-                .buildAndExpand()
+        String url = UriComponentsBuilder.fromUriString(parametersBaseUrl + "/{uuid}/duplicate")
+                .buildAndExpand(sourceParametersUuid)
                 .toUriString();
 
         return getRestTemplate().postForObject(url, null, UUID.class);

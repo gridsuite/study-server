@@ -178,9 +178,8 @@ public class VoltageInitService extends AbstractComputationService implements Co
         Objects.requireNonNull(sourceParametersUuid);
 
         String path = UriComponentsBuilder
-                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS)
-                .queryParam("duplicateFrom", sourceParametersUuid)
-                .buildAndExpand()
+                .fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + "/{uuid}/duplicate")
+                .buildAndExpand(sourceParametersUuid)
                 .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
