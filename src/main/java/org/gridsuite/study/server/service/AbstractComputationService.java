@@ -32,6 +32,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 @Service
 public abstract class AbstractComputationService {
+    @Getter
     private final StudyRepository studyRepository;
     private final ComputationParametersService computationParametersService;
     protected final NotificationService notificationService;
@@ -78,7 +79,27 @@ public abstract class AbstractComputationService {
         return userProfileIssue;
     }
 
-    private void emitComputationParametersChanged(UUID studyUuid, String userId,
+    protected <T> void setComputationParameters(UUID studyUuid, T parameters, String userId,
+                                              Function<StudyEntity, UUID> studyParameterGetter,
+                                              BiConsumer<StudyEntity, UUID> studyParameterSetter,
+                                              Function<T, UUID> createParameters,
+                                              BiConsumer<UUID, T> updateParameters,
+                                              ComputationType computationType,
+                                              List<Consumer<UUID>> statusInvalidations,
+                                              String... statusUpdateTypes) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        computationParametersService.createOrUpdateParameters(
+                studyEntity,
+                parameters,
+                studyParameterGetter,
+                studyParameterSetter,
+                createParameters,
+                updateParameters
+        );
+        emitComputationParametersChanged(studyUuid, userId, computationType, statusInvalidations, statusUpdateTypes);
+    }
+
+    protected void emitComputationParametersChanged(UUID studyUuid, String userId,
                                                   ComputationType computationType,
                                                   List<Consumer<UUID>> statusInvalidations,
                                                   String... statusUpdateTypes) {
