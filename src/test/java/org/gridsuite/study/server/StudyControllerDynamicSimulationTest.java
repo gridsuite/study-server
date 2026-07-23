@@ -32,6 +32,7 @@ import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.utils.PropertyType;
@@ -144,6 +145,9 @@ class StudyControllerDynamicSimulationTest {
 
     @MockitoBean
     private LoadFlowService loadFlowService;
+
+    @MockitoBean
+    private UserAdminService userAdminService;
 
     @MockitoSpyBean
     private DynamicSimulationService spyDynamicSimulationService;

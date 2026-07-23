@@ -8,14 +8,19 @@
 package org.gridsuite.study.server.service;
 
 import org.gridsuite.study.server.RemoteServicesProperties;
+import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.Optional;
+import java.util.Map;
+import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.*;
+import static org.gridsuite.study.server.StudyConstants.DELIMITER;
+import static org.gridsuite.study.server.StudyConstants.USER_ADMIN_API_VERSION;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -23,8 +28,12 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @Service
 public class UserAdminService {
     private static final String USERS_PROFILE_URI = "/users/{sub}/profile";
+    private static final String USERS_QUOTA_URI = "/users/{sub}/quota";
+    private static final String USERS_MAX_QUOTA_URI = USERS_QUOTA_URI + "/max";
+    private static final String USERS_CURRENT_QUOTA_URI = USERS_QUOTA_URI + "/current";
+    private static final String USERS_START_QUOTA_URI = USERS_QUOTA_URI + "/{operation}/{operation_id}/start";
+    private static final String USERS_END_QUOTA_URI = USERS_QUOTA_URI + "/{operation}/{operation_id}/end";
 
-    private static final String USERS_MAX_ALLOWED_BUILDS_URI = USERS_PROFILE_URI + "/max-builds";
     private final RestTemplate restTemplate;
     private String userAdminServerBaseUri;
 
@@ -39,13 +48,43 @@ public class UserAdminService {
 
     public UserProfileInfos getUserProfile(String sub) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_PROFILE_URI)
-            .buildAndExpand(sub).toUriString();
+                .buildAndExpand(sub).toUriString();
         return restTemplate.getForObject(userAdminServerBaseUri + path, UserProfileInfos.class);
     }
 
-    public Optional<Integer> getUserMaxAllowedBuilds(String sub) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_MAX_ALLOWED_BUILDS_URI)
-            .buildAndExpand(sub).toUriString();
-        return Optional.ofNullable(restTemplate.getForObject(userAdminServerBaseUri + path, Integer.class));
+    public Map<QuotaType, Integer> getUserMaxQuota(String sub) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_MAX_QUOTA_URI)
+                .buildAndExpand(sub).toUriString();
+        return restTemplate.exchange(
+                userAdminServerBaseUri + path,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<QuotaType, Integer>>() {
+                }).getBody();
+    }
+
+    public Map<QuotaType, Integer> getUserCurrentQuota(String sub) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_CURRENT_QUOTA_URI)
+                .buildAndExpand(sub).toUriString();
+        return restTemplate.exchange(
+                userAdminServerBaseUri + path,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<Map<QuotaType, Integer>>() {
+                }).getBody();
+    }
+
+    public void startOperationWithQuota(String sub, QuotaType quotaType, UUID operationId) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_START_QUOTA_URI)
+                .buildAndExpand(sub, quotaType, operationId)
+                .toUriString();
+        restTemplate.postForEntity(userAdminServerBaseUri + path, null, Void.class);
+    }
+
+    public void endOperationWithQuota(String sub, QuotaType quotaType, UUID operationId) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + USER_ADMIN_API_VERSION + USERS_END_QUOTA_URI)
+                .buildAndExpand(sub, quotaType, operationId)
+                .toUriString();
+        restTemplate.postForEntity(userAdminServerBaseUri + path, null, Void.class);
     }
 }

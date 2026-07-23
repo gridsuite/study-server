@@ -315,8 +315,8 @@ public class ShortCircuitService extends AbstractComputationService implements C
         HttpHeaders headers = new HttpHeaders();
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
         return restTemplate.postForObject(getBaseUriForParameters()
-            .queryParam("duplicateFrom", parametersUuid)
-            .build()
+            .pathSegment("{parametersUuid}", "duplicate")
+            .buildAndExpand(parametersUuid)
             .toUri(), new HttpEntity<>(headers), UUID.class);
     }
 
