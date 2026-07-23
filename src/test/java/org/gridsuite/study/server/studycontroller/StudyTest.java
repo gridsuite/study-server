@@ -156,7 +156,7 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?compression=GZIP&fileName=myFileName",
             studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
-            Map.of("compression", WireMock.equalTo("GZIP"), "fileName", WireMock.equalTo("myFileName")));
+            Map.of("compression", WireMock.equalTo(CompressionType.GZIP.name()), "fileName", WireMock.equalTo("myFileName")));
 
         stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", UUID.randomUUID().toString());
         mockMvc.perform(
