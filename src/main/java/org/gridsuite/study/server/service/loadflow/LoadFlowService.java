@@ -30,7 +30,7 @@ import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 public class LoadFlowService extends AbstractComputationService {
     private final LoadFlowServiceRest loadflowServiceRest;
     private final NotificationService notificationService;
-    public final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     public LoadFlowService(StudyRepository studyRepository,
                            LoadFlowServiceRest loadflowServiceRest,
