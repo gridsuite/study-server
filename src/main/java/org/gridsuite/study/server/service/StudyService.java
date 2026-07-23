@@ -57,6 +57,7 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEve
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.service.pccmin.PccMinService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
@@ -141,7 +142,7 @@ public class StudyService {
     private final ActionsService actionsService;
     private final CaseService caseService;
     private final StateEstimationRestService stateEstimationService;
-    private final PccMinRestService pccMinService;
+    private final PccMinService pccMinService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
@@ -211,7 +212,7 @@ public class StudyService {
         NadConfigService nadConfigService,
         FilterService filterService,
         StateEstimationRestService stateEstimationService,
-        PccMinRestService pccMinService,
+        PccMinService pccMinService,
         @Lazy StudyService studyService,
         RootNetworkService rootNetworkService,
         RootNetworkNodeInfoService rootNetworkNodeInfoService,
@@ -1278,7 +1279,7 @@ public class StudyService {
                 shortCircuitService::createParameters,
                 shortCircuitService::updateParameters,
                 SHORT_CIRCUIT,
-                List.of(this::invalidateShortCircuitStatusOnAllNodes, this::invalidatePccMinStatusOnAllNodes),
+                List.of(this::invalidateShortCircuitStatusOnAllNodes, pccMinService::invalidatePccMinStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
                 NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
                 NotificationService.UPDATE_TYPE_PCC_MIN_STATUS
@@ -1411,10 +1412,6 @@ public class StudyService {
 
     public void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
         stateEstimationService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
-    }
-
-    public void invalidatePccMinStatusOnAllNodes(UUID studyUuid) {
-        pccMinService.invalidatePccMinStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, PCC_MIN));
     }
 
     private StudyEntity updateRootNetworkIndexationStatus(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, RootNetworkIndexationStatus indexationStatus) {
@@ -3303,17 +3300,6 @@ public class StudyService {
         return result;
     }
 
-    @Transactional
-    public UUID runPccMin(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        UUID result = handlePccMinRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
-
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(PCC_MIN), result);
-        return result;
-    }
-
     private UUID handleStateEstimationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
@@ -3339,31 +3325,6 @@ public class StudyService {
         return result;
     }
 
-    private UUID handlePccMinRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(PCC_MIN.name(), UUID.randomUUID());
-        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, PCC_MIN, reportUuid);
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
-        if (prevResultUuid != null) {
-            pccMinService.deletePccMinResults(List.of(prevResultUuid));
-        }
-        var runPccMinParametersInfos = new RunPccMinParametersInfos(studyEntity.getShortCircuitParametersUuid(), studyEntity.getPccMinParametersUuid(), null);
-
-        UUID result = pccMinService.runPccMin(networkUuid, variantId, runPccMinParametersInfos, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
-        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, PCC_MIN);
-        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
-        notificationService.emitElementUpdated(studyEntity.getId(), userId);
-        return result;
-    }
-
     @Transactional
     public String getStateEstimationParameters(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
@@ -3384,52 +3345,6 @@ public class StudyService {
                 List.of(this::invalidateStateEstimationStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS
         );
-    }
-
-    @Transactional
-    public String getPccMinParameters(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return pccMinService.getPccMinParameters(pccMinService.getPccMinParametersUuidOrElseCreateDefaults(studyEntity));
-    }
-
-    @Transactional
-    public boolean setPccMinParameters(UUID studyUuid, String parameters, String userId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        boolean userProfileIssue = createOrUpdatePccMinParameters(studyEntity, parameters, userId);
-
-        invalidatePccMinStatusOnAllNodes(studyEntity.getId());
-        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
-        notificationService.emitElementUpdated(studyUuid, userId);
-        notificationService.emitComputationParamsChanged(studyUuid, PCC_MIN);
-        return userProfileIssue;
-    }
-
-    public boolean createOrUpdatePccMinParameters(StudyEntity studyEntity, String parameters, String userId) {
-        UUID existingPccMinParametersUuid = studyEntity.getPccMinParametersUuid();
-        boolean userProfileIssue = false;
-
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos.getPccMinParameterId() != null) {
-            // reset case, with existing profile, having default pcc min params
-            try {
-                UUID pccMinParametersFromProfileUuid = pccMinService.duplicateParameters(userProfileInfos.getPccMinParameterId());
-                studyEntity.setPccMinParametersUuid(pccMinParametersFromProfileUuid);
-                pccMinService.doDeleteComputationParameters(existingPccMinParametersUuid, PCC_MIN.getLabel(), LOGGER);
-                return userProfileIssue;
-            } catch (Exception e) {
-                userProfileIssue = true;
-                LOGGER.error(String.format("Could not duplicate pcc min parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getPccMinParameterId(), userId, userProfileInfos.getName()), e);
-                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
-            }
-        }
-        if (existingPccMinParametersUuid == null) {
-            existingPccMinParametersUuid = pccMinService.createPccMinParameters(parameters);
-            studyEntity.setPccMinParametersUuid(existingPccMinParametersUuid);
-        } else {
-            pccMinService.updatePccMinParameters(existingPccMinParametersUuid, parameters);
-        }
-        return userProfileIssue;
     }
 
     @Transactional

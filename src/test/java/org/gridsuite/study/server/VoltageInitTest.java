@@ -50,6 +50,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.utils.MatcherJson;
