@@ -26,6 +26,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.utils.assertions.Assertions;
+import org.gridsuite.study.server.utils.wiremock.UserAdminServerStubs;
 import org.junit.platform.commons.util.StringUtils;
 import org.mockito.stubbing.Answer;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
@@ -111,7 +112,10 @@ public final class TestUtils {
     public static void assertRequestMatches(String method, String path, MockWebServer server) {
         RecordedRequest recordedRequest;
         try {
-            recordedRequest = Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS));
+            do {
+                recordedRequest = Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS));
+                // skip quota start/end requests that are auto-handled and not part of test assertions
+            } while (recordedRequest.getPath() != null && recordedRequest.getPath().matches("/v1/users/.*/quota/.*"));
         } catch (InterruptedException e) {
             throw new UncheckedInterruptedException(e);
         }
@@ -123,7 +127,12 @@ public final class TestUtils {
     public static Set<String> getRequestsDone(int n, MockWebServer server) {
         return IntStream.range(0, n).mapToObj(i -> {
             try {
-                return Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS)).getPath();
+                RecordedRequest req;
+                do {
+                    req = Objects.requireNonNull(server.takeRequest(TIMEOUT, TimeUnit.MILLISECONDS));
+                    // skip quota start/end requests that are auto-handled and not part of test assertions
+                } while (req.getPath() != null && req.getPath().matches("/v1/users/.*/quota/.*"));
+                return req.getPath();
             } catch (InterruptedException e) {
                 throw new UncheckedInterruptedException(e);
             }
@@ -335,6 +344,9 @@ public final class TestUtils {
     public static void assertWiremockServerRequestsEmptyThenShutdown(WireMockServer wireMockServer) throws UncheckedInterruptedException {
         try {
             wireMockServer.checkForUnmatchedRequests(); // requests no matched ? (it returns an exception if a request was not matched by wireMock, but does not complain if it was not verified by 'verify')
+            // Remove quota operation start/end requests that are auto-stubbed and do not need explicit verification
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_START_URL_PATTERN)).build());
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_END_URL_PATTERN)).build());
             var requests = wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl()));
             assertEquals(0, requests.size(), "Unverified WireMock requests found:\n" + requests.stream()
                 .map(r -> "URL: " + r.getUrl() + ", Method: " + r.getMethod() + ", Body: " + r.getBodyAsString() + ", Params: " + r.getQueryParams())
@@ -347,6 +359,9 @@ public final class TestUtils {
     public static void assertWiremockServerRequestsEmptyThenClear(WireMockServer wireMockServer) throws UncheckedInterruptedException {
         try {
             wireMockServer.checkForUnmatchedRequests();
+            // Remove quota operation start/end requests that are auto-stubbed and do not need explicit verification
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_START_URL_PATTERN)).build());
+            wireMockServer.removeServeEventsMatching(WireMock.postRequestedFor(WireMock.urlPathMatching(UserAdminServerStubs.QUOTA_END_URL_PATTERN)).build());
             assertEquals(0, wireMockServer.findAll(WireMock.anyRequestedFor(WireMock.anyUrl())).size());
         } finally {
             wireMockServer.resetAll();

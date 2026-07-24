@@ -107,8 +107,7 @@ public class ComputationServerStubs {
      */
 
     public UUID stubParametersDuplicateFromAny(String responseBody) {
-        return wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/parameters"))
-                .withQueryParam("duplicateFrom", WireMock.matching(".*"))
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/parameters/.*/duplicate"))
                 .atPriority(10)
                 .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody))).getId();
     }
@@ -118,8 +117,7 @@ public class ComputationServerStubs {
     }
 
     public void stubParametersDuplicateFrom(String duplicateFromUuid, String responseBody, String prefix) {
-        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/" + prefix + "parameters"))
-            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/" + prefix + "parameters/" + duplicateFromUuid + "/duplicate"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).withBody(responseBody)));
     }
 
@@ -128,13 +126,12 @@ public class ComputationServerStubs {
     }
 
     public void stubParametersDuplicateFromNotFound(String duplicateFromUuid, String prefix) {
-        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/" + prefix + "parameters"))
-            .withQueryParam("duplicateFrom", WireMock.equalTo(duplicateFromUuid))
+        wireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/" + prefix + "parameters/" + duplicateFromUuid + "/duplicate"))
             .willReturn(WireMock.notFound()));
     }
 
     public void verifyParametersDuplicateFromAny(UUID stubId, int nbRequests) {
-        verifyPostRequest(wireMock, stubId, "/v1/parameters", Map.of("duplicateFrom", WireMock.matching(".*")), nbRequests);
+        verifyPostRequest(wireMock, stubId, "/v1/parameters/.*/duplicate", true, Map.of(), nbRequests);
     }
 
     public void verifyParametersDuplicateFrom(String duplicateFromUuid) {
@@ -146,7 +143,7 @@ public class ComputationServerStubs {
     }
 
     public void verifyParametersDuplicateFrom(String duplicateFromUuid, int nbRequests, String prefix) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/" + prefix + "parameters", Map.of("duplicateFrom", WireMock.equalTo(duplicateFromUuid)), nbRequests);
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/" + prefix + "parameters/" + duplicateFromUuid + "/duplicate", Map.of(), nbRequests);
     }
 
     /** Preferably use function without WireMockServer in signature
