@@ -684,6 +684,25 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/modification-reference/{referenceModificationUuid}/notification")
+    @Operation(summary = "Notifies a study node that this reference modification has been modified")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The reference notification has been transmitted and handled")})
+    public ResponseEntity<Void> referenceNotification(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @PathVariable("nodeUuid") UUID nodeUuid,
+            @PathVariable("referenceModificationUuid") UUID referenceModificationUuid, // ?? MAY NOT BE NECESSARY HERE, SHOULD BE KEPT NLY IF IT IS TRANSMITTED TO NETMOD-SERVER
+            @Parameter(description = "type of notification") @RequestParam(value = "referenceModificationType") ReferenceNotificationType referenceModificationType,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
+        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
+        // TODO GRD-5063: handle those notifications :
+        // will notify all the users who are editing this study ?
+        // rebuild the node ? Or let it unbuilt and notify the user ?
+        // ATTENTION : this notification to the user is probably useless if the notification sender is the same user
+        // if this is a DELETE NOTIFICATION there may be additional things to do but netmod-server will handle the deletions
+        return ResponseEntity.ok().build();
+    }
+
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "For a list of network modifications passed in body, copy or cut, then append them to target node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification list has been updated.")})
