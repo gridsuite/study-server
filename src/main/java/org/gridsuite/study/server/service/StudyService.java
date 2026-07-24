@@ -67,6 +67,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.Nullable;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriUtils;
@@ -551,25 +552,30 @@ public class StudyService {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         DeleteStudyInfos deleteStudyInfos = null;
-        if (studyCreationRequestEntity.isEmpty() && studyEntity.isPresent()) {
-            List<RootNetworkInfos> rootNetworkInfos = getStudyRootNetworksInfos(studyUuid);
-            // get all modification groups and nodes related to the study
-            List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid);
-            List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = allStudyNetworkModificationNodeInfo.stream()
-                    .map(nodeInfoEntity -> Pair.of(nodeInfoEntity.getModificationGroupUuid(), nodeInfoEntity.getIdNode()))
-                    .toList();
-            StudyEntity s = studyEntity.get();
-            networkModificationTreeService.doDeleteTree(studyUuid);
-            studyRepository.deleteById(studyUuid);
-            studyInfosService.deleteByUuid(studyUuid);
-            computationParametersService.deleteComputationsParameters(s);
-            removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
-            removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
-            removeWorkspacesConfig(s.getWorkspacesConfigUuid());
-            removeNadConfigs(s.getNadConfigsUuids().stream().toList());
-            deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuidsNodeUuids);
-        } else {
-            studyCreationRequestEntity.ifPresent(creationRequestEntity -> studyCreationRequestRepository.deleteById(creationRequestEntity.getId()));
+        try {
+            if (studyCreationRequestEntity.isEmpty() && studyEntity.isPresent()) {
+                List<RootNetworkInfos> rootNetworkInfos = getStudyRootNetworksInfos(studyUuid);
+                // get all modification groups and nodes related to the study
+                List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid);
+                List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = allStudyNetworkModificationNodeInfo.stream()
+                        .map(nodeInfoEntity -> Pair.of(nodeInfoEntity.getModificationGroupUuid(), nodeInfoEntity.getIdNode()))
+                        .toList();
+                StudyEntity s = studyEntity.get();
+                networkModificationTreeService.doDeleteTree(studyUuid);
+                studyRepository.deleteById(studyUuid);
+                studyInfosService.deleteByUuid(studyUuid);
+                computationParametersService.deleteComputationsParameters(s);
+                removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
+                removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
+                removeWorkspacesConfig(s.getWorkspacesConfigUuid());
+                removeNadConfigs(s.getNadConfigsUuids().stream().toList());
+                deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuidsNodeUuids);
+            } else {
+                studyCreationRequestEntity.ifPresent(creationRequestEntity -> studyCreationRequestRepository.deleteById(creationRequestEntity.getId()));
+            }
+        } catch (ObjectOptimisticLockingFailureException e) {
+            // This exception my be raise with a race condition when two threads try to delete the same study at the same time. 
+            LOGGER.error("Could not delete study with uuid:" + studyUuid, e);
         }
 
         if (deleteStudyInfos == null) {
