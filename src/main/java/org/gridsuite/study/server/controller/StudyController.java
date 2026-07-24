@@ -961,6 +961,7 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("format") String format,
+            @RequestParam(name = "compression", required = false, defaultValue = "ZIP") CompressionType compression,
             @RequestParam(value = "formatParameters", required = false) String parametersJson,
             @RequestParam(value = "fileName") String fileName,
             @RequestParam(value = "exportToGridExplore", required = false, defaultValue = "false") boolean exportToGridExplore,
@@ -974,6 +975,7 @@ public class StudyController {
                                                         rootNetworkUuid,
                                                         new NodeExportInfos(exportToGridExplore, parentDirectoryUuid, fileName, description),
                                                         format,
+                                                        compression,
                                                         userId,
                                                         parametersJson);
         return ResponseEntity.ok().body(exportUuid);
