@@ -33,8 +33,8 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
@@ -170,21 +170,21 @@ class RootNetworkTest {
     @MockitoBean
     private DynamicMarginCalculationService dynamicMarginCalculationService;
     @MockitoBean
-    private SecurityAnalysisServiceRest securityAnalysisService;
+    private SecurityAnalysisRestService securityAnalysisService;
     @MockitoBean
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowRestService loadFlowRestService;
     @MockitoBean
-    private ShortCircuitServiceRest shortCircuitService;
+    private ShortCircuitRestService shortCircuitService;
     @MockitoBean
-    private SensitivityAnalysisServiceRest sensitivityAnalysisService;
+    private SensitivityAnalysisRestService sensitivityAnalysisService;
     @MockitoBean
-    private StateEstimationServiceRest stateEstimationService;
+    private StateEstimationRestService stateEstimationService;
     @MockitoBean
-    private VoltageInitServiceRest voltageInitService;
+    private VoltageInitRestService voltageInitService;
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
-    private PccMinServiceRest pccMinService;
+    private PccMinRestService pccMinService;
 
     @BeforeEach
     void setUp() {
@@ -575,7 +575,7 @@ class RootNetworkTest {
         verify(dynamicSecurityAnalysisService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
         verify(dynamicMarginCalculationService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
         // check LOADFLOW_RESULT_UUID2 is also deleted
-        verify(loadFlowServiceRest, times(1)).deleteLoadFlowResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
+        verify(loadFlowRestService, times(1)).deleteLoadFlowResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
         verify(securityAnalysisService, times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
         verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
         verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));

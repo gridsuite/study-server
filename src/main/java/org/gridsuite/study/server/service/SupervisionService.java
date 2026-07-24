@@ -21,8 +21,8 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -56,7 +56,7 @@ public class SupervisionService {
 
     private final ReportService reportService;
 
-    private final LoadFlowServiceRest loadFlowServiceRest;
+    private final LoadFlowRestService loadFlowRestService;
 
     private final DynamicSimulationService dynamicSimulationService;
 
@@ -64,21 +64,21 @@ public class SupervisionService {
 
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
 
-    private final SecurityAnalysisServiceRest securityAnalysisService;
+    private final SecurityAnalysisRestService securityAnalysisService;
 
-    private final SensitivityAnalysisServiceRest sensitivityAnalysisService;
+    private final SensitivityAnalysisRestService sensitivityAnalysisService;
 
-    private final ShortCircuitServiceRest shortCircuitService;
+    private final ShortCircuitRestService shortCircuitService;
 
-    private final VoltageInitServiceRest voltageInitService;
+    private final VoltageInitRestService voltageInitService;
 
     private final EquipmentInfosService equipmentInfosService;
 
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
-    private final StateEstimationServiceRest stateEstimationService;
+    private final StateEstimationRestService stateEstimationService;
 
-    private final PccMinServiceRest pccMinService;
+    private final PccMinRestService pccMinService;
 
     private final ElasticsearchOperations elasticsearchOperations;
 
@@ -94,17 +94,17 @@ public class SupervisionService {
                               NetworkModificationTreeService networkModificationTreeService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                               ReportService reportService,
-                              LoadFlowServiceRest loadFlowServiceRest,
+                              LoadFlowRestService loadFlowRestService,
                               DynamicSimulationService dynamicSimulationService,
                               DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                               DynamicMarginCalculationService dynamicMarginCalculationService,
-                              SecurityAnalysisServiceRest securityAnalysisService,
-                              SensitivityAnalysisServiceRest sensitivityAnalysisService,
-                              ShortCircuitServiceRest shortCircuitService,
-                              VoltageInitServiceRest voltageInitService,
+                              SecurityAnalysisRestService securityAnalysisService,
+                              SensitivityAnalysisRestService sensitivityAnalysisService,
+                              ShortCircuitRestService shortCircuitService,
+                              VoltageInitRestService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
-                              StateEstimationServiceRest stateEstimationService,
-                              PccMinServiceRest pccMinService,
+                              StateEstimationRestService stateEstimationService,
+                              PccMinRestService pccMinService,
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
@@ -114,7 +114,7 @@ public class SupervisionService {
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.reportService = reportService;
-        this.loadFlowServiceRest = loadFlowServiceRest;
+        this.loadFlowRestService = loadFlowRestService;
         this.dynamicSimulationService = dynamicSimulationService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.dynamicMarginCalculationService = dynamicMarginCalculationService;
@@ -135,7 +135,7 @@ public class SupervisionService {
     @Transactional
     public Integer deleteComputationResults(ComputationType computationType, boolean dryRun) {
         return switch (computationType) {
-            case LOAD_FLOW -> dryRun ? loadFlowServiceRest.getLoadFlowResultsCount() : deleteLoadflowResults();
+            case LOAD_FLOW -> dryRun ? loadFlowRestService.getLoadFlowResultsCount() : deleteLoadflowResults();
             case DYNAMIC_SIMULATION ->
                 dryRun ? dynamicSimulationService.getResultsCount() : deleteDynamicSimulationResults();
             case DYNAMIC_SECURITY_ANALYSIS ->

@@ -55,9 +55,9 @@ import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMargin
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.ElementType;
 import org.slf4j.Logger;
@@ -119,27 +119,27 @@ public class StudyService {
     private final UserAdminService userAdminService;
     private final StudyInfosService studyInfosService;
     private final EquipmentInfosService equipmentInfosService;
-    private final LoadFlowServiceRest loadflowServiceRest;
+    private final LoadFlowRestService loadflowRestService;
     private final LoadFlowService loadFlowService;
-    private final ShortCircuitServiceRest shortCircuitService;
-    private final VoltageInitServiceRest voltageInitService;
+    private final ShortCircuitRestService shortCircuitService;
+    private final VoltageInitRestService voltageInitService;
     private final SingleLineDiagramService singleLineDiagramService;
     private final NetworkConversionService networkConversionService;
     private final GeoDataService geoDataService;
     private final NetworkMapService networkMapService;
-    private final SecurityAnalysisServiceRest securityAnalysisService;
+    private final SecurityAnalysisRestService securityAnalysisService;
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
-    private final SensitivityAnalysisServiceRest sensitivityAnalysisService;
+    private final SensitivityAnalysisRestService sensitivityAnalysisService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
     private final NadConfigService nadConfigService;
     private final FilterService filterService;
     private final ActionsService actionsService;
     private final CaseService caseService;
-    private final StateEstimationServiceRest stateEstimationService;
-    private final PccMinServiceRest pccMinService;
+    private final StateEstimationRestService stateEstimationService;
+    private final PccMinRestService pccMinService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
@@ -187,27 +187,27 @@ public class StudyService {
         ObjectMapper objectMapper,
         StudyServerExecutionService studyServerExecutionService,
         NotificationService notificationService,
-        LoadFlowServiceRest loadflowServiceRest,
+        LoadFlowRestService loadflowRestService,
         LoadFlowService loadFlowService,
-        ShortCircuitServiceRest shortCircuitService,
+        ShortCircuitRestService shortCircuitService,
         SingleLineDiagramService singleLineDiagramService,
         NetworkConversionService networkConversionService,
         GeoDataService geoDataService,
         NetworkMapService networkMapService,
-        SecurityAnalysisServiceRest securityAnalysisService,
+        SecurityAnalysisRestService securityAnalysisService,
         ActionsService actionsService,
         CaseService caseService,
-        SensitivityAnalysisServiceRest sensitivityAnalysisService,
+        SensitivityAnalysisRestService sensitivityAnalysisService,
         DynamicSimulationService dynamicSimulationService,
         DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
         DynamicMarginCalculationService dynamicMarginCalculationService,
-        VoltageInitServiceRest voltageInitService,
+        VoltageInitRestService voltageInitService,
         DynamicSimulationEventService dynamicSimulationEventService,
         StudyConfigService studyConfigService,
         NadConfigService nadConfigService,
         FilterService filterService,
-        StateEstimationServiceRest stateEstimationService,
-        PccMinServiceRest pccMinService,
+        StateEstimationRestService stateEstimationService,
+        PccMinRestService pccMinService,
         @Lazy StudyService studyService,
         RootNetworkService rootNetworkService,
         RootNetworkNodeInfoService rootNetworkNodeInfoService,
@@ -227,7 +227,7 @@ public class StudyService {
         this.notificationService = notificationService;
         this.loadFlowService = loadFlowService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
-        this.loadflowServiceRest = loadflowServiceRest;
+        this.loadflowRestService = loadflowRestService;
         this.shortCircuitService = shortCircuitService;
         this.singleLineDiagramService = singleLineDiagramService;
         this.networkConversionService = networkConversionService;
@@ -1009,15 +1009,15 @@ public class StudyService {
     }
 
     private void handleLoadflowRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
-        UUID lfParametersUuid = loadflowServiceRest.getLoadFlowParametersOrDefaultsUuid(studyEntity);
+        UUID lfParametersUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
         UUID lfReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(LOAD_FLOW.name(), UUID.randomUUID());
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
 
         boolean isSecurityNode = networkModificationTreeService.isSecurityNode(nodeUuid);
         networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
-        UUID result = loadflowServiceRest.runLoadFlow(new NodeReceiver(nodeUuid, rootNetworkUuid), loadflowResultUuid, new VariantInfos(networkUuid, variantId),
-                new LoadFlowServiceRest.ParametersInfos(lfParametersUuid, withRatioTapChangers, isSecurityNode), lfReportUuid, userId);
+        UUID result = loadflowRestService.runLoadFlow(new NodeReceiver(nodeUuid, rootNetworkUuid), loadflowResultUuid, new VariantInfos(networkUuid, variantId),
+                new LoadFlowRestService.ParametersInfos(lfParametersUuid, withRatioTapChangers, isSecurityNode), lfReportUuid, userId);
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
 
         userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(LOAD_FLOW), result);
@@ -1238,9 +1238,9 @@ public class StudyService {
                 StudyEntity::getLoadFlowParametersUuid,
                 StudyEntity::setLoadFlowParametersUuid,
                 UserProfileInfos::getLoadFlowParameterId,
-            loadflowServiceRest,
-                loadflowServiceRest::createLoadFlowParameters,
-                loadflowServiceRest::updateLoadFlowParameters,
+                loadflowRestService,
+                loadflowRestService::createLoadFlowParameters,
+                loadflowRestService::updateLoadFlowParameters,
                 LOAD_FLOW,
                 List.of(
                         this::invalidateAllStudyLoadFlowStatus,
@@ -1357,7 +1357,7 @@ public class StudyService {
         UUID networkuuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
-        return loadflowServiceRest.getLimitViolations(resultUuid, filters, globalFilters, sort, networkuuid, variantId);
+        return loadflowRestService.getLimitViolations(resultUuid, filters, globalFilters, sort, networkuuid, variantId);
     }
 
     public byte[] generateSubstationSvg(String substationId, UUID nodeUuid, UUID rootNetworkUuid, Map<String, Object> sldRequestInfos) {
@@ -1414,7 +1414,7 @@ public class StudyService {
     }
 
     private void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
-        loadflowServiceRest.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
+        loadflowRestService.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
     }
 
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
@@ -1539,7 +1539,7 @@ public class StudyService {
         UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, computationType);
         if (resultUuid != null) {
             return switch (computationType) {
-                case LOAD_FLOW -> loadflowServiceRest.getEnumValues(enumName, resultUuid);
+                case LOAD_FLOW -> loadflowRestService.getEnumValues(enumName, resultUuid);
                 case SECURITY_ANALYSIS -> securityAnalysisService.getEnumValues(enumName, resultUuid);
                 case SHORT_CIRCUIT, SHORT_CIRCUIT_ONE_BUS -> shortCircuitService.getEnumValues(enumName, resultUuid);
                 default -> throw new StudyException(NOT_ALLOWED);
@@ -3743,7 +3743,7 @@ public class StudyService {
         if (resultUuid == null) {
             return List.of();
         }
-        return loadflowServiceRest.getCurrentLimitViolations(resultUuid)
+        return loadflowRestService.getCurrentLimitViolations(resultUuid)
             .stream()
             .map(l -> new CurrentLimitViolationInfos(l.getSubjectId(), null))
             .toList();

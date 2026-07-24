@@ -18,7 +18,7 @@ import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.error.StudyException;
-import org.gridsuite.study.server.service.common.AbstractComputationServiceRest;
+import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
@@ -38,7 +38,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
 @Service
-public class VoltageInitServiceRest extends AbstractComputationServiceRest implements ComputationParameters {
+public class VoltageInitRestService extends AbstractComputationRestService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
     static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
@@ -51,7 +51,7 @@ public class VoltageInitServiceRest extends AbstractComputationServiceRest imple
 
     private final RestTemplate restTemplate;
 
-    public VoltageInitServiceRest(RemoteServicesProperties remoteServicesProperties,
+    public VoltageInitRestService(RemoteServicesProperties remoteServicesProperties,
                                   RestTemplate restTemplate,
                                   ObjectMapper objectMapper) {
         this.voltageInitServerBaseUri = remoteServicesProperties.getServiceUri("voltage-init-server");

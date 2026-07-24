@@ -18,8 +18,8 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,7 +70,7 @@ class LoadFLowUnitTest {
     @MockitoBean
     private NetworkModificationService networkModificationService;
     @MockitoBean
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowRestService loadFlowRestService;
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
@@ -131,7 +131,7 @@ class LoadFLowUnitTest {
     private void testRerunLoadFlow(boolean withRatioTapChangers, boolean isSecurityNode) {
         StudyEntity studyEntity = new StudyEntity();
         studyEntity.setId(studyUuid);
-        reset(studyService, networkModificationTreeService, networkModificationService, notificationService, loadFlowServiceRest, studyRepository);
+        reset(studyService, networkModificationTreeService, networkModificationService, notificationService, loadFlowRestService, studyRepository);
         when(studyRepository.findById(studyUuid)).thenReturn(Optional.of(studyEntity));
         when(networkModificationTreeService.isSecurityNode(nodeUuid)).thenReturn(isSecurityNode);
         if (isSecurityNode) {
@@ -144,7 +144,7 @@ class LoadFLowUnitTest {
     private void testRerunLoadFlowConstructionNode(boolean withRatioTapChangers) {
         studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
 
-        verify(loadFlowServiceRest, times(1)).runLoadFlow(any(), any(), any(), any(), any(), anyString());
+        verify(loadFlowRestService, times(1)).runLoadFlow(any(), any(), any(), any(), any(), anyString());
         verify(notificationService, times(1)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
     }
 
@@ -172,7 +172,7 @@ class LoadFLowUnitTest {
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
         when(networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid)).thenReturn(buildInfos);
         when(networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid)).thenReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
-        doReturn(loadflowResultUuid).when(loadFlowServiceRest).createRunningStatus();
+        doReturn(loadflowResultUuid).when(loadFlowRestService).createRunningStatus();
 
         // execute loadflow rerun
         studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);

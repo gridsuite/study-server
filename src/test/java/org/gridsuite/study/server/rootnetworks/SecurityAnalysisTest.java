@@ -27,7 +27,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -236,13 +236,13 @@ class SecurityAnalysisTest {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
-    private SecurityAnalysisServiceRest securityAnalysisService;
+    private SecurityAnalysisRestService securityAnalysisService;
 
     @Autowired
     private ActionsService actionsService;
 
     @Autowired
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowRestService loadFlowRestService;
 
     @Autowired
     private UserAdminService userAdminService;
@@ -287,7 +287,7 @@ class SecurityAnalysisTest {
         actionsService.setActionsServerBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
 
-        loadFlowServiceRest.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
+        loadFlowRestService.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
         limitTypeJson = objectMapper.writeValueAsString(List.of(LimitViolationType.CURRENT.name(), LimitViolationType.HIGH_VOLTAGE.name()));
 

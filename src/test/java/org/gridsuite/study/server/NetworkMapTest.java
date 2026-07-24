@@ -31,8 +31,8 @@ import org.gridsuite.study.server.networkmodificationtree.dto.RootNode;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -140,7 +140,7 @@ class NetworkMapTest {
     private FilterService filterService;
 
     @Autowired
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowRestService loadFlowRestService;
 
     @Autowired
     private ReportService reportService;
@@ -156,7 +156,7 @@ class NetworkMapTest {
     @MockitoSpyBean
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @MockitoBean
-    private ShortCircuitServiceRest shortCircuitService;
+    private ShortCircuitRestService shortCircuitService;
 
     @BeforeEach
     void setup(final MockWebServer server) throws Exception {
@@ -170,7 +170,7 @@ class NetworkMapTest {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         networkMapService.setNetworkMapServerBaseUri(baseUrl);
-        loadFlowServiceRest.setLoadFlowServerBaseUri(baseUrl);
+        loadFlowRestService.setLoadFlowServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         filterService.setBaseUri(wireMockServer.baseUrl());
 

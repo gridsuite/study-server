@@ -40,8 +40,8 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -243,19 +243,19 @@ class StudyTestBase {
     protected UserAdminService userAdminService;
 
     @Autowired
-    protected SensitivityAnalysisServiceRest sensitivityAnalysisService;
+    protected SensitivityAnalysisRestService sensitivityAnalysisService;
 
     @Autowired
-    protected SecurityAnalysisServiceRest securityAnalysisService;
+    protected SecurityAnalysisRestService securityAnalysisService;
 
     @Autowired
-    protected VoltageInitServiceRest voltageInitService;
+    protected VoltageInitRestService voltageInitService;
 
     @Autowired
-    protected LoadFlowServiceRest loadflowServiceRest;
+    protected LoadFlowRestService loadflowRestService;
 
     @Autowired
-    protected ShortCircuitServiceRest shortCircuitService;
+    protected ShortCircuitRestService shortCircuitService;
 
     @Autowired
     protected DynamicSimulationClient dynamicSimulationClient;
@@ -267,10 +267,10 @@ class StudyTestBase {
     protected DynamicMarginCalculationClient dynamicMarginCalculationClient;
 
     @Autowired
-    protected StateEstimationServiceRest stateEstimationService;
+    protected StateEstimationRestService stateEstimationService;
 
     @Autowired
-    protected PccMinServiceRest pccMinService;
+    protected PccMinRestService pccMinService;
 
     @Autowired
     protected StudyConfigService studyConfigService;
@@ -379,7 +379,7 @@ class StudyTestBase {
         userAdminService.setUserAdminServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         voltageInitService.setVoltageInitServerBaseUri(baseUrl);
-        loadflowServiceRest.setLoadFlowServerBaseUri(baseUrl);
+        loadflowRestService.setLoadFlowServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
         dynamicSimulationClient.setBaseUri(baseUrl);
         dynamicSecurityAnalysisClient.setBaseUri(baseUrl);

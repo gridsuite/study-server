@@ -24,8 +24,8 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -89,19 +89,19 @@ class StudyControllerCreationTest {
 
     // All these computation services need to be mocked because apps try to create default parameters for each computation app on study creation
     @MockitoBean
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowRestService loadFlowRestService;
     @MockitoBean
-    private ShortCircuitServiceRest shortCircuitService;
+    private ShortCircuitRestService shortCircuitService;
     @MockitoBean
-    private SecurityAnalysisServiceRest securityAnalysisService;
+    private SecurityAnalysisRestService securityAnalysisService;
     @MockitoBean
-    private SensitivityAnalysisServiceRest sensitivityAnalysisService;
+    private SensitivityAnalysisRestService sensitivityAnalysisService;
     @MockitoBean
-    private VoltageInitServiceRest voltageInitService;
+    private VoltageInitRestService voltageInitService;
     @MockitoBean
     private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     @MockitoBean
-    private StateEstimationServiceRest stateEstimationService;
+    private StateEstimationRestService stateEstimationService;
     @MockitoBean
     private StudyConfigService studyConfigService;
 
@@ -250,7 +250,7 @@ class StudyControllerCreationTest {
 
     private void verifyMockCallsAfterStudyCreation() {
         verify(reportService, Mockito.times(1)).sendReport(any(UUID.class), any(ReportNode.class));
-        verify(loadFlowServiceRest, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(loadFlowRestService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(shortCircuitService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(securityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(sensitivityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());

@@ -121,7 +121,7 @@ class PccMinTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
     @MockitoSpyBean
-    private PccMinServiceRest pccMinService;
+    private PccMinRestService pccMinService;
     @Autowired
     private StudyRepository studyRepository;
     @Autowired

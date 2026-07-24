@@ -49,8 +49,8 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -224,25 +224,25 @@ class VoltageInitTest {
     private ReportService reportService;
 
     @MockitoSpyBean
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowRestService loadFlowRestService;
 
     @Autowired
-    private SecurityAnalysisServiceRest securityAnalysisService;
+    private SecurityAnalysisRestService securityAnalysisService;
 
     @Autowired
-    private SensitivityAnalysisServiceRest sensitivityAnalysisService;
+    private SensitivityAnalysisRestService sensitivityAnalysisService;
 
     @Autowired
-    private ShortCircuitServiceRest shortCircuitService;
+    private ShortCircuitRestService shortCircuitService;
 
     @Autowired
-    private StateEstimationServiceRest stateEstimationService;
+    private StateEstimationRestService stateEstimationService;
 
     @Autowired
-    private PccMinServiceRest pccMinService;
+    private PccMinRestService pccMinService;
 
     @Autowired
-    private VoltageInitServiceRest voltageInitService;
+    private VoltageInitRestService voltageInitService;
 
     @MockitoSpyBean
     private UserAdminService userAdminService;
@@ -303,7 +303,7 @@ class VoltageInitTest {
         voltageInitService.setVoltageInitServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
-        loadFlowServiceRest.setLoadFlowServerBaseUri(baseUrl);
+        loadFlowRestService.setLoadFlowServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
@@ -753,7 +753,7 @@ class VoltageInitTest {
         checkInsertVoltageInitModifications(studyNameUserIdUuid, modificationNode3Uuid, firstRootNetworkUuid, true);
 
         // clone and insert again voltage-init modification to modificationNode3Uuid, with LF result -> node is invalidated
-        when(loadFlowServiceRest.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(loadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         when(networkModificationService.duplicateModificationsFromGroup(any(), any(), any())).thenReturn(null);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid,
                 modificationNode3Uuid)
@@ -788,7 +788,7 @@ class VoltageInitTest {
         checkInsertVoltageInitModifications(studyNameUserIdUuid, modificationNode2Uuid, firstRootNetworkUuid, true);
 
         // clone and insert again voltage-init modification to modificationNode2Uuid, with LF result-> invalidate only children (construction node)
-        when(loadFlowServiceRest.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(loadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid,
                 modificationNode2Uuid)
             .header("userId", "userId")).andExpect(status().isOk());
@@ -805,7 +805,7 @@ class VoltageInitTest {
 
     private void runVoltageInit(UUID studyUuid, UUID nodeUuuid, UUID rootNetworkUuid, final MockWebServer server) throws Exception {
         // run a voltage init analysis
-        reset(loadFlowServiceRest);
+        reset(loadFlowRestService);
         reset(networkModificationService);
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run", studyUuid, rootNetworkUuid, nodeUuuid)
                 .header("userId", "userId"))

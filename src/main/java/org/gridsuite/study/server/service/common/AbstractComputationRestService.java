@@ -11,7 +11,7 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RESULTS_UUIDS;
 
-public abstract class AbstractComputationServiceRest {
+public abstract class AbstractComputationRestService {
 
     public abstract List<String> getEnumValues(String enumName, UUID resultUuidOpt);
 

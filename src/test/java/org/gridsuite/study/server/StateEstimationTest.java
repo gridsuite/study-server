@@ -127,7 +127,7 @@ class StateEstimationTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
     @Autowired
-    private StateEstimationServiceRest stateEstimationService;
+    private StateEstimationRestService stateEstimationService;
     @Autowired
     private StudyRepository studyRepository;
     @Autowired

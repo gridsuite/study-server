@@ -44,8 +44,8 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -203,22 +203,22 @@ class NetworkModificationTest {
     private ReportService reportService;
 
     @Autowired
-    private SecurityAnalysisServiceRest securityAnalysisService;
+    private SecurityAnalysisRestService securityAnalysisService;
 
     @Autowired
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowRestService loadFlowRestService;
 
     @Autowired
-    private SensitivityAnalysisServiceRest sensitivityAnalysisService;
+    private SensitivityAnalysisRestService sensitivityAnalysisService;
 
     @Autowired
-    private ShortCircuitServiceRest shortCircuitService;
+    private ShortCircuitRestService shortCircuitService;
 
     @Autowired
-    private VoltageInitServiceRest voltageInitService;
+    private VoltageInitRestService voltageInitService;
 
     @Autowired
-    private StateEstimationServiceRest stateEstimationService;
+    private StateEstimationRestService stateEstimationService;
 
     @MockitoSpyBean
     private UserAdminService userAdminService;
@@ -267,7 +267,7 @@ class NetworkModificationTest {
     private static final String ERROR_MESSAGE = "nullPointerException: unexpected null somewhere";
 
     @Autowired
-    private PccMinServiceRest pccMinService;
+    private PccMinRestService pccMinService;
     @MockitoSpyBean
     private StudyService studyService;
 
@@ -295,7 +295,7 @@ class NetworkModificationTest {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         String baseUrl = wireMockServer.baseUrl();
         reportService.setReportServerBaseUri(baseUrl);
-        loadFlowServiceRest.setLoadFlowServerBaseUri(baseUrl);
+        loadFlowRestService.setLoadFlowServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);

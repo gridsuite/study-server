@@ -28,15 +28,15 @@ import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 
 @Service
 public class LoadFlowService extends AbstractComputationService {
-    private final LoadFlowServiceRest loadflowServiceRest;
+    private final LoadFlowRestService loadflowRestService;
     private final NotificationService notificationService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     public LoadFlowService(StudyRepository studyRepository,
-                           LoadFlowServiceRest loadflowServiceRest,
+                           LoadFlowRestService loadflowRestService,
                            NotificationService notificationService, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
         super(studyRepository);
-        this.loadflowServiceRest = loadflowServiceRest;
+        this.loadflowRestService = loadflowRestService;
         this.notificationService = notificationService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
@@ -44,13 +44,13 @@ public class LoadFlowService extends AbstractComputationService {
     @Transactional
     public UUID getLoadFlowParametersId(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        return loadflowServiceRest.getLoadFlowParametersOrDefaultsUuid(studyEntity);
+        return loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
     }
 
     @Transactional(readOnly = true)
     public String getLoadFlowProvider(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        return loadflowServiceRest.getLoadFlowProvider(studyEntity.getLoadFlowParametersUuid());
+        return loadflowRestService.getLoadFlowProvider(studyEntity.getLoadFlowParametersUuid());
     }
 
     @Transactional
@@ -60,8 +60,8 @@ public class LoadFlowService extends AbstractComputationService {
     }
 
     private LoadFlowParametersInfos getLoadFlowParametersInfos(StudyEntity studyEntity) {
-        UUID loadFlowParamsUuid = loadflowServiceRest.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-        return loadflowServiceRest.getLoadFlowParameters(loadFlowParamsUuid);
+        UUID loadFlowParamsUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
+        return loadflowRestService.getLoadFlowParameters(loadFlowParamsUuid);
     }
 
     @Transactional
@@ -72,7 +72,7 @@ public class LoadFlowService extends AbstractComputationService {
 
     @Transactional
     public void deleteLoadflowResult(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid) {
-        loadflowServiceRest.deleteLoadFlowResults(List.of(loadflowResultUuid));
+        loadflowRestService.deleteLoadFlowResults(List.of(loadflowResultUuid));
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, null, null);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
     }
@@ -80,7 +80,7 @@ public class LoadFlowService extends AbstractComputationService {
     @Transactional
     public UUID createLoadflowRunningStatus(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, boolean withRatioTapChangers) {
         // since invalidating and building nodes can be long, we create loadflow result status before execution long operations
-        UUID loadflowResultUuid = loadflowServiceRest.createRunningStatus();
+        UUID loadflowResultUuid = loadflowRestService.createRunningStatus();
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         return loadflowResultUuid;

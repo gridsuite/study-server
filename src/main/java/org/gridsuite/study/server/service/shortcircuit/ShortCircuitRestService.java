@@ -19,7 +19,7 @@ import org.gridsuite.study.server.dto.ShortCircuitStatus;
 import org.gridsuite.study.server.dto.VariantInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.common.AbstractComputationServiceRest;
+import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +48,7 @@ import static org.gridsuite.study.server.utils.StudyUtils.*;
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
  */
 @Service
-public class ShortCircuitServiceRest extends AbstractComputationServiceRest implements ComputationParameters {
+public class ShortCircuitRestService extends AbstractComputationRestService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -61,7 +61,7 @@ public class ShortCircuitServiceRest extends AbstractComputationServiceRest impl
     private final RestTemplate restTemplate;
 
     @Autowired
-    public ShortCircuitServiceRest(RemoteServicesProperties remoteServicesProperties,
+    public ShortCircuitRestService(RemoteServicesProperties remoteServicesProperties,
                                    RestTemplate restTemplate,
                                    ObjectMapper objectMapper) {
         this.shortCircuitServerBaseUri = remoteServicesProperties.getServiceUri("shortcircuit-server");

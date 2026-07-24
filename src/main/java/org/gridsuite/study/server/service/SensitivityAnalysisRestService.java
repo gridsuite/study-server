@@ -15,7 +15,7 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.common.AbstractComputationServiceRest;
+import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -45,7 +45,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class SensitivityAnalysisServiceRest extends AbstractComputationServiceRest implements ComputationParameters {
+public class SensitivityAnalysisRestService extends AbstractComputationRestService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
     private static final String RESULTS = "results";
@@ -58,7 +58,7 @@ public class SensitivityAnalysisServiceRest extends AbstractComputationServiceRe
 
     private final ObjectMapper objectMapper;
 
-    SensitivityAnalysisServiceRest(RemoteServicesProperties remoteServicesProperties,
+    SensitivityAnalysisRestService(RemoteServicesProperties remoteServicesProperties,
                                    RestTemplate restTemplate,
                                    ObjectMapper objectMapper) {
         this.sensitivityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("sensitivity-analysis-server");

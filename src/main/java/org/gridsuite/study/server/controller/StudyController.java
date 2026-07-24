@@ -80,7 +80,7 @@ public class StudyController {
     private final RemoteServicesInspector remoteServicesInspector;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    private final SensitivityAnalysisServiceRest sensitivityAnalysisService;
+    private final SensitivityAnalysisRestService sensitivityAnalysisService;
     private final RebuildNodeService rebuildNodeService;
 
     public StudyController(StudyService studyService,
@@ -92,7 +92,7 @@ public class StudyController {
                            RemoteServicesInspector remoteServicesInspector,
                            RootNetworkService rootNetworkService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                           SensitivityAnalysisServiceRest sensitivityAnalysisService,
+                           SensitivityAnalysisRestService sensitivityAnalysisService,
                            RebuildNodeService rebuildNodeService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;

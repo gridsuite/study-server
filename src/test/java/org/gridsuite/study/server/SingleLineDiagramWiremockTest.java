@@ -10,8 +10,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.loadflow.LoadFlowServiceRest;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitServiceRest;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +48,7 @@ class SingleLineDiagramWiremockTest {
     @Autowired
     private SingleLineDiagramService singleLineDiagramService;
     @Autowired
-    private ShortCircuitServiceRest shortCircuitService;
+    private ShortCircuitRestService shortCircuitService;
 
     @Autowired
     public ObjectMapper mapper;
@@ -56,7 +56,7 @@ class SingleLineDiagramWiremockTest {
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
-    private LoadFlowServiceRest loadFlowServiceRest;
+    private LoadFlowRestService loadFlowRestService;
     @MockitoBean
     private RootNetworkService rootNetworkService;
     @MockitoBean
@@ -142,6 +142,6 @@ class SingleLineDiagramWiremockTest {
         doReturn(shortcircuitResultUuid).when(rootNetworkNodeInfoService).getComputationResultUuid(nodeUuid, rootNetworkUuid, ComputationType.SHORT_CIRCUIT);
         List<CurrentLimitViolationInfos> currentLimitViolationInfos = (List<CurrentLimitViolationInfos>) sldRequestInfos.get(CURRENT_LIMIT_VIOLATIONS_INFOS);
         List<LimitViolationInfos> violations = currentLimitViolationInfos.stream().map(clv -> LimitViolationInfos.builder().subjectId(clv.equipmentId()).build()).toList();
-        doReturn(violations).when(loadFlowServiceRest).getCurrentLimitViolations(loadflowResultUuid);
+        doReturn(violations).when(loadFlowRestService).getCurrentLimitViolations(loadflowResultUuid);
     }
 }
