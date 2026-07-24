@@ -1033,7 +1033,7 @@ public class StudyService {
         notificationService.emitElementUpdated(studyEntity.getId(), userId);
     }
 
-    public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NodeExportInfos exportInfos, String format, String userId, String parametersJson) {
+    public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NodeExportInfos exportInfos, String format, CompressionType compression, String userId, String parametersJson) {
         // Checks if we can write on target directory in gridexplore
         if (exportInfos.exportToGridExplore()) {
             directoryService.checkPermission(List.of(), exportInfos.directoryUuid(), userId, PermissionType.WRITE, false);
@@ -1045,7 +1045,7 @@ public class StudyService {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
         UUID exportUuid = networkConversionService.exportNetwork(networkUuid, studyUuid, variantId,
-            new NodeExportInfos(exportInfos.exportToGridExplore(), exportInfos.directoryUuid(), exportInfos.fileName(), exportInfos.description()), format, userId, parametersJson);
+            new NodeExportInfos(exportInfos.exportToGridExplore(), exportInfos.directoryUuid(), exportInfos.fileName(), exportInfos.description()), format, compression, userId, parametersJson);
 
         networkModificationTreeService.updateExportNetworkStatus(nodeUuid, exportUuid, ExportNetworkStatus.RUNNING);
         return exportUuid;
