@@ -1099,9 +1099,8 @@ class NodeControllerTest extends StudyTestBase {
         NetworkModificationNode node2 = createNetworkModificationNode(study2Uuid, root2Uuid, VARIANT_ID_2, "node2", userId);
         UUID unknownNodeUuid = UUID.randomUUID();
 
-        MvcResult result = mockMvc.perform(post("/v1/nodes/infos")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(List.of(node1.getId(), node2.getId(), unknownNodeUuid))))
+        MvcResult result = mockMvc.perform(get("/v1/nodes/infos")
+                        .param("ids", node1.getId().toString(), node2.getId().toString(), unknownNodeUuid.toString()))
                 .andExpect(status().isOk())
                 .andReturn();
 
