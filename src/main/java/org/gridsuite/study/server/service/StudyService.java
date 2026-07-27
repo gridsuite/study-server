@@ -574,7 +574,7 @@ public class StudyService {
                 studyCreationRequestEntity.ifPresent(creationRequestEntity -> studyCreationRequestRepository.deleteById(creationRequestEntity.getId()));
             }
         } catch (ObjectOptimisticLockingFailureException e) {
-            // This exception my be raise with a race condition when two threads try to delete the same study at the same time. 
+            // This exception may be raised with a race condition when two threads try to delete the same study at the same time. Instead of redesigning the whole system, we accept this design
             LOGGER.error("Could not delete study with uuid:" + studyUuid, e);
         }
 
