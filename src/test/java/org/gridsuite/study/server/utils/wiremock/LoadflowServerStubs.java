@@ -201,12 +201,12 @@ public class LoadflowServerStubs {
     }
 
     public void stubDuplicateLoadflowParameters(String loadflowParametersToDuplicateUuid, String createdLoadflowParametersUuidJson, boolean isNotFound) {
-        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters?duplicateFrom=" + loadflowParametersToDuplicateUuid))
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/v1/parameters/" + loadflowParametersToDuplicateUuid + "/duplicate"))
                 .willReturn(isNotFound ? WireMock.notFound() : WireMock.ok().withBody(createdLoadflowParametersUuidJson).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
     }
 
     public void verifyDuplicateLoadflowParameters(String loadflowParametersToDuplicateUuid) {
-        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters", Map.of("duplicateFrom", WireMock.equalTo(loadflowParametersToDuplicateUuid)));
+        WireMockUtilsCriteria.verifyPostRequest(wireMock, "/v1/parameters/" + loadflowParametersToDuplicateUuid + "/duplicate", Map.of());
     }
 
     public void stubDeleteLoadFlowParameters(String parametersUuid) {

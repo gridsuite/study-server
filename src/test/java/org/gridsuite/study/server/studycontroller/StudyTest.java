@@ -149,17 +149,20 @@ class StudyTest extends StudyTestBase {
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
             studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
-
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
             Map.of("fileName", WireMock.equalTo("myFileName")));
 
         stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", UUID.randomUUID().toString());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?compression=GZIP&fileName=myFileName",
+            studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+        wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
+            Map.of("compression", WireMock.equalTo(CompressionType.GZIP.name()), "fileName", WireMock.equalTo("myFileName")));
 
+        stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", UUID.randomUUID().toString());
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D",
                         studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM")
             .header(HEADER_USER_ID, userId)).andExpect(status().isOk());
-
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
             Map.of("fileName", WireMock.equalTo("myFileName")));
 
@@ -1029,7 +1032,7 @@ class StudyTest extends StudyTestBase {
         assertEquals(1, networkVariants.size(), "Network should be cloned with only one variant");
 
         //Test duplication from a non-existing source study
-        mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", UUID.randomUUID())
+        mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", UUID.randomUUID())
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isNotFound());
     }
@@ -1091,7 +1094,7 @@ class StudyTest extends StudyTestBase {
             throw new RuntimeException();
         }).when(caseService).duplicateCase(any(), any());
 
-        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
+        String response = mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", studyUuid)
                 .param(CASE_FORMAT, "XIIDM")
                 .header(USER_ID_HEADER, "userId"))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
@@ -1126,7 +1129,7 @@ class StudyTest extends StudyTestBase {
         UUID stubNetworkVisualizationParamsDuplicateFromId = wireMockStubs.stubNetworkVisualizationParamsDuplicateFromAny(DUPLICATED_NETWORK_VISUALIZATION_PARAMS_JSON);
         UUID stubWorkspacesConfigDuplicateFromId = wireMockStubs.stubWorkspacesConfigDuplicateFromAny(mapper.writeValueAsString(UUID.randomUUID()));
 
-        String response = mockMvc.perform(post(STUDIES_URL + "?duplicateFrom={studyUuid}", studyUuid)
+        String response = mockMvc.perform(post(STUDIES_URL + "/{studyUuid}/duplicate", studyUuid)
                 .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         String newUuid = mapper.readValue(response, String.class);
