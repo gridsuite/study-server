@@ -22,6 +22,8 @@ import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.Resource;
@@ -44,6 +46,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NETWORK_EX
 public class NetworkConversionService {
 
     private final RestTemplate restTemplate;
+    private static final Logger LOGGER = LoggerFactory.getLogger(NetworkConversionService.class);
 
     @Setter
     @Getter
@@ -51,12 +54,16 @@ public class NetworkConversionService {
 
     private final ObjectMapper objectMapper;
 
+    private final StudyImportContextService studyImportContextService;
+
     public NetworkConversionService(@Value("${powsybl.services.network-conversion-server.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
             ObjectMapper objectMapper,
-            RestTemplate restTemplate) {
+            RestTemplate restTemplate,
+            StudyImportContextService studyImportContextService) {
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;
+        this.studyImportContextService = studyImportContextService;
     }
 
     /**
@@ -65,14 +72,32 @@ public class NetworkConversionService {
      * - one variant cloned from the previous one for the 1st node - *variantId*
      */
     public void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, String userId, UUID importReportUuid, Map<String, Object> importParameters,
-            CaseImportAction caseImportAction) {
+            CaseImportAction caseImportAction, org.gridsuite.study.server.dto.studyexport.StudyImportContext importContext) {
+
+        LOGGER.info("persistNetwork: Study {}, Action: {}, Case: {}, HasContext: {}",
+                studyUuid, caseImportAction, rootNetworkInfos.getCaseInfos().getCaseUuid(), importContext != null);
+
+        // Store StudyImportContext in cache if provided (for STUDY_IMPORT action)
+        Boolean hasImportContext = false;
+        if (importContext != null) {
+            LOGGER.info("persistNetwork: Storing import context in cache for study {}", studyUuid);
+            studyImportContextService.storeImportContext(studyUuid, importContext);
+            hasImportContext = true;
+            LOGGER.info("persistNetwork: Import context stored successfully for study {}", studyUuid);
+        }
+
         String receiver;
         try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(
-                        new CaseImportReceiver(studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getCaseInfos().getCaseUuid(), rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(),
-                                importReportUuid, userId, System.nanoTime(), caseImportAction
-                    )), StandardCharsets.UTF_8);
+            CaseImportReceiver caseImportReceiver = new CaseImportReceiver(
+                    studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getCaseInfos().getCaseUuid(),
+                    rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), importReportUuid, userId,
+                    System.nanoTime(), caseImportAction, hasImportContext);
+
+            receiver = URLEncoder.encode(objectMapper.writeValueAsString(caseImportReceiver), StandardCharsets.UTF_8);
+            LOGGER.info("persistNetwork: Created receiver for study {}, receiver size: {} bytes",
+                    studyUuid, receiver.length());
         } catch (JsonProcessingException e) {
+            LOGGER.error("persistNetwork: Failed to serialize CaseImportReceiver for study {}", studyUuid, e);
             throw new UncheckedIOException(e);
         }
 
@@ -87,12 +112,18 @@ public class NetworkConversionService {
                 .buildAndExpand()
                 .toUriString();
 
+        LOGGER.info("persistNetwork: Sending case import request to network-conversion-server for study {}", studyUuid);
+        LOGGER.debug("persistNetwork: Request path: {}", path);
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
 
         restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.POST, httpEntity,
                 Void.class);
+
+        LOGGER.info("persistNetwork: Case import request sent successfully for study {}, action: {}",
+                studyUuid, caseImportAction);
     }
 
     public String getExportFormats() {

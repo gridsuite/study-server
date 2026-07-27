@@ -17,6 +17,7 @@ import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.DeleteNodeInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.ComputationsInvalidationMode;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters.InvalidationMode;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
@@ -72,6 +73,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriUtils;
 
@@ -649,6 +651,111 @@ public class StudyService {
         return createdStudyBasicInfos;
     }
 
+    /**
+     * Insert study with imported node tree instead of keeping the basic tree.
+     * Creates the basic tree first, deletes the N1 node, then imports the tree from export data.
+     * This is used for study import to avoid node name conflicts.
+     */
+    public CreatedStudyBasicInfos insertStudyWithImportedTree(UUID studyUuid, String userId, NetworkInfos networkInfos,
+                                                              CaseInfos caseInfos, Map<String, Object> importParameters,
+                                                              UUID importReportUuid, StudyExportInfos studyExportInfos) {
+        Objects.requireNonNull(studyUuid);
+        Objects.requireNonNull(userId);
+        Objects.requireNonNull(networkInfos.getNetworkUuid());
+        Objects.requireNonNull(networkInfos.getNetworkId());
+        Objects.requireNonNull(caseInfos.getCaseFormat());
+        Objects.requireNonNull(caseInfos.getCaseUuid());
+        Objects.requireNonNull(importParameters);
+        Objects.requireNonNull(studyExportInfos);
+
+        LOGGER.info("insertStudyWithImportedTree: Creating study {} with imported node tree", studyUuid);
+
+        // Get user profile and create parameters
+        UserProfileInfos userProfileInfos = getUserProfile(userId);
+        LOGGER.info("insertStudyWithImportedTree: Creating default computation parameters for user {}", userId);
+        ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
+        LOGGER.info("insertStudyWithImportedTree: Computation parameters created: {}", computationParameterUUIDs);
+        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
+        UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
+        UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
+        LOGGER.info("insertStudyWithImportedTree: All parameters created successfully");
+
+        // Create study with only root node (no N1 node) to avoid having to delete it
+        // Use self proxy to ensure @Transactional(REQUIRES_NEW) is applied and study is committed immediately
+        self.saveStudyThenCreateRootOnly(studyUuid, networkInfos, caseInfos,
+                computationParameterUUIDs, networkVisualizationParametersUuid,
+                spreadsheetConfigCollectionUuid, workspacesConfigUuid, importParameters, importReportUuid);
+        LOGGER.info("insertStudyWithImportedTree: Study entity and root node created and committed for study {}", studyUuid);
+
+        // Add study to cache immediately so it's visible during import
+        StudyEntity studyEntity = getStudy(studyUuid);
+        CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
+        studyInfosService.add(createdStudyBasicInfos);
+        LOGGER.info("insertStudyWithImportedTree: Study {} added to cache", studyUuid);
+
+        // Import the complete node tree and additional root networks from export data
+        LOGGER.info("insertStudyWithImportedTree: Importing node tree with {} children and {} root networks",
+                studyExportInfos.nodeTree() != null ? studyExportInfos.nodeTree().children().size() : 0,
+                studyExportInfos.rootNetworks().size());
+        self.importStudy(studyUuid, studyExportInfos, userId);
+
+        notificationService.emitStudyCreationFinished(studyUuid, userId);
+
+        LOGGER.info("insertStudyWithImportedTree: Study {} created successfully with imported tree", studyUuid);
+        return createdStudyBasicInfos;
+    }
+
+    private UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getNetworkVisualizationParameterId() != null) {
+            try {
+                return studyConfigService.duplicateNetworkVisualizationParameters(userProfileInfos.getNetworkVisualizationParameterId());
+            } catch (Exception e) {
+                LOGGER.error(String.format("Could not duplicate network visualization parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                        userProfileInfos.getNetworkVisualizationParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        try {
+            return studyConfigService.createDefaultNetworkVisualizationParameters();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating network visualization default parameters", e);
+            return null;
+        }
+    }
+
+    private UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
+            try {
+                return studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
+            } catch (Exception e) {
+                LOGGER.error(String.format("Could not duplicate spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default spreadsheet config collection",
+                        userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
+            }
+        }
+        try {
+            return studyConfigService.createDefaultSpreadsheetConfigCollection();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default spreadsheet config collection", e);
+            return null;
+        }
+    }
+
+    private UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
+        try {
+            List<UUID> workspaceIds = new ArrayList<>();
+            if (userProfileInfos != null && userProfileInfos.getWorkspaceId() != null) {
+                // Create config with profile workspace as first, and two empty workspaces
+                workspaceIds.add(userProfileInfos.getWorkspaceId());
+                workspaceIds.add(null);
+                workspaceIds.add(null);
+            }
+            // Empty list will create default config
+            return studyConfigService.createWorkspacesConfigFromWorkspaces(workspaceIds);
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating workspace collection", e);
+            return null;
+        }
+    }
+
     @Transactional
     public CreatedStudyBasicInfos updateNetwork(UUID studyUuid, UUID rootNetworkUuid, NetworkInfos networkInfos, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
@@ -796,7 +903,14 @@ public class StudyService {
     }
 
     private void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, String userId, Map<String, Object> importParameters, CaseImportAction caseImportAction) {
-        networkConversionService.persistNetwork(rootNetworkInfos, studyUuid, variantId, userId, UUID.randomUUID(), importParameters, caseImportAction);
+        networkConversionService.persistNetwork(rootNetworkInfos, studyUuid, variantId, userId, UUID.randomUUID(), importParameters, caseImportAction, null);
+    }
+
+    private void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, String userId,
+                                Map<String, Object> importParameters, CaseImportAction caseImportAction,
+                                org.gridsuite.study.server.dto.studyexport.StudyImportContext importContext) {
+        networkConversionService.persistNetwork(rootNetworkInfos, studyUuid, variantId, userId, UUID.randomUUID(),
+                importParameters, caseImportAction, importContext);
     }
 
     public String getLinesGraphics(UUID networkUuid, UUID nodeUuid, UUID rootNetworkUuid, List<String> linesIds) {
@@ -1564,6 +1678,53 @@ public class StudyService {
                 RootNetworkInfos.builder().id(UUID.randomUUID()).name(firstRootNetworkName).networkInfos(networkInfos).caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(
                         importParameters).tag("1").build());
         networkModificationTreeService.createBasicTree(study);
+
+        return study;
+    }
+
+    /**
+     * Save study and create only the root node (without N1 child).
+     * Used for study import where the node tree will be imported from export data.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    StudyEntity saveStudyThenCreateRootOnly(UUID studyUuid, NetworkInfos networkInfos,
+                                                    CaseInfos caseInfos, ComputationParameterUUIDs computationParameterUUIDs,
+                                                    UUID networkVisualizationParametersUuid, UUID spreadsheetConfigCollectionUuid,
+                                                    UUID workspacesConfigUuid, Map<String, Object> importParameters, UUID importReportUuid) {
+
+        StudyEntity studyEntity = StudyEntity.builder()
+                .id(studyUuid)
+                .loadFlowParametersUuid(computationParameterUUIDs.loadFlowParametersUuid())
+                .shortCircuitParametersUuid(computationParameterUUIDs.shortCircuitParametersUuid())
+                .voltageInitParametersUuid(computationParameterUUIDs.voltageInitParametersUuid())
+                .securityAnalysisParametersUuid(computationParameterUUIDs.securityAnalysisParametersUuid())
+                .sensitivityAnalysisParametersUuid(computationParameterUUIDs.sensitivityAnalysisParametersUuid())
+                .voltageInitParameters(new StudyVoltageInitParametersEntity())
+                .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
+                .dynamicSimulationParametersUuid(computationParameterUUIDs.dynamicSimulationParametersUuid())
+                .dynamicSecurityAnalysisParametersUuid(computationParameterUUIDs.dynamicSecurityAnalysisParametersUuid())
+                .dynamicMarginCalculationParametersUuid(computationParameterUUIDs.dynamicMarginCalculationParametersUuid())
+                .stateEstimationParametersUuid(computationParameterUUIDs.stateEstimationParametersUuid())
+                .pccMinParametersUuid(computationParameterUUIDs.pccMinParametersUuid())
+                .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
+                .workspacesConfigUuid(workspacesConfigUuid)
+                .monoRoot(true)
+                .build();
+
+        var study = studyRepository.save(studyEntity);
+
+        // Create first root network
+        Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
+        var firstRootNetworkName = caseInfos.getCaseName();
+        if (studyCreationRequestEntity.isPresent() && !StringUtils.isBlank(studyCreationRequestEntity.get().getFirstRootNetworkName())) {
+            firstRootNetworkName = studyCreationRequestEntity.get().getFirstRootNetworkName();
+        }
+        rootNetworkService.createRootNetwork(studyEntity,
+                RootNetworkInfos.builder().id(UUID.randomUUID()).name(firstRootNetworkName).networkInfos(networkInfos)
+                        .caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).tag("1").build());
+
+        // Create only the root node (no N1 child node)
+        networkModificationTreeService.createRoot(study);
 
         return study;
     }
@@ -3883,23 +4044,30 @@ public class StudyService {
 
     @Transactional
     public void importStudy(UUID studyUuid, StudyExportInfos studyExportInfos, String userId) {
-        LOGGER.info("Importing study {}: {} root networks, node tree present: {}",
-                studyUuid, studyExportInfos.rootNetworks().size(), studyExportInfos.nodeTree() != null);
+        LOGGER.info("importStudy: Starting import for study {}: {} root networks, node tree present: {}, node tree children: {}",
+                studyUuid, studyExportInfos.rootNetworks().size(), studyExportInfos.nodeTree() != null,
+                studyExportInfos.nodeTree() != null ? studyExportInfos.nodeTree().children().size() : 0);
 
         // Import node tree
         if (studyExportInfos.nodeTree() != null) {
-            LOGGER.info("Importing node tree for study {}", studyUuid);
+            LOGGER.info("importStudy: Importing node tree for study {} with {} children", 
+                    studyUuid, studyExportInfos.nodeTree().children().size());
             importNodeTree(studyUuid, studyExportInfos.nodeTree(), userId);
+            LOGGER.info("importStudy: Node tree imported successfully for study {}", studyUuid);
+        } else {
+            LOGGER.info("importStudy: No node tree to import for study {}", studyUuid);
         }
 
         // Import additional root networks (skip first one as it's already imported)
         if (studyExportInfos.rootNetworks().size() > 1) {
-            LOGGER.info("Importing {} additional root networks for study {}",
+            LOGGER.info("importStudy: Importing {} additional root networks for study {}",
                     studyExportInfos.rootNetworks().size() - 1, studyUuid);
             StudyEntity studyEntity = getStudy(studyUuid);
             for (int i = 1; i < studyExportInfos.rootNetworks().size(); i++) {
                 RootNetworkExportInfos rootNetworkExport = studyExportInfos.rootNetworks().get(i);
-                LOGGER.info("Importing root network {}: name={}, tag={}", i, rootNetworkExport.name(), rootNetworkExport.tag());
+                LOGGER.info("importStudy: Importing additional root network {}/{}: name={}, tag={}, case={}", 
+                        i, studyExportInfos.rootNetworks().size() - 1, rootNetworkExport.name(), 
+                        rootNetworkExport.tag(), rootNetworkExport.caseInfos().uuid());
 
                 // Assert can create root network
                 rootNetworkService.assertCanCreateRootNetwork(studyUuid, rootNetworkExport.name(), rootNetworkExport.tag());
@@ -3923,29 +4091,23 @@ public class StudyService {
                 // Insert creation request
                 RootNetworkRequestEntity rootNetworkRequestEntity = rootNetworkService.insertCreationRequest(studyEntity.getId(), rootNetworkInfos, userId);
 
-                try {
-                    // Import the network from the case (this populates networkUuid and networkId)
-                    persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkExport.importParameters(), CaseImportAction.ROOT_NETWORK_CREATION);
-
-                    // Create the root network with the imported network info
-                    rootNetworkService.createRootNetwork(studyEntity, rootNetworkInfos);
-
-                    // Delete the creation request
-                    rootNetworkService.deleteRootNetworkRequest(rootNetworkRequestEntity);
-                } catch (Exception e) {
-                    rootNetworkService.deleteRootNetworkRequest(rootNetworkRequestEntity);
-                    throw e;
-                }
+                // Import the network from the case (async via RabbitMQ)
+                // The consumer ROOT_NETWORK_CREATION will handle createRootNetwork when notification arrives
+                persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkExport.importParameters(), CaseImportAction.ROOT_NETWORK_CREATION);
+                LOGGER.info("importStudy: Triggered async import for root network {}, will be created when notification arrives", rootNetworkExport.name());
             }
 
-            // Update study entity to multi-root if needed
-            if (studyEntity.getRootNetworks().size() > 1) {
+            // Update study entity to multi-root if we have multiple root networks in the export
+            // The additional root networks will be created async when notifications arrive
+            if (studyExportInfos.rootNetworks().size() > 1) {
                 studyEntity.setMonoRoot(false);
+                studyRepository.save(studyEntity);
+                LOGGER.info("importStudy: Study {} set to multi-root mode (expecting {} root networks)",
+                        studyUuid, studyExportInfos.rootNetworks().size());
             }
 
-            // Notify
-            notificationService.emitRootNetworksUpdated(studyUuid);
-            notificationService.emitElementUpdated(studyUuid, userId);
+            LOGGER.info("importStudy: Import completed for study {} - {} root networks will be created async",
+                    studyUuid, studyExportInfos.rootNetworks().size() - 1);
         }
     }
 
@@ -3954,6 +4116,117 @@ public class StudyService {
         StudyEntity studyEntity = getStudy(studyUuid);
         UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
         nodeTree.children().forEach(child -> createNodeRecursively(studyEntity, rootNodeUuid, child, userId));
+    }
+
+    /**
+     * Import a complete study using an existing case (synchronous).
+     * This creates the study immediately without async case import.
+     */
+    @Transactional
+    public void importStudyWithExistingCase(UUID studyUuid, UUID caseUuid, String caseFormat,
+                                           StudyExportInfos studyExportInfos, Map<String, Object> importParameters,
+                                           String userId) {
+        LOGGER.info("importStudyWithExistingCase: Starting synchronous import for study {} with existing case {}", 
+                studyUuid, caseUuid);
+        
+        if (studyExportInfos.rootNetworks() == null || studyExportInfos.rootNetworks().isEmpty()) {
+            LOGGER.error("importStudyWithExistingCase: No root networks in study export data for study {}", studyUuid);
+            throw new StudyException(IMPORT_STUDY_ERROR, "No root networks in study export data");
+        }
+
+        var firstRootNetwork = studyExportInfos.rootNetworks().getFirst();
+        LOGGER.info("importStudyWithExistingCase: First root network: {}, total: {}", 
+                firstRootNetwork.name(), studyExportInfos.rootNetworks().size());
+
+        // Create the study with the existing case (synchronous)
+        // Note: The study creation and directory element creation is handled by the caller (explore-server)
+        // Here we just need to import the network and then the node tree + additional root networks
+        
+        // Import node tree and additional root networks
+        importStudy(studyUuid, studyExportInfos, userId);
+        
+        LOGGER.info("importStudyWithExistingCase: Successfully imported study {} synchronously", studyUuid);
+    }
+
+    /**
+     * Import a complete study with case import trigger.
+     * This triggers an async case import, which will then call importStudy() via the consumer.
+     */
+    public void importStudyWithCase(UUID studyUuid, String studyName, String description, UUID parentDirectoryUuid,
+                                    UUID caseUuid, String caseFormat, StudyExportInfos studyExportInfos,
+                                    Map<String, Object> importParameters, String userId) {
+        LOGGER.info("importStudyWithCase: Starting import for study {} - name: {}, case: {}, format: {}, parentDir: {}",
+                studyUuid, studyName, caseUuid, caseFormat, parentDirectoryUuid);
+
+        // Get the first root network to use for study creation
+        if (studyExportInfos.rootNetworks() == null || studyExportInfos.rootNetworks().isEmpty()) {
+            LOGGER.error("importStudyWithCase: No root networks in study export data for study {}", studyUuid);
+            throw new StudyException(IMPORT_STUDY_ERROR, "No root networks in study export data");
+        }
+
+        var firstRootNetwork = studyExportInfos.rootNetworks().getFirst();
+        LOGGER.info("importStudyWithCase: First root network: {}, total root networks: {}",
+                firstRootNetwork.name(), studyExportInfos.rootNetworks().size());
+
+        // Create import context with all necessary info
+        org.gridsuite.study.server.dto.studyexport.StudyImportContext importContext =
+                new org.gridsuite.study.server.dto.studyexport.StudyImportContext(
+                        studyExportInfos, studyName, description, parentDirectoryUuid);
+
+        LOGGER.info("importStudyWithCase: Created import context for study {}", studyUuid);
+
+        // Create RootNetworkInfos with the case and trigger async import
+        CaseInfos caseInfos = new CaseInfos(caseUuid, null, null, caseFormat);
+
+        RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder()
+                .id(UUID.randomUUID())
+                .name(firstRootNetwork.name())
+                .caseInfos(caseInfos)
+                .importParameters(importParameters != null ? importParameters : firstRootNetwork.importParameters())
+                .build();
+
+        LOGGER.info("importStudyWithCase: Triggering async case import for study {} with root network {}",
+                studyUuid, rootNetworkInfos.getId());
+
+        // Trigger case import with STUDY_IMPORT action and pass the import context
+        // The consumer will call importStudy() and create directory element after the case import succeeds
+        persistNetwork(rootNetworkInfos, studyUuid, NetworkModificationTreeService.FIRST_VARIANT_ID, userId,
+                rootNetworkInfos.getImportParameters(), CaseImportAction.STUDY_IMPORT, importContext);
+
+        LOGGER.info("importStudyWithCase: Successfully triggered async import for study {}", studyUuid);
+    }
+
+    /**
+     * Import a complete study using STUDY_IMPORT action (async via consumer).
+     * This method parses the request body and delegates to importStudyWithCase.
+     */
+    @SuppressWarnings("unchecked")
+    public void importStudyWithCaseImportAction(UUID studyUuid, UUID caseUuid, String caseFormat,
+                                                String studyName, String description, UUID parentDirectoryUuid,
+                                                Map<String, Object> requestBody, String userId) {
+        LOGGER.info("importStudyWithCaseImportAction: Starting for study {} with case {}", studyUuid, caseUuid);
+
+        // Extract importParameters and studyExportInfos from request body
+        Map<String, Object> importParameters = (Map<String, Object>) requestBody.get("importParameters");
+        Object studyExportInfosObj = requestBody.get("studyExportInfos");
+
+        // Convert studyExportInfos from Map to StudyExportInfos object
+        StudyExportInfos studyExportInfos;
+        try {
+            if (studyExportInfosObj instanceof StudyExportInfos) {
+                studyExportInfos = (StudyExportInfos) studyExportInfosObj;
+            } else {
+                // Need to convert from Map to StudyExportInfos
+                studyExportInfos = objectMapper.convertValue(studyExportInfosObj, StudyExportInfos.class);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to parse StudyExportInfos from request body", e);
+            throw new StudyException(IMPORT_STUDY_ERROR, "Invalid study export data format");
+        }
+
+        LOGGER.info("importStudyWithCaseImportAction: Delegating to importStudyWithCase");
+        importStudyWithCase(studyUuid, studyName, description, parentDirectoryUuid,
+                caseUuid, caseFormat, studyExportInfos, importParameters, userId);
     }
 
     private void createNodeRecursively(StudyEntity studyEntity, UUID parentNodeUuid, NodeTreeExportInfos exportNode, String userId) {

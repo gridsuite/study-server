@@ -14,6 +14,7 @@ package org.gridsuite.study.server.dto.caseimport;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 import java.util.UUID;
 
 @Getter
@@ -28,4 +29,5 @@ public class CaseImportReceiver {
     private String userId;
     private Long startTime;
     private CaseImportAction caseImportAction;
+    private Boolean hasImportContext;  // For STUDY_IMPORT action - indicates if StudyExportInfos is stored in cache
 }

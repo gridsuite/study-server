@@ -26,7 +26,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -73,32 +72,23 @@ public class StudyExportArchiveService {
     public InputStreamResource exportStudyArchive(UUID studyUuid) {
         try {
             log.info("Starting export of study {}", studyUuid);
-
-            // Create temporary directory for export
             Path tempDir = Files.createTempDirectory("study-export-" + studyUuid);
             Path casesDir = tempDir.resolve("cases");
             Files.createDirectories(casesDir);
 
             try {
-                // Get study export data
                 StudyExportInfos studyExportInfos = studyService.exportStudy(studyUuid);
                 List<RootNetworkInfos> rootNetworkInfosList = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
-
-                // Export all case files
                 for (RootNetworkInfos rootNetworkInfos : rootNetworkInfosList) {
                     UUID caseUuid = rootNetworkInfos.getCaseInfos().getCaseUuid();
                     String caseName = rootNetworkInfos.getCaseInfos().getCaseName();
                     exportCaseFile(caseUuid, caseName, casesDir);
                 }
-
-                // Write study.json
                 Path studyJsonPath = tempDir.resolve("study.json");
                 objectMapper.writerWithDefaultPrettyPrinter()
                         .writeValue(studyJsonPath.toFile(), studyExportInfos);
 
                 log.debug("Study JSON written to {}, size: {} bytes", studyJsonPath, Files.size(studyJsonPath));
-
-                // Create zip archive
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 try (ZipOutputStream zipOut = new ZipOutputStream(baos)) {
                     writeZipEntries(tempDir, zipOut);
@@ -113,7 +103,6 @@ public class StudyExportArchiveService {
                 return new InputStreamResource(bais);
 
             } finally {
-                // Cleanup temp directory
                 deleteDirectory(tempDir);
             }
 
@@ -144,16 +133,9 @@ public class StudyExportArchiveService {
         if (body != null) {
             Path caseDir = casesDir.resolve(caseUuid.toString());
             Files.createDirectories(caseDir);
-
-            // case-server stocke les fichiers "plain" compressés en gzip ;
-            // ce endpoint renvoie les octets tels que stockés -> il faut décompresser
-            // avant de les réécrire, sinon le fichier réimporté est illisible
             if (isGzipCompressed(body)) {
                 body = decompressGzip(body);
             }
-
-            // caseName contient déjà le nom + l'extension d'origine (ex: "LILLE.xiidm", "foo.zip")
-            // -> ne rien ajouter, sous peine de dupliquer/corrompre l'extension
             Path caseFile = caseDir.resolve(caseName);
             Files.write(caseFile, body);
             log.debug("Exported case file to {}", caseFile);
@@ -161,7 +143,7 @@ public class StudyExportArchiveService {
     }
 
     private static boolean isGzipCompressed(byte[] data) {
-        return data.length > 2 && data[0] == (byte) 0x1f && data[1] == (byte) 0x8b;
+        return data.length > 2 && data[0] == (byte) 0x1F && data[1] == (byte) 0x8B;
     }
 
     private static byte[] decompressGzip(byte[] data) throws IOException {
@@ -205,7 +187,7 @@ public class StudyExportArchiveService {
     private void deleteDirectory(Path directory) throws IOException {
         if (Files.exists(directory)) {
             Files.walk(directory)
-                    .sorted((a, b) -> b.compareTo(a)) // Delete files before directories
+                    .sorted((a, b) -> b.compareTo(a))
                     .forEach(path -> {
                         try {
                             Files.delete(path);

@@ -12,7 +12,8 @@ public enum CaseImportAction {
     STUDY_CREATION("Study creation"),
     ROOT_NETWORK_CREATION("Root network creation"),
     NETWORK_RECREATION("Network recreation"),
-    ROOT_NETWORK_MODIFICATION("Root network modification");
+    ROOT_NETWORK_MODIFICATION("Root network modification"),
+    STUDY_IMPORT("Study import");
 
     @Getter
     public final String label;

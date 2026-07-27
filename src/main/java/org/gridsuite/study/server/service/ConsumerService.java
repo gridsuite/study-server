@@ -70,6 +70,7 @@ public class ConsumerService {
     private final DirectoryService directoryService;
     private final ComputationParametersService computationParametersService;
     private final UserAdminService userAdminService;
+    private final StudyImportContextService studyImportContextService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -81,7 +82,8 @@ public class ConsumerService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            DirectoryService directoryService,
                            ComputationParametersService computationParametersService,
-                           UserAdminService userAdminService) {
+                           UserAdminService userAdminService,
+                           StudyImportContextService studyImportContextService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -93,6 +95,7 @@ public class ConsumerService {
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
         this.userAdminService = userAdminService;
+        this.studyImportContextService = studyImportContextService;
     }
 
     @Bean
@@ -197,12 +200,17 @@ public class ConsumerService {
     @SuppressWarnings("checkstyle:LambdaBodyLength")
     public Consumer<Message<String>> consumeCaseImportSucceeded() {
         return message -> {
+            LOGGER.info("consumeCaseImportSucceeded: Received case import success notification");
+
             String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
             UUID networkUuid = UUID.fromString(message.getHeaders().get(NETWORK_UUID, String.class));
             String networkId = message.getHeaders().get(NETWORK_ID, String.class);
             String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
             String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
             Map<String, Object> rawParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
+
+            LOGGER.info("consumeCaseImportSucceeded: networkUuid={}, networkId={}, caseName={}, receiverPresent={}",
+                    networkUuid, networkId, caseName, receiverString != null);
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
@@ -226,6 +234,10 @@ public class ConsumerService {
         UUID importReportUuid = receiver.getReportUuid();
         UUID rootNetworkUuid = receiver.getRootNetworkUuid();
         CaseImportAction caseImportAction = receiver.getCaseImportAction();
+        boolean success = false;
+
+        LOGGER.info("handleConsumeCaseImportSucceeded: Received notification for study {}, action: {}, hasImportContext: {}",
+                studyUuid, caseImportAction, receiver.getHasImportContext());
 
         CaseInfos caseInfos = new CaseInfos(caseUuid, receiver.getOriginalCaseUuid(), caseName, caseFormat);
         NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
@@ -248,13 +260,53 @@ public class ConsumerService {
                     .importParameters(importParameters)
                     .reportUuid(importReportUuid)
                     .build());
+                case STUDY_IMPORT -> {
+                    LOGGER.info("STUDY_IMPORT: Starting import for study {}", studyUuid);
+
+                    // Retrieve import context first
+                    var importContext = Boolean.TRUE.equals(receiver.getHasImportContext())
+                            ? studyImportContextService.getAndRemoveImportContext(studyUuid)
+                            : null;
+
+                    if (importContext == null) {
+                        LOGGER.error("STUDY_IMPORT action: import context not found for study {}", studyUuid);
+                        throw new RuntimeException("Import context not found for study " + studyUuid);
+                    }
+
+                    LOGGER.info("STUDY_IMPORT: Retrieved import context for study {} - name: {}, parentDir: {}",
+                            studyUuid, importContext.studyName(), importContext.parentDirectoryUuid());
+
+                    // Insert the study with the first root network and import the complete node tree
+                    LOGGER.info("STUDY_IMPORT: Inserting study {} with imported node tree", studyUuid);
+                    studyService.insertStudyWithImportedTree(studyUuid, userId, networkInfos, caseInfos,
+                            importParameters, importReportUuid, importContext.studyExportInfos());
+                    LOGGER.info("STUDY_IMPORT: Study {} inserted successfully with node tree", studyUuid);
+
+                    // Create directory element for the study
+                    LOGGER.info("STUDY_IMPORT: Creating directory element for study {} in parent {}",
+                            studyUuid, importContext.parentDirectoryUuid());
+                    directoryService.createElement(
+                            importContext.parentDirectoryUuid(),
+                            importContext.description(),
+                            studyUuid,
+                            importContext.studyName(),
+                            DirectoryService.STUDY,
+                            userId);
+                    LOGGER.info("STUDY_IMPORT: Directory element created for study {}", studyUuid);
+                    LOGGER.info("Successfully imported study {} with node tree and {} root networks",
+                            studyUuid, importContext.studyExportInfos().rootNetworks().size());
+                }
             }
             caseService.disableCaseExpiration(caseUuid);
+            success = true;
         } catch (Exception e) {
-            LOGGER.error("Error while importing case", e);
+            LOGGER.error("handleConsumeCaseImportSucceeded: Error for action {}, study {}", caseImportAction, studyUuid, e);
         } finally {
             // if studyEntity is already existing, we don't delete anything in the end of the process
-            if (caseImportAction == CaseImportAction.STUDY_CREATION) {
+            // For STUDY_IMPORT, only delete if failed (success=false), not if completed successfully
+            // because additional root networks will arrive async
+            if ((caseImportAction == CaseImportAction.STUDY_CREATION) ||
+                (caseImportAction == CaseImportAction.STUDY_IMPORT && !success)) {
                 studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
             }
             if (caseImportAction == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
@@ -355,6 +407,11 @@ public class ConsumerService {
                     UUID rootNetworkUuid = receiver.getRootNetworkUuid();
 
                     if (receiver.getCaseImportAction() == CaseImportAction.STUDY_CREATION) {
+                        studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+                        notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
+                    } else if (receiver.getCaseImportAction() == CaseImportAction.STUDY_IMPORT) {
+                        // Clean up import context on failure
+                        studyImportContextService.removeImportContext(studyUuid);
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
                         notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
                     } else {

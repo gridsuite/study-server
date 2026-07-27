@@ -2590,7 +2590,7 @@ public class StudyController {
     @Operation(summary = "Export a study as a JSON descriptor (root networks + node tree)")
     @ApiResponse(responseCode = "200", description = "The study export infos")
     @ApiResponse(responseCode = "404", description = "Study or root network not found")
-    public ResponseEntity<StudyExportInfos> exportStudy(@PathVariable("studyUuid") UUID studyUuid){
+    public ResponseEntity<StudyExportInfos> exportStudy(@PathVariable("studyUuid") UUID studyUuid) {
         return ResponseEntity.ok(studyService.exportStudy(studyUuid));
     }
 
@@ -2628,6 +2628,37 @@ public class StudyController {
             @Parameter(description = "Study export data") @RequestBody StudyExportInfos studyExportInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.importStudy(studyUuid, studyExportInfos, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/import-with-existing-case/{caseUuid}")
+    @Operation(summary = "Import a complete study using an existing case (synchronous)")
+    @ApiResponse(responseCode = "200", description = "Study imported successfully")
+    public ResponseEntity<Void> importStudyWithExistingCase(
+            @Parameter(description = "Case UUID") @PathVariable("caseUuid") UUID caseUuid,
+            @Parameter(description = "Study UUID") @RequestParam("studyUuid") UUID studyUuid,
+            @Parameter(description = "Case format") @RequestParam("caseFormat") String caseFormat,
+            @Parameter(description = "Study export data") @RequestBody StudyExportInfos studyExportInfos,
+            @Parameter(description = "Import parameters (optional)") @RequestParam(required = false) Map<String, Object> importParameters,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.importStudyWithExistingCase(studyUuid, caseUuid, caseFormat, studyExportInfos, importParameters, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping(value = "/studies/import-with-case-import-action/{caseUuid}")
+    @Operation(summary = "Import a complete study using STUDY_IMPORT action (async)")
+    @ApiResponse(responseCode = "200", description = "Study import initiated successfully")
+    public ResponseEntity<Void> importStudyWithCaseImportAction(
+            @Parameter(description = "Case UUID") @PathVariable("caseUuid") UUID caseUuid,
+            @Parameter(description = "Study UUID") @RequestParam("studyUuid") UUID studyUuid,
+            @Parameter(description = "Case format") @RequestParam("caseFormat") String caseFormat,
+            @Parameter(description = "Study name") @RequestParam("studyName") String studyName,
+            @Parameter(description = "Study description") @RequestParam("description") String description,
+            @Parameter(description = "Parent directory UUID") @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
+            @Parameter(description = "Request body with importParameters and studyExportInfos") @RequestBody Map<String, Object> requestBody,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.importStudyWithCaseImportAction(studyUuid, caseUuid, caseFormat, studyName, description,
+                parentDirectoryUuid, requestBody, userId);
         return ResponseEntity.ok().build();
     }
 }
