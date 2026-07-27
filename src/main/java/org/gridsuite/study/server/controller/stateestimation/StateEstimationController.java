@@ -40,7 +40,7 @@ public class StateEstimationController {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/run")
+    @PostMapping(value = "/run")
     @Operation(summary = "run state estimation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation has started")})
     public ResponseEntity<Void> runStateEstimation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
@@ -54,7 +54,7 @@ public class StateEstimationController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/result")
+    @GetMapping(value = "/result")
     @Operation(summary = "Get a state estimation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
             @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
@@ -67,7 +67,7 @@ public class StateEstimationController {
                 ResponseEntity.noContent().build();
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/status")
+    @GetMapping(value = "/status")
     @Operation(summary = "Get the state estimation status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation status"),
             @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
@@ -79,7 +79,7 @@ public class StateEstimationController {
         return status != null ? ResponseEntity.ok().body(status) : ResponseEntity.noContent().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation/stop")
+    @PutMapping(value = "/stop")
     @Operation(summary = "stop state estimation on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation has been stopped")})
     public ResponseEntity<Void> stopStateEstimation(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
