@@ -575,7 +575,7 @@ public class StudyService {
             }
         } catch (ObjectOptimisticLockingFailureException e) {
             // This exception may be raised with a race condition when two threads try to delete the same study at the same time. Instead of redesigning the whole system, we accept this design
-            LOGGER.error("Could not delete study with uuid:" + studyUuid, e);
+            LOGGER.warn("Could not delete (maybe already deleted) study with uuid " + studyUuid, e);
         }
 
         if (deleteStudyInfos == null) {
