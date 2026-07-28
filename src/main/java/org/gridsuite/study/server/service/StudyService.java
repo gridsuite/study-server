@@ -77,7 +77,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriUtils;
 
 import java.io.UncheckedIOException;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -1153,26 +1152,6 @@ public class StudyService {
         return userProfileIssue;
     }
 
-    private <T> void setComputationParameters(UUID studyUuid, T parameters, String userId,
-                                              Function<StudyEntity, UUID> studyParameterGetter,
-                                              BiConsumer<StudyEntity, UUID> studyParameterSetter,
-                                              Function<T, UUID> createParameters,
-                                              BiConsumer<UUID, T> updateParameters,
-                                              ComputationType computationType,
-                                              List<Consumer<UUID>> statusInvalidations,
-                                              String... statusUpdateTypes) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        computationParametersService.createOrUpdateParameters(
-                studyEntity,
-                parameters,
-                studyParameterGetter,
-                studyParameterSetter,
-                createParameters,
-                updateParameters
-        );
-        emitComputationParametersChanged(studyUuid, userId, computationType, statusInvalidations, statusUpdateTypes);
-    }
-
     private void emitComputationParametersChanged(UUID studyUuid, String userId,
                                                   ComputationType computationType,
                                                   List<Consumer<UUID>> statusInvalidations,
@@ -1375,10 +1354,6 @@ public class StudyService {
 
     public void invalidateVoltageInitStatusOnAllNodes(UUID studyUuid) {
         voltageInitService.invalidateVoltageInitStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, VOLTAGE_INITIALIZATION));
-    }
-
-    public void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
-        stateEstimationService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
     }
 
     private StudyEntity updateRootNetworkIndexationStatus(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, RootNetworkIndexationStatus indexationStatus) {
@@ -3217,64 +3192,6 @@ public class StudyService {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid);
         return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid, variantId);
-    }
-
-    @Transactional
-    public UUID runStateEstimation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        UUID result = handleStateEstimationRequest(studyEntity, nodeUuid, rootNetworkUuid, userId, debug);
-
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(STATE_ESTIMATION), result);
-        return result;
-    }
-
-    private UUID handleStateEstimationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(STATE_ESTIMATION.name(), UUID.randomUUID());
-        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION, reportUuid);
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
-        if (prevResultUuid != null) {
-            stateEstimationService.deleteStateEstimationResults(List.of(prevResultUuid));
-        }
-
-        UUID result = stateEstimationService.runStateEstimation(networkUuid, variantId, studyEntity.getStateEstimationParametersUuid(), new ReportInfos(reportUuid, nodeUuid), receiver, userId, debug);
-        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, STATE_ESTIMATION);
-        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
-        notificationService.emitElementUpdated(studyEntity.getId(), userId);
-
-        return result;
-    }
-
-    @Transactional
-    public String getStateEstimationParameters(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return stateEstimationService.getStateEstimationParameters(stateEstimationService.getStateEstimationParametersUuidOrElseCreateDefaults(studyEntity));
-    }
-
-    @Transactional
-    public void setStateEstimationParametersValues(UUID studyUuid, String parameters, String userId) {
-        setComputationParameters(
-                studyUuid,
-                parameters,
-                userId,
-                StudyEntity::getStateEstimationParametersUuid,
-                StudyEntity::setStateEstimationParametersUuid,
-                stateEstimationService::createStateEstimationParameters,
-                stateEstimationService::updateStateEstimationParameters,
-                STATE_ESTIMATION,
-                List.of(this::invalidateStateEstimationStatusOnAllNodes),
-                NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS
-        );
     }
 
     @Transactional

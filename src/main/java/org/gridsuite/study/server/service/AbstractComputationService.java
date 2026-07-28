@@ -82,6 +82,26 @@ public abstract class AbstractComputationService {
         return userProfileIssue;
     }
 
+    protected <T> void setComputationParameters(UUID studyUuid, T parameters, String userId,
+                                              Function<StudyEntity, UUID> studyParameterGetter,
+                                              BiConsumer<StudyEntity, UUID> studyParameterSetter,
+                                              Function<T, UUID> createParameters,
+                                              BiConsumer<UUID, T> updateParameters,
+                                              ComputationType computationType,
+                                              List<Consumer<UUID>> statusInvalidations,
+                                              String... statusUpdateTypes) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        computationParametersService.createOrUpdateParameters(
+                studyEntity,
+                parameters,
+                studyParameterGetter,
+                studyParameterSetter,
+                createParameters,
+                updateParameters
+        );
+        emitComputationParametersChanged(studyUuid, userId, computationType, statusInvalidations, statusUpdateTypes);
+    }
+
     private void emitComputationParametersChanged(UUID studyUuid, String userId,
                                                   ComputationType computationType,
                                                   List<Consumer<UUID>> statusInvalidations,

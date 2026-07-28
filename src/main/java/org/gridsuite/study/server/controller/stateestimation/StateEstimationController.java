@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,14 +31,14 @@ import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation")
 @Tag(name = "Study server - State Estimation")
 public class StateEstimationController {
-
-
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final StateEstimationService stateEstimationService;
 
-    public StateEstimationController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+    public StateEstimationController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService, StateEstimationService stateEstimationService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.stateEstimationService = stateEstimationService;
     }
 
     @PostMapping(value = "/run")
@@ -50,15 +51,15 @@ public class StateEstimationController {
                                                    @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(STATE_ESTIMATION, userId);
-        studyService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
+        stateEstimationService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/result")
     @Operation(summary = "Get a state estimation result on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation result"),
-            @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The state estimation has not been found")})
+        @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The state estimation has not been found")})
     public ResponseEntity<String> getStateEstimationResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
@@ -70,8 +71,8 @@ public class StateEstimationController {
     @GetMapping(value = "/status")
     @Operation(summary = "Get the state estimation status on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation status"),
-            @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
-            @ApiResponse(responseCode = "404", description = "The state estimation status has not been found")})
+        @ApiResponse(responseCode = "204", description = "No state estimation has been done yet"),
+        @ApiResponse(responseCode = "404", description = "The state estimation status has not been found")})
     public ResponseEntity<String> getStateEstimationStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                            @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                            @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {

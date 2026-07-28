@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,10 +28,10 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @Tag(name = "Study server - State Estimation parameters")
 public class StateEstimationParametersController {
 
-    private final StudyService studyService;
+    private final StateEstimationService stateEstimationService;
 
-    public StateEstimationParametersController(StudyService studyService) {
-        this.studyService = studyService;
+    public StateEstimationParametersController(StateEstimationService stateEstimationService) {
+        this.stateEstimationService = stateEstimationService;
     }
 
     @GetMapping(value = "/parameters")
@@ -39,18 +39,18 @@ public class StateEstimationParametersController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters")})
     public ResponseEntity<String> getStateEstimationParametersValues(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getStateEstimationParameters(studyUuid));
+        return ResponseEntity.ok().body(stateEstimationService.getStateEstimationParameters(studyUuid));
     }
 
     @PostMapping(value = "/parameters")
     @Operation(summary = "set state estimation parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters are set"),
-            @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
     public ResponseEntity<Void> setStateEstimationParametersValues(
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) String stateEstimationParametersValues,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setStateEstimationParametersValues(studyUuid, stateEstimationParametersValues, userId);
+        stateEstimationService.setStateEstimationParametersValues(studyUuid, stateEstimationParametersValues, userId);
         return ResponseEntity.ok().build();
     }
 }
