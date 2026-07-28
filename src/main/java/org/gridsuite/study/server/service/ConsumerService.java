@@ -305,8 +305,7 @@ public class ConsumerService {
             // if studyEntity is already existing, we don't delete anything in the end of the process
             // For STUDY_IMPORT, only delete if failed (success=false), not if completed successfully
             // because additional root networks will arrive async
-            if ((caseImportAction == CaseImportAction.STUDY_CREATION) ||
-                (caseImportAction == CaseImportAction.STUDY_IMPORT && !success)) {
+            if (caseImportAction == CaseImportAction.STUDY_CREATION || caseImportAction == CaseImportAction.STUDY_IMPORT && !success) {
                 studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
             }
             if (caseImportAction == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
