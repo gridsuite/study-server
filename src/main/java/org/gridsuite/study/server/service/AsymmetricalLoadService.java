@@ -265,10 +265,9 @@ public class AsymmetricalLoadService extends AbstractComputationService implemen
         Objects.requireNonNull(sourceParametersUuid);
 
         String path = UriComponentsBuilder
-            .fromPath(PARAMETERS_URI)
-            .queryParam("duplicateFrom", sourceParametersUuid)
-            .buildAndExpand()
-            .toUriString();
+                .fromPath(PARAMETERS_URI + "/{uuid}/duplicate")
+                .buildAndExpand(sourceParametersUuid)
+                .toUriString();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

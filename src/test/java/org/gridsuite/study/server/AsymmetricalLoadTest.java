@@ -55,7 +55,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.HttpClientErrorException;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
@@ -368,8 +371,8 @@ class AsymmetricalLoadTest {
         UUID studyUuid = studyEntity.getId();
 
         userAdminServerStubs.stubGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID, USER_PROFILE_VALID_PARAMS_JSON);
-        wireMockServer.stubFor(post(urlPathEqualTo("/v1/asymmetrical-load/parameters"))
-            .withQueryParam("duplicateFrom", equalTo(PROFILE_ASYMMETRICAL_LOAD_VALID_PARAMETERS_UUID_STRING))
+        wireMockServer.stubFor(post(urlPathEqualTo("/v1/asymmetrical-load/parameters/" +
+                PROFILE_ASYMMETRICAL_LOAD_VALID_PARAMETERS_UUID_STRING + "/duplicate"))
             .willReturn(ok()
                 .withBody(DUPLICATED_PARAMS_JSON)
                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -378,8 +381,8 @@ class AsymmetricalLoadTest {
         createOrUpdateParametersAndDoChecks(studyUuid, "", VALID_PARAMS_IN_PROFILE_USER_ID, HttpStatus.OK);
 
         userAdminServerStubs.verifyGetUserProfile(VALID_PARAMS_IN_PROFILE_USER_ID);
-        wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/asymmetrical-load/parameters"))
-            .withQueryParam("duplicateFrom", equalTo(PROFILE_ASYMMETRICAL_LOAD_VALID_PARAMETERS_UUID_STRING))
+        wireMockServer.verify(postRequestedFor(
+                urlPathEqualTo("/v1/asymmetrical-load/parameters/" + PROFILE_ASYMMETRICAL_LOAD_VALID_PARAMETERS_UUID_STRING + "/duplicate"))
         );
     }
 
