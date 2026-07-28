@@ -29,7 +29,6 @@ import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNo
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
-import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
@@ -43,7 +42,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -76,7 +74,6 @@ public class StudyController {
     private final RemoteServicesInspector remoteServicesInspector;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    private final SensitivityAnalysisRestService sensitivityAnalysisService;
     private final RebuildNodeService rebuildNodeService;
 
     public StudyController(StudyService studyService,
@@ -88,7 +85,6 @@ public class StudyController {
                            RemoteServicesInspector remoteServicesInspector,
                            RootNetworkService rootNetworkService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                           SensitivityAnalysisRestService sensitivityAnalysisService,
                            RebuildNodeService rebuildNodeService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
@@ -99,7 +95,6 @@ public class StudyController {
         this.remoteServicesInspector = remoteServicesInspector;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
-        this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.rebuildNodeService = rebuildNodeService;
     }
 
@@ -1471,101 +1466,6 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/run")
-    @Operation(summary = "run sensitivity analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has started"), @ApiResponse(responseCode = "403",
-            description = "The study node is not a model node")})
-    public ResponseEntity<Void> runSensitivityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                       @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                       @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(SENSITIVITY_ANALYSIS, userId);
-        studyService.runSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result")
-    @Operation(summary = "Get a sensitivity analysis result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis result"),
-        @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
-    public ResponseEntity<String> getSensitivityAnalysisResult(
-        @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-        @Parameter(description = "results selector") @RequestParam("selector") String selector,
-        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
-        @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters
-    ) {
-        String result = rootNetworkNodeInfoService.getSensitivityAnalysisResult(nodeUuid, rootNetworkUuid, selector, filters, globalFilters);
-        return result != null ? ResponseEntity.ok().body(result) :
-            ResponseEntity.noContent().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get a sensitivity analysis result as csv")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Csv of sensitivity analysis results"),
-        @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
-    public ResponseEntity<byte[]> exportSensitivityResultsAsCsv(
-        @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-        @Parameter(description = "results selector") @RequestParam("selector") String selector,
-        @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
-        @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
-        @RequestBody SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
-        byte[] result = rootNetworkNodeInfoService.exportSensitivityResultsAsCsv(nodeUuid, rootNetworkUuid, sensitivityAnalysisCsvFileInfos, selector, filters, globalFilters);
-        HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        responseHeaders.setContentDispositionFormData("attachment", "sensitivity_results.csv");
-
-        return ResponseEntity
-                .ok()
-                .headers(responseHeaders)
-                .body(result);
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/result/filter-options")
-    @Operation(summary = "Get sensitivity analysis filter options on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis filter options"),
-        @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The sensitivity analysis has not been found")})
-    public ResponseEntity<String> getSensitivityAnalysisFilterOptions(
-        @Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-        @Parameter(description = "results selector") @RequestParam("selector") String selector) {
-        String result = rootNetworkNodeInfoService.getSensitivityResultsFilterOptions(nodeUuid, rootNetworkUuid, selector);
-        return result != null ? ResponseEntity.ok().body(result) :
-            ResponseEntity.noContent().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/status")
-    @Operation(summary = "Get the sensitivity analysis status on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis status"),
-        @ApiResponse(responseCode = "204", description = "No sensitivity analysis has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The sensitivity analysis status has not been found")})
-    public ResponseEntity<String> getSensitivityAnalysisStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                               @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                               @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getSensitivityAnalysisStatus(nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().body(result) :
-            ResponseEntity.noContent().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/stop")
-    @Operation(summary = "stop sensitivity analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis has been stopped")})
-    public ResponseEntity<Void> stopSensitivityAnalysis(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                        @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkNodeInfoService.stopSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
     // --- Dynamic Simulation Endpoints BEGIN --- //
 
     @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")
@@ -1907,37 +1807,6 @@ public class StudyController {
         public void setAsText(final String text) throws IllegalArgumentException {
             setValue(ModificationType.getTypeFromUri(text));
         }
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
-    @Operation(summary = "Get sensitivity analysis parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters")})
-    public ResponseEntity<String> getSensitivityAnalysisParameters(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getSensitivityAnalysisParameters(studyUuid));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/sensitivity-analysis/parameters")
-    @Operation(summary = "set sensitivity analysis parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sensitivity analysis parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
-    public ResponseEntity<Void> setSensitivityAnalysisParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String sensitivityAnalysisParameters,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return studyService.setSensitivityAnalysisParameters(studyUuid, sensitivityAnalysisParameters, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/sensitivity-analysis/factor-count")
-    @Operation(summary = "Get the factor count of sensitivity parameters")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The factors count of sensitivity parameters")})
-    public ResponseEntity<String> getSensitivityAnalysisFactorCount(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid,
-            @RequestBody String sensitivityAnalysisParameters) {
-        return ResponseEntity.ok().body(sensitivityAnalysisService.getSensitivityAnalysisFactorCount(rootNetworkService.getNetworkUuid(rootNetworkUuid),
-            networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid), sensitivityAnalysisParameters));
     }
 
     @GetMapping(value = "/servers/infos")

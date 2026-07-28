@@ -59,9 +59,9 @@ import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
-import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
 import org.gridsuite.study.server.utils.ElementType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,14 +133,13 @@ public class StudyService {
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
-    private final SensitivityAnalysisRestService sensitivityAnalysisService;
+    private final SensitivityAnalysisService sensitivityAnalysisService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
     private final NadConfigService nadConfigService;
     private final FilterService filterService;
     private final ActionsService actionsService;
     private final CaseService caseService;
-    private final StateEstimationRestService stateEstimationService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
@@ -177,44 +176,42 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        StudyRepository studyRepository,
-        StudyCreationRequestRepository studyCreationRequestRepository,
-        NetworkService networkStoreService,
-        NetworkModificationService networkModificationService,
-        ReportService reportService,
-        UserAdminService userAdminService,
-        StudyInfosService studyInfosService,
-        EquipmentInfosService equipmentInfosService,
-        NetworkModificationTreeService networkModificationTreeService,
-        ObjectMapper objectMapper,
-        StudyServerExecutionService studyServerExecutionService,
-        NotificationService notificationService,
-        LoadFlowRestService loadflowRestService,
-        LoadFlowService loadFlowService,
-        ShortCircuitRestService shortCircuitService,
-        SingleLineDiagramService singleLineDiagramService,
-        NetworkConversionService networkConversionService,
-        GeoDataService geoDataService,
-        NetworkMapService networkMapService,
-        SecurityAnalysisRestService securityAnalysisRestService,
-        SecurityAnalysisService securityAnalysisService,
-        ActionsService actionsService,
-        CaseService caseService,
-        SensitivityAnalysisRestService sensitivityAnalysisService,
-        DynamicSimulationService dynamicSimulationService,
-        DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-        DynamicMarginCalculationService dynamicMarginCalculationService,
-        VoltageInitRestService voltageInitService,
-        DynamicSimulationEventService dynamicSimulationEventService,
-        StudyConfigService studyConfigService,
-        NadConfigService nadConfigService,
-        FilterService filterService,
-        StateEstimationRestService stateEstimationService,
-        @Lazy StudyService studyService,
-        RootNetworkService rootNetworkService,
-        RootNetworkNodeInfoService rootNetworkNodeInfoService,
-        DirectoryService directoryService,
-        ComputationParametersService computationParametersService) {
+            StudyRepository studyRepository,
+            StudyCreationRequestRepository studyCreationRequestRepository,
+            NetworkService networkStoreService,
+            NetworkModificationService networkModificationService,
+            ReportService reportService,
+            UserAdminService userAdminService,
+            StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
+            NetworkModificationTreeService networkModificationTreeService,
+            ObjectMapper objectMapper,
+            StudyServerExecutionService studyServerExecutionService,
+            NotificationService notificationService,
+            LoadFlowRestService loadflowRestService,
+            LoadFlowService loadFlowService,
+            ShortCircuitRestService shortCircuitService,
+            SingleLineDiagramService singleLineDiagramService,
+            NetworkConversionService networkConversionService,
+            GeoDataService geoDataService,
+            NetworkMapService networkMapService,
+            SecurityAnalysisRestService securityAnalysisRestService,
+            SecurityAnalysisService securityAnalysisService,
+            ActionsService actionsService,
+            CaseService caseService,
+            DynamicSimulationService dynamicSimulationService,
+            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+            DynamicMarginCalculationService dynamicMarginCalculationService,
+            VoltageInitRestService voltageInitService, SensitivityAnalysisService sensitivityAnalysisService,
+            DynamicSimulationEventService dynamicSimulationEventService,
+            StudyConfigService studyConfigService,
+            NadConfigService nadConfigService,
+            FilterService filterService,
+            @Lazy StudyService studyService,
+            RootNetworkService rootNetworkService,
+            RootNetworkNodeInfoService rootNetworkNodeInfoService,
+            DirectoryService directoryService,
+            ComputationParametersService computationParametersService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -228,7 +225,6 @@ public class StudyService {
         this.studyServerExecutionService = studyServerExecutionService;
         this.notificationService = notificationService;
         this.loadFlowService = loadFlowService;
-        this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.loadflowRestService = loadflowRestService;
         this.shortCircuitService = shortCircuitService;
         this.singleLineDiagramService = singleLineDiagramService;
@@ -242,11 +238,11 @@ public class StudyService {
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.dynamicMarginCalculationService = dynamicMarginCalculationService;
         this.voltageInitService = voltageInitService;
+        this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
         this.nadConfigService = nadConfigService;
         this.filterService = filterService;
-        this.stateEstimationService = stateEstimationService;
         this.self = studyService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
@@ -1203,7 +1199,7 @@ public class StudyService {
                 List.of(
                         this::invalidateAllStudyLoadFlowStatus,
                         securityAnalysisService::invalidateSecurityAnalysisStatusOnAllNodes,
-                        this::invalidateSensitivityAnalysisStatusOnAllNodes,
+                        sensitivityAnalysisService::invalidateSensitivityAnalysisStatusOnAllNodes,
                         this::invalidateDynamicSimulationStatusOnAllNodes,
                         this::invalidateDynamicSecurityAnalysisStatusOnAllNodes,
                         this::invalidateDynamicMarginCalculationStatusOnAllNodes
@@ -1305,10 +1301,6 @@ public class StudyService {
 
     private void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
         loadflowRestService.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
-    }
-
-    public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        sensitivityAnalysisService.invalidateSensitivityAnalysisStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
     }
 
     public void invalidateDynamicSimulationStatusOnAllNodes(UUID studyUuid) {
@@ -2493,42 +2485,6 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSensitivityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
-        StudyEntity study = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        UUID result = handleSensitivityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
-
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SENSITIVITY_ANALYSIS), result);
-        return result;
-    }
-
-    private UUID handleSensitivityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
-        if (prevResultUuid != null) {
-            sensitivityAnalysisService.deleteSensitivityAnalysisResults(List.of(prevResultUuid));
-        }
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID sensiReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(SENSITIVITY_ANALYSIS.name(), UUID.randomUUID());
-        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS, sensiReportUuid);
-
-        UUID sensiParamsUuid = study.getSensitivityAnalysisParametersUuid();
-
-        // fetch the filters and contingencyLists contained in sensi parameters
-        // and retrieve their names, as they are needed in the results
-        List<UUID> elementIds = sensitivityAnalysisService.getElementIds(sensiParamsUuid);
-        Map<UUID, String> elementsIdNameMap = directoryService.getElementNames(new HashSet<>(elementIds));
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, rootNetworkUuid, networkUuid, variantId,
-                sensiReportUuid, userId, sensiParamsUuid, study.getLoadFlowParametersUuid(), elementsIdNameMap);
-
-        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SENSITIVITY_ANALYSIS);
-        notificationService.emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        notificationService.emitElementUpdated(study.getId(), userId);
-        return result;
-    }
-
-    @Transactional
     public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
         networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
@@ -3098,31 +3054,6 @@ public class StudyService {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, nodeUuid, childrenUuids);
         }
         notificationService.emitElementUpdated(studyUuid, userId);
-    }
-
-    @Transactional
-    public String getSensitivityAnalysisParameters(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return sensitivityAnalysisService.getSensitivityAnalysisParameters(
-                sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
-    }
-
-    @Transactional
-    public boolean setSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
-        return setComputationParameters(
-                studyUuid,
-                parameters,
-                userId,
-                StudyEntity::getSensitivityAnalysisParametersUuid,
-                StudyEntity::setSensitivityAnalysisParametersUuid,
-                UserProfileInfos::getSensitivityAnalysisParameterId,
-                sensitivityAnalysisService,
-                sensitivityAnalysisService::createSensitivityAnalysisParameters,
-                sensitivityAnalysisService::updateSensitivityAnalysisParameters,
-                SENSITIVITY_ANALYSIS,
-                List.of(this::invalidateSensitivityAnalysisStatusOnAllNodes),
-                NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS
-        );
     }
 
     private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode computationsInvalidationMode) {

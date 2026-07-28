@@ -35,6 +35,7 @@ import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
