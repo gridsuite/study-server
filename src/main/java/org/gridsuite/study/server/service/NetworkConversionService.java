@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
+import org.gridsuite.study.server.dto.CompressionType;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
@@ -136,11 +137,15 @@ public class NetworkConversionService {
         return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.GET, null, typeRef).getBody();
     }
 
-    public UUID exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, NodeExportInfos exportInfos, String format, String userId, String parametersJson) {
+    public UUID exportNetwork(UUID networkUuid, UUID studyUuid, String variantId, NodeExportInfos exportInfos, String format, CompressionType compression, String userId, String parametersJson) {
 
         try {
             var uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION
                 + "/networks/{networkUuid}/export/{format}");
+
+            if (compression != null) {
+                uriComponentsBuilder.queryParam("compression", compression);
+            }
             if (!StringUtils.isEmpty(variantId)) {
                 uriComponentsBuilder.queryParam("variantId", variantId);
             }

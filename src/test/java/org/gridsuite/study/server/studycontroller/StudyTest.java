@@ -149,17 +149,20 @@ class StudyTest extends StudyTestBase {
         UUID rootNodeUuid = getRootNodeUuid(studyNameUserIdUuid);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName",
             studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
-
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
             Map.of("fileName", WireMock.equalTo("myFileName")));
 
         stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", UUID.randomUUID().toString());
+        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?compression=GZIP&fileName=myFileName",
+            studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM").header(HEADER_USER_ID, userId)).andExpect(status().isOk());
+        wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
+            Map.of("compression", WireMock.equalTo(CompressionType.GZIP.name()), "fileName", WireMock.equalTo("myFileName")));
 
+        stubNetworkExportId = wireMockStubs.networkConversionServer.stubNetworkExport(NETWORK_UUID_STRING, "XIIDM", UUID.randomUUID().toString());
         mockMvc.perform(
                 post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/export-network/{format}?fileName=myFileName&formatParameters=%7B%22iidm.export.xml.indent%22%3Afalse%7D",
                         studyNameUserIdUuid, firstRootNetworkUuid, rootNodeUuid, "XIIDM")
             .header(HEADER_USER_ID, userId)).andExpect(status().isOk());
-
         wireMockStubs.networkConversionServer.verifyNetworkExport(stubNetworkExportId, NETWORK_UUID_STRING, "XIIDM",
             Map.of("fileName", WireMock.equalTo("myFileName")));
 
