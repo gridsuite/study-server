@@ -2378,6 +2378,14 @@ public class StudyService {
             (groupUuid, modificationApplicationContexts) -> {
                 NetworkModificationsResult networkModificationResults = networkModificationService.duplicateModifications(groupUuid, Pair.of(modificationsUuids, modificationApplicationContexts));
                 copyModificationsToExclude(originNodeUuid, targetNodeUuid, modificationsUuids, networkModificationResults);
+                Map<UUID, UUID> referenceTargets = networkModificationService.getReferences(modificationsUuids);
+                referenceTargets.forEach((refUuid, sharedCompositeUuids) -> {
+                    directoryService.createsReferencesToSharedComposites(
+                            List.of(refUuid),
+                            userId,
+                            targetNodeUuid
+                    );
+                });
                 return networkModificationResults;
             },
             userId);
