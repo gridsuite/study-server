@@ -71,6 +71,7 @@ public class ConsumerService {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
     private final ComputationParametersService computationParametersService;
+    private final UserAdminService userAdminService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
@@ -81,7 +82,8 @@ public class ConsumerService {
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            DirectoryService directoryService,
-                           ComputationParametersService computationParametersService) {
+                           ComputationParametersService computationParametersService,
+                           UserAdminService userAdminService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
@@ -92,6 +94,7 @@ public class ConsumerService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
+        this.userAdminService = userAdminService;
     }
 
     @Bean
@@ -401,6 +404,11 @@ public class ConsumerService {
                 if (receiverObj != null) {
                     handleUnblockNode(receiverObj, computationType);
 
+                    // free quota
+                    if (userId != null && resultUuid != null) {
+                        userAdminService.endOperationWithQuota(userId, QuotaType.mapFromComputationType(computationType), resultUuid);
+                    }
+
                     // send notification for failed computation
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     notificationService.emitStudyError(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateFailedType(), errorMessage, userId);
@@ -421,6 +429,14 @@ public class ConsumerService {
                 UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                 // send notification for stopped computation
                 notificationService.emitStudyChanged(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), computationType.getUpdateStatusType());
+
+                // free quota
+                String resultId = msg.getHeaders().get(RESULT_UUID, String.class);
+                String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
+                if (resultId != null && userId != null) {
+                    UUID resultUuid = UUID.fromString(resultId);
+                    userAdminService.endOperationWithQuota(userId, QuotaType.mapFromComputationType(computationType), resultUuid);
+                }
 
                 LOGGER.info("{} stopped for node '{}'", computationType.getLabel(), receiverObj.getNodeUuid());
             } catch (JsonProcessingException e) {
@@ -503,6 +519,12 @@ public class ConsumerService {
                 if (computationType == LOAD_FLOW) {
                     String userId = (String) msg.getHeaders().get(HEADER_USER_ID);
                     handleLoadFlowSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), resultUuid, userId);
+                }
+
+                // free quota
+                String userId = msg.getHeaders().get(HEADER_USER_ID, String.class);
+                if (userId != null) {
+                    userAdminService.endOperationWithQuota(userId, QuotaType.mapFromComputationType(computationType), resultUuid);
                 }
 
                 // send notifications
