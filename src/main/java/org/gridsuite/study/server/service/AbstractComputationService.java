@@ -102,7 +102,7 @@ public abstract class AbstractComputationService {
         emitComputationParametersChanged(studyUuid, userId, computationType, statusInvalidations, statusUpdateTypes);
     }
 
-    private void emitComputationParametersChanged(UUID studyUuid, String userId,
+    protected void emitComputationParametersChanged(UUID studyUuid, String userId,
                                                   ComputationType computationType,
                                                   List<Consumer<UUID>> statusInvalidations,
                                                   String... statusUpdateTypes) {

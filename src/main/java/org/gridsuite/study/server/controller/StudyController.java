@@ -32,7 +32,6 @@ import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
-import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
@@ -756,79 +755,6 @@ public class StudyController {
         } finally {
             studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
         }
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run")
-    @Operation(summary = "run voltage init on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has started"),
-        @ApiResponse(responseCode = "403", description = "The study node is not a model node")})
-    public ResponseEntity<Void> runVoltageInit(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-            @PathVariable("nodeUuid") UUID nodeUuid,
-            @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(VOLTAGE_INITIALIZATION, userId);
-        studyService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/stop")
-    @Operation(summary = "stop security analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init has been stopped")})
-    public ResponseEntity<Void> stopVoltageInit(@Parameter(description = "Study uuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                @RequestHeader(HEADER_USER_ID) String userId) {
-        rootNetworkNodeInfoService.stopVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/result")
-    @Operation(summary = "Get a voltage init result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init result"),
-        @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The voltage init has not been found")})
-    public ResponseEntity<String> getVoltageInitResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                        @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                        @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                        @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters) {
-        String result = studyService.getVoltageInitResult(nodeUuid, rootNetworkUuid, globalFilters);
-        return result != null ? ResponseEntity.ok().body(result) :
-                ResponseEntity.noContent().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/status")
-    @Operation(summary = "Get the voltage init status on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init status"),
-        @ApiResponse(responseCode = "204", description = "No voltage init has been done yet"),
-        @ApiResponse(responseCode = "404", description = "The voltage init status has not been found")})
-    public ResponseEntity<String> getVoltageInitStatus(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                       @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getVoltageInitStatus(nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().body(result) :
-                ResponseEntity.noContent().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
-    @Operation(summary = "Set voltage init parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
-    public ResponseEntity<Void> setVoltageInitParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) StudyVoltageInitParameters voltageInitParameters,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return studyService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/voltage-init/parameters")
-    @Operation(summary = "Get voltage init parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters")})
-    public ResponseEntity<StudyVoltageInitParameters> getVoltageInitParameters(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getVoltageInitParameters(studyUuid));
     }
 
     @GetMapping(value = "/export-network-formats")
