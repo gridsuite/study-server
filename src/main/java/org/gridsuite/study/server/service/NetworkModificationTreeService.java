@@ -118,7 +118,7 @@ public class NetworkModificationTreeService {
     @Transactional(readOnly = true)
     public List<NodeInfos> getNodesInfos(List<UUID> nodeUuids) {
         // unknown node uuids are simply absent from the result
-        return networkModificationNodeInfoRepository.findAllByIdIn(nodeUuids).stream()
+        return networkModificationNodeInfoRepository.findAllByIdInWithNode(nodeUuids).stream()
                 .map(nodeInfo -> new NodeInfos(nodeInfo.getId(), nodeInfo.getName(), nodeInfo.getNode().getStudy().getId()))
                 .toList();
     }
