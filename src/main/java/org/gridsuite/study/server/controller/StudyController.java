@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
@@ -24,10 +23,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
-import org.gridsuite.study.server.dto.modification.CompositeInfos;
-import org.gridsuite.study.server.dto.modification.ModificationType;
-import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
-import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
+import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
@@ -651,36 +647,17 @@ public class StudyController {
     }
 
     @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modification/{modificationUuid}")
-    @Operation(summary = "move network modification before another")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification order is updated")})
-    public ResponseEntity<Void> moveModification(@PathVariable("studyUuid") UUID studyUuid,
-                                                        @PathVariable("nodeUuid") UUID nodeUuid,
-                                                        @PathVariable("modificationUuid") UUID modificationUuid,
-                                                        @Nullable @Parameter(description = "move before, if no value move to end") @RequestParam(value = "beforeUuid") UUID beforeUuid,
-                                                        @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-        rebuildNodeService.moveNetworkModification(studyUuid, nodeUuid, modificationUuid, beforeUuid, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/composite-sub-modification/{modificationUuid}")
-    @Operation(summary = "Move a composite sub-modification within/between composites or to/from root level")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The sub-modification order has been updated")})
-    public ResponseEntity<Void> moveSubModification(
+    @Operation(summary = "Move a modification within or between containers (groups or composites)")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The modification order has been updated")})
+    public ResponseEntity<Void> moveModification(
             @PathVariable("studyUuid") UUID studyUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("modificationUuid") UUID modificationUuid,
-            @Nullable @Parameter(description = "Source composite UUID; absent when moving from root level") @RequestParam(value = "sourceCompositeUuid", required = false) UUID sourceCompositeUuid,
-            @Nullable @Parameter(description = "Target composite UUID; absent when moving to root level") @RequestParam(value = "targetCompositeUuid", required = false) UUID targetCompositeUuid,
-            @Nullable @Parameter(description = "Insert before this UUID; absent means append at end") @RequestParam(value = "beforeUuid", required = false) UUID beforeUuid,
+            @RequestBody MoveModificationInfos moveModificationInfos,
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
         studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
-        rebuildNodeService.moveSubModification(
-                studyUuid, nodeUuid,
-                sourceCompositeUuid, targetCompositeUuid,
-                modificationUuid, beforeUuid, userId);
+        rebuildNodeService.moveNetworkModification(studyUuid, nodeUuid, modificationUuid, moveModificationInfos, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -1060,6 +1037,7 @@ public class StudyController {
             @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
             @PathVariable("nodeUuid") UUID nodeUuid,
             @PathVariable("format") String format,
+            @RequestParam(name = "compression", required = false, defaultValue = "ZIP") CompressionType compression,
             @RequestParam(value = "formatParameters", required = false) String parametersJson,
             @RequestParam(value = "fileName") String fileName,
             @RequestParam(value = "exportToGridExplore", required = false, defaultValue = "false") boolean exportToGridExplore,
@@ -1073,6 +1051,7 @@ public class StudyController {
                                                         rootNetworkUuid,
                                                         new NodeExportInfos(exportToGridExplore, parentDirectoryUuid, fileName, description),
                                                         format,
+                                                        compression,
                                                         userId,
                                                         parametersJson);
         return ResponseEntity.ok().body(exportUuid);
@@ -1732,7 +1711,7 @@ public class StudyController {
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
-        studyService.assertCanBuildNode(rootNetworkUuid, nodeUuid);
+        studyService.assertNoBuildingNode(rootNetworkUuid, nodeUuid);
         studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
@@ -1747,6 +1726,7 @@ public class StudyController {
                                           @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
                                           @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
+        studyService.assertNoBuildingNode(rootNetworkUuid, nodeUuid);
         studyService.unbuildStudyNode(studyUuid, nodeUuid, rootNetworkUuid, userId);
         return ResponseEntity.ok().build();
     }
