@@ -66,8 +66,10 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     List<RootNetworkNodeInfoEntity> getAllByRootNetworkIdAndNodeInfoIdIn(UUID rootNetworkUuid, List<UUID> nodesUuids);
 
-    default int acquireActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> strictCheckSetUuids, List<UUID> sharedCheckSetUuids, LocalActivityStatus activity) {
-        return acquireActivity(rootNetworkUuid, nodeUuids, strictCheckSetUuids, sharedCheckSetUuids, activity, LocalActivityStatus.IDLE, SharedActivityStatus.IDLE);
+    default int acquireActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> localActivityCheckUuids, List<UUID> sharedActivityCheckUuids,
+                                 List<UUID> securityAncestorCheckUuids, LocalActivityStatus activity) {
+        return acquireActivity(rootNetworkUuid, nodeUuids, localActivityCheckUuids, sharedActivityCheckUuids, securityAncestorCheckUuids, activity,
+            LocalActivityStatus.IDLE, SharedActivityStatus.IDLE, LocalActivityStatus.SECURITY_LOADFLOW_RUNNING);
     }
 
     @Modifying
@@ -77,16 +79,22 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
           AND rnni.activityStatus = :idle
           AND NOT EXISTS (
               SELECT 1 FROM RootNetworkNodeInfoEntity rnni2
-              WHERE rnni2.rootNetwork.id = :rootNetworkUuid AND rnni2.nodeInfo.idNode IN :strictCheckSetUuids
+              WHERE rnni2.rootNetwork.id = :rootNetworkUuid AND rnni2.nodeInfo.idNode IN :localActivityCheckUuids
                 AND rnni2.activityStatus <> :idle
           )
           AND NOT EXISTS (
               SELECT 1 FROM NetworkModificationNodeInfoEntity n
-              WHERE n.idNode IN :sharedCheckSetUuids AND n.sharedActivityStatus <> :sharedIdle
+              WHERE n.idNode IN :sharedActivityCheckUuids AND n.sharedActivityStatus <> :sharedIdle
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM RootNetworkNodeInfoEntity rnni3
+              WHERE rnni3.rootNetwork.id = :rootNetworkUuid AND rnni3.nodeInfo.idNode IN :securityAncestorCheckUuids
+                AND rnni3.activityStatus = :securityLoadflowRunning
           )
         """)
-    int acquireActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> strictCheckSetUuids, List<UUID> sharedCheckSetUuids,
-                         LocalActivityStatus activity, LocalActivityStatus idle, SharedActivityStatus sharedIdle);
+    int acquireActivity(UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> localActivityCheckUuids, List<UUID> sharedActivityCheckUuids,
+                         List<UUID> securityAncestorCheckUuids, LocalActivityStatus activity, LocalActivityStatus idle, SharedActivityStatus sharedIdle,
+                         LocalActivityStatus securityLoadflowRunning);
 
     default void releaseActivity(UUID rootNetworkUuid, List<UUID> nodeUuids) {
         releaseActivity(rootNetworkUuid, nodeUuids, LocalActivityStatus.IDLE);

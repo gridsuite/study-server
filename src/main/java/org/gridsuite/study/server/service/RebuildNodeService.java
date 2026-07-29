@@ -13,6 +13,7 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.networkmodificationtree.dto.LocalActivityStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeCheckScope;
 import org.gridsuite.study.server.networkmodificationtree.dto.SharedActivityStatus;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -28,12 +29,14 @@ public class RebuildNodeService {
     private final StudyService studyService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final NodeActivityGuardService nodeActivityGuardService;
+    private final NotificationService notificationService;
 
     public RebuildNodeService(StudyService studyService, NetworkModificationTreeService networkModificationTreeService,
-                              NodeActivityGuardService nodeActivityGuardService) {
+                              NodeActivityGuardService nodeActivityGuardService, NotificationService notificationService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.nodeActivityGuardService = nodeActivityGuardService;
+        this.notificationService = notificationService;
     }
 
     public void createNetworkModification(UUID studyUuid, UUID nodeUuid, String modificationAttributes, String userId) {
@@ -196,6 +199,10 @@ public class RebuildNodeService {
         ));
 
         T result = nodeActivityGuardService.runWithSharedActivity(studyUuid, nodesToSetActivity, NodeCheckScope.BRANCH, reason, action);
+
+        if (!node1Uuid.equals(node2Uuid)) {
+            notificationService.emitSharedActivityUpdated(studyUuid, List.of(node1Uuid, node2Uuid));
+        }
 
         rootNetworkUuidsByNodeBuilt.forEach((nodeUuid, rootNetworkUuids) ->
             rootNetworkUuids.forEach(rootNetworkUuid -> studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId))

@@ -16,6 +16,7 @@ import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
 import org.gridsuite.study.server.networkmodificationtree.dto.LocalActivityStatus;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -30,6 +31,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @SuperBuilder
+@DynamicUpdate
 @Table(name = "RootNetworkNodeInfo",
     indexes = {
         @Index(name = "rootNetworkNodeEntity_rootNetworkId_idx", columnList = "root_network_id"),

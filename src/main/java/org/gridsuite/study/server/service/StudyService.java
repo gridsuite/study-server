@@ -999,8 +999,15 @@ public class StudyService {
     @Transactional
     public void sendLoadflowRequestWorflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        nodeActivityGuardService.runComputation(studyUuid, rootNetworkUuid, nodeUuid,
+        runLoadflowComputation(studyUuid, nodeUuid, rootNetworkUuid,
             () -> handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId));
+    }
+
+    private void runLoadflowComputation(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Runnable action) {
+        boolean isSecurityNode = networkModificationTreeService.isSecurityNode(nodeUuid);
+        NodeCheckScope scope = isSecurityNode ? NodeCheckScope.BRANCH : NodeCheckScope.ANCESTORS;
+        LocalActivityStatus activity = isSecurityNode ? LocalActivityStatus.SECURITY_LOADFLOW_RUNNING : LocalActivityStatus.COMPUTATION_RUNNING;
+        nodeActivityGuardService.runWithLocalActivityAsync(studyUuid, List.of(rootNetworkUuid), List.of(nodeUuid), scope, activity, action);
     }
 
     @Transactional
@@ -1015,7 +1022,7 @@ public class StudyService {
                         .build()));
         }
 
-        nodeActivityGuardService.runComputation(studyUuid, rootNetworkUuid, nodeUuid,
+        runLoadflowComputation(studyUuid, nodeUuid, rootNetworkUuid,
             () -> handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId));
     }
 
@@ -3079,7 +3086,6 @@ public class StudyService {
         return networkModificationService.getModifications(voltageInitModificationsGroupUuid, false, false);
     }
 
-    @Transactional
     public void insertVoltageInitModifications(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         assertIsNodeNotReadOnly(nodeUuid);
         // get modifications group uuid associated to voltage init results
@@ -3090,11 +3096,12 @@ public class StudyService {
         UUID voltageInitModificationsGroupUuid = voltageInitService.getModificationsGroupUuid(nodeUuid, resultUuid);
 
         nodeActivityGuardService.runWithSharedActivity(studyUuid, List.of(nodeUuid), NodeCheckScope.BRANCH, SharedActivityStatus.CREATING,
-            () -> doInsertVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, voltageInitModificationsGroupUuid));
+            () -> self.doInsertVoltageInitModifications(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, voltageInitModificationsGroupUuid));
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    private void doInsertVoltageInitModifications(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, UUID voltageInitModificationsGroupUuid) {
+    @Transactional
+    public void doInsertVoltageInitModifications(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, UUID voltageInitModificationsGroupUuid) {
         checkStudyContainsNode(studyUuid, nodeUuid);
 
         invalidateNodeTreeWithLF(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode.PRESERVE_VOLTAGE_INIT_RESULTS);

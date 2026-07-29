@@ -37,23 +37,19 @@ public interface NetworkModificationNodeInfoRepository extends NodeInfoRepositor
         UPDATE NetworkModificationNodeInfoEntity n SET n.sharedActivityStatus = :reason
         WHERE n.idNode IN :nodeUuids AND n.sharedActivityStatus = :sharedIdle
           AND NOT EXISTS (
-              SELECT 1 FROM NetworkModificationNodeInfoEntity n2
-              WHERE n2.idNode IN :strictSet AND n2.sharedActivityStatus <> :sharedIdle
-          )
-          AND NOT EXISTS (
               SELECT 1 FROM RootNetworkNodeInfoEntity rnni
-              WHERE rnni.nodeInfo.idNode IN :strictSet AND rnni.activityStatus <> :idle
+              WHERE rnni.nodeInfo.idNode IN :localActivityCheckUuids AND rnni.activityStatus <> :idle
           )
           AND NOT EXISTS (
               SELECT 1 FROM NetworkModificationNodeInfoEntity n3
-              WHERE n3.idNode IN :looseSet AND n3.sharedActivityStatus <> :sharedIdle
+              WHERE n3.idNode IN :sharedActivityCheckUuids AND n3.sharedActivityStatus <> :sharedIdle
           )
         """)
-    int acquireSharedActivity(List<UUID> nodeUuids, List<UUID> strictSet, List<UUID> looseSet, SharedActivityStatus reason,
+    int acquireSharedActivity(List<UUID> nodeUuids, List<UUID> localActivityCheckUuids, List<UUID> sharedActivityCheckUuids, SharedActivityStatus reason,
                                LocalActivityStatus idle, SharedActivityStatus sharedIdle);
 
-    default int acquireSharedActivity(List<UUID> nodeUuids, List<UUID> strictSet, List<UUID> looseSet, SharedActivityStatus reason) {
-        return acquireSharedActivity(nodeUuids, strictSet, looseSet, reason, LocalActivityStatus.IDLE, SharedActivityStatus.IDLE);
+    default int acquireSharedActivity(List<UUID> nodeUuids, List<UUID> localActivityCheckUuids, List<UUID> sharedActivityCheckUuids, SharedActivityStatus reason) {
+        return acquireSharedActivity(nodeUuids, localActivityCheckUuids, sharedActivityCheckUuids, reason, LocalActivityStatus.IDLE, SharedActivityStatus.IDLE);
     }
 
     @Modifying

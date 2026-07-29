@@ -10,6 +10,7 @@ public enum LocalActivityStatus {
     IDLE,
     BUILDING,
     COMPUTATION_RUNNING,
+    SECURITY_LOADFLOW_RUNNING,
     UNBUILDING,
     REIMPORTING_CASE
 }

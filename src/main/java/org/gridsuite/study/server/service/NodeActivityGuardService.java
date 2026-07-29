@@ -37,22 +37,18 @@ public class NodeActivityGuardService {
         this.notificationService = notificationService;
     }
 
-    private record CheckSet(List<UUID> strict, List<UUID> loose) {
+    private record CheckSet(List<UUID> localActivityCheckUuids, List<UUID> sharedActivityCheckUuids) {
     }
 
-    private CheckSet resolveCheckSet(List<UUID> nodeUuids, NodeCheckScope scope) {
+    private CheckSet resolveCheckSet(List<UUID> nodeUuids, NodeCheckScope scope, List<UUID> ancestors) {
         return switch (scope) {
-            case SELF -> new CheckSet(nodeUuids, List.of());
-            case ANCESTORS -> new CheckSet(List.of(), networkModificationTreeService.getNodeAncestorUuids(nodeUuids));
+            case SELF -> new CheckSet(nodeUuids, nodeUuids);
+            case ANCESTORS -> new CheckSet(List.of(), Stream.concat(nodeUuids.stream(), ancestors.stream()).distinct().toList());
             case BRANCH -> {
-                List<UUID> strict = Stream.concat(nodeUuids.stream(), networkModificationTreeService.getAllChildrenUuids(nodeUuids).stream()).distinct().toList();
-                yield new CheckSet(strict, networkModificationTreeService.getNodeAncestorUuids(nodeUuids));
+                List<UUID> branch = Stream.concat(nodeUuids.stream(), networkModificationTreeService.getAllChildrenUuids(nodeUuids).stream()).distinct().toList();
+                yield new CheckSet(branch, Stream.concat(branch.stream(), ancestors.stream()).distinct().toList());
             }
         };
-    }
-
-    private List<UUID> sharedCheckSet(List<UUID> nodeUuids, CheckSet checkSet) {
-        return Stream.of(nodeUuids, checkSet.strict(), checkSet.loose()).flatMap(List::stream).distinct().toList();
     }
 
     private static Supplier<Void> asSupplier(Runnable action) {
@@ -80,8 +76,9 @@ public class NodeActivityGuardService {
         if (nodeUuids.isEmpty()) {
             return;
         }
-        CheckSet checkSet = resolveCheckSet(nodeUuids, scope);
-        int updated = networkModificationTreeService.acquireSharedActivity(nodeUuids, checkSet.strict(), sharedCheckSet(nodeUuids, checkSet), reason);
+        List<UUID> ancestors = scope == NodeCheckScope.SELF ? List.of() : networkModificationTreeService.getNodeAncestorUuids(nodeUuids);
+        CheckSet checkSet = resolveCheckSet(nodeUuids, scope, ancestors);
+        int updated = networkModificationTreeService.acquireSharedActivity(nodeUuids, checkSet.localActivityCheckUuids(), checkSet.sharedActivityCheckUuids(), reason);
         if (updated != nodeUuids.size()) {
             throw new StudyException(NODE_ACTIVITY_CONFLICT, "Another action is in progress on this node !");
         }
@@ -101,12 +98,17 @@ public class NodeActivityGuardService {
         if (nodeUuids.isEmpty()) {
             return List.of();
         }
-        CheckSet checkSet = resolveCheckSet(nodeUuids, scope);
-        List<UUID> sharedCheckSet = sharedCheckSet(nodeUuids, checkSet);
+
+        boolean needsAncestors = scope != NodeCheckScope.SELF || activity == LocalActivityStatus.BUILDING;
+        List<UUID> ancestors = needsAncestors ? networkModificationTreeService.getNodeAncestorUuids(nodeUuids) : List.of();
+        CheckSet checkSet = resolveCheckSet(nodeUuids, scope, ancestors);
+
+        List<UUID> securityAncestorCheckUuids = activity == LocalActivityStatus.BUILDING ? ancestors : List.of();
         List<UUID> acquired = new ArrayList<>();
         try {
             for (UUID rootNetworkUuid : rootNetworkUuids) {
-                rootNetworkNodeInfoService.acquireActivity(studyUuid, rootNetworkUuid, nodeUuids, checkSet.strict(), sharedCheckSet, activity);
+                rootNetworkNodeInfoService.acquireActivity(studyUuid, rootNetworkUuid, nodeUuids, checkSet.localActivityCheckUuids(), checkSet.sharedActivityCheckUuids(),
+                    securityAncestorCheckUuids, activity);
                 acquired.add(rootNetworkUuid);
             }
             return acquired;

@@ -264,7 +264,7 @@ public class StudyController {
         //if the source study is not set we assume it's the same as the target study
         UUID sourceStudy = sourceStudyUuid == null ? targetStudyUuid : sourceStudyUuid;
         nodeActivityGuardService.runWithSharedActivity(targetStudyUuid, destinationNodesToGuard(referenceNodeUuid, insertMode),
-            NodeCheckScope.BRANCH, SharedActivityStatus.CREATING,
+            NodeCheckScope.BRANCH, SharedActivityStatus.UPDATING,
             () -> studyService.duplicateStudyNode(sourceStudy, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode, userId));
         return ResponseEntity.ok().build();
     }

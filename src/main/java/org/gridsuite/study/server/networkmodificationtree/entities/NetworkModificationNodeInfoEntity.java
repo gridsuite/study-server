@@ -12,6 +12,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.dto.SharedActivityStatus;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @SuperBuilder
+@DynamicUpdate
 @Table(name = "NetworkModificationNodeInfo")
 public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 

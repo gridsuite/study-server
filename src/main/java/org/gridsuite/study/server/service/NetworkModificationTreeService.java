@@ -408,8 +408,8 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
-    public int acquireSharedActivity(List<UUID> nodeUuids, List<UUID> strictSet, List<UUID> sharedCheckSet, SharedActivityStatus reason) {
-        return networkModificationNodeInfoRepository.acquireSharedActivity(nodeUuids, strictSet, sharedCheckSet, reason);
+    public int acquireSharedActivity(List<UUID> nodeUuids, List<UUID> localActivityCheckUuids, List<UUID> sharedActivityCheckUuids, SharedActivityStatus reason) {
+        return networkModificationNodeInfoRepository.acquireSharedActivity(nodeUuids, localActivityCheckUuids, sharedActivityCheckUuids, reason);
     }
 
     @Transactional

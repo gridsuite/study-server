@@ -494,8 +494,9 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional
-    public void acquireActivity(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> strictCheckSetUuids, List<UUID> sharedCheckSetUuids, LocalActivityStatus activity) {
-        int updated = rootNetworkNodeInfoRepository.acquireActivity(rootNetworkUuid, nodeUuids, strictCheckSetUuids, sharedCheckSetUuids, activity);
+    public void acquireActivity(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids, List<UUID> localActivityCheckUuids, List<UUID> sharedActivityCheckUuids,
+                                 List<UUID> securityAncestorCheckUuids, LocalActivityStatus activity) {
+        int updated = rootNetworkNodeInfoRepository.acquireActivity(rootNetworkUuid, nodeUuids, localActivityCheckUuids, sharedActivityCheckUuids, securityAncestorCheckUuids, activity);
         if (updated != nodeUuids.size()) {
             throw new StudyException(NODE_ACTIVITY_CONFLICT, "Another action is in progress in this branch !");
         }
