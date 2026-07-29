@@ -11,6 +11,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.networkmodificationtree.dto.SharedActivityStatus;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +27,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @SuperBuilder
+@DynamicUpdate
 @Table(name = "NetworkModificationNodeInfo")
 public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
 
@@ -34,6 +37,11 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
     @Column
     @Enumerated(EnumType.STRING)
     private NetworkModificationNodeType nodeType;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private SharedActivityStatus sharedActivityStatus = SharedActivityStatus.IDLE;
 
     @OneToMany(orphanRemoval = true, mappedBy = "nodeInfo", cascade = CascadeType.ALL)
     @Builder.Default
@@ -53,6 +61,7 @@ public class NetworkModificationNodeInfoEntity extends AbstractNodeInfoEntity {
             .description(this.getDescription())
             .columnPosition(this.getColumnPosition())
             .readOnly(this.getReadOnly())
+            .sharedActivityStatus(sharedActivityStatus)
             .build();
     }
 }

@@ -389,14 +389,32 @@ public class NetworkModificationTreeService {
         return nodesUuids;
     }
 
-    public List<UUID> getNodeBranchUuids(UUID nodeUuid) {
+    public List<UUID> getNodeAncestorUuids(UUID nodeUuid) {
         List<UUID> nodesUuids = nodesRepository.findAllAncestorsUuids(nodeUuid);
-        nodesUuids.addAll(getNodeTreeUuids(nodeUuid));
+        nodesUuids.add(nodeUuid);
         return nodesUuids;
+    }
+
+    public List<UUID> getNodeAncestorUuids(List<UUID> nodeUuids) {
+        return nodeUuids.stream().flatMap(nodeUuid -> getNodeAncestorUuids(nodeUuid).stream()).distinct().toList();
     }
 
     public List<UUID> getAllChildrenUuids(UUID parentUuid) {
         return nodesRepository.findAllChildrenUuids(parentUuid);
+    }
+
+    public List<UUID> getAllChildrenUuids(List<UUID> parentUuids) {
+        return parentUuids.stream().flatMap(parentUuid -> getAllChildrenUuids(parentUuid).stream()).distinct().toList();
+    }
+
+    @Transactional
+    public int acquireSharedActivity(List<UUID> nodeUuids, List<UUID> localActivityCheckUuids, List<UUID> sharedActivityCheckUuids, SharedActivityStatus reason) {
+        return networkModificationNodeInfoRepository.acquireSharedActivity(nodeUuids, localActivityCheckUuids, sharedActivityCheckUuids, reason);
+    }
+
+    @Transactional
+    public void releaseSharedActivity(List<UUID> nodeUuids) {
+        networkModificationNodeInfoRepository.releaseSharedActivity(nodeUuids);
     }
 
     // TODO Remove this method and use getAllChildrenUuids
@@ -463,12 +481,15 @@ public class NetworkModificationTreeService {
 
     private void completeNodeInfos(List<AbstractNode> nodes, UUID rootNetworkUuid) {
         RootNetworkEntity rootNetworkEntity = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
+        Map<UUID, RootNetworkActivity> activityInAnotherRootNetworkByNode = rootNetworkNodeInfoService.getActivityInAnotherRootNetwork(rootNetworkEntity.getStudy().getId(), rootNetworkUuid);
         nodes.forEach(nodeInfo -> {
             if (nodeInfo instanceof RootNode rootNode) {
                 rootNode.setReportUuid(rootNetworkEntity.getReportUuid());
             } else {
-                ((NetworkModificationNode) nodeInfo).completeDtoFromRootNetworkNodeInfo(rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeInfo.getId(),
+                NetworkModificationNode modificationNode = (NetworkModificationNode) nodeInfo;
+                modificationNode.completeDtoFromRootNetworkNodeInfo(rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeInfo.getId(),
                         rootNetworkEntity.getId()).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found")));
+                modificationNode.setActivityInAnotherRootNetwork(activityInAnotherRootNetworkByNode.get(nodeInfo.getId()));
             }
         });
     }
@@ -1077,28 +1098,12 @@ public class NetworkModificationTreeService {
 
         InvalidateNodeTreeParameters invalidateChildrenParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
-            .withBlockedNode(invalidateTreeParameters.withBlockedNode())
             .build();
         rootNetworkNodeInfoEntities.forEach(child ->
             invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters))
         );
 
         return invalidateNodeInfos;
-    }
-
-    @Transactional
-    public void unblockNodeTree(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.unblockNodes(rootNetworkUuid, getNodeTreeUuids(nodeUuid));
-    }
-
-    @Transactional
-    public void unblockNode(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.unblockNodes(rootNetworkUuid, List.of(nodeUuid));
-    }
-
-    @Transactional
-    public void blockNode(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.blockNodes(rootNetworkUuid, List.of(nodeUuid));
     }
 
     /**

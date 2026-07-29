@@ -16,6 +16,7 @@ public enum StudyBusinessErrorCode implements BusinessErrorCode {
     COMPUTATION_RUNNING("study.computationRunning"),
     LOADFLOW_ERROR("study.loadflowError"),
     NOT_ALLOWED("study.notAllowed"),
+    NODE_ACTIVITY_CONFLICT("study.nodeActivityConflict"),
     CANT_DELETE_ROOT_NODE("study.cantDeleteRootNode"),
     MOVE_NETWORK_MODIFICATION_FORBIDDEN("study.moveNetworkModificationForbidden"),
     BAD_NODE_TYPE("study.badNodeType"),

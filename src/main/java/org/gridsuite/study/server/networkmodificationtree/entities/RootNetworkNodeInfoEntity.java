@@ -8,12 +8,15 @@
 package org.gridsuite.study.server.networkmodificationtree.entities;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
+import org.gridsuite.study.server.networkmodificationtree.dto.LocalActivityStatus;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -28,6 +31,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @SuperBuilder
+@DynamicUpdate
 @Table(name = "RootNetworkNodeInfo",
     indexes = {
         @Index(name = "rootNetworkNodeEntity_rootNetworkId_idx", columnList = "root_network_id"),
@@ -105,8 +109,10 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "pccMinResultUuid")
     private UUID pccMinResultUuid;
 
-    @Column(name = "blockedNode")
-    private Boolean blockedNode;
+    @Column(name = "activityStatus", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private LocalActivityStatus activityStatus = LocalActivityStatus.IDLE;
 
     @Embedded
     @AttributeOverrides(value = {
@@ -133,6 +139,7 @@ public class RootNetworkNodeInfoEntity {
             .loadFlowResultUuid(loadFlowResultUuid)
             .loadFlowWithRatioTapChangers(loadFlowWithRatioTapChangers)
             .nodeBuildStatus(nodeBuildStatus.toDto())
+            .activityStatus(activityStatus)
             .oneBusShortCircuitAnalysisResultUuid(oneBusShortCircuitAnalysisResultUuid)
             .securityAnalysisResultUuid(securityAnalysisResultUuid)
             .stateEstimationResultUuid(stateEstimationResultUuid)
