@@ -126,6 +126,7 @@ public class StudyService {
     private final GeoDataService geoDataService;
     private final NetworkMapService networkMapService;
     private final SecurityAnalysisService securityAnalysisService;
+    private final DynamicMappingService dynamicMappingService;
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
@@ -195,6 +196,7 @@ public class StudyService {
         ActionsService actionsService,
         CaseService caseService,
         SensitivityAnalysisService sensitivityAnalysisService,
+        DynamicMappingService dynamicMappingService,
         DynamicSimulationService dynamicSimulationService,
         DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
         DynamicMarginCalculationService dynamicMarginCalculationService,
@@ -232,6 +234,7 @@ public class StudyService {
         this.securityAnalysisService = securityAnalysisService;
         this.actionsService = actionsService;
         this.caseService = caseService;
+        this.dynamicMappingService = dynamicMappingService;
         this.dynamicSimulationService = dynamicSimulationService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.dynamicMarginCalculationService = dynamicMarginCalculationService;
@@ -2919,6 +2922,25 @@ public class StudyService {
                 .map(StudyVoltageInitParametersEntity::shouldApplyModifications)
                 .orElse(true);
     }
+
+    // --- Dynamic Mapping service methods BEGIN --- //
+
+    @Transactional(readOnly = true)
+    public String getNetworkValuesFromStudy(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        UUID networkUuid = studyEntity.getFirstRootNetwork().getNetworkUuid();
+        return dynamicMappingService.getNetworkValues(networkUuid);
+    }
+
+    @Transactional(readOnly = true)
+    public String getNetworkMatchesFromStudy(UUID studyUuid, String ruleToMatch) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        UUID networkUuid = studyEntity.getFirstRootNetwork().getNetworkUuid();
+        return dynamicMappingService.getNetworkMatches(networkUuid, ruleToMatch);
+    }
+
+
+    // --- Dynamic Mapping service methods END --- //
 
     // --- Dynamic Simulation service methods BEGIN --- //
 

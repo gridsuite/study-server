@@ -1872,6 +1872,28 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
+    // --- Dynamic Mapping Endpoints BEGIN --- //
+
+    @GetMapping(value = "/studies/{studyUuid}/network-values")
+    @Operation(summary = "Fetch attribute values of the first root network of a study")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of attribute values of the first root network")})
+
+    public ResponseEntity<String> getNetworkValuesFromStudy(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkValuesFromStudy(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/matches/rule")
+    @Operation(summary = "Get the equipment ids that matches the given rule.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Possible attributes values of the network")})
+
+    public ResponseEntity<String> getNetworkMatchesFromStudy(@PathVariable("studyUuid") UUID studyUuid, @RequestBody String ruleToMatch) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkMatchesFromStudy(studyUuid, ruleToMatch));
+    }
+
+    // --- Dynamic Mapping Endpoints END --- //
+
     // --- Dynamic Simulation Endpoints BEGIN --- //
 
     @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")
