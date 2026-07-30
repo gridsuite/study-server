@@ -7,7 +7,6 @@
 
 package org.gridsuite.study.server.service;
 
-import lombok.Getter;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.error.StudyException;
@@ -35,10 +34,8 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 public abstract class AbstractComputationService {
     private final StudyRepository studyRepository;
     private final ComputationParametersService computationParametersService;
-    @Getter
-    private final NotificationService notificationService;
-    @Getter
-    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    protected final NotificationService notificationService;
+    protected final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
     protected AbstractComputationService(StudyRepository studyRepository,
                                          ComputationParametersService computationParametersService,

@@ -87,7 +87,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
             throw new UncheckedIOException(e);
         }
 
-        UUID prevResultUuid = getRootNetworkNodeInfoService().getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
+        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
         if (prevResultUuid != null) {
             securityAnalysisRestService.deleteSecurityAnalysisResults(List.of(prevResultUuid));
         }
@@ -96,8 +96,8 @@ public class SecurityAnalysisService extends AbstractComputationService {
         UUID result = securityAnalysisRestService.runSecurityAnalysis(networkUuid, variantId, runSecurityAnalysisParametersInfos,
                 new ReportInfos(saReportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SECURITY_ANALYSIS);
-        getNotificationService().emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        getNotificationService().emitElementUpdated(study.getId(), userId);
+        notificationService.emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitElementUpdated(study.getId(), userId);
         return result;
     }
 
@@ -120,7 +120,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
     }
 
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        securityAnalysisRestService.invalidateSaStatus(getRootNetworkNodeInfoService().getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
+        securityAnalysisRestService.invalidateSaStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
     }
 
 }
