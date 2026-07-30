@@ -269,7 +269,7 @@ class StudyControllerCreationTest {
     }
 
     private MessageHeaders prepareMessageHeaders(UUID studyUuid, String userId, UUID caseUuid, Map<String, Object> importParameters) throws JsonProcessingException {
-        CaseImportReceiver receiver = new CaseImportReceiver(studyUuid, null, caseUuid, UUID.randomUUID(), UUID.randomUUID(), userId, System.nanoTime(), CaseImportAction.STUDY_CREATION);
+        CaseImportReceiver receiver = new CaseImportReceiver(studyUuid, null, caseUuid, UUID.randomUUID(), UUID.randomUUID(), userId, System.nanoTime(), CaseImportAction.STUDY_CREATION, false);
 
         return new MessageHeaders(Map.of(
             HEADER_USER_ID, userId,
@@ -283,7 +283,7 @@ class StudyControllerCreationTest {
 
     private MessageHeaders prepareMessageHeaders(UUID studyUuid, String userId, UUID caseUuid, Map<String, Object> importParameters,
                                                  NodeExportInfos exportInfos, UUID exportUuid) throws JsonProcessingException {
-        CaseImportReceiver receiver = new CaseImportReceiver(studyUuid, null, caseUuid, UUID.randomUUID(), UUID.randomUUID(), userId, System.nanoTime(), CaseImportAction.STUDY_CREATION);
+        CaseImportReceiver receiver = new CaseImportReceiver(studyUuid, null, caseUuid, UUID.randomUUID(), UUID.randomUUID(), userId, System.nanoTime(), CaseImportAction.STUDY_CREATION, false);
 
         return new MessageHeaders(Map.of(
             HEADER_USER_ID, userId,

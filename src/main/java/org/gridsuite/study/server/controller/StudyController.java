@@ -28,8 +28,6 @@ import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
-import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
-import org.gridsuite.study.server.dto.studyexport.StudyExportInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
@@ -2565,23 +2563,6 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllComputationsStatus(studyUuid, rootNetworkUuid, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/export", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Export a study as a JSON descriptor (root networks + node tree)")
-    @ApiResponse(responseCode = "200", description = "The study export infos")
-    @ApiResponse(responseCode = "404", description = "Study or root network not found")
-    public ResponseEntity<StudyExportInfos> exportStudy(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok(studyService.exportStudy(studyUuid));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/node-tree/import", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Import a node tree into an existing study, duplicating modification groups")
-    public ResponseEntity<Void> importNodeTree(@PathVariable("studyUuid") UUID studyUuid,
-                                               @RequestBody NodeTreeExportInfos nodeTree,
-                                               @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.importNodeTree(studyUuid, nodeTree, userId);
-        return ResponseEntity.ok().build();
-    }
-
     @GetMapping(value = "/studies/{studyUuid}/export-archive", produces = "application/gzip")
     @Operation(summary = "Export a study as a gzip archive containing study.json and case files")
     @ApiResponse(responseCode = "200", description = "The study archive as gzip")
@@ -2598,32 +2579,6 @@ public class StudyController {
                 .body(resource);
     }
 
-    @PostMapping(value = "/studies/import")
-    @Operation(summary = "Import node tree and additional root networks to an existing study")
-    @ApiResponse(responseCode = "200", description = "Study import successful")
-    @ApiResponse(responseCode = "404", description = "Study not found")
-    public ResponseEntity<Void> importStudy(
-            @Parameter(description = "Study UUID") @RequestParam("studyUuid") UUID studyUuid,
-            @Parameter(description = "Study export data") @RequestBody StudyExportInfos studyExportInfos,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.importStudy(studyUuid, studyExportInfos, userId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/import-with-existing-case/{caseUuid}")
-    @Operation(summary = "Import a complete study using an existing case (synchronous)")
-    @ApiResponse(responseCode = "200", description = "Study imported successfully")
-    public ResponseEntity<Void> importStudyWithExistingCase(
-            @Parameter(description = "Case UUID") @PathVariable("caseUuid") UUID caseUuid,
-            @Parameter(description = "Study UUID") @RequestParam("studyUuid") UUID studyUuid,
-            @Parameter(description = "Case format") @RequestParam("caseFormat") String caseFormat,
-            @Parameter(description = "Study export data") @RequestBody StudyExportInfos studyExportInfos,
-            @Parameter(description = "Import parameters (optional)") @RequestParam(required = false) Map<String, Object> importParameters,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.importStudyWithExistingCase(studyUuid, caseUuid, caseFormat, studyExportInfos, importParameters, userId);
-        return ResponseEntity.ok().build();
-    }
-
     @PostMapping(value = "/studies/import-with-case-import-action/{caseUuid}")
     @Operation(summary = "Import a complete study using STUDY_IMPORT action (async)")
     @ApiResponse(responseCode = "200", description = "Study import initiated successfully")
@@ -2636,8 +2591,7 @@ public class StudyController {
             @Parameter(description = "Parent directory UUID") @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
             @Parameter(description = "Request body with importParameters and studyExportInfos") @RequestBody Map<String, Object> requestBody,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.importStudyWithCaseImportAction(studyUuid, caseUuid, caseFormat, studyName, description,
-                parentDirectoryUuid, requestBody, userId);
+        studyService.importStudyWithCaseImportAction(studyUuid, caseUuid, caseFormat, studyName, description, parentDirectoryUuid, requestBody, userId);
         return ResponseEntity.ok().build();
     }
 }

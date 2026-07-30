@@ -395,7 +395,7 @@ class RootNetworkTest {
         // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
         CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(),
-                newRootNetworkUuid, CASE_UUID2, CASE_UUID, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION);
+                newRootNetworkUuid, CASE_UUID2, CASE_UUID, REPORT_UUID2, USER_ID, 0L, CaseImportAction.ROOT_NETWORK_CREATION, false);
         Map<String, Object> importParameters = new HashMap<>();
         importParameters.put("param1", "value1");
         importParameters.put("param2", true);
@@ -433,7 +433,7 @@ class RootNetworkTest {
         // prepare all headers that will be sent to consumer supposed to receive "caseImportSucceeded" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportSucceeded();
         CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getCaseInfos().getCaseUuid(), rootNetworkInfos.getCaseInfos(
-                ).getOriginalCaseUuid(), rootNetworkInfos.getReportUuid(), USER_ID, 0L, caseImportAction);
+                ).getOriginalCaseUuid(), rootNetworkInfos.getReportUuid(), USER_ID, 0L, caseImportAction, false);
         Map<String, Object> headers = createConsumeCaseImportSucceededHeaders(rootNetworkInfos.getNetworkInfos().getNetworkUuid().toString(), rootNetworkInfos.getNetworkInfos().getNetworkId(),
                 rootNetworkInfos.getCaseInfos().getCaseFormat(), rootNetworkInfos.getCaseInfos().getCaseName(), caseImportReceiver, rootNetworkInfos.getImportParameters());
 
@@ -456,7 +456,7 @@ class RootNetworkTest {
         // prepare all headers that will be sent to consumer supposed to receive "caseImportFailed" message
         Consumer<Message<String>> messageConsumer = consumerService.consumeCaseImportFailed();
         CaseImportReceiver caseImportReceiver = new CaseImportReceiver(studyEntity.getId(), newRootNetworkUuid, CASE_UUID2, CASE_UUID, REPORT_UUID2, USER_ID, 0L,
-                CaseImportAction.ROOT_NETWORK_CREATION);
+                CaseImportAction.ROOT_NETWORK_CREATION, false);
         Map<String, Object> headers = createConsumeCaseImportFailedHeaders(caseImportReceiver);
 
         // send message to consumer

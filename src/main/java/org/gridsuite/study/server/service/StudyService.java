@@ -31,10 +31,7 @@ import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
-import org.gridsuite.study.server.dto.studyexport.CaseExportInfos;
-import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
-import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
-import org.gridsuite.study.server.dto.studyexport.StudyExportInfos;
+import org.gridsuite.study.server.dto.studyexport.*;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
@@ -2434,7 +2431,7 @@ public class StudyService {
         reindexRootNetwork(getStudy(studyUuid), rootNetworkUuid);
     }
 
-    private StudyEntity getStudy(UUID studyUuid) {
+    public StudyEntity getStudy(UUID studyUuid) {
         return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
     }
 
@@ -4117,61 +4114,21 @@ public class StudyService {
     }
 
     /**
-     * Import a complete study using an existing case (synchronous).
-     * This creates the study immediately without async case import.
-     */
-    @Transactional
-    public void importStudyWithExistingCase(UUID studyUuid, UUID caseUuid, String caseFormat,
-                                           StudyExportInfos studyExportInfos, Map<String, Object> importParameters,
-                                           String userId) {
-        LOGGER.info("importStudyWithExistingCase: Starting synchronous import for study {} with existing case {}", 
-                studyUuid, caseUuid);
-        
-        if (studyExportInfos.rootNetworks() == null || studyExportInfos.rootNetworks().isEmpty()) {
-            LOGGER.error("importStudyWithExistingCase: No root networks in study export data for study {}", studyUuid);
-            throw new StudyException(IMPORT_STUDY_ERROR, "No root networks in study export data");
-        }
-
-        var firstRootNetwork = studyExportInfos.rootNetworks().getFirst();
-        LOGGER.info("importStudyWithExistingCase: First root network: {}, total: {}", 
-                firstRootNetwork.name(), studyExportInfos.rootNetworks().size());
-
-        // Create the study with the existing case (synchronous)
-        // Note: The study creation and directory element creation is handled by the caller (explore-server)
-        // Here we just need to import the network and then the node tree + additional root networks
-        
-        // Import node tree and additional root networks
-        importStudy(studyUuid, studyExportInfos, userId);
-        
-        LOGGER.info("importStudyWithExistingCase: Successfully imported study {} synchronously", studyUuid);
-    }
-
-    /**
      * Import a complete study with case import trigger.
      * This triggers an async case import, which will then call importStudy() via the consumer.
      */
     public void importStudyWithCase(UUID studyUuid, String studyName, String description, UUID parentDirectoryUuid,
                                     UUID caseUuid, String caseFormat, StudyExportInfos studyExportInfos,
                                     Map<String, Object> importParameters, String userId) {
-        LOGGER.info("importStudyWithCase: Starting import for study {} - name: {}, case: {}, format: {}, parentDir: {}",
-                studyUuid, studyName, caseUuid, caseFormat, parentDirectoryUuid);
-
         // Get the first root network to use for study creation
         if (studyExportInfos.rootNetworks() == null || studyExportInfos.rootNetworks().isEmpty()) {
-            LOGGER.error("importStudyWithCase: No root networks in study export data for study {}", studyUuid);
             throw new StudyException(IMPORT_STUDY_ERROR, "No root networks in study export data");
         }
 
         var firstRootNetwork = studyExportInfos.rootNetworks().getFirst();
-        LOGGER.info("importStudyWithCase: First root network: {}, total root networks: {}",
-                firstRootNetwork.name(), studyExportInfos.rootNetworks().size());
 
         // Create import context with all necessary info
-        org.gridsuite.study.server.dto.studyexport.StudyImportContext importContext =
-                new org.gridsuite.study.server.dto.studyexport.StudyImportContext(
-                        studyExportInfos, studyName, description, parentDirectoryUuid);
-
-        LOGGER.info("importStudyWithCase: Created import context for study {}", studyUuid);
+        StudyImportContext importContext = new StudyImportContext(studyExportInfos, studyName, description, parentDirectoryUuid);
 
         // Create RootNetworkInfos with the case and trigger async import
         CaseInfos caseInfos = new CaseInfos(caseUuid, null, null, caseFormat);
@@ -4183,15 +4140,10 @@ public class StudyService {
                 .importParameters(importParameters != null ? importParameters : firstRootNetwork.importParameters())
                 .build();
 
-        LOGGER.info("importStudyWithCase: Triggering async case import for study {} with root network {}",
-                studyUuid, rootNetworkInfos.getId());
-
         // Trigger case import with STUDY_IMPORT action and pass the import context
         // The consumer will call importStudy() and create directory element after the case import succeeds
         persistNetwork(rootNetworkInfos, studyUuid, NetworkModificationTreeService.FIRST_VARIANT_ID, userId,
                 rootNetworkInfos.getImportParameters(), CaseImportAction.STUDY_IMPORT, importContext);
-
-        LOGGER.info("importStudyWithCase: Successfully triggered async import for study {}", studyUuid);
     }
 
     /**
@@ -4202,8 +4154,6 @@ public class StudyService {
     public void importStudyWithCaseImportAction(UUID studyUuid, UUID caseUuid, String caseFormat,
                                                 String studyName, String description, UUID parentDirectoryUuid,
                                                 Map<String, Object> requestBody, String userId) {
-        LOGGER.info("importStudyWithCaseImportAction: Starting for study {} with case {}", studyUuid, caseUuid);
-
         // Extract importParameters and studyExportInfos from request body
         Map<String, Object> importParameters = (Map<String, Object>) requestBody.get("importParameters");
         Object studyExportInfosObj = requestBody.get("studyExportInfos");
@@ -4218,11 +4168,9 @@ public class StudyService {
                 studyExportInfos = objectMapper.convertValue(studyExportInfosObj, StudyExportInfos.class);
             }
         } catch (Exception e) {
-            LOGGER.error("Failed to parse StudyExportInfos from request body", e);
             throw new StudyException(IMPORT_STUDY_ERROR, "Invalid study export data format");
         }
 
-        LOGGER.info("importStudyWithCaseImportAction: Delegating to importStudyWithCase");
         importStudyWithCase(studyUuid, studyName, description, parentDirectoryUuid,
                 caseUuid, caseFormat, studyExportInfos, importParameters, userId);
     }
