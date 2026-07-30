@@ -41,7 +41,7 @@ public class SecurityAnalysisController {
         this.securityAnalysisService = securityAnalysisService;
     }
 
-    @PostMapping(value = "run")
+    @PostMapping(value = "/run")
     @Operation(summary = "run security analysis on study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The security analysis has started")})
     public ResponseEntity<Void> runSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,

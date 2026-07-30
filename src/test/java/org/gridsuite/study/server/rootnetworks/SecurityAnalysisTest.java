@@ -39,7 +39,6 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -73,6 +72,7 @@ import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -238,7 +238,7 @@ class SecurityAnalysisTest {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
-    private SecurityAnalysisRestService securityAnalysisService;
+    private SecurityAnalysisRestService securityAnalysisRestService;
 
     @Autowired
     private ActionsService actionsService;
@@ -285,7 +285,7 @@ class SecurityAnalysisTest {
 
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
-        securityAnalysisService.setSecurityAnalysisServerBaseUri(wireMockServer.baseUrl());
+        securityAnalysisRestService.setSecurityAnalysisServerBaseUri(wireMockServer.baseUrl());
         actionsService.setActionsServerBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
 
@@ -522,7 +522,7 @@ class SecurityAnalysisTest {
         assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
         assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, SECURITY_ANALYSIS));
 
-        SecurityAnalysisService securityAnalysisService = Mockito.mock(SecurityAnalysisService.class);
+        SecurityAnalysisService securityAnalysisService = mock(SecurityAnalysisService.class);
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), saFailedDestination);
             return resultUuid;

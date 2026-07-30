@@ -129,6 +129,7 @@ public class StudyService {
     private final NetworkConversionService networkConversionService;
     private final GeoDataService geoDataService;
     private final NetworkMapService networkMapService;
+    private final SecurityAnalysisRestService securityAnalysisRestService;
     private final SecurityAnalysisService securityAnalysisService;
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
@@ -148,7 +149,6 @@ public class StudyService {
     private final ComputationParametersService computationParametersService;
 
     private final ObjectMapper objectMapper;
-    private final SecurityAnalysisRestService securityAnalysisRestService;
 
     public enum ReportType {
         NETWORK_MODIFICATION("NetworkModification"),

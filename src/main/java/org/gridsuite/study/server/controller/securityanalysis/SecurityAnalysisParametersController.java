@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,7 +26,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 public class SecurityAnalysisParametersController {
     private final SecurityAnalysisService securityAnalysisService;
 
-    public SecurityAnalysisParametersController(StudyService studyService, SecurityAnalysisService securityAnalysisService) {
+    public SecurityAnalysisParametersController(SecurityAnalysisService securityAnalysisService) {
         this.securityAnalysisService = securityAnalysisService;
     }
 
