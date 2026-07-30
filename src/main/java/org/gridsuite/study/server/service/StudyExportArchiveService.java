@@ -22,7 +22,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
@@ -61,7 +65,8 @@ public class StudyExportArchiveService {
     @Transactional(readOnly = true)
     public InputStreamResource exportStudyArchive(UUID studyUuid) {
         try {
-            Path tempDir = Files.createTempDirectory("study-export-" + studyUuid);
+            FileAttribute<Set<PosixFilePermission>> attr = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"));
+            Path tempDir = Files.createTempDirectory("study-export-" + studyUuid, attr);
             Path casesDir = tempDir.resolve("cases");
             Files.createDirectories(casesDir);
 
