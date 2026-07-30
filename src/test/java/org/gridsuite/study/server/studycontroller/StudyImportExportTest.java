@@ -12,11 +12,13 @@ import org.gridsuite.study.server.dto.studyexport.CaseExportInfos;
 import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.StudyExportInfos;
+import org.gridsuite.study.server.service.StudyExportArchiveService;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.ByteArrayInputStream;
@@ -39,10 +41,22 @@ class StudyImportExportTest extends StudyTestBase {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private StudyExportArchiveService studyExportArchiveService;
+
     @Test
     void testExportStudyArchive() throws Exception {
         // Create a study
         UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
+
+        // Point StudyExportArchiveService's case-server base URI to WireMock
+        ReflectionTestUtils.setField(studyExportArchiveService, "caseServerBaseUri", wireMockServer.baseUrl());
+
+        // Stub the case content download used during export
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
+                .willReturn(WireMock.aResponse().withStatus(200)
+                        .withHeader("Content-Type", "application/octet-stream")
+                        .withBody("dummy case content".getBytes())));
 
         // Export as archive
         MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export-archive", studyUuid).header(HEADER_USER_ID, "testUser"))
@@ -76,6 +90,9 @@ class StudyImportExportTest extends StudyTestBase {
         assertEquals("ROOT", exportInfos.nodeTree().type());
         assertNotNull(exportInfos.nodeTree().children());
         assertEquals(1, exportInfos.nodeTree().children().size());
+
+        // Verify the case content download call
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
     }
 
     @Test
