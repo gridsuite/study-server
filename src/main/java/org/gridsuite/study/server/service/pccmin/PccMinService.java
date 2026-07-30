@@ -87,7 +87,7 @@ public class PccMinService extends AbstractComputationService {
             throw new UncheckedIOException(e);
         }
 
-        UUID prevResultUuid = getRootNetworkNodeInfoService().getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
+        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
         if (prevResultUuid != null) {
             pccMinRestService.deletePccMinResults(List.of(prevResultUuid));
         }
@@ -95,8 +95,8 @@ public class PccMinService extends AbstractComputationService {
 
         UUID result = pccMinRestService.runPccMin(networkUuid, variantId, runPccMinParametersInfos, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, PCC_MIN);
-        getNotificationService().emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
-        getNotificationService().emitElementUpdated(studyEntity.getId(), userId);
+        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
         return result;
     }
 
@@ -106,9 +106,9 @@ public class PccMinService extends AbstractComputationService {
         boolean userProfileIssue = createOrUpdatePccMinParameters(studyEntity, parameters, userId);
 
         invalidatePccMinStatusOnAllNodes(studyEntity.getId());
-        getNotificationService().emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
-        getNotificationService().emitElementUpdated(studyUuid, userId);
-        getNotificationService().emitComputationParamsChanged(studyUuid, PCC_MIN);
+        notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
+        notificationService.emitElementUpdated(studyUuid, userId);
+        notificationService.emitComputationParamsChanged(studyUuid, PCC_MIN);
         return userProfileIssue;
     }
 
@@ -141,6 +141,6 @@ public class PccMinService extends AbstractComputationService {
     }
 
     public void invalidatePccMinStatusOnAllNodes(UUID studyUuid) {
-        pccMinRestService.invalidatePccMinStatus(getRootNetworkNodeInfoService().getComputationResultUuids(studyUuid, PCC_MIN));
+        pccMinRestService.invalidatePccMinStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, PCC_MIN));
     }
 }

@@ -60,7 +60,7 @@ public class ShortCircuitService extends AbstractComputationService {
         StudyEntity studyEntity = getStudy(studyUuid);
         if (studyEntity.getShortCircuitParametersUuid() == null) {
             studyEntity.setShortCircuitParametersUuid(shortCircuitRestService.createParameters(null));
-            getStudyRepository().save(studyEntity);
+            studyRepository.save(studyEntity);
         }
         return shortCircuitRestService.getParameters(studyEntity.getShortCircuitParametersUuid());
     }
@@ -78,7 +78,7 @@ public class ShortCircuitService extends AbstractComputationService {
 
     private UUID handleShortCircuitRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, Optional<String> busId, boolean debug, String userId) {
         ComputationType computationType = busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS;
-        UUID shortCircuitResultUuid = getRootNetworkNodeInfoService().getComputationResultUuid(nodeUuid, rootNetworkUuid, computationType);
+        UUID shortCircuitResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, computationType);
         if (shortCircuitResultUuid != null) {
             shortCircuitRestService.deleteShortCircuitAnalysisResults(List.of(shortCircuitResultUuid));
         }
@@ -89,9 +89,9 @@ public class ShortCircuitService extends AbstractComputationService {
         final UUID result = shortCircuitRestService.runShortCircuit(rootNetworkUuid, new VariantInfos(networkUuid, variantId), busId.orElse(null), studyEntity.getShortCircuitParametersUuid(),
                 new ReportInfos(scReportUuid, nodeUuid), userId, debug);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, computationType);
-        getNotificationService().emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid,
+        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid,
                 busId.isEmpty() ? NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS : NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
-        getNotificationService().emitElementUpdated(studyEntity.getId(), userId);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
         return result;
     }
 
@@ -117,8 +117,8 @@ public class ShortCircuitService extends AbstractComputationService {
 
     public void invalidateShortCircuitStatusOnAllNodes(UUID studyUuid) {
         shortCircuitRestService.invalidateShortCircuitStatus(Stream.concat(
-                getRootNetworkNodeInfoService().getComputationResultUuids(studyUuid, SHORT_CIRCUIT).stream(),
-                getRootNetworkNodeInfoService().getComputationResultUuids(studyUuid, SHORT_CIRCUIT_ONE_BUS).stream()
+                rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT).stream(),
+                rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT_ONE_BUS).stream()
         ).toList());
     }
 }

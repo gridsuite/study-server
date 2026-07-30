@@ -80,7 +80,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
     }
 
     public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        sensitivityAnalysisRestService.invalidateSensitivityAnalysisStatus(getRootNetworkNodeInfoService().getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
+        sensitivityAnalysisRestService.invalidateSensitivityAnalysisStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
     }
 
     @Transactional
@@ -95,7 +95,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
     }
 
     private UUID handleSensitivityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        UUID prevResultUuid = getRootNetworkNodeInfoService().getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
+        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
         if (prevResultUuid != null) {
             sensitivityAnalysisRestService.deleteSensitivityAnalysisResults(List.of(prevResultUuid));
         }
@@ -114,8 +114,8 @@ public class SensitivityAnalysisService extends AbstractComputationService {
                 sensiReportUuid, userId, sensiParamsUuid, study.getLoadFlowParametersUuid(), elementsIdNameMap);
 
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SENSITIVITY_ANALYSIS);
-        getNotificationService().emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        getNotificationService().emitElementUpdated(study.getId(), userId);
+        notificationService.emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
+        notificationService.emitElementUpdated(study.getId(), userId);
         return result;
     }
 }

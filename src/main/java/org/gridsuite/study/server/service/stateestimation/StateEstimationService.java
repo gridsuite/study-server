@@ -67,7 +67,7 @@ public class StateEstimationService extends AbstractComputationService {
             throw new UncheckedIOException(e);
         }
 
-        UUID prevResultUuid = getRootNetworkNodeInfoService().getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
+        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
         if (prevResultUuid != null) {
             stateEstimationRestService.deleteStateEstimationResults(List.of(prevResultUuid));
         }
@@ -75,8 +75,8 @@ public class StateEstimationService extends AbstractComputationService {
         UUID result = stateEstimationRestService.runStateEstimation(networkUuid, variantId, studyEntity.getStateEstimationParametersUuid(),
                 new ReportInfos(reportUuid, nodeUuid), receiver, userId, debug);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, STATE_ESTIMATION);
-        getNotificationService().emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
-        getNotificationService().emitElementUpdated(studyEntity.getId(), userId);
+        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
 
         return result;
     }
@@ -104,6 +104,6 @@ public class StateEstimationService extends AbstractComputationService {
     }
 
     private void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
-        stateEstimationRestService.invalidateStateEstimationStatus(getRootNetworkNodeInfoService().getComputationResultUuids(studyUuid, STATE_ESTIMATION));
+        stateEstimationRestService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
     }
 }
