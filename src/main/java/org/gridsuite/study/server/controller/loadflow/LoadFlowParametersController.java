@@ -22,6 +22,10 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
+/**
+ * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
+ */
+
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/loadflow")
 @Tag(name = "Study server - Load flow parameters")

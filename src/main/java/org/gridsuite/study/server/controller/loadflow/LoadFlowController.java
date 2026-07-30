@@ -28,6 +28,10 @@ import static org.gridsuite.study.server.StudyConstants.DYNA_FLOW_PROVIDER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 
+/**
+ * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
+ */
+
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow")
 @Tag(name = "Study server - Load flow")
