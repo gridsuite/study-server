@@ -6,11 +6,9 @@
  */
 package org.gridsuite.study.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.DynamicMappingService;
-import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
@@ -74,13 +72,7 @@ class StudyControllerDynamicMappingTest {
     private MockMvc studyClient;
 
     @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
-
-    @MockitoBean
-    private LoadFlowService mockLoadFlowService;
 
     @MockitoBean
     private UserAdminService userAdminService;
