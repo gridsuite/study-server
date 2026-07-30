@@ -2923,19 +2923,22 @@ public class StudyService {
                 .orElse(true);
     }
 
+    @Transactional(readOnly = true)
+    public UUID getFirstNetworkUuid(UUID studyUuid) {
+        return studyRepository.findWithRootNetworksById(studyUuid)
+                .map(study -> study.getFirstRootNetwork().getNetworkUuid())
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
+    }
+
     // --- Dynamic Mapping service methods BEGIN --- //
 
-    @Transactional(readOnly = true)
     public String getNetworkValuesFromStudy(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        UUID networkUuid = studyEntity.getFirstRootNetwork().getNetworkUuid();
+        UUID networkUuid = this.self.getFirstNetworkUuid(studyUuid);
         return dynamicMappingService.getNetworkValues(networkUuid);
     }
 
-    @Transactional(readOnly = true)
     public String getNetworkMatchesFromStudy(UUID studyUuid, String ruleToMatch) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        UUID networkUuid = studyEntity.getFirstRootNetwork().getNetworkUuid();
+        UUID networkUuid = this.self.getFirstNetworkUuid(studyUuid);
         return dynamicMappingService.getNetworkMatches(networkUuid, ruleToMatch);
     }
 

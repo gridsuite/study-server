@@ -19,7 +19,7 @@ import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
  */
 public final class UrlUtil {
     private UrlUtil() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        throw new AssertionError("Utility class should not be instantiated");
     }
 
     /**
@@ -33,10 +33,16 @@ public final class UrlUtil {
         try {
             var sb = new StringBuilder(baseUri);
             if (Strings.isNotBlank(apiVersion)) {
-                sb.append(DELIMITER).append(apiVersion);
+                if (sb.lastIndexOf(DELIMITER) != (sb.length() - 1)) {
+                    sb.append(DELIMITER);
+                }
+                sb.append(apiVersion);
             }
             if (Strings.isNotBlank(endPoint)) {
-                sb.append(DELIMITER).append(endPoint);
+                if (sb.lastIndexOf(DELIMITER) != (sb.length() - 1)) {
+                    sb.append(DELIMITER);
+                }
+                sb.append(endPoint);
             }
             var url = sb.toString();
 

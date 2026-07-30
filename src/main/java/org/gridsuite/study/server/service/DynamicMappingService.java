@@ -16,11 +16,18 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.UUID;
 
+import static org.gridsuite.study.server.StudyConstants.DYNAMIC_MAPPING_API_VERSION;
+import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
+
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @Service
 public class DynamicMappingService {
+    public static final String API_VERSION = DYNAMIC_MAPPING_API_VERSION;
+    public static final String DYNAMIC_MAPPING_END_POINT_NETWORK = "/network";
+    public static final String NETWORK_MATCHES_URI = "/{networkUuid}/matches/rule";
+    public static final String NETWORK_VALUES_URI = "/{networkUuid}/values";
     private final RestTemplate restTemplate;
     private String dynamicMappingServerBaseUri;
 
@@ -34,20 +41,22 @@ public class DynamicMappingService {
     }
 
     public String getNetworkValues(UUID networkUuid) {
-        String path = UriComponentsBuilder.fromPath("/network/{networkUuid}/values")
+        String networkBasePath = buildEndPointUrl(dynamicMappingServerBaseUri, API_VERSION, DYNAMIC_MAPPING_END_POINT_NETWORK);
+        String url = UriComponentsBuilder.fromUriString(networkBasePath + NETWORK_VALUES_URI)
                 .buildAndExpand(networkUuid)
                 .toUriString();
-        return restTemplate.getForObject(dynamicMappingServerBaseUri + path, String.class);
+        return restTemplate.getForObject(url, String.class);
     }
 
     public String getNetworkMatches(UUID networkUuid, String ruleToMatch) {
-        String path = UriComponentsBuilder.fromPath("/network/{networkUuid}/matches/rule")
+        String networkBasePath = buildEndPointUrl(dynamicMappingServerBaseUri, API_VERSION, DYNAMIC_MAPPING_END_POINT_NETWORK);
+        String url = UriComponentsBuilder.fromUriString(networkBasePath + NETWORK_MATCHES_URI)
                 .buildAndExpand(networkUuid)
                 .toUriString();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<String> httpEntity = new HttpEntity<>(ruleToMatch, headers);
-        return restTemplate.postForObject(dynamicMappingServerBaseUri + path, httpEntity, String.class);
+        return restTemplate.postForObject(url, httpEntity, String.class);
     }
 }
