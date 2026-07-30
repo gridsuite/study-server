@@ -24,7 +24,9 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -32,7 +34,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,8 +56,7 @@ import static org.gridsuite.study.server.service.NetworkModificationTreeService.
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -88,19 +88,19 @@ class StudyControllerCreationTest {
 
     // All these computation services need to be mocked because apps try to create default parameters for each computation app on study creation
     @MockitoBean
-    private LoadFlowService loadFlowService;
+    private LoadFlowRestService loadFlowRestService;
     @MockitoBean
-    private ShortCircuitService shortCircuitService;
+    private ShortCircuitRestService shortCircuitService;
     @MockitoBean
-    private SecurityAnalysisService securityAnalysisService;
+    private SecurityAnalysisRestService securityAnalysisService;
     @MockitoBean
-    private SensitivityAnalysisService sensitivityAnalysisService;
+    private SensitivityAnalysisRestService sensitivityAnalysisService;
     @MockitoBean
-    private VoltageInitService voltageInitService;
+    private VoltageInitRestService voltageInitService;
     @MockitoBean
     private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     @MockitoBean
-    private StateEstimationService stateEstimationService;
+    private StateEstimationRestService stateEstimationService;
     @MockitoBean
     private StudyConfigService studyConfigService;
 
@@ -248,15 +248,15 @@ class StudyControllerCreationTest {
     }
 
     private void verifyMockCallsAfterStudyCreation() {
-        verify(reportService, Mockito.times(1)).sendReport(any(UUID.class), any(ReportNode.class));
-        verify(loadFlowService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
-        verify(shortCircuitService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
-        verify(securityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
-        verify(sensitivityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
-        verify(voltageInitService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
-        verify(dynamicSecurityAnalysisService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
-        verify(stateEstimationService, Mockito.times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
-        verify(studyConfigService, Mockito.times(1)).createDefaultSpreadsheetConfigCollection();
+        verify(reportService, times(1)).sendReport(any(UUID.class), any(ReportNode.class));
+        verify(loadFlowRestService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(shortCircuitService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(securityAnalysisService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(sensitivityAnalysisService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(voltageInitService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(dynamicSecurityAnalysisService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(stateEstimationService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(studyConfigService, times(1)).createDefaultSpreadsheetConfigCollection();
     }
 
     private void sendStudyCreationRequest(String userId, UUID caseUuid, String caseFormat, Map<String, Object> importParameters, boolean duplicateCase) throws Exception {

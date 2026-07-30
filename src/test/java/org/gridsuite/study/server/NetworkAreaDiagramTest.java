@@ -9,11 +9,11 @@ import com.powsybl.network.store.model.VariantInfos;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.CurrentLimitViolationInfos;
 import org.gridsuite.study.server.dto.LimitViolationInfos;
-import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.SingleLineDiagramService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,7 +63,7 @@ class NetworkAreaDiagramTest {
     private RootNetworkService rootNetworkService;
 
     @MockitoBean
-    private LoadFlowService loadFlowService;
+    private LoadFlowRestService loadFlowRestService;
 
     @MockitoBean
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
@@ -91,7 +91,7 @@ class NetworkAreaDiagramTest {
 
         when(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).thenReturn(VariantManagerConstants.INITIAL_VARIANT_ID);
         when(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID, ROOTNETWORK_UUID, ComputationType.LOAD_FLOW)).thenReturn(UUID.randomUUID());
-        when(loadFlowService.getCurrentLimitViolations(any())).thenReturn(List.of(LimitViolationInfos.builder().subjectId("eq1").limitName("limit1").build()));
+        when(loadFlowRestService.getCurrentLimitViolations(any())).thenReturn(List.of(LimitViolationInfos.builder().subjectId("eq1").limitName("limit1").build()));
         when(rootNetworkService.getNetworkUuid(ROOTNETWORK_UUID)).thenReturn(NETWORK_UUID);
         when(networkStoreService.getVariantsInfos(NETWORK_UUID)).thenReturn(List.of(new VariantInfos(VariantManagerConstants.INITIAL_VARIANT_ID, 0)));
     }
