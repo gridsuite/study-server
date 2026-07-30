@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.studyexport.StudyExportInfos;
 import org.gridsuite.study.server.error.StudyException;
@@ -33,9 +32,10 @@ import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STUDY_ERROR;
 
-
+/**
+ * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ */
 @Service
-@Slf4j
 public class StudyExportArchiveService {
 
     private final StudyService studyService;
@@ -88,7 +88,6 @@ public class StudyExportArchiveService {
             }
 
         } catch (Exception e) {
-            log.error("Error exporting study {}", studyUuid, e);
             throw new StudyException(EXPORT_STUDY_ERROR, "Failed to export study: " + e.getMessage());
         }
     }
@@ -160,7 +159,7 @@ public class StudyExportArchiveService {
                         try {
                             Files.delete(path);
                         } catch (IOException e) {
-                            log.warn("Failed to delete {}", path, e);
+                            throw new UncheckedIOException(e);
                         }
                     });
         }
