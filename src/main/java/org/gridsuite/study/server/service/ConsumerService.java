@@ -27,6 +27,8 @@ import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -65,36 +67,39 @@ public class ConsumerService {
     private final NotificationService notificationService;
     private final StudyService studyService;
     private final CaseService caseService;
-    private final LoadFlowService loadFlowService;
+    private final LoadFlowRestService loadFlowRestService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
     private final ComputationParametersService computationParametersService;
     private final UserAdminService userAdminService;
+    private final LoadFlowService loadFlowService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
                            StudyService studyService,
                            CaseService caseService,
-                           LoadFlowService loadFlowService,
+                           LoadFlowRestService loadFlowRestService,
                            NetworkModificationTreeService networkModificationTreeService,
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            DirectoryService directoryService,
                            ComputationParametersService computationParametersService,
-                           UserAdminService userAdminService) {
+                           UserAdminService userAdminService,
+                           LoadFlowService loadFlowService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
         this.caseService = caseService;
-        this.loadFlowService = loadFlowService;
+        this.loadFlowRestService = loadFlowRestService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.studyConfigService = studyConfigService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
         this.userAdminService = userAdminService;
+        this.loadFlowService = loadFlowService;
     }
 
     @Bean
@@ -193,7 +198,7 @@ public class ConsumerService {
             WorkflowType workflowType = WorkflowType.valueOf(workflowTypeStr);
             if (WorkflowType.RERUN_LOAD_FLOW.equals(workflowType)) {
                 RerunLoadFlowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowInfos.class);
-                studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid());
+                loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid());
             }
         }
     }
@@ -536,7 +541,7 @@ public class ConsumerService {
     private void handleLoadFlowSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
         // Build 1st level children if loadflow is converged, and node is a security type
         if (userId != null && networkModificationTreeService.isSecurityNode(nodeUuid)) {
-            LoadFlowStatus loadFlowStatus = loadFlowService.getLoadFlowStatus(resultUuid);
+            LoadFlowStatus loadFlowStatus = loadFlowRestService.getLoadFlowStatus(resultUuid);
             if (loadFlowStatus == LoadFlowStatus.CONVERGED) {
                 studyService.buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, userId);
             }
