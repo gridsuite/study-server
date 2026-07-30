@@ -33,13 +33,7 @@ import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STUDY_ERROR;
 
-/**
- * Service to export a study as a zip archive containing:
- * - study.json: study structure and metadata
- * - cases/{caseUuid}/{caseName}.xiidm: network case files
- *
- * @author Claude Code
- */
+
 @Service
 @Slf4j
 public class StudyExportArchiveService {
@@ -52,11 +46,7 @@ public class StudyExportArchiveService {
     @Value("${powsybl.services.case-server.base-uri:http://case-server/}")
     private String caseServerBaseUri;
 
-    public StudyExportArchiveService(
-            StudyService studyService,
-            RootNetworkService rootNetworkService,
-            RestTemplate restTemplate,
-            ObjectMapper objectMapper) {
+    public StudyExportArchiveService(StudyService studyService, RootNetworkService rootNetworkService, RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.studyService = studyService;
         this.rootNetworkService = rootNetworkService;
         this.restTemplate = restTemplate;
@@ -71,7 +61,6 @@ public class StudyExportArchiveService {
     @Transactional(readOnly = true)
     public InputStreamResource exportStudyArchive(UUID studyUuid) {
         try {
-            log.info("Starting export of study {}", studyUuid);
             Path tempDir = Files.createTempDirectory("study-export-" + studyUuid);
             Path casesDir = tempDir.resolve("cases");
             Files.createDirectories(casesDir);
@@ -85,20 +74,12 @@ public class StudyExportArchiveService {
                     exportCaseFile(caseUuid, caseName, casesDir);
                 }
                 Path studyJsonPath = tempDir.resolve("study.json");
-                objectMapper.writerWithDefaultPrettyPrinter()
-                        .writeValue(studyJsonPath.toFile(), studyExportInfos);
-
-                log.debug("Study JSON written to {}, size: {} bytes", studyJsonPath, Files.size(studyJsonPath));
+                objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), studyExportInfos);
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 try (ZipOutputStream zipOut = new ZipOutputStream(baos)) {
                     writeZipEntries(tempDir, zipOut);
                     zipOut.finish();
                 }
-
-                log.info("Successfully exported study {} ({} bytes)", studyUuid, baos.size());
-                System.out.println("Study JSON written to " + studyJsonPath + ", size: " + Files.size(studyJsonPath) + " bytes");
-                System.out.println("studyExportInfos: " + studyExportInfos);
-                System.out.println("studyExportInfos JSON: " + objectMapper.writeValueAsString(studyExportInfos));
                 ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
                 return new InputStreamResource(bais);
 
@@ -116,19 +97,8 @@ public class StudyExportArchiveService {
      * Export a case file from case-server
      */
     private void exportCaseFile(UUID caseUuid, String caseName, Path casesDir) throws IOException {
-        log.debug("Exporting case {} ({})", caseUuid, caseName);
-
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
-                .buildAndExpand(caseUuid)
-                .toUriString();
-
-        ResponseEntity<byte[]> response = restTemplate.exchange(
-                caseServerBaseUri + path,
-                HttpMethod.GET,
-                null,
-                byte[].class
-        );
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}").buildAndExpand(caseUuid).toUriString();
+        ResponseEntity<byte[]> response = restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, byte[].class);
         byte[] body = response.getBody();
         if (body != null) {
             Path caseDir = casesDir.resolve(caseUuid.toString());
@@ -138,7 +108,6 @@ public class StudyExportArchiveService {
             }
             Path caseFile = caseDir.resolve(caseName);
             Files.write(caseFile, body);
-            log.debug("Exported case file to {}", caseFile);
         }
     }
 
@@ -174,7 +143,6 @@ public class StudyExportArchiveService {
                         }
 
                         zipOut.closeEntry();
-                        log.debug("Added to zip: {} ({} bytes)", entryName, Files.size(file));
                     } catch (IOException e) {
                         throw new UncheckedIOException(e);
                     }
