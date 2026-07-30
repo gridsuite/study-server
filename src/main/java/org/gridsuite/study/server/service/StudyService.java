@@ -30,9 +30,6 @@ import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
-import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
-import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
-import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -59,8 +56,10 @@ import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
+import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.gridsuite.study.server.utils.ElementType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +75,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriUtils;
 
 import java.io.UncheckedIOException;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -133,14 +131,13 @@ public class StudyService {
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
-    private final SensitivityAnalysisRestService sensitivityAnalysisService;
+    private final SensitivityAnalysisService sensitivityAnalysisService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
     private final NadConfigService nadConfigService;
     private final FilterService filterService;
     private final ActionsService actionsService;
     private final CaseService caseService;
-    private final StateEstimationRestService stateEstimationService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
@@ -177,44 +174,42 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-        StudyRepository studyRepository,
-        StudyCreationRequestRepository studyCreationRequestRepository,
-        NetworkService networkStoreService,
-        NetworkModificationService networkModificationService,
-        ReportService reportService,
-        UserAdminService userAdminService,
-        StudyInfosService studyInfosService,
-        EquipmentInfosService equipmentInfosService,
-        NetworkModificationTreeService networkModificationTreeService,
-        ObjectMapper objectMapper,
-        StudyServerExecutionService studyServerExecutionService,
-        NotificationService notificationService,
-        LoadFlowRestService loadflowRestService,
-        LoadFlowService loadFlowService,
-        ShortCircuitRestService shortCircuitService,
-        SingleLineDiagramService singleLineDiagramService,
-        NetworkConversionService networkConversionService,
-        GeoDataService geoDataService,
-        NetworkMapService networkMapService,
-        SecurityAnalysisRestService securityAnalysisRestService,
-        SecurityAnalysisService securityAnalysisService,
-        ActionsService actionsService,
-        CaseService caseService,
-        SensitivityAnalysisRestService sensitivityAnalysisService,
-        DynamicSimulationService dynamicSimulationService,
-        DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-        DynamicMarginCalculationService dynamicMarginCalculationService,
-        VoltageInitRestService voltageInitService,
-        DynamicSimulationEventService dynamicSimulationEventService,
-        StudyConfigService studyConfigService,
-        NadConfigService nadConfigService,
-        FilterService filterService,
-        StateEstimationRestService stateEstimationService,
-        @Lazy StudyService studyService,
-        RootNetworkService rootNetworkService,
-        RootNetworkNodeInfoService rootNetworkNodeInfoService,
-        DirectoryService directoryService,
-        ComputationParametersService computationParametersService) {
+            StudyRepository studyRepository,
+            StudyCreationRequestRepository studyCreationRequestRepository,
+            NetworkService networkStoreService,
+            NetworkModificationService networkModificationService,
+            ReportService reportService,
+            UserAdminService userAdminService,
+            StudyInfosService studyInfosService,
+            EquipmentInfosService equipmentInfosService,
+            NetworkModificationTreeService networkModificationTreeService,
+            ObjectMapper objectMapper,
+            StudyServerExecutionService studyServerExecutionService,
+            NotificationService notificationService,
+            LoadFlowRestService loadflowRestService,
+            LoadFlowService loadFlowService,
+            ShortCircuitRestService shortCircuitService,
+            SingleLineDiagramService singleLineDiagramService,
+            NetworkConversionService networkConversionService,
+            GeoDataService geoDataService,
+            NetworkMapService networkMapService,
+            SecurityAnalysisRestService securityAnalysisRestService,
+            SecurityAnalysisService securityAnalysisService,
+            ActionsService actionsService,
+            CaseService caseService,
+            DynamicSimulationService dynamicSimulationService,
+            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+            DynamicMarginCalculationService dynamicMarginCalculationService,
+            VoltageInitRestService voltageInitService, SensitivityAnalysisService sensitivityAnalysisService,
+            DynamicSimulationEventService dynamicSimulationEventService,
+            StudyConfigService studyConfigService,
+            NadConfigService nadConfigService,
+            FilterService filterService,
+            @Lazy StudyService studyService,
+            RootNetworkService rootNetworkService,
+            RootNetworkNodeInfoService rootNetworkNodeInfoService,
+            DirectoryService directoryService,
+            ComputationParametersService computationParametersService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -228,7 +223,6 @@ public class StudyService {
         this.studyServerExecutionService = studyServerExecutionService;
         this.notificationService = notificationService;
         this.loadFlowService = loadFlowService;
-        this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.loadflowRestService = loadflowRestService;
         this.shortCircuitService = shortCircuitService;
         this.singleLineDiagramService = singleLineDiagramService;
@@ -242,11 +236,11 @@ public class StudyService {
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.dynamicMarginCalculationService = dynamicMarginCalculationService;
         this.voltageInitService = voltageInitService;
+        this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
         this.nadConfigService = nadConfigService;
         this.filterService = filterService;
-        this.stateEstimationService = stateEstimationService;
         this.self = studyService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
@@ -1152,26 +1146,6 @@ public class StudyService {
         return userProfileIssue;
     }
 
-    private <T> void setComputationParameters(UUID studyUuid, T parameters, String userId,
-                                              Function<StudyEntity, UUID> studyParameterGetter,
-                                              BiConsumer<StudyEntity, UUID> studyParameterSetter,
-                                              Function<T, UUID> createParameters,
-                                              BiConsumer<UUID, T> updateParameters,
-                                              ComputationType computationType,
-                                              List<Consumer<UUID>> statusInvalidations,
-                                              String... statusUpdateTypes) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        computationParametersService.createOrUpdateParameters(
-                studyEntity,
-                parameters,
-                studyParameterGetter,
-                studyParameterSetter,
-                createParameters,
-                updateParameters
-        );
-        emitComputationParametersChanged(studyUuid, userId, computationType, statusInvalidations, statusUpdateTypes);
-    }
-
     private void emitComputationParametersChanged(UUID studyUuid, String userId,
                                                   ComputationType computationType,
                                                   List<Consumer<UUID>> statusInvalidations,
@@ -1223,7 +1197,7 @@ public class StudyService {
                 List.of(
                         this::invalidateAllStudyLoadFlowStatus,
                         securityAnalysisService::invalidateSecurityAnalysisStatusOnAllNodes,
-                        this::invalidateSensitivityAnalysisStatusOnAllNodes,
+                        sensitivityAnalysisService::invalidateSensitivityAnalysisStatusOnAllNodes,
                         this::invalidateDynamicSimulationStatusOnAllNodes,
                         this::invalidateDynamicSecurityAnalysisStatusOnAllNodes,
                         this::invalidateDynamicMarginCalculationStatusOnAllNodes
@@ -1327,10 +1301,6 @@ public class StudyService {
         loadflowRestService.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
     }
 
-    public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        sensitivityAnalysisService.invalidateSensitivityAnalysisStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
-    }
-
     public void invalidateDynamicSimulationStatusOnAllNodes(UUID studyUuid) {
         dynamicSimulationService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SIMULATION));
     }
@@ -1370,14 +1340,6 @@ public class StudyService {
 
             nodeTreesToInvalidate.forEach(node -> invalidateNodeTree(studyUuid, node.getIdNode(), rootNetworkUuid));
         });
-    }
-
-    public void invalidateVoltageInitStatusOnAllNodes(UUID studyUuid) {
-        voltageInitService.invalidateVoltageInitStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, VOLTAGE_INITIALIZATION));
-    }
-
-    public void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
-        stateEstimationService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
     }
 
     private StudyEntity updateRootNetworkIndexationStatus(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, RootNetworkIndexationStatus indexationStatus) {
@@ -1455,38 +1417,6 @@ public class StudyService {
         StudyCreationRequestEntity studyCreationRequestEntity = new StudyCreationRequestEntity(
                 studyUuid == null ? UUID.randomUUID() : studyUuid, firstRootNetworkName);
         return studyCreationRequestRepository.save(studyCreationRequestEntity);
-    }
-
-    public boolean createOrUpdateVoltageInitParameters(StudyEntity studyEntity, VoltageInitParametersInfos parameters, String userId) {
-        boolean userProfileIssue = false;
-        UUID existingVoltageInitParametersUuid = studyEntity.getVoltageInitParametersUuid();
-        UserProfileInfos userProfileInfos = parameters == null ? userAdminService.getUserProfile(userId) : null;
-        if (parameters == null && userProfileInfos.getVoltageInitParameterId() != null) {
-            // reset case, with existing profile, having default voltage init params
-            try {
-                UUID voltageInitParametersFromProfileUuid = voltageInitService.duplicateParameters(userProfileInfos.getVoltageInitParameterId());
-                studyEntity.setVoltageInitParametersUuid(voltageInitParametersFromProfileUuid);
-                voltageInitService.doDeleteComputationParameters(existingVoltageInitParametersUuid, VOLTAGE_INITIALIZATION.getLabel(), LOGGER);
-                return userProfileIssue;
-            } catch (Exception e) {
-                userProfileIssue = true;
-                LOGGER.error(String.format("Could not duplicate voltage init parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getVoltageInitParameterId(), userId, userProfileInfos.getName()), e);
-                // in case of duplication error (ex: wrong/dangling uuid in the profile), move on with default params below
-            }
-        }
-
-        if (existingVoltageInitParametersUuid == null) {
-            existingVoltageInitParametersUuid = voltageInitService.createVoltageInitParameters(parameters);
-            studyEntity.setVoltageInitParametersUuid(existingVoltageInitParametersUuid);
-        } else {
-            VoltageInitParametersInfos oldParameters = voltageInitService.getVoltageInitParameters(existingVoltageInitParametersUuid);
-            if (Objects.isNull(parameters) || !parameters.equals(oldParameters)) {
-                voltageInitService.updateVoltageInitParameters(existingVoltageInitParametersUuid, parameters);
-            }
-        }
-
-        return userProfileIssue;
     }
 
     @Transactional
@@ -2517,107 +2447,6 @@ public class StudyService {
     }
 
     @Transactional
-    public UUID runSensitivityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
-        StudyEntity study = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        UUID result = handleSensitivityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
-
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SENSITIVITY_ANALYSIS), result);
-        return result;
-    }
-
-    private UUID handleSensitivityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS);
-        if (prevResultUuid != null) {
-            sensitivityAnalysisService.deleteSensitivityAnalysisResults(List.of(prevResultUuid));
-        }
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID sensiReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(SENSITIVITY_ANALYSIS.name(), UUID.randomUUID());
-        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS, sensiReportUuid);
-
-        UUID sensiParamsUuid = study.getSensitivityAnalysisParametersUuid();
-
-        // fetch the filters and contingencyLists contained in sensi parameters
-        // and retrieve their names, as they are needed in the results
-        List<UUID> elementIds = sensitivityAnalysisService.getElementIds(sensiParamsUuid);
-        Map<UUID, String> elementsIdNameMap = directoryService.getElementNames(new HashSet<>(elementIds));
-        UUID result = sensitivityAnalysisService.runSensitivityAnalysis(nodeUuid, rootNetworkUuid, networkUuid, variantId,
-                sensiReportUuid, userId, sensiParamsUuid, study.getLoadFlowParametersUuid(), elementsIdNameMap);
-
-        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SENSITIVITY_ANALYSIS);
-        notificationService.emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS);
-        notificationService.emitElementUpdated(study.getId(), userId);
-        return result;
-    }
-
-    @Transactional
-    public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        UUID result = handleVoltageInitRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
-
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(VOLTAGE_INITIALIZATION), result);
-        return result;
-    }
-
-    private UUID handleVoltageInitRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
-        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
-        if (prevResultUuid != null) {
-            voltageInitService.deleteVoltageInitResults(List.of(prevResultUuid));
-        }
-
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-
-        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(VOLTAGE_INITIALIZATION.name(), UUID.randomUUID());
-        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION, reportUuid);
-
-        RootNetworkEntity rootNetwork = rootNetworkService.getRootNetwork(rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        NetworkModificationNodeInfoEntity nodeEntity = networkModificationTreeService.getNetworkModificationNodeInfoEntity(nodeUuid);
-
-        UUID result = voltageInitService.runVoltageInit(new VariantInfos(networkUuid, variantId), studyEntity.getVoltageInitParametersUuid(),
-                                                        new ReportInfos(reportUuid, nodeUuid), rootNetworkUuid, userId, debug,
-                                                        new ContextInfos(rootNetwork.getName(), nodeEntity.getName()));
-
-        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, VOLTAGE_INITIALIZATION);
-        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
-        notificationService.emitElementUpdated(studyEntity.getId(), userId);
-        return result;
-    }
-
-    @Transactional
-    public boolean setVoltageInitParameters(UUID studyUuid, StudyVoltageInitParameters parameters, String userId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        var voltageInitParameters = studyEntity.getVoltageInitParameters();
-        if (voltageInitParameters == null) {
-            var newVoltageInitParameters = new StudyVoltageInitParametersEntity(parameters.isApplyModifications());
-            studyEntity.setVoltageInitParameters(newVoltageInitParameters);
-        } else {
-            voltageInitParameters.setApplyModifications(parameters.isApplyModifications());
-        }
-        boolean userProfileIssue = createOrUpdateVoltageInitParameters(studyEntity, parameters.getComputationParameters(), userId);
-        emitComputationParametersChanged(
-                studyUuid,
-                userId,
-                VOLTAGE_INITIALIZATION,
-                List.of(this::invalidateVoltageInitStatusOnAllNodes),
-                NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS
-        );
-        return userProfileIssue;
-    }
-
-    public StudyVoltageInitParameters getVoltageInitParameters(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return new StudyVoltageInitParameters(
-                Optional.ofNullable(studyEntity.getVoltageInitParametersUuid()).map(voltageInitService::getVoltageInitParameters).orElse(null),
-                Optional.ofNullable(studyEntity.getVoltageInitParameters()).map(StudyVoltageInitParametersEntity::shouldApplyModifications).orElse(true)
-        );
-    }
-
-    @Transactional
     public String getSpreadsheetConfigCollection(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return studyConfigService.getSpreadsheetConfigCollection(studyConfigService.getSpreadsheetConfigCollectionUuidOrElseCreateDefaults(studyEntity));
@@ -3124,31 +2953,6 @@ public class StudyService {
         notificationService.emitElementUpdated(studyUuid, userId);
     }
 
-    @Transactional
-    public String getSensitivityAnalysisParameters(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return sensitivityAnalysisService.getSensitivityAnalysisParameters(
-                sensitivityAnalysisService.getSensitivityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
-    }
-
-    @Transactional
-    public boolean setSensitivityAnalysisParameters(UUID studyUuid, String parameters, String userId) {
-        return setComputationParameters(
-                studyUuid,
-                parameters,
-                userId,
-                StudyEntity::getSensitivityAnalysisParametersUuid,
-                StudyEntity::setSensitivityAnalysisParametersUuid,
-                UserProfileInfos::getSensitivityAnalysisParameterId,
-                sensitivityAnalysisService,
-                sensitivityAnalysisService::createSensitivityAnalysisParameters,
-                sensitivityAnalysisService::updateSensitivityAnalysisParameters,
-                SENSITIVITY_ANALYSIS,
-                List.of(this::invalidateSensitivityAnalysisStatusOnAllNodes),
-                NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS
-        );
-    }
-
     private void emitAllComputationStatusChanged(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters.ComputationsInvalidationMode computationsInvalidationMode) {
         if (InvalidateNodeTreeParameters.ComputationsInvalidationMode.isPreserveLoadFlowResults(computationsInvalidationMode)) {
             // use for security node, when reruning loadflow, there is a modification due to the first lf and the node is unbuild when a modification is deleted and we want to keep the results
@@ -3216,64 +3020,6 @@ public class StudyService {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         String variantId = networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid);
         return filterService.exportFilters(rootNetworkService.getNetworkUuid(rootNetworkUuid), filtersUuid, variantId);
-    }
-
-    @Transactional
-    public UUID runStateEstimation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        UUID result = handleStateEstimationRequest(studyEntity, nodeUuid, rootNetworkUuid, userId, debug);
-
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(STATE_ESTIMATION), result);
-        return result;
-    }
-
-    private UUID handleStateEstimationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(STATE_ESTIMATION.name(), UUID.randomUUID());
-        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION, reportUuid);
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION);
-        if (prevResultUuid != null) {
-            stateEstimationService.deleteStateEstimationResults(List.of(prevResultUuid));
-        }
-
-        UUID result = stateEstimationService.runStateEstimation(networkUuid, variantId, studyEntity.getStateEstimationParametersUuid(), new ReportInfos(reportUuid, nodeUuid), receiver, userId, debug);
-        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, STATE_ESTIMATION);
-        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS);
-        notificationService.emitElementUpdated(studyEntity.getId(), userId);
-
-        return result;
-    }
-
-    @Transactional
-    public String getStateEstimationParameters(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return stateEstimationService.getStateEstimationParameters(stateEstimationService.getStateEstimationParametersUuidOrElseCreateDefaults(studyEntity));
-    }
-
-    @Transactional
-    public void setStateEstimationParametersValues(UUID studyUuid, String parameters, String userId) {
-        setComputationParameters(
-                studyUuid,
-                parameters,
-                userId,
-                StudyEntity::getStateEstimationParametersUuid,
-                StudyEntity::setStateEstimationParametersUuid,
-                stateEstimationService::createStateEstimationParameters,
-                stateEstimationService::updateStateEstimationParameters,
-                STATE_ESTIMATION,
-                List.of(this::invalidateStateEstimationStatusOnAllNodes),
-                NotificationService.UPDATE_TYPE_STATE_ESTIMATION_STATUS
-        );
     }
 
     @Transactional
@@ -3482,14 +3228,6 @@ public class StudyService {
     public void resetFilters(UUID studyUuid, UUID configUuid) {
         studyConfigService.resetFilters(configUuid);
         notificationService.emitSpreadsheetConfigChanged(studyUuid, configUuid);
-    }
-
-    @Transactional(readOnly = true)
-    public String getVoltageInitResult(UUID nodeUuid, UUID rootNetworkUuid, String globalFilters) {
-        UUID networkuuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID resultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION);
-        return voltageInitService.getVoltageInitResult(resultUuid, networkuuid, variantId, globalFilters);
     }
 
     private void removeWorkspacesConfig(@Nullable UUID workspacesConfigUuid) {
