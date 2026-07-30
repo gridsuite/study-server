@@ -16,6 +16,9 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.UUID;
 
+/**
+ * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ */
 @Service
 public class DynamicMappingService {
     private final RestTemplate restTemplate;

@@ -2939,7 +2939,6 @@ public class StudyService {
         return dynamicMappingService.getNetworkMatches(networkUuid, ruleToMatch);
     }
 
-
     // --- Dynamic Mapping service methods END --- //
 
     // --- Dynamic Simulation service methods BEGIN --- //
