@@ -22,10 +22,13 @@ import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
+import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -40,6 +43,7 @@ import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -63,38 +67,41 @@ public class ConsumerService {
     private final NotificationService notificationService;
     private final StudyService studyService;
     private final CaseService caseService;
-    private final LoadFlowService loadFlowService;
+    private final LoadFlowRestService loadFlowRestService;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
     private final ComputationParametersService computationParametersService;
     private final UserAdminService userAdminService;
+    private final LoadFlowService loadFlowService;
     private final StudyImportContextService studyImportContextService;
 
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
                            StudyService studyService,
                            CaseService caseService,
-                           LoadFlowService loadFlowService,
+                           LoadFlowRestService loadFlowRestService,
                            NetworkModificationTreeService networkModificationTreeService,
                            StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            DirectoryService directoryService,
                            ComputationParametersService computationParametersService,
                            UserAdminService userAdminService,
+                           LoadFlowService loadFlowService,
                            StudyImportContextService studyImportContextService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
         this.caseService = caseService;
-        this.loadFlowService = loadFlowService;
+        this.loadFlowRestService = loadFlowRestService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.studyConfigService = studyConfigService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
         this.userAdminService = userAdminService;
+        this.loadFlowService = loadFlowService;
         this.studyImportContextService = studyImportContextService;
     }
 
@@ -109,10 +116,13 @@ public class ConsumerService {
                     receiverObj = objectMapper.readValue(URLDecoder.decode(receiver, StandardCharsets.UTF_8),
                         NodeReceiver.class);
 
+                    if (!networkModificationTreeService.getNodeBuildStatus(receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid()).isBuilding()) {
+                        throw new StudyException(NODE_NOT_BUILDING);
+                    }
                     UUID studyUuid = networkModificationTreeService.getStudyUuidForNodeId(receiverObj.getNodeUuid());
                     studyService.handleBuildSuccess(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), networkModificationResult);
                     handleBuildResultWorkflow(studyUuid, receiverObj.getNodeUuid(), receiverObj.getRootNetworkUuid(), message);
-                } catch (Exception e) {
+                } catch (JsonProcessingException e) {
                     LOGGER.error(e.toString());
                 }
             }
@@ -191,7 +201,7 @@ public class ConsumerService {
             WorkflowType workflowType = WorkflowType.valueOf(workflowTypeStr);
             if (WorkflowType.RERUN_LOAD_FLOW.equals(workflowType)) {
                 RerunLoadFlowInfos workflowInfos = objectMapper.readValue(URLDecoder.decode(workflowInfosStr, StandardCharsets.UTF_8), RerunLoadFlowInfos.class);
-                studyService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid());
+                loadFlowService.deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid());
             }
         }
     }
@@ -200,17 +210,12 @@ public class ConsumerService {
     @SuppressWarnings("checkstyle:LambdaBodyLength")
     public Consumer<Message<String>> consumeCaseImportSucceeded() {
         return message -> {
-            LOGGER.info("consumeCaseImportSucceeded: Received case import success notification");
-
             String receiverString = message.getHeaders().get(HEADER_RECEIVER, String.class);
             UUID networkUuid = UUID.fromString(message.getHeaders().get(NETWORK_UUID, String.class));
             String networkId = message.getHeaders().get(NETWORK_ID, String.class);
             String caseFormat = message.getHeaders().get(HEADER_CASE_FORMAT, String.class);
             String caseName = message.getHeaders().get(HEADER_CASE_NAME, String.class);
             Map<String, Object> rawParameters = message.getHeaders().get(HEADER_IMPORT_PARAMETERS, Map.class);
-
-            LOGGER.info("consumeCaseImportSucceeded: networkUuid={}, networkId={}, caseName={}, receiverPresent={}",
-                    networkUuid, networkId, caseName, receiverString != null);
 
             if (receiverString != null) {
                 CaseImportReceiver receiver;
@@ -235,9 +240,6 @@ public class ConsumerService {
         UUID rootNetworkUuid = receiver.getRootNetworkUuid();
         CaseImportAction caseImportAction = receiver.getCaseImportAction();
         boolean success = false;
-
-        LOGGER.info("handleConsumeCaseImportSucceeded: Received notification for study {}, action: {}, hasImportContext: {}",
-                studyUuid, caseImportAction, receiver.getHasImportContext());
 
         CaseInfos caseInfos = new CaseInfos(caseUuid, receiver.getOriginalCaseUuid(), caseName, caseFormat);
         NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
@@ -300,7 +302,7 @@ public class ConsumerService {
             caseService.disableCaseExpiration(caseUuid);
             success = true;
         } catch (Exception e) {
-            LOGGER.error("handleConsumeCaseImportSucceeded: Error for action {}, study {}", caseImportAction, studyUuid, e);
+            LOGGER.error("Error while importing case", e);
         } finally {
             // if studyEntity is already existing, we don't delete anything in the end of the process
             // For STUDY_IMPORT, only delete if failed (success=false), not if completed successfully
@@ -587,7 +589,7 @@ public class ConsumerService {
     private void handleLoadFlowSuccess(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
         // Build 1st level children if loadflow is converged, and node is a security type
         if (userId != null && networkModificationTreeService.isSecurityNode(nodeUuid)) {
-            LoadFlowStatus loadFlowStatus = loadFlowService.getLoadFlowStatus(resultUuid);
+            LoadFlowStatus loadFlowStatus = loadFlowRestService.getLoadFlowStatus(resultUuid);
             if (loadFlowStatus == LoadFlowStatus.CONVERGED) {
                 studyService.buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, userId);
             }

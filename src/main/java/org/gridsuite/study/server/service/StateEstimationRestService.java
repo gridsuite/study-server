@@ -16,7 +16,7 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.StateEstimationStatus;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -40,7 +40,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATIO
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class StateEstimationService extends AbstractComputationService implements ComputationParameters {
+public class StateEstimationRestService extends AbstractComputationRestService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -54,8 +54,8 @@ public class StateEstimationService extends AbstractComputationService implement
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
 
     @Autowired
-    public StateEstimationService(RemoteServicesProperties remoteServicesProperties,
-                                  ObjectMapper objectMapper, RestTemplate restTemplate) {
+    public StateEstimationRestService(RemoteServicesProperties remoteServicesProperties,
+                                      ObjectMapper objectMapper, RestTemplate restTemplate) {
         this.stateEstimationServerServerBaseUri = remoteServicesProperties.getServiceUri("state-estimation-server");
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;

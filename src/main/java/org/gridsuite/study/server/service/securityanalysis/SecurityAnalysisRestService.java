@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.securityanalysis;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,9 +17,8 @@ import org.gridsuite.study.server.dto.RunSecurityAnalysisParametersInfos;
 import org.gridsuite.study.server.dto.SecurityAnalysisStatus;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
-import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -36,12 +35,13 @@ import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.service.StudyService.*;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class SecurityAnalysisService extends AbstractComputationService implements ComputationParameters {
+public class SecurityAnalysisRestService extends AbstractComputationRestService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
 
@@ -55,8 +55,8 @@ public class SecurityAnalysisService extends AbstractComputationService implemen
     private String securityAnalysisServerBaseUri;
 
     @Autowired
-    public SecurityAnalysisService(RemoteServicesProperties remoteServicesProperties,
-                                   ObjectMapper objectMapper, RestTemplate restTemplate) {
+    public SecurityAnalysisRestService(RemoteServicesProperties remoteServicesProperties,
+                                       ObjectMapper objectMapper, RestTemplate restTemplate) {
         this.securityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("security-analysis-server");
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;
@@ -133,7 +133,7 @@ public class SecurityAnalysisService extends AbstractComputationService implemen
                 .fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/networks/{networkUuid}/run-and-save")
                 .queryParam("reportUuid", reportInfos.reportUuid().toString())
                 .queryParam("reporterId", reportInfos.nodeUuid())
-                .queryParam("reportType", StudyService.ReportType.SECURITY_ANALYSIS.reportKey);
+                .queryParam("reportType", ReportType.SECURITY_ANALYSIS.reportKey);
         if (!StringUtils.isBlank(variantId)) {
             uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantId);
         }

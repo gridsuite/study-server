@@ -20,6 +20,7 @@ public enum StudyBusinessErrorCode implements BusinessErrorCode {
     MOVE_NETWORK_MODIFICATION_FORBIDDEN("study.moveNetworkModificationForbidden"),
     BAD_NODE_TYPE("study.badNodeType"),
     NODE_NOT_BUILT("study.nodeNotBuilt"),
+    NODE_NOT_BUILDING("study.nodeNotBuilding"),
     NODE_NAME_ALREADY_EXIST("study.nodeNameAlreadyExist"),
     TIME_SERIES_BAD_TYPE("study.timeSeriesBadType"),
     NO_VOLTAGE_INIT_RESULTS_FOR_NODE("study.noVoltageInitResultsForNode"),
