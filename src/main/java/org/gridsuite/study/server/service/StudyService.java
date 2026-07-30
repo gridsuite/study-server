@@ -57,6 +57,8 @@ import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEve
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.ElementType;
@@ -128,7 +130,8 @@ public class StudyService {
     private final NetworkConversionService networkConversionService;
     private final GeoDataService geoDataService;
     private final NetworkMapService networkMapService;
-    private final SecurityAnalysisRestService securityAnalysisService;
+    private final SecurityAnalysisRestService securityAnalysisRestService;
+    private final SecurityAnalysisService securityAnalysisService;
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
@@ -195,7 +198,8 @@ public class StudyService {
         NetworkConversionService networkConversionService,
         GeoDataService geoDataService,
         NetworkMapService networkMapService,
-        SecurityAnalysisRestService securityAnalysisService,
+        SecurityAnalysisRestService securityAnalysisRestService,
+        SecurityAnalysisService securityAnalysisService,
         ActionsService actionsService,
         CaseService caseService,
         SensitivityAnalysisRestService sensitivityAnalysisService,
@@ -234,7 +238,7 @@ public class StudyService {
         this.networkConversionService = networkConversionService;
         this.geoDataService = geoDataService;
         this.networkMapService = networkMapService;
-        this.securityAnalysisService = securityAnalysisService;
+        this.securityAnalysisRestService = securityAnalysisRestService;
         this.actionsService = actionsService;
         this.caseService = caseService;
         this.dynamicSimulationService = dynamicSimulationService;
@@ -252,6 +256,7 @@ public class StudyService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
+        this.securityAnalysisService = securityAnalysisService;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
@@ -1188,30 +1193,6 @@ public class StudyService {
     }
 
     @Transactional
-    public String getSecurityAnalysisParametersValues(UUID studyUuid) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        return securityAnalysisService.getSecurityAnalysisParameters(securityAnalysisService.getSecurityAnalysisParametersUuidOrElseCreateDefaults(studyEntity));
-    }
-
-    @Transactional
-    public boolean setSecurityAnalysisParametersValues(UUID studyUuid, String parameters, String userId) {
-        return setComputationParameters(
-                studyUuid,
-                parameters,
-                userId,
-                StudyEntity::getSecurityAnalysisParametersUuid,
-                StudyEntity::setSecurityAnalysisParametersUuid,
-                UserProfileInfos::getSecurityAnalysisParameterId,
-                securityAnalysisService,
-                securityAnalysisService::createSecurityAnalysisParameters,
-                securityAnalysisService::updateSecurityAnalysisParameters,
-                SECURITY_ANALYSIS,
-                List.of(this::invalidateSecurityAnalysisStatusOnAllNodes),
-                NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS
-        );
-    }
-
-    @Transactional
     public String getNetworkVisualizationParametersValues(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
         return studyConfigService.getNetworkVisualizationParameters(studyConfigService.getNetworkVisualizationParametersUuidOrElseCreateDefaults(studyEntity));
@@ -1250,7 +1231,7 @@ public class StudyService {
                 LOAD_FLOW,
                 List.of(
                         this::invalidateAllStudyLoadFlowStatus,
-                        this::invalidateSecurityAnalysisStatusOnAllNodes,
+                        securityAnalysisService::invalidateSecurityAnalysisStatusOnAllNodes,
                         this::invalidateSensitivityAnalysisStatusOnAllNodes,
                         this::invalidateDynamicSimulationStatusOnAllNodes,
                         this::invalidateDynamicSecurityAnalysisStatusOnAllNodes,
@@ -1308,44 +1289,6 @@ public class StudyService {
                 NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
                 NotificationService.UPDATE_TYPE_PCC_MIN_STATUS
         );
-    }
-
-    @Transactional
-    public UUID runSecurityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
-        StudyEntity study = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-
-        UUID result = handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
-
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SECURITY_ANALYSIS), result);
-        return result;
-    }
-
-    private UUID handleSecurityAnalysisRequest(StudyEntity study, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-        UUID saReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(SECURITY_ANALYSIS.name(), UUID.randomUUID());
-        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS, saReportUuid);
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)),
-                    StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS);
-        if (prevResultUuid != null) {
-            securityAnalysisService.deleteSecurityAnalysisResults(List.of(prevResultUuid));
-        }
-
-        var runSecurityAnalysisParametersInfos = new RunSecurityAnalysisParametersInfos(study.getSecurityAnalysisParametersUuid(), study.getLoadFlowParametersUuid());
-        UUID result = securityAnalysisService.runSecurityAnalysis(networkUuid, variantId, runSecurityAnalysisParametersInfos,
-                new ReportInfos(saReportUuid, nodeUuid), receiver, userId);
-        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, SECURITY_ANALYSIS);
-        notificationService.emitStudyChanged(study.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS);
-        notificationService.emitElementUpdated(study.getId(), userId);
-        return result;
     }
 
     public ContingencyCount getContingencyCount(UUID studyUuid, List<UUID> contingencyListIds, UUID nodeUuid, UUID rootNetworkUuid) {
@@ -1421,10 +1364,6 @@ public class StudyService {
 
     private void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
         loadflowRestService.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
-    }
-
-    public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        securityAnalysisService.invalidateSaStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
     }
 
     public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
@@ -1546,7 +1485,7 @@ public class StudyService {
         if (resultUuid != null) {
             return switch (computationType) {
                 case LOAD_FLOW -> loadflowRestService.getEnumValues(enumName, resultUuid);
-                case SECURITY_ANALYSIS -> securityAnalysisService.getEnumValues(enumName, resultUuid);
+                case SECURITY_ANALYSIS -> securityAnalysisRestService.getEnumValues(enumName, resultUuid);
                 case SHORT_CIRCUIT, SHORT_CIRCUIT_ONE_BUS -> shortCircuitService.getEnumValues(enumName, resultUuid);
                 default -> throw new StudyException(NOT_ALLOWED);
             };
