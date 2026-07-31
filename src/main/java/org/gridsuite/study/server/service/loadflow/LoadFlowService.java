@@ -12,7 +12,7 @@ import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.AbstractComputationService;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.stereotype.Service;
