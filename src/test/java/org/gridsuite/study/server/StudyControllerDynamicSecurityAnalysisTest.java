@@ -21,7 +21,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
@@ -29,6 +28,7 @@ import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -115,7 +115,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
     StudyService spyStudyService;
 
     @MockitoBean
-    private LoadFlowService mockLoadFlowService;
+    private LoadFlowRestService mockLoadFlowRestService;
 
     @MockitoBean
     private UserAdminService userAdminService;
@@ -234,7 +234,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(mockLoadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         when(mockDynamicSimulationService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
 
         // setup DynamicSecurityAnalysisService spy
@@ -341,7 +341,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(mockLoadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         when(mockDynamicSimulationService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
 
         // setup DynamicSecurityAnalysisService mock
@@ -418,7 +418,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(mockLoadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         when(mockDynamicSimulationService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
 
         // setup DynamicSecurityAnalysisService mock

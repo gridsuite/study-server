@@ -40,7 +40,6 @@ import java.time.Duration;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -127,30 +126,27 @@ public class RemoteServicesInspector {
      * @apiNote contact {@code /actuator/info} endpoint of the services
      * @implNote retrieve data in parallel to optimize requests time
      */
-    @SuppressWarnings("unchecked") //.toArray(...) generics cause "Generic array creation) problem
     public Map<String, JsonNode> getServicesInfo(@Nullable FrontService view) throws PartialResultException {
-        final CompletableFuture<Entry<String, JsonNode>>[] resultsAsync = Optional.ofNullable(view)
+        final List<CompletableFuture<Entry<String, JsonNode>>> futures = Optional.ofNullable(view)
                 .map(viewFilter -> remoteServicesProperties.getRemoteServiceViewFilter().get(viewFilter))
                 .orElse(remoteServicesProperties.getRemoteServiceViewDefault())
-                .parallelStream()
+                .stream()
                 .map(srv -> asyncSelf.getServiceInfo(srv).thenApply(json -> Map.entry(srv.serviceName(), json)))
-                .toArray(size -> (CompletableFuture<Entry<String, JsonNode>>[]) new CompletableFuture<?>[size]);
-        CompletableFuture.allOf(resultsAsync).join();
-        final AtomicBoolean isPartial = new AtomicBoolean(false); //need effectively final for lambda
-        final Map<String, JsonNode> result = Map.ofEntries(Arrays.stream(resultsAsync)
-                .map(CompletableFuture::join)
-                .map(e -> {
-                    if (NullNode.instance.equals(e.getValue())) {
-                        isPartial.lazySet(true);
-                    }
-                    return e;
-                })
-                .toArray(size -> (Entry<String, JsonNode>[]) new Entry[size]));
-        if (isPartial.get()) {
-            throw new PartialResultException(new HashMap<>(result), "Didn't get response from some servers");
-        } else {
-            return result;
+                .toList();
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+        final HashMap<String, JsonNode> result = new HashMap<>();
+        boolean isPartial = false;
+        for (CompletableFuture<Entry<String, JsonNode>> future : futures) {
+            final Entry<String, JsonNode> entry = future.join();
+            result.put(entry.getKey(), entry.getValue());
+            if (NullNode.instance.equals(entry.getValue())) {
+                isPartial = true;
+            }
         }
+        if (isPartial) {
+            throw new PartialResultException(result, "Didn't get response from some servers");
+        }
+        return result;
     }
 
     /**
@@ -171,7 +167,7 @@ public class RemoteServicesInspector {
                 return CompletableFuture.completedFuture(this.objectMapper.readTree(rawJson));
             }
         } catch (final RuntimeException | JacksonException ex) {
-            LOGGER.debug("Error while retrieving informations for " + service, ex);
+            LOGGER.debug("Error while retrieving informations for {}", service, ex);
             return CompletableFuture.completedFuture(NullNode.instance);
         }
     }

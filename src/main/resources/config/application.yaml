@@ -1,8 +1,6 @@
 spring:
   application:
     name: study-server
-  main:
-    allow-circular-references: true
   cloud:
     function:
       definition: "consumeSaResult;consumeSaStopped;consumeSaFailed;consumeSaCancelFailed;\

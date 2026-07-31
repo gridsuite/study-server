@@ -24,6 +24,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -188,13 +189,13 @@ class SensitivityAnalysisTest {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
-    private SensitivityAnalysisService sensitivityAnalysisService;
+    private SensitivityAnalysisRestService sensitivityAnalysisService;
 
     @Autowired
     private ActionsService actionsService;
 
     @Autowired
-    private LoadFlowService loadFlowService;
+    private LoadFlowRestService loadFlowRestService;
 
     @Autowired
     private UserAdminService userAdminService;
@@ -237,7 +238,7 @@ class SensitivityAnalysisTest {
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         directoryService.setDirectoryServerServerBaseUri(wireMockServer.baseUrl());
 
-        loadFlowService.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
+        loadFlowRestService.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
     }
 

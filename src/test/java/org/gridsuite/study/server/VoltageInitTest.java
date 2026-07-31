@@ -49,7 +49,9 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -223,25 +225,25 @@ class VoltageInitTest {
     private ReportService reportService;
 
     @MockitoSpyBean
-    private LoadFlowService loadFlowService;
+    private LoadFlowRestService loadFlowRestService;
 
     @Autowired
-    private SecurityAnalysisService securityAnalysisService;
+    private SecurityAnalysisRestService securityAnalysisService;
 
     @Autowired
-    private SensitivityAnalysisService sensitivityAnalysisService;
+    private SensitivityAnalysisRestService sensitivityAnalysisService;
 
     @Autowired
-    private ShortCircuitService shortCircuitService;
+    private ShortCircuitRestService shortCircuitService;
 
     @Autowired
-    private StateEstimationService stateEstimationService;
+    private StateEstimationRestService stateEstimationService;
 
     @Autowired
-    private PccMinService pccMinService;
+    private PccMinRestService pccMinService;
 
     @Autowired
-    private VoltageInitService voltageInitService;
+    private VoltageInitRestService voltageInitService;
 
     @MockitoSpyBean
     private UserAdminService userAdminService;
@@ -302,7 +304,7 @@ class VoltageInitTest {
         voltageInitService.setVoltageInitServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
-        loadFlowService.setLoadFlowServerBaseUri(baseUrl);
+        loadFlowRestService.setLoadFlowServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
@@ -341,7 +343,7 @@ class VoltageInitTest {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), VOLTAGE_INIT_STATUS_JSON);
                 } else if (path.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid")) {
                     return new MockResponse(200, Headers.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE), "\"" + MODIFICATIONS_GROUP_UUID + "\"");
-                } else if (path.matches("/v1/groups/.*" + "\\?action=COPY.*")) {
+                } else if (path.matches("/v1/containers/.*" + "\\?action=COPY.*")) {
                     Optional<NetworkModificationResult> networkModificationResult =
                             createModificationResultWithElementImpact(SimpleImpactType.MODIFICATION,
                                     IdentifiableType.GENERATOR, "genId", Set.of("s1"));
@@ -541,7 +543,7 @@ class VoltageInitTest {
         // Fetch results to get modification group UUID
         TestUtils.assertRequestMatches("GET", "/v1/results/.*", server);
         // Duplicate modification in the group related to the node
-        TestUtils.assertRequestMatches("PUT", "/v1/groups/.*", server);
+        TestUtils.assertRequestMatches("PUT", "/v1/containers/.*", server);
         // Update modification group UUID in the result
         TestUtils.assertRequestMatches("PUT", "/v1/results/.*/modifications-group-uuid", server);
 
@@ -745,14 +747,14 @@ class VoltageInitTest {
         assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
-                r.matches("/v1/groups/.*\\?action=COPY&originGroupUuid=.*")
+                r.matches("/v1/containers/.*\\?action=COPY&sourceContainerId=.*")
         ));
 
         // Invalidate only children
         checkInsertVoltageInitModifications(studyNameUserIdUuid, modificationNode3Uuid, firstRootNetworkUuid, true);
 
         // clone and insert again voltage-init modification to modificationNode3Uuid, with LF result -> node is invalidated
-        when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(loadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         when(networkModificationService.duplicateModificationsFromGroup(any(), any(), any())).thenReturn(null);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid,
                 modificationNode3Uuid)
@@ -761,7 +763,7 @@ class VoltageInitTest {
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
                 r.matches("/v1/results\\?resultsUuids=" + VOLTAGE_INIT_RESULT_UUID) ||
-                r.matches("/v1/groups/.*\\?action=COPY.*") ||
+                r.matches("/v1/containers/.*\\?action=COPY.*") ||
                 r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*") ||
                 r.matches("/v1/reports")
         ));
@@ -779,7 +781,7 @@ class VoltageInitTest {
         assertTrue(TestUtils.getRequestsDone(5, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
-                r.matches("/v1/groups/.*\\?action=COPY&originGroupUuid=.*") ||
+                r.matches("/v1/containers/.*\\?action=COPY&sourceContainerId=.*") ||
                 r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*")
         ));
 
@@ -787,14 +789,14 @@ class VoltageInitTest {
         checkInsertVoltageInitModifications(studyNameUserIdUuid, modificationNode2Uuid, firstRootNetworkUuid, true);
 
         // clone and insert again voltage-init modification to modificationNode2Uuid, with LF result-> invalidate only children (construction node)
-        when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(loadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid,
                 modificationNode2Uuid)
             .header("userId", "userId")).andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(5, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
-                r.matches("/v1/groups/.*\\?action=COPY.*") ||
+                r.matches("/v1/containers/.*\\?action=COPY.*") ||
                 r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*")
         ));
 
@@ -804,7 +806,7 @@ class VoltageInitTest {
 
     private void runVoltageInit(UUID studyUuid, UUID nodeUuuid, UUID rootNetworkUuid, final MockWebServer server) throws Exception {
         // run a voltage init analysis
-        reset(loadFlowService);
+        reset(loadFlowRestService);
         reset(networkModificationService);
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run", studyUuid, rootNetworkUuid, nodeUuuid)
                 .header("userId", "userId"))
@@ -883,7 +885,7 @@ class VoltageInitTest {
         assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
                         r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
-                        r.matches("/v1/groups/.*\\?action=COPY&originGroupUuid=.*")
+                        r.matches("/v1/containers/.*\\?action=COPY&sourceContainerId=.*")
         ));
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid);
         checkUpdateModelsStatusMessagesReceived(studyUuid, firstRootNetworkUuid);

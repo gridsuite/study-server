@@ -6,6 +6,9 @@
  */
 package org.gridsuite.study.server;
 
+import org.gridsuite.study.server.dto.modification.ModificationContainerInfos;
+import org.gridsuite.study.server.dto.modification.ModificationContainerType;
+import org.gridsuite.study.server.dto.modification.MoveModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -22,7 +25,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @DisableElasticsearch
@@ -57,7 +63,11 @@ class RebuildNodeServiceTest {
             Map.of(rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT))
         ).when(studyService).getNodeBuildStatusByRootNetwork(studyUuid, node1Uuid);
 
-        rebuildNodeService.moveNetworkModification(studyUuid, node1Uuid, UUID.randomUUID(), UUID.randomUUID(), userId);
+        MoveModificationInfos moveModificationInfos = new MoveModificationInfos(
+                new ModificationContainerInfos(UUID.randomUUID(), ModificationContainerType.GROUP),
+                new ModificationContainerInfos(UUID.randomUUID(), ModificationContainerType.GROUP),
+                null);
+        rebuildNodeService.moveNetworkModification(studyUuid, node1Uuid, UUID.randomUUID(), moveModificationInfos, userId);
 
         verify(studyService, times(1)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }
@@ -123,7 +133,11 @@ class RebuildNodeServiceTest {
 
         doReturn(true).when(networkModificationTreeService).isRootOrConstructionNode(any());
 
-        rebuildNodeService.moveNetworkModification(studyUuid, node1Uuid, UUID.randomUUID(), UUID.randomUUID(), userId);
+        MoveModificationInfos moveModificationInfos = new MoveModificationInfos(
+                new ModificationContainerInfos(UUID.randomUUID(), ModificationContainerType.GROUP),
+                new ModificationContainerInfos(UUID.randomUUID(), ModificationContainerType.GROUP),
+                null);
+        rebuildNodeService.moveNetworkModification(studyUuid, node1Uuid, UUID.randomUUID(), moveModificationInfos, userId);
 
         verify(studyService, times(0)).buildNode(studyUuid, node1Uuid, rootNetworkUuid, userId);
     }
