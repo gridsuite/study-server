@@ -300,13 +300,13 @@ class NetworkModificationTest {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         String baseUrl = wireMockServer.baseUrl();
         reportService.setReportServerBaseUri(baseUrl);
-        loadFlowRestService.setLoadFlowServerBaseUri(baseUrl);
-        securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
-        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
-        shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
-        voltageInitService.setVoltageInitServerBaseUri(baseUrl);
-        stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
-        pccMinService.setPccMinServerBaseUri(baseUrl);
+        loadFlowRestService.setBaseUri(baseUrl);
+        securityAnalysisService.setBaseUri(baseUrl);
+        sensitivityAnalysisService.setBaseUri(baseUrl);
+        shortCircuitService.setBaseUri(baseUrl);
+        voltageInitService.setBaseUri(baseUrl);
+        stateEstimationService.setBaseUri(baseUrl);
+        pccMinService.setBaseUri(baseUrl);
 
         doReturn(baseUrl).when(dynamicSimulationClient).getBaseUri();
         doReturn(baseUrl).when(dynamicSecurityAnalysisClient).getBaseUri();

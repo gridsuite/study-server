@@ -1,5 +1,6 @@
 package org.gridsuite.study.server.service.common;
 
+import org.gridsuite.study.server.service.client.AbstractRestClient;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.web.client.RestTemplate;
@@ -8,10 +9,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RESULTS_UUIDS;
 
-public abstract class AbstractComputationRestService {
+public abstract class AbstractComputationRestService extends AbstractRestClient {
+
+    protected AbstractComputationRestService(String baseUri, RestTemplate restTemplate) {
+        super(baseUri, restTemplate);
+    }
 
     public abstract List<String> getEnumValues(String enumName, UUID resultUuidOpt);
 

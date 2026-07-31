@@ -235,12 +235,12 @@ class SensitivityAnalysisTest {
 
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
-        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(wireMockServer.baseUrl());
+        sensitivityAnalysisService.setBaseUri(wireMockServer.baseUrl());
         actionsService.setActionsServerBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         directoryService.setDirectoryServerServerBaseUri(wireMockServer.baseUrl());
 
-        loadFlowRestService.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
+        loadFlowRestService.setBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
     }
 
