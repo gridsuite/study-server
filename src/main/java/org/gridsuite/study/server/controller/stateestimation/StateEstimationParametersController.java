@@ -25,7 +25,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/state-estimation")
-@Tag(name = "Study server - State Estimation parameters")
+@Tag(name = "Study server - State estimation parameters")
 public class StateEstimationParametersController {
 
     private final StateEstimationService stateEstimationService;

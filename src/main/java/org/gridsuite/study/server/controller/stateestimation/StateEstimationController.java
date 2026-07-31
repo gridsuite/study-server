@@ -29,7 +29,7 @@ import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/state-estimation")
-@Tag(name = "Study server - State Estimation")
+@Tag(name = "Study server - State estimation")
 public class StateEstimationController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;

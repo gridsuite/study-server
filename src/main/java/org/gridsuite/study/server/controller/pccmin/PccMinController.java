@@ -33,7 +33,7 @@ import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/pcc-min")
-@Tag(name = "Study server - Pcc min")
+@Tag(name = "Study server - Pcc min parameters")
 public class PccMinController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final StudyService studyService;
