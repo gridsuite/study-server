@@ -14,7 +14,6 @@ import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +43,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-@Disabled("To test CI")
 class StudyControllerDynamicMappingTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyControllerDynamicMappingTest.class);
@@ -53,7 +51,6 @@ class StudyControllerDynamicMappingTest {
     private static final String DELIMITER = "/";
     private static final String STUDY_END_POINT = "studies";
 
-    private static final String STUDY_BASE_URL = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
     private static final String STUDY_NETWORK_VALUES_END_POINT = "{studyUuid}/dynamic-mapping/network/values";
     private static final String STUDY_NETWORK_MATCHES_END_POINT = "{studyUuid}/dynamic-mapping/network/matches/rule";
 
@@ -95,16 +92,17 @@ class StudyControllerDynamicMappingTest {
     @Test
     void testGetNetworkValuesFromStudy() throws Exception {
         // create a study in the db
-        org.gridsuite.study.server.repository.StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
 
         // setup DynamicMappingService spy — stop at the service, do not call the remote server
         doAnswer(invocation -> NETWORK_VALUES_JSON)
                 .when(spyDynamicMappingService).getNetworkValues(eq(NETWORK_UUID));
 
+        String studyBaseUrl = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
         // --- call endpoint to be tested --- //
         LOGGER.info("Calling getNetworkValuesFromStudy for studyUuid={}", studyUuid);
-        MvcResult result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_NETWORK_VALUES_END_POINT, studyUuid)
+        MvcResult result = studyClient.perform(get(studyBaseUrl + DELIMITER + STUDY_NETWORK_VALUES_END_POINT, studyUuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -122,16 +120,17 @@ class StudyControllerDynamicMappingTest {
     @Test
     void testGetNetworkMatchesFromStudy() throws Exception {
         // create a study in the db
-        org.gridsuite.study.server.repository.StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID);
         UUID studyUuid = studyEntity.getId();
 
         // setup DynamicMappingService spy — stop at the service, do not call the remote server
         doAnswer(invocation -> NETWORK_MATCHES_JSON)
                 .when(spyDynamicMappingService).getNetworkMatches(eq(NETWORK_UUID), eq(RULE_TO_MATCH_JSON));
 
+        String studyBaseUrl = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
         // --- call endpoint to be tested --- //
         LOGGER.info("Calling getNetworkMatchesFromStudy for studyUuid={}", studyUuid);
-        MvcResult result = studyClient.perform(post(STUDY_BASE_URL + DELIMITER + STUDY_NETWORK_MATCHES_END_POINT, studyUuid)
+        MvcResult result = studyClient.perform(post(studyBaseUrl + DELIMITER + STUDY_NETWORK_MATCHES_END_POINT, studyUuid)
                         .header(HEADER_USER_ID_NAME, HEADER_USER_ID_VALUE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(RULE_TO_MATCH_JSON))

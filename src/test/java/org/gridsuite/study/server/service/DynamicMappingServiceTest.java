@@ -10,7 +10,6 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +26,11 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-@Disabled("To test CI")
 class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamicMappingServiceTest.class);
 
     private static final String DELIMITER = "/";
-    private static final String NETWORK_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_NETWORK);
-
     private static final UUID NETWORK_UUID = UUID.randomUUID();
 
     private static final String NETWORK_VALUES_JSON = "{\"propertyValues\":[]}";
@@ -58,8 +54,9 @@ class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
 
     @Test
     void testGetNetworkValues() {
+        String networkBaseUrl = buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_NETWORK);
         // --- setup mock server --- //
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(NETWORK_BASE_URL + DELIMITER + NETWORK_UUID + "/values"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(networkBaseUrl + DELIMITER + NETWORK_UUID + "/values"))
                 .willReturn(WireMock.ok()
                         .withBody(NETWORK_VALUES_JSON)));
 
@@ -75,8 +72,9 @@ class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
 
     @Test
     void testGetNetworkMatches() {
+        String networkBaseUrl = buildEndPointUrl("", API_VERSION, DYNAMIC_MAPPING_END_POINT_NETWORK);
         // --- setup mock server --- //
-        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(NETWORK_BASE_URL + DELIMITER + NETWORK_UUID + "/matches/rule"))
+        wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(networkBaseUrl + DELIMITER + NETWORK_UUID + "/matches/rule"))
                         .withRequestBody(WireMock.equalToJson(RULE_TO_MATCH_JSON))
                         .willReturn(WireMock.ok()
                         .withBody(NETWORK_MATCHES_JSON)));
