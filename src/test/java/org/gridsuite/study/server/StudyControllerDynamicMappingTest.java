@@ -29,7 +29,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.doAnswer;
-import static org.mockito.BDDMockito.eq;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -97,7 +96,7 @@ class StudyControllerDynamicMappingTest {
 
         // setup DynamicMappingService spy — stop at the service, do not call the remote server
         doAnswer(invocation -> NETWORK_VALUES_JSON)
-                .when(spyDynamicMappingService).getNetworkValues(eq(NETWORK_UUID));
+                .when(spyDynamicMappingService).getNetworkValues(NETWORK_UUID);
 
         String studyBaseUrl = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
         // --- call endpoint to be tested --- //
@@ -125,7 +124,7 @@ class StudyControllerDynamicMappingTest {
 
         // setup DynamicMappingService spy — stop at the service, do not call the remote server
         doAnswer(invocation -> NETWORK_MATCHES_JSON)
-                .when(spyDynamicMappingService).getNetworkMatches(eq(NETWORK_UUID), eq(RULE_TO_MATCH_JSON));
+                .when(spyDynamicMappingService).getNetworkMatches(NETWORK_UUID, RULE_TO_MATCH_JSON);
 
         String studyBaseUrl = UrlUtil.buildEndPointUrl("", API_VERSION, STUDY_END_POINT);
         // --- call endpoint to be tested --- //
