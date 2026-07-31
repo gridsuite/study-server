@@ -19,7 +19,7 @@ import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
  */
 public final class UrlUtil {
     private UrlUtil() {
-        throw new AssertionError("Utility class should not be instantiated");
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
     /**

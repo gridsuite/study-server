@@ -50,8 +50,13 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
+import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
+import org.gridsuite.study.server.service.voltageinit.VoltageInitService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -61,7 +66,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1008,7 +1012,7 @@ class VoltageInitTest {
         assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION));
         assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION));
 
-        StudyService mockStudyService = Mockito.mock(StudyService.class);
+        VoltageInitService mockVoltageInitService = mock(VoltageInitService.class);
         doAnswer(invocation -> {
             input.send(
                 MessageBuilder.withPayload("")
@@ -1016,8 +1020,8 @@ class VoltageInitTest {
                     .setHeader("resultUuid", VOLTAGE_INIT_ERROR_RESULT_UUID)
                 .build(), voltageInitFailedDestination);
             return resultUuid;
-        }).when(mockStudyService).runVoltageInit(any(), any(), any(), any(), anyBoolean());
-        mockStudyService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "", false);
+        }).when(mockVoltageInitService).runVoltageInit(any(), any(), any(), any(), anyBoolean());
+        mockVoltageInitService.runVoltageInit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, "", false);
 
         // Test doesn't reset uuid result in the database
         assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION).toString());
