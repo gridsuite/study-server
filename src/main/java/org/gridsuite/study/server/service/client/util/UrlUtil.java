@@ -33,10 +33,7 @@ public final class UrlUtil {
         try {
             var sb = new StringBuilder(baseUri);
             if (Strings.isNotBlank(apiVersion)) {
-                if (sb.lastIndexOf(DELIMITER) != (sb.length() - 1)) {
-                    sb.append(DELIMITER);
-                }
-                sb.append(apiVersion);
+                sb.append(DELIMITER).append(apiVersion);
             }
             if (Strings.isNotBlank(endPoint)) {
                 if (sb.lastIndexOf(DELIMITER) != (sb.length() - 1)) {

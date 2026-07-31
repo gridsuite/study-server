@@ -10,7 +10,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.DynamicMappingService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -22,7 +21,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -62,7 +60,6 @@ class StudyControllerDynamicMappingTest {
 
     private static final UUID CASE_UUID = UUID.randomUUID();
     private static final UUID NETWORK_UUID = UUID.randomUUID();
-    private static final UUID STUDY_UUID = UUID.randomUUID();
 
     private static final String RULE_TO_MATCH_JSON = "{\"filter\":null,\"ruleIndex\":0}";
     private static final String NETWORK_VALUES_JSON = "{\"propertyValues\":[]}";
@@ -73,9 +70,6 @@ class StudyControllerDynamicMappingTest {
 
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
-
-    @MockitoBean
-    private UserAdminService userAdminService;
 
     @MockitoSpyBean
     private DynamicMappingService spyDynamicMappingService;
