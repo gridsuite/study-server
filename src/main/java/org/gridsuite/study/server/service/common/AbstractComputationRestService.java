@@ -19,10 +19,10 @@ public abstract class AbstractComputationRestService extends AbstractRestClient 
 
     public abstract List<String> getEnumValues(String enumName, UUID resultUuidOpt);
 
-    public List<String> getEnumValues(String enumName, UUID resultUuid, String apiVersion, String computingTypeBaseUri, RestTemplate restTemplate) {
+    public List<String> getEnumValues(String enumName, UUID resultUuid, String apiVersion, RestTemplate restTemplate) {
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + apiVersion + "/results/{resultUuid}/{enumName}");
         String path = uriComponentsBuilder.buildAndExpand(resultUuid, enumName).toUriString();
-        return restTemplate.exchange(computingTypeBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<String>>() { }).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<String>>() { }).getBody();
     }
 
     public static void deleteCalculationResults(List<UUID> resultsUuids,

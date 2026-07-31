@@ -261,7 +261,7 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
 
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuid) {
-        return getEnumValues(enumName, resultUuid, SHORT_CIRCUIT_API_VERSION, baseUri, restTemplate);
+        return getEnumValues(enumName, resultUuid, SHORT_CIRCUIT_API_VERSION, restTemplate);
     }
 
     private UriComponentsBuilder getBaseUriForParameters() {
