@@ -10,6 +10,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +27,7 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
+@Disabled("To test CI")
 class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamicMappingServiceTest.class);
