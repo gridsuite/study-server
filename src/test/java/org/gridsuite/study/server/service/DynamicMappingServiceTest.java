@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -9,13 +9,11 @@ package org.gridsuite.study.server.service;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.UUID;
@@ -28,7 +26,6 @@ import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPoi
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
-@SpringBootTest
 class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamicMappingServiceTest.class);
@@ -57,17 +54,8 @@ class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
         dynamicMappingService = new DynamicMappingService(remoteServicesProperties, restTemplate);
     }
 
-    @AfterEach
-    public void tearDown() {
-        try {
-            wireMockServer.shutdown();
-        } catch (Exception e) {
-            getLogger().info("Can not shutdown the mock server {}", this.getClass().getSimpleName());
-        }
-    }
-
     @Test
-    void testGetNetworkValues() throws Exception {
+    void testGetNetworkValues() {
         // --- setup mock server --- //
         wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(NETWORK_BASE_URL + DELIMITER + NETWORK_UUID + "/values"))
                 .willReturn(WireMock.ok()
@@ -84,7 +72,7 @@ class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
     }
 
     @Test
-    void testGetNetworkMatches() throws Exception {
+    void testGetNetworkMatches() {
         // --- setup mock server --- //
         wireMockServer.stubFor(WireMock.post(WireMock.urlEqualTo(NETWORK_BASE_URL + DELIMITER + NETWORK_UUID + "/matches/rule"))
                         .withRequestBody(WireMock.equalToJson(RULE_TO_MATCH_JSON))
