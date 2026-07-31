@@ -25,9 +25,11 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -131,26 +133,23 @@ public class StudyExportArchiveService {
      * Write directory contents to zip archive
      */
     private void writeZipEntries(Path directory, ZipOutputStream zipOut) throws IOException {
-        Files.walk(directory)
-                .filter(Files::isRegularFile)
-                .forEach(file -> {
-                    try {
-                        Path relativePath = directory.relativize(file);
-                        String entryName = relativePath.toString().replace('\\', '/');
-
-                        ZipEntry entry = new ZipEntry(entryName);
-                        entry.setSize(Files.size(file));
-                        zipOut.putNextEntry(entry);
-
-                        try (InputStream in = Files.newInputStream(file)) {
-                            in.transferTo(zipOut);
-                        }
-
-                        zipOut.closeEntry();
-                    } catch (IOException e) {
-                        throw new UncheckedIOException(e);
+        try (Stream<Path> paths = Files.walk(directory)) {
+            paths.filter(Files::isRegularFile).forEach(file -> {
+                try {
+                    Path relativePath = directory.relativize(file);
+                    String entryName = relativePath.toString().replace('\\', '/');
+                    ZipEntry entry = new ZipEntry(entryName);
+                    entry.setSize(Files.size(file));
+                    zipOut.putNextEntry(entry);
+                    try (InputStream in = Files.newInputStream(file)) {
+                        in.transferTo(zipOut);
                     }
-                });
+                    zipOut.closeEntry();
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        }
     }
 
     /**
@@ -158,15 +157,17 @@ public class StudyExportArchiveService {
      */
     private void deleteDirectory(Path directory) throws IOException {
         if (Files.exists(directory)) {
-            Files.walk(directory)
-                    .sorted((a, b) -> b.compareTo(a))
-                    .forEach(path -> {
-                        try {
-                            Files.delete(path);
-                        } catch (IOException e) {
-                            throw new UncheckedIOException(e);
-                        }
-                    });
+            try (Stream<Path> paths = Files.walk(directory)) {
+                paths.sorted(Comparator.reverseOrder()).forEach(path -> {
+                    try {
+                        Files.delete(path);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                });
+            } catch (UncheckedIOException e) {
+                throw e.getCause();
+            }
         }
     }
 }

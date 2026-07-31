@@ -3922,7 +3922,7 @@ public class StudyService {
     }
 
     private NodeTreeExportInfos toNodeTreeExportInfos(AbstractNode node) {
-        List<NodeTreeExportInfos> children = node.getChildren().stream().map(this::toNodeTreeExportInfos).toList();
+        List<NodeTreeExportInfos> children = CollectionUtils.emptyIfNull(node.getChildren()).stream().map(this::toNodeTreeExportInfos).toList();
         UUID modificationGroupUuid = null;
         String buildStatus = null;
         if (node instanceof NetworkModificationNode modificationNode) {
@@ -3943,34 +3943,19 @@ public class StudyService {
 
     @Transactional
     public void importStudy(UUID studyUuid, StudyExportInfos studyExportInfos, String userId) {
-        LOGGER.info("importStudy: Starting import for study {}: {} root networks, node tree present: {}, node tree children: {}",
-                studyUuid, studyExportInfos.rootNetworks().size(), studyExportInfos.nodeTree() != null,
-                studyExportInfos.nodeTree() != null ? studyExportInfos.nodeTree().children().size() : 0);
-
         // Import node tree
         if (studyExportInfos.nodeTree() != null) {
-            LOGGER.info("importStudy: Importing node tree for study {} with {} children", 
-                    studyUuid, studyExportInfos.nodeTree().children().size());
-            importNodeTree(studyUuid, studyExportInfos.nodeTree(), userId);
-            LOGGER.info("importStudy: Node tree imported successfully for study {}", studyUuid);
-        } else {
-            LOGGER.info("importStudy: No node tree to import for study {}", studyUuid);
+            StudyEntity studyEntity = getStudy(studyUuid);
+            UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
+            studyExportInfos.nodeTree().children().forEach(child -> createNodeRecursively(studyEntity, rootNodeUuid, child, userId));
         }
-
         // Import additional root networks (skip first one as it's already imported)
         if (studyExportInfos.rootNetworks().size() > 1) {
-            LOGGER.info("importStudy: Importing {} additional root networks for study {}",
-                    studyExportInfos.rootNetworks().size() - 1, studyUuid);
             StudyEntity studyEntity = getStudy(studyUuid);
             for (int i = 1; i < studyExportInfos.rootNetworks().size(); i++) {
                 RootNetworkExportInfos rootNetworkExport = studyExportInfos.rootNetworks().get(i);
-                LOGGER.info("importStudy: Importing additional root network {}/{}: name={}, tag={}, case={}", 
-                        i, studyExportInfos.rootNetworks().size() - 1, rootNetworkExport.name(), 
-                        rootNetworkExport.tag(), rootNetworkExport.caseInfos().uuid());
-
                 // Assert can create root network
                 rootNetworkService.assertCanCreateRootNetwork(studyUuid, rootNetworkExport.name(), rootNetworkExport.tag());
-
                 // Convert RootNetworkExportInfos to RootNetworkInfos
                 CaseInfos caseInfos = new CaseInfos(
                         rootNetworkExport.caseInfos().uuid(),
@@ -3978,7 +3963,6 @@ public class StudyService {
                         rootNetworkExport.caseInfos().name(),
                         rootNetworkExport.caseFormat()
                 );
-
                 RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder()
                         .id(UUID.randomUUID())
                         .name(rootNetworkExport.name())
@@ -3986,35 +3970,19 @@ public class StudyService {
                         .importParameters(rootNetworkExport.importParameters())
                         .caseInfos(caseInfos)
                         .build();
-
                 // Insert creation request
-                RootNetworkRequestEntity rootNetworkRequestEntity = rootNetworkService.insertCreationRequest(studyEntity.getId(), rootNetworkInfos, userId);
-
+                rootNetworkService.insertCreationRequest(studyEntity.getId(), rootNetworkInfos, userId);
                 // Import the network from the case (async via RabbitMQ)
                 // The consumer ROOT_NETWORK_CREATION will handle createRootNetwork when notification arrives
                 persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkExport.importParameters(), CaseImportAction.ROOT_NETWORK_CREATION);
-                LOGGER.info("importStudy: Triggered async import for root network {}, will be created when notification arrives", rootNetworkExport.name());
             }
-
             // Update study entity to multi-root if we have multiple root networks in the export
             // The additional root networks will be created async when notifications arrive
             if (studyExportInfos.rootNetworks().size() > 1) {
                 studyEntity.setMonoRoot(false);
                 studyRepository.save(studyEntity);
-                LOGGER.info("importStudy: Study {} set to multi-root mode (expecting {} root networks)",
-                        studyUuid, studyExportInfos.rootNetworks().size());
             }
-
-            LOGGER.info("importStudy: Import completed for study {} - {} root networks will be created async",
-                    studyUuid, studyExportInfos.rootNetworks().size() - 1);
         }
-    }
-
-    @Transactional
-    public void importNodeTree(UUID studyUuid, NodeTreeExportInfos nodeTree, String userId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
-        nodeTree.children().forEach(child -> createNodeRecursively(studyEntity, rootNodeUuid, child, userId));
     }
 
     /**
@@ -4075,8 +4043,7 @@ public class StudyService {
             throw new StudyException(IMPORT_STUDY_ERROR, "Invalid study export data format");
         }
 
-        importStudyWithCase(studyUuid, studyName, description, parentDirectoryUuid,
-                caseUuid, caseFormat, studyExportInfos, importParameters, userId);
+        importStudyWithCase(studyUuid, studyName, description, parentDirectoryUuid, caseUuid, caseFormat, studyExportInfos, importParameters, userId);
     }
 
     private void createNodeRecursively(StudyEntity studyEntity, UUID parentNodeUuid, NodeTreeExportInfos exportNode, String userId) {

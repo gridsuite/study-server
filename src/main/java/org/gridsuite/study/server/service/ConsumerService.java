@@ -38,12 +38,11 @@ import org.springframework.stereotype.Service;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NODE_NOT_BUILDING;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -263,40 +262,21 @@ public class ConsumerService {
                     .reportUuid(importReportUuid)
                     .build());
                 case STUDY_IMPORT -> {
-                    LOGGER.info("STUDY_IMPORT: Starting import for study {}", studyUuid);
-
                     // Retrieve import context first
                     var importContext = Boolean.TRUE.equals(receiver.getHasImportContext())
                             ? studyImportContextService.getAndRemoveImportContext(studyUuid)
                             : null;
 
                     if (importContext == null) {
-                        LOGGER.error("STUDY_IMPORT action: import context not found for study {}", studyUuid);
                         throw new RuntimeException("Import context not found for study " + studyUuid);
                     }
 
-                    LOGGER.info("STUDY_IMPORT: Retrieved import context for study {} - name: {}, parentDir: {}",
-                            studyUuid, importContext.studyName(), importContext.parentDirectoryUuid());
-
                     // Insert the study with the first root network and import the complete node tree
-                    LOGGER.info("STUDY_IMPORT: Inserting study {} with imported node tree", studyUuid);
                     studyService.insertStudyWithImportedTree(studyUuid, userId, networkInfos, caseInfos,
                             importParameters, importReportUuid, importContext.studyExportInfos());
-                    LOGGER.info("STUDY_IMPORT: Study {} inserted successfully with node tree", studyUuid);
-
                     // Create directory element for the study
-                    LOGGER.info("STUDY_IMPORT: Creating directory element for study {} in parent {}",
-                            studyUuid, importContext.parentDirectoryUuid());
-                    directoryService.createElement(
-                            importContext.parentDirectoryUuid(),
-                            importContext.description(),
-                            studyUuid,
-                            importContext.studyName(),
-                            DirectoryService.STUDY,
-                            userId);
-                    LOGGER.info("STUDY_IMPORT: Directory element created for study {}", studyUuid);
-                    LOGGER.info("Successfully imported study {} with node tree and {} root networks",
-                            studyUuid, importContext.studyExportInfos().rootNetworks().size());
+                    directoryService.createElement(importContext.parentDirectoryUuid(), importContext.description(),
+                            studyUuid, importContext.studyName(), DirectoryService.STUDY, userId);
                 }
             }
             caseService.disableCaseExpiration(caseUuid);
@@ -314,8 +294,6 @@ public class ConsumerService {
                 UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
                 networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNodeUuid);
             }
-            LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
-                TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
         }
     }
 
