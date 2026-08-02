@@ -75,9 +75,6 @@ public class NetworkConversionService {
     public void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, String userId, UUID importReportUuid, Map<String, Object> importParameters,
             CaseImportAction caseImportAction, org.gridsuite.study.server.dto.studyexport.StudyImportContext importContext) {
 
-        LOGGER.info("persistNetwork: Study {}, Action: {}, Case: {}, HasContext: {}",
-                studyUuid, caseImportAction, rootNetworkInfos.getCaseInfos().getCaseUuid(), importContext != null);
-
         // Store StudyImportContext in cache if provided (for STUDY_IMPORT action)
         Boolean hasImportContext = false;
         if (importContext != null) {
@@ -95,10 +92,7 @@ public class NetworkConversionService {
                     System.nanoTime(), caseImportAction, hasImportContext);
 
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(caseImportReceiver), StandardCharsets.UTF_8);
-            LOGGER.info("persistNetwork: Created receiver for study {}, receiver size: {} bytes",
-                    studyUuid, receiver.length());
         } catch (JsonProcessingException e) {
-            LOGGER.error("persistNetwork: Failed to serialize CaseImportReceiver for study {}", studyUuid, e);
             throw new UncheckedIOException(e);
         }
 
@@ -113,18 +107,12 @@ public class NetworkConversionService {
                 .buildAndExpand()
                 .toUriString();
 
-        LOGGER.info("persistNetwork: Sending case import request to network-conversion-server for study {}", studyUuid);
-        LOGGER.debug("persistNetwork: Request path: {}", path);
-
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
 
         restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.POST, httpEntity,
                 Void.class);
-
-        LOGGER.info("persistNetwork: Case import request sent successfully for study {}, action: {}",
-                studyUuid, caseImportAction);
     }
 
     public String getExportFormats() {

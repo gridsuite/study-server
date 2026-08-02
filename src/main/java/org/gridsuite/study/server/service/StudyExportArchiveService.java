@@ -72,7 +72,7 @@ public class StudyExportArchiveService {
             Path casesDir = tempDir.resolve("cases");
             Files.createDirectories(casesDir);
 
-            try {
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
                 StudyExportInfos studyExportInfos = studyService.exportStudy(studyUuid);
                 List<RootNetworkInfos> rootNetworkInfosList = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
                 for (RootNetworkInfos rootNetworkInfos : rootNetworkInfosList) {
@@ -82,7 +82,6 @@ public class StudyExportArchiveService {
                 }
                 Path studyJsonPath = tempDir.resolve("study.json");
                 objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), studyExportInfos);
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 try (ZipOutputStream zipOut = new ZipOutputStream(baos)) {
                     writeZipEntries(tempDir, zipOut);
                     zipOut.finish();

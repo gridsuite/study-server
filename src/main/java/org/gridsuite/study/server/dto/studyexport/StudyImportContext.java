@@ -9,12 +9,7 @@ package org.gridsuite.study.server.dto.studyexport;
 import java.util.UUID;
 
 /**
- * Context for study import - stores both the export data and directory info
- *
- * @param studyExportInfos The study export data (node tree, root networks)
- * @param studyName The name of the study to create
- * @param description The description of the study
- * @param parentDirectoryUuid The parent directory UUID where to create the study element
+ * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
 public record StudyImportContext(
         StudyExportInfos studyExportInfos,

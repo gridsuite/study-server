@@ -234,7 +234,6 @@ public class ConsumerService {
         UUID caseUuid = receiver.getCaseUuid();
         UUID studyUuid = receiver.getStudyUuid();
         String userId = receiver.getUserId();
-        Long startTime = receiver.getStartTime();
         UUID importReportUuid = receiver.getReportUuid();
         UUID rootNetworkUuid = receiver.getRootNetworkUuid();
         CaseImportAction caseImportAction = receiver.getCaseImportAction();
@@ -267,16 +266,14 @@ public class ConsumerService {
                             ? studyImportContextService.getAndRemoveImportContext(studyUuid)
                             : null;
 
-                    if (importContext == null) {
-                        throw new RuntimeException("Import context not found for study " + studyUuid);
+                    if (importContext != null) {
+                        // Insert the study with the first root network and import the complete node tree
+                        studyService.insertStudyWithImportedTree(studyUuid, userId, networkInfos, caseInfos,
+                                importParameters, importReportUuid, importContext.studyExportInfos());
+                        // Create directory element for the study
+                        directoryService.createElement(importContext.parentDirectoryUuid(), importContext.description(),
+                                studyUuid, importContext.studyName(), DirectoryService.STUDY, userId);
                     }
-
-                    // Insert the study with the first root network and import the complete node tree
-                    studyService.insertStudyWithImportedTree(studyUuid, userId, networkInfos, caseInfos,
-                            importParameters, importReportUuid, importContext.studyExportInfos());
-                    // Create directory element for the study
-                    directoryService.createElement(importContext.parentDirectoryUuid(), importContext.description(),
-                            studyUuid, importContext.studyName(), DirectoryService.STUDY, userId);
                 }
             }
             caseService.disableCaseExpiration(caseUuid);
