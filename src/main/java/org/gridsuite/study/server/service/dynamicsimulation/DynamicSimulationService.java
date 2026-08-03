@@ -18,6 +18,8 @@ import org.gridsuite.study.server.service.common.ComputationParameters;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -25,6 +27,8 @@ import java.util.UUID;
 public interface DynamicSimulationService extends ComputationParameters {
 
     // --- Parameters related methods --- //
+
+    String getProviders();
 
     String getProvider(UUID parametersUuid);
 
@@ -118,4 +122,6 @@ public interface DynamicSimulationService extends ComputationParameters {
      * @return a list of time-series metadata
      */
     List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID resultUuid);
+    ResponseEntity<Resource> downloadDebugFile(UUID resultUuid);
+
 }

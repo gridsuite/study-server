@@ -6,51 +6,28 @@
  */
 package org.gridsuite.study.server.controller.stateestimation;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.stateestimation.StateEstimationService;
+import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-
-/**
- * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
- */
-
 @RestController
-@RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/state-estimation")
-@Tag(name = "Study server - State estimation parameters")
+@RequestMapping(value = "/" + StudyApi.API_VERSION + "/state-estimation")
 public class StateEstimationParametersController {
-
     private final StateEstimationService stateEstimationService;
 
     public StateEstimationParametersController(StateEstimationService stateEstimationService) {
         this.stateEstimationService = stateEstimationService;
     }
 
-    @GetMapping(value = "/parameters")
-    @Operation(summary = "Get state estimation parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters")})
-    public ResponseEntity<String> getStateEstimationParametersValues(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(stateEstimationService.getStateEstimationParameters(studyUuid));
-    }
-
-    @PostMapping(value = "/parameters")
-    @Operation(summary = "set state estimation parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The state estimation parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
-    public ResponseEntity<Void> setStateEstimationParametersValues(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String stateEstimationParametersValues,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        stateEstimationService.setStateEstimationParametersValues(studyUuid, stateEstimationParametersValues, userId);
-        return ResponseEntity.ok().build();
+    @GetMapping(value = "/results/{resultUuid}/download-debug-file", produces = "application/json")
+    public ResponseEntity<Resource> downloadDebugFile(@PathVariable UUID resultUuid) {
+        return stateEstimationService.downloadDebugFile(resultUuid);
     }
 }

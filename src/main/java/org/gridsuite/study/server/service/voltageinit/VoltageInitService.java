@@ -34,6 +34,9 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
+import org.gridsuite.study.server.service.client.voltageinit.VoltageInitClient;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -42,6 +45,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 @Service
 public class VoltageInitService extends AbstractComputationService {
     private final VoltageInitRestService voltageInitRestService;
+    private final VoltageInitClient voltageInitClient;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final UserAdminService userAdminService;
     private final RootNetworkService rootNetworkService;
@@ -53,11 +57,13 @@ public class VoltageInitService extends AbstractComputationService {
                                  NotificationService notificationService,
                                  RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                  VoltageInitRestService voltageInitRestService,
+                                 VoltageInitClient voltageInitClient,
                                  NetworkModificationTreeService networkModificationTreeService,
                                  UserAdminService userAdminService,
                                  RootNetworkService rootNetworkService) {
         super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
         this.voltageInitRestService = voltageInitRestService;
+        this.voltageInitClient = voltageInitClient;
         this.networkModificationTreeService = networkModificationTreeService;
         this.userAdminService = userAdminService;
         this.rootNetworkService = rootNetworkService;
@@ -171,4 +177,12 @@ public class VoltageInitService extends AbstractComputationService {
 
         return userProfileIssue;
     }
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return voltageInitClient.downloadDebugFile(resultUuid);
+    }
+
+    public VoltageInitParametersInfos getVoltageInitParametersByUuid(UUID parameterUuid) {
+        return voltageInitClient.getParameters(parameterUuid);
+    }
+
 }

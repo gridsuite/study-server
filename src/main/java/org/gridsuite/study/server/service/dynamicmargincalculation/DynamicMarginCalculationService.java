@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -41,6 +43,10 @@ public class DynamicMarginCalculationService implements ComputationParameters {
                                            DynamicMarginCalculationClient dynamicMarginCalculationClient) {
         this.objectMapper = objectMapper;
         this.dynamicMarginCalculationClient = dynamicMarginCalculationClient;
+    }
+
+    public String getProviders() {
+        return dynamicMarginCalculationClient.getProviders();
     }
 
     public String getParameters(UUID parametersUuid, String userId) {
@@ -127,4 +133,8 @@ public class DynamicMarginCalculationService implements ComputationParameters {
     public String getProvider(UUID parametersUuid) {
         return dynamicMarginCalculationClient.getProvider(parametersUuid);
     }
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return dynamicMarginCalculationClient.downloadDebugFile(resultUuid);
+    }
+
 }

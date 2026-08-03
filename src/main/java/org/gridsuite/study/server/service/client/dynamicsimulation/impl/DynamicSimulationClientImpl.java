@@ -31,6 +31,8 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -53,6 +55,12 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
     }
 
     // --- Parameters related methods --- //
+
+    @Override
+    public String getProviders() {
+        String url = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, "providers");
+        return getRestTemplate().getForObject(url, String.class);
+    }
 
     @Override
     public String getProvider(@NonNull UUID parametersUuid) {
@@ -252,4 +260,13 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         // call dynamic-simulation REST API
         return getRestTemplate().getForObject(uriComponents.toUriString(), Integer.class);
     }
+    @Override
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_SIMULATION_API_VERSION, DYNAMIC_SIMULATION_END_POINT_RESULT);
+        String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/{resultUuid}/download-debug-file")
+            .buildAndExpand(resultUuid)
+            .toUriString();
+        return getRestTemplate().exchange(url, org.springframework.http.HttpMethod.GET, null, Resource.class);
+    }
+
 }

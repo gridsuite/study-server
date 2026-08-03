@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -41,6 +43,10 @@ public class DynamicSecurityAnalysisService implements ComputationParameters {
                                           DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient) {
         this.objectMapper = objectMapper;
         this.dynamicSecurityAnalysisClient = dynamicSecurityAnalysisClient;
+    }
+
+    public String getProviders() {
+        return dynamicSecurityAnalysisClient.getProviders();
     }
 
     public String getParameters(UUID parametersUuid) {
@@ -125,4 +131,8 @@ public class DynamicSecurityAnalysisService implements ComputationParameters {
     public String getProvider(UUID parametersUuid) {
         return dynamicSecurityAnalysisClient.getProvider(parametersUuid);
     }
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return dynamicSecurityAnalysisClient.downloadDebugFile(resultUuid);
+    }
+
 }

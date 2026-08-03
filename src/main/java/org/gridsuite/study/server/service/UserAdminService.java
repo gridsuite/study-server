@@ -18,6 +18,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Map;
 import java.util.UUID;
+import org.gridsuite.study.server.service.client.useradmin.UserAdminClient;
+import org.springframework.http.ResponseEntity;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.USER_ADMIN_API_VERSION;
@@ -35,11 +37,13 @@ public class UserAdminService {
     private static final String USERS_END_QUOTA_URI = USERS_QUOTA_URI + "/{operation}/{operation_id}/end";
 
     private final RestTemplate restTemplate;
+    private final UserAdminClient userAdminClient;
     private String userAdminServerBaseUri;
 
-    public UserAdminService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public UserAdminService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate, UserAdminClient userAdminClient) {
         this.userAdminServerBaseUri = remoteServicesProperties.getServiceUri("user-admin-server");
         this.restTemplate = restTemplate;
+        this.userAdminClient = userAdminClient;
     }
 
     public void setUserAdminServerBaseUri(String serverBaseUri) {
@@ -87,4 +91,12 @@ public class UserAdminService {
                 .toUriString();
         restTemplate.postForEntity(userAdminServerBaseUri + path, null, Void.class);
     }
+    public ResponseEntity<String> getUserDetail(String sub) {
+        return userAdminClient.getUserDetail(sub);
+    }
+
+    public ResponseEntity<String> getCurrentAnnouncement() {
+        return userAdminClient.getCurrentAnnouncement();
+    }
+
 }

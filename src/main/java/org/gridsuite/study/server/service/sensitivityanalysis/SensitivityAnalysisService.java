@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.gridsuite.study.server.service.client.sensitivityanalysis.SensitivityAnalysisClient;
 
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
 
@@ -32,6 +33,7 @@ import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSI
 public class SensitivityAnalysisService extends AbstractComputationService {
 
     private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
+    private final SensitivityAnalysisClient sensitivityAnalysisClient;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final RootNetworkService rootNetworkService;
     private final UserAdminService userAdminService;
@@ -42,12 +44,14 @@ public class SensitivityAnalysisService extends AbstractComputationService {
                                          NotificationService notificationService,
                                          RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                          SensitivityAnalysisRestService sensitivityAnalysisRestService,
+                                         SensitivityAnalysisClient sensitivityAnalysisClient,
                                          NetworkModificationTreeService networkModificationTreeService,
                                          RootNetworkService rootNetworkService,
                                          UserAdminService userAdminService,
                                          DirectoryService directoryService) {
         super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
         this.sensitivityAnalysisRestService = sensitivityAnalysisRestService;
+        this.sensitivityAnalysisClient = sensitivityAnalysisClient;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkService = rootNetworkService;
         this.userAdminService = userAdminService;
@@ -118,4 +122,16 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         notificationService.emitElementUpdated(study.getId(), userId);
         return result;
     }
+    public String getProviders() {
+        return sensitivityAnalysisClient.getProviders();
+    }
+
+    public String getSensitivityAnalysisParametersByUuid(UUID parameterUuid) {
+        return sensitivityAnalysisClient.getParameters(parameterUuid);
+    }
+
+    public void updateSensitivityAnalysisParameters(UUID parameterUuid, String parameters) {
+        sensitivityAnalysisClient.updateParameters(parameterUuid, parameters);
+    }
+
 }

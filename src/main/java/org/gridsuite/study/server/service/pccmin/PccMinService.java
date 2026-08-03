@@ -25,6 +25,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
+import org.gridsuite.study.server.service.client.pccmin.PccMinClient;
 
 import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
 
@@ -35,6 +36,7 @@ import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
 @Service
 public class PccMinService extends AbstractComputationService {
     private final PccMinRestService pccMinRestService;
+    private final PccMinClient pccMinClient;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final UserAdminService userAdminService;
     private final ObjectMapper objectMapper;
@@ -46,12 +48,14 @@ public class PccMinService extends AbstractComputationService {
                             NotificationService notificationService,
                             RootNetworkNodeInfoService rootNetworkNodeInfoService,
                             PccMinRestService pccMinRestService,
+                            PccMinClient pccMinClient,
                             NetworkModificationTreeService networkModificationTreeService,
                             UserAdminService userAdminService,
                             ObjectMapper objectMapper,
                             RootNetworkService rootNetworkService) {
         super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
         this.pccMinRestService = pccMinRestService;
+        this.pccMinClient = pccMinClient;
         this.networkModificationTreeService = networkModificationTreeService;
         this.userAdminService = userAdminService;
         this.objectMapper = objectMapper;
@@ -143,4 +147,8 @@ public class PccMinService extends AbstractComputationService {
     public void invalidatePccMinStatusOnAllNodes(UUID studyUuid) {
         pccMinRestService.invalidatePccMinStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, PCC_MIN));
     }
+    public String getPccMinParametersByUuid(UUID parameterUuid) {
+        return pccMinClient.getParameters(parameterUuid);
+    }
+
 }

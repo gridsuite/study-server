@@ -30,6 +30,8 @@ import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -44,6 +46,11 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
     protected DynamicMarginCalculationClient(RemoteServicesProperties remoteServicesProperties,
                                              RestTemplate restTemplate) {
         super(remoteServicesProperties.getServiceUri("dynamic-margin-calculation-server"), restTemplate);
+    }
+
+    public String getProviders() {
+        String url = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, "providers");
+        return getRestTemplate().getForObject(url, String.class);
     }
 
     private String getParametersWithUuidUrl(UUID parametersUuid) {
@@ -245,4 +252,12 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
         // call dynamic-margin-calculation REST API
         return getRestTemplate().getForObject(url, Integer.class);
     }
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RESULT);
+        String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/{resultUuid}/download-debug-file")
+            .buildAndExpand(resultUuid)
+            .toUriString();
+        return getRestTemplate().exchange(url, HttpMethod.GET, null, Resource.class);
+    }
+
 }

@@ -37,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.gridsuite.study.server.service.client.networkconversion.NetworkConversionClient;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NETWORK_EXPORT_FAILED;
@@ -45,6 +46,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NETWORK_EX
 public class NetworkConversionService {
 
     private final RestTemplate restTemplate;
+    private final NetworkConversionClient networkConversionClient;
 
     @Setter
     @Getter
@@ -54,10 +56,12 @@ public class NetworkConversionService {
 
     public NetworkConversionService(@Value("${powsybl.services.network-conversion-server.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
             ObjectMapper objectMapper,
-            RestTemplate restTemplate) {
+            RestTemplate restTemplate,
+            NetworkConversionClient networkConversionClient) {
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;
+        this.networkConversionClient = networkConversionClient;
     }
 
     /**
@@ -179,4 +183,8 @@ public class NetworkConversionService {
         };
         return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
     }
+    public String getCaseImportParameters(UUID caseUuid) {
+        return networkConversionClient.getCaseImportParameters(caseUuid);
+    }
+
 }

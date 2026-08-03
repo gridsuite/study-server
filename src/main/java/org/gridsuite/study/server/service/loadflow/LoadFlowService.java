@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import org.gridsuite.study.server.service.client.loadflow.LoadFlowClient;
 
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 
@@ -30,14 +31,17 @@ import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 @Service
 public class LoadFlowService extends AbstractComputationService {
     private final LoadFlowRestService loadflowRestService;
+    private final LoadFlowClient loadFlowClient;
 
     public LoadFlowService(StudyRepository studyRepository,
                            LoadFlowRestService loadflowRestService,
+                           LoadFlowClient loadFlowClient,
                            NotificationService notificationService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            ComputationParametersService computationParametersService) {
         super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
         this.loadflowRestService = loadflowRestService;
+        this.loadFlowClient = loadFlowClient;
     }
 
     @Transactional
@@ -84,4 +88,24 @@ public class LoadFlowService extends AbstractComputationService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         return loadflowResultUuid;
     }
+    public String getProviders() {
+        return loadFlowClient.getProviders();
+    }
+
+    public String getSpecificParameters() {
+        return loadFlowClient.getSpecificParameters();
+    }
+
+    public String getDefaultLimitReductions() {
+        return loadFlowClient.getDefaultLimitReductions();
+    }
+
+    public LoadFlowParametersInfos getLoadFlowParameters(UUID parameterUuid) {
+        return loadFlowClient.getParameters(parameterUuid);
+    }
+
+    public void updateLoadFlowParameters(UUID parameterUuid, String parameters) {
+        loadFlowClient.updateParameters(parameterUuid, parameters);
+    }
+
 }

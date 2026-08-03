@@ -27,6 +27,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
+import org.gridsuite.study.server.service.client.directory.DirectoryClient;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
@@ -43,15 +44,17 @@ public class DirectoryService {
     public static final String PARAM_RECURSIVE_CHECK = "recursiveCheck";
 
     private final RestTemplate restTemplate;
+    private final DirectoryClient directoryClient;
 
     @Setter
     @Getter
     private String directoryServerServerBaseUri;
 
     @Autowired
-    public DirectoryService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public DirectoryService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate, DirectoryClient directoryClient) {
         this.directoryServerServerBaseUri = remoteServicesProperties.getServiceUri("directory-server");
         this.restTemplate = restTemplate;
+        this.directoryClient = directoryClient;
     }
 
     public String getElementName(UUID elementUuid) {
@@ -91,15 +94,12 @@ public class DirectoryService {
         }
     }
 
-    public boolean elementExists(UUID directoryUuid, String elementName, String type) {
-        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements/{elementName}/types/{type}");
-        String path = pathBuilder.buildAndExpand(directoryUuid, elementName, type).toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+    public String getElements(List<UUID> elementUuids, List<String> elementTypes, boolean strictMode, String userId) {
+        return directoryClient.getElements(elementUuids, elementTypes, strictMode, userId);
+    }
 
-        HttpEntity<Void> request = new HttpEntity<>(headers);
-        ResponseEntity<Void> response = restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.HEAD, request, Void.class);
-        return response.getStatusCode() == HttpStatus.OK;
+    public boolean elementExists(UUID directoryUuid, String elementName, String type) {
+        return directoryClient.elementExists(directoryUuid, elementName, type);
     }
 
     /**

@@ -31,6 +31,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import org.gridsuite.study.server.service.client.networkmodification.NetworkModificationClient;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;
@@ -54,16 +55,19 @@ public class NetworkModificationService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final RootNetworkService rootNetworkService;
+    private final NetworkModificationClient networkModificationClient;
     private String networkModificationServerBaseUri;
 
     @Autowired
     NetworkModificationService(RemoteServicesProperties remoteServicesProperties,
                                RestTemplate restTemplate,
-                               ObjectMapper objectMapper, RootNetworkService rootNetworkService) {
+                               ObjectMapper objectMapper, RootNetworkService rootNetworkService,
+                               NetworkModificationClient networkModificationClient) {
         this.networkModificationServerBaseUri = remoteServicesProperties.getServiceUri("network-modification-server");
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.rootNetworkService = rootNetworkService;
+        this.networkModificationClient = networkModificationClient;
     }
 
     public void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
@@ -78,6 +82,38 @@ public class NetworkModificationService {
         return UriComponentsBuilder.fromPath("{networkUuid}" + DELIMITER)
                 .buildAndExpand(networkUuid)
                 .toUriString();
+    }
+
+    public String getLineTypesCatalog() {
+        return networkModificationClient.getLineTypesCatalog();
+    }
+
+    public String getLineType(UUID lineTypeUuid) {
+        return networkModificationClient.getLineType(lineTypeUuid);
+    }
+
+    public String getLineTypeWithLimits(UUID lineTypeUuid, String area, String temperature, String shapeFactor) {
+        return networkModificationClient.getLineTypeWithLimits(lineTypeUuid, area, temperature, shapeFactor);
+    }
+
+    public String getNetworkModificationsFromComposite(List<UUID> compositeModificationUuids, boolean onlyMetadata) {
+        return networkModificationClient.getNetworkModificationsFromComposite(compositeModificationUuids, onlyMetadata);
+    }
+
+    public String getNetworkModification(UUID networkModificationUuid) {
+        return networkModificationClient.getNetworkModification(networkModificationUuid);
+    }
+
+    public String getBusBarSectionsForNewCoupler(String voltageLevelId, Integer busBarCount, Integer sectionCount, List<String> switchKindList) {
+        return networkModificationClient.getBusBarSectionsForNewCoupler(voltageLevelId, busBarCount, sectionCount, switchKindList);
+    }
+
+    public void updateNetworkModification(UUID networkModificationUuid, String modificationInfos) {
+        networkModificationClient.updateNetworkModification(networkModificationUuid, modificationInfos);
+    }
+
+    public void updateNetworkModificationsMetadata(List<UUID> networkModificationUuids, String metadata) {
+        networkModificationClient.updateNetworkModificationsMetadata(networkModificationUuids, metadata);
     }
 
     public String getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata) {

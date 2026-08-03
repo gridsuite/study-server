@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.DYNAMIC_SIMULATION_API_VERSION;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -30,6 +32,8 @@ public interface DynamicSimulationClient extends RestClient {
     String DYNAMIC_SIMULATION_END_POINT_RESULT_COUNT = "supervision/results-count";
 
     // --- Parameters related methods --- //
+
+    String getProviders();
 
     String getProvider(@NonNull UUID parametersUuid);
 
@@ -63,4 +67,6 @@ public interface DynamicSimulationClient extends RestClient {
     void deleteAllResults();
 
     Integer getResultsCount();
+    ResponseEntity<Resource> downloadDebugFile(UUID resultUuid);
+
 }

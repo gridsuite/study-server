@@ -6,52 +6,35 @@
  */
 package org.gridsuite.study.server.controller.voltageinit;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.dto.voltageinit.parameters.StudyVoltageInitParameters;
+import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.service.voltageinit.VoltageInitService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-
-/**
- * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
- */
-
 @RestController
-@RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/voltage-init")
-@Tag(name = "Study server - Voltage init parameters")
+@RequestMapping(value = "/" + StudyApi.API_VERSION + "/voltage-init")
 public class VoltageInitParametersController {
-
     private final VoltageInitService voltageInitService;
 
     public VoltageInitParametersController(VoltageInitService voltageInitService) {
         this.voltageInitService = voltageInitService;
     }
 
-    @PostMapping(value = "/parameters")
-    @Operation(summary = "Set voltage init parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
-    public ResponseEntity<Void> setVoltageInitParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) StudyVoltageInitParameters voltageInitParameters,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return voltageInitService.setVoltageInitParameters(studyUuid, voltageInitParameters, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+    @GetMapping(value = "/results/{resultUuid}/download-debug-file", produces = "application/json")
+    public ResponseEntity<Resource> downloadDebugFile(@PathVariable UUID resultUuid) {
+        return voltageInitService.downloadDebugFile(resultUuid);
     }
 
-    @GetMapping(value = "/parameters")
-    @Operation(summary = "Get voltage init parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The voltage init parameters")})
-    public ResponseEntity<StudyVoltageInitParameters> getVoltageInitParameters(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(voltageInitService.getVoltageInitParameters(studyUuid));
+    @GetMapping(value = "/parameters/{parameterUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<VoltageInitParametersInfos> getParameters(@PathVariable UUID parameterUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(voltageInitService.getVoltageInitParametersByUuid(parameterUuid));
     }
-
 }

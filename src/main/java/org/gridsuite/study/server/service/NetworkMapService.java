@@ -29,18 +29,25 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.gridsuite.study.server.service.client.networkmap.NetworkMapClient;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 
 @Service
 public class NetworkMapService {
     private final RestTemplate restTemplate;
+    private final NetworkMapClient networkMapClient;
 
     private String networkMapServerBaseUri;
 
-    public NetworkMapService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public NetworkMapService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate, NetworkMapClient networkMapClient) {
         this.networkMapServerBaseUri = remoteServicesProperties.getServiceUri("network-map-server");
         this.restTemplate = restTemplate;
+        this.networkMapClient = networkMapClient;
+    }
+
+    public String getElementSchema(String elementType, String infoType) {
+        return networkMapClient.getElementSchema(elementType, infoType);
     }
 
     public String getElementsInfos(UUID networkUuid,
