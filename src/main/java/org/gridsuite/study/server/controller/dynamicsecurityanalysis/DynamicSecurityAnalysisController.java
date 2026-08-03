@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,10 +36,14 @@ import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SECURITY_AN
 public class DynamicSecurityAnalysisController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
 
-    public DynamicSecurityAnalysisController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+    public DynamicSecurityAnalysisController(StudyService studyService,
+                                             RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                                             DynamicSecurityAnalysisService dynamicSecurityAnalysisService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
     }
 
     @PostMapping(value = "/run")
@@ -51,8 +56,8 @@ public class DynamicSecurityAnalysisController {
                                                            @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(DYNAMIC_SECURITY_ANALYSIS, userId);
-        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSecurityAnalysisProvider);
-        studyService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
+        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSecurityAnalysisService::getDynamicSecurityAnalysisProvider);
+        dynamicSecurityAnalysisService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 

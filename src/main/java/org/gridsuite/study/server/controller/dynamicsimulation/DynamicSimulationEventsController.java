@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,9 +32,11 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @Tag(name = "Study server - Dynamic simulation events")
 public class DynamicSimulationEventsController {
     private final StudyService studyService;
+    private final DynamicSimulationService dynamicSimulationService;
 
-    public DynamicSimulationEventsController(StudyService studyService) {
+    public DynamicSimulationEventsController(StudyService studyService, DynamicSimulationService dynamicSimulationService) {
         this.studyService = studyService;
+        this.dynamicSimulationService = dynamicSimulationService;
     }
 
     @GetMapping(value = "/events")
@@ -43,7 +46,7 @@ public class DynamicSimulationEventsController {
         @ApiResponse(responseCode = "404", description = "The study/node is not found")})
     public ResponseEntity<List<EventInfos>> getDynamicSimulationEvents(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                        @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<EventInfos> dynamicSimulationEvents = studyService.getDynamicSimulationEvents(nodeUuid);
+        List<EventInfos> dynamicSimulationEvents = dynamicSimulationService.getDynamicSimulationEvents(nodeUuid);
         return ResponseEntity.ok().body(dynamicSimulationEvents);
     }
 
@@ -55,7 +58,7 @@ public class DynamicSimulationEventsController {
     public ResponseEntity<EventInfos> getDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                 @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                 @Parameter(description = "Equipment id") @RequestParam(value = "equipmentId") String equipmentId) {
-        EventInfos dynamicSimulationEvent = studyService.getDynamicSimulationEvent(nodeUuid, equipmentId);
+        EventInfos dynamicSimulationEvent = dynamicSimulationService.getDynamicSimulationEvent(nodeUuid, equipmentId);
         return dynamicSimulationEvent != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicSimulationEvent) :
                 ResponseEntity.noContent().build();
     }
@@ -70,7 +73,7 @@ public class DynamicSimulationEventsController {
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
+        dynamicSimulationService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
         return ResponseEntity.ok().build();
     }
 
@@ -84,7 +87,7 @@ public class DynamicSimulationEventsController {
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
+        dynamicSimulationService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event);
         return ResponseEntity.ok().build();
     }
 
@@ -98,7 +101,7 @@ public class DynamicSimulationEventsController {
                                                               @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
-        studyService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids);
+        dynamicSimulationService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids);
         return ResponseEntity.ok().build();
     }
 }

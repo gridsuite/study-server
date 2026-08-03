@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,10 +26,10 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/dynamic-simulation")
 @Tag(name = "Study server - Dynamic security analysis")
 public class DynamicSimulationParametersController {
-    private final StudyService studyService;
+    private final DynamicSimulationService dynamicSimulationService;
 
-    public DynamicSimulationParametersController(StudyService studyService) {
-        this.studyService = studyService;
+    public DynamicSimulationParametersController(DynamicSimulationService dynamicSimulationService) {
+        this.dynamicSimulationService = dynamicSimulationService;
     }
 
     @PostMapping(value = "/parameters")
@@ -39,7 +39,7 @@ public class DynamicSimulationParametersController {
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) String dsParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setDynamicSimulationParameters(studyUuid, dsParameter, userId);
+        dynamicSimulationService.setDynamicSimulationParameters(studyUuid, dsParameter, userId);
         return ResponseEntity.ok().build();
     }
 
@@ -48,13 +48,13 @@ public class DynamicSimulationParametersController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters")})
     public ResponseEntity<String> getDynamicSimulationParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getDynamicSimulationParameters(studyUuid));
+        return ResponseEntity.ok().body(dynamicSimulationService.getDynamicSimulationParameters(studyUuid));
     }
 
     @GetMapping(value = "/provider")
     @Operation(summary = "Get dynamic simulation provider for a specified study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is returned")})
     public ResponseEntity<String> getDynamicSimulationProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getDynamicSimulationProvider(studyUuid));
+        return ResponseEntity.ok().body(dynamicSimulationService.getDynamicSimulationProvider(studyUuid));
     }
 }

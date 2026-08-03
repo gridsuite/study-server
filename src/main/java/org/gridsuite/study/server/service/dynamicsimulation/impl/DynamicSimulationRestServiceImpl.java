@@ -24,7 +24,7 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.springframework.stereotype.Service;
 
 import java.io.UncheckedIOException;
@@ -43,7 +43,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.TIME_SERIE
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @Service
-public class DynamicSimulationServiceImpl implements DynamicSimulationService {
+public class DynamicSimulationRestServiceImpl implements DynamicSimulationRestService {
 
     private final ObjectMapper objectMapper;
 
@@ -51,9 +51,9 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     private final DynamicSimulationClient dynamicSimulationClient;
 
-    public DynamicSimulationServiceImpl(ObjectMapper objectMapper,
-                                        TimeSeriesClient timeSeriesClient,
-                                        DynamicSimulationClient dynamicSimulationClient) {
+    public DynamicSimulationRestServiceImpl(ObjectMapper objectMapper,
+                                            TimeSeriesClient timeSeriesClient,
+                                            DynamicSimulationClient dynamicSimulationClient) {
         this.objectMapper = objectMapper;
         this.timeSeriesClient = timeSeriesClient;
         this.dynamicSimulationClient = dynamicSimulationClient;

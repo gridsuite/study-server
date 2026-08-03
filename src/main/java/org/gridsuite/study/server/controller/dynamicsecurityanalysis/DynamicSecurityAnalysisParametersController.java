@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,10 +27,10 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/dynamic-security-analysis")
 @Tag(name = "Study server - Dynamic security analysis parameters")
 public class DynamicSecurityAnalysisParametersController {
-    private final StudyService studyService;
+    private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
 
-    public DynamicSecurityAnalysisParametersController(StudyService studyService) {
-        this.studyService = studyService;
+    public DynamicSecurityAnalysisParametersController(DynamicSecurityAnalysisService dynamicSecurityAnalysisService) {
+        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
     }
 
     @PostMapping(value = "/parameters")
@@ -40,7 +40,7 @@ public class DynamicSecurityAnalysisParametersController {
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) String dsaParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        return studyService.setDynamicSecurityAnalysisParameters(studyUuid, dsaParameter, userId) ?
+        return dynamicSecurityAnalysisService.setDynamicSecurityAnalysisParameters(studyUuid, dsaParameter, userId) ?
                 ResponseEntity.noContent().build() :
                 ResponseEntity.ok().build();
     }
@@ -50,13 +50,13 @@ public class DynamicSecurityAnalysisParametersController {
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis parameters")})
     public ResponseEntity<String> getDynamicSecurityAnalysisParameters(
             @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getDynamicSecurityAnalysisParameters(studyUuid));
+        return ResponseEntity.ok().body(dynamicSecurityAnalysisService.getDynamicSecurityAnalysisParameters(studyUuid));
     }
 
     @GetMapping(value = "/provider")
     @Operation(summary = "Get dynamic security analysis provider for a specified study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis provider is returned")})
     public ResponseEntity<String> getDynamicSecurityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getDynamicSecurityAnalysisProvider(studyUuid));
+        return ResponseEntity.ok().body(dynamicSecurityAnalysisService.getDynamicSecurityAnalysisProvider(studyUuid));
     }
 }

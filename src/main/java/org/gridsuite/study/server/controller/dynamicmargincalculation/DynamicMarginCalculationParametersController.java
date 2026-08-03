@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,17 +28,17 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @Tag(name = "Study server - Dynamic margin calculation")
 public class DynamicMarginCalculationParametersController {
 
-    private final StudyService studyService;
+    private final DynamicMarginCalculationService dynamicMarginCalculationService;
 
-    public DynamicMarginCalculationParametersController(StudyService studyService) {
-        this.studyService = studyService;
+    public DynamicMarginCalculationParametersController(DynamicMarginCalculationService dynamicMarginCalculationService) {
+        this.dynamicMarginCalculationService = dynamicMarginCalculationService;
     }
 
     @GetMapping(value = "/provider")
     @Operation(summary = "Get dynamic margin calculation provider for a specified study")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation provider is returned")})
     public ResponseEntity<String> getDynamicMarginCalculationProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getDynamicMarginCalculationProvider(studyUuid));
+        return ResponseEntity.ok().body(dynamicMarginCalculationService.getDynamicMarginCalculationProvider(studyUuid));
     }
 
     @PostMapping(value = "/parameters")
@@ -48,7 +48,7 @@ public class DynamicMarginCalculationParametersController {
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestBody(required = false) String dmcParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        return studyService.setDynamicMarginCalculationParameters(studyUuid, dmcParameter, userId) ?
+        return dynamicMarginCalculationService.setDynamicMarginCalculationParameters(studyUuid, dmcParameter, userId) ?
                 ResponseEntity.noContent().build() :
                 ResponseEntity.ok().build();
     }
@@ -60,6 +60,6 @@ public class DynamicMarginCalculationParametersController {
             @PathVariable("studyUuid") UUID studyUuid,
             @RequestHeader(HEADER_USER_ID) String userId
     ) {
-        return ResponseEntity.ok().body(studyService.getDynamicMarginCalculationParameters(studyUuid, userId));
+        return ResponseEntity.ok().body(dynamicMarginCalculationService.getDynamicMarginCalculationParameters(studyUuid, userId));
     }
 }

@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
@@ -40,10 +41,12 @@ public class DynamicSimulationController {
 
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    private final DynamicSimulationService dynamicSimulationService;
 
-    public DynamicSimulationController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+    public DynamicSimulationController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService, DynamicSimulationService dynamicSimulationService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.dynamicSimulationService = dynamicSimulationService;
     }
 
     @PostMapping(value = "/run")
@@ -56,8 +59,8 @@ public class DynamicSimulationController {
                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(DYNAMIC_SIMULATION, userId);
-        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSimulationProvider);
-        studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
+        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSimulationService::getDynamicSimulationProvider);
+        dynamicSimulationService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }
 

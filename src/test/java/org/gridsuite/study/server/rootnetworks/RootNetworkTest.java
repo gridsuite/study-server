@@ -30,9 +30,9 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
@@ -169,11 +169,11 @@ class RootNetworkTest {
     @MockitoBean
     private CaseService caseService;
     @MockitoBean
-    private DynamicSimulationService dynamicSimulationService;
+    private DynamicSimulationRestService dynamicSimulationRestService;
     @MockitoBean
-    private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
     @MockitoBean
-    private DynamicMarginCalculationService dynamicMarginCalculationService;
+    private DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
     @MockitoBean
     private SecurityAnalysisRestService securityAnalysisService;
     @MockitoBean
@@ -576,9 +576,9 @@ class RootNetworkTest {
         verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
         verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID2);
         verify(caseService, times(1)).deleteCase(CASE_UUID2);
-        verify(dynamicSimulationService, times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
-        verify(dynamicSecurityAnalysisService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
-        verify(dynamicMarginCalculationService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
+        verify(dynamicSimulationRestService, times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
+        verify(dynamicSecurityAnalysisRestService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
+        verify(dynamicMarginCalculationRestService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
         // check LOADFLOW_RESULT_UUID2 is also deleted
         verify(loadFlowRestService, times(1)).deleteLoadFlowResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
         verify(securityAnalysisService, times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
