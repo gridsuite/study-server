@@ -49,7 +49,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
                                    RootNetworkService rootNetworkService,
                                    RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                    UserAdminService userAdminService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, computationParametersService, rootNetworkNodeInfoService);
         this.securityAnalysisRestService = securityAnalysisRestService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;

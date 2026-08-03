@@ -14,9 +14,12 @@ import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
@@ -26,10 +29,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -52,19 +57,24 @@ class LoadFLowUnitTest {
 
     @MockitoSpyBean
     private StudyService studyService;
+    @MockitoSpyBean
+    private NetworkModificationTreeService networkModificationTreeService;
+    @MockitoSpyBean
+    private StudyServerExecutionService studyServerExecutionService;
+    @MockitoSpyBean
+    private LoadFlowService loadFlowService;
 
     UUID studyUuid = UUID.randomUUID();
     UUID nodeUuid = UUID.randomUUID();
     UUID rootNetworkUuid = UUID.randomUUID();
     UUID networkUuid = UUID.randomUUID();
     String userId = "userId";
+    String variantId = "variant_1";
 
     UUID loadflowResultUuid = UUID.randomUUID();
 
     @MockitoBean
     RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    @MockitoBean
-    private NetworkModificationTreeService networkModificationTreeService;
     @MockitoBean
     private RootNetworkService rootNetworkService;
     @MockitoBean
@@ -79,11 +89,10 @@ class LoadFLowUnitTest {
     private NotificationService notificationService;
     @MockitoBean
     StudyRepository studyRepository;
-
-    @MockitoSpyBean
-    private StudyServerExecutionService studyServerExecutionService;
-    @MockitoSpyBean
-    private LoadFlowService loadFlowService;
+    @MockitoBean
+    NodeRepository nodesRepository;
+    @MockitoBean
+    private OutputDestination output;
 
     @BeforeEach
     void setup() {
@@ -92,11 +101,12 @@ class LoadFLowUnitTest {
 
     @Test
     void testRunLoadFlow() {
+        doReturn(Boolean.FALSE).when(networkModificationTreeService).isReadOnly(nodeUuid);
         when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(null);
         doNothing().when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
         doNothing().when(studyService).assertCanRunOnConstructionNode(any(), any(), any(), any());
 
-        controller.runLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, false, userId);
+        controller.runLoadFlow(studyUuid, rootNetworkUuid, nodeUuid, false, userId);
 
         verify(studyService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
         verify(studyService, times(1)).assertCanRunOnConstructionNode(any(), any(), any(), any());
@@ -111,6 +121,8 @@ class LoadFLowUnitTest {
         doNothing().when(loadFlowService).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
         doReturn(loadflowResultUuid).when(loadFlowService).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
         doNothing().when(studyService).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
+
+        doReturn(Boolean.FALSE).when(networkModificationTreeService).isReadOnly(nodeUuid);
 
         controller.runLoadFlow(studyUuid, rootNetworkUuid, nodeUuid, false, userId);
 
@@ -131,9 +143,11 @@ class LoadFLowUnitTest {
     private void testRerunLoadFlow(boolean withRatioTapChangers, boolean isSecurityNode) {
         StudyEntity studyEntity = new StudyEntity();
         studyEntity.setId(studyUuid);
+        NodeEntity nodeEntity = new NodeEntity(nodeUuid, null, NodeType.NETWORK_MODIFICATION, studyEntity, false, null, null);
         reset(studyService, networkModificationTreeService, networkModificationService, notificationService, loadFlowRestService, studyRepository);
         when(studyRepository.findById(studyUuid)).thenReturn(Optional.of(studyEntity));
-        when(networkModificationTreeService.isSecurityNode(nodeUuid)).thenReturn(isSecurityNode);
+        when(nodesRepository.findById(nodeUuid)).thenReturn(Optional.of(nodeEntity));
+        doReturn(isSecurityNode).when(networkModificationTreeService).isSecurityNode(nodeUuid);
         if (isSecurityNode) {
             testRerunLoadFlowSecurityNode(withRatioTapChangers);
         } else {
@@ -142,6 +156,8 @@ class LoadFLowUnitTest {
     }
 
     private void testRerunLoadFlowConstructionNode(boolean withRatioTapChangers) {
+        doReturn(Map.of(LOAD_FLOW.name(), UUID.randomUUID())).when(networkModificationTreeService).getComputationReports(nodeUuid, rootNetworkUuid);
+        doReturn(variantId).when(networkModificationTreeService).getVariantId(nodeUuid, rootNetworkUuid);
         studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
 
         verify(loadFlowRestService, times(1)).runLoadFlow(any(), any(), any(), any(), any(), anyString());
@@ -168,17 +184,21 @@ class LoadFLowUnitTest {
             .build();
 
         // mock call returning values
-        when(networkModificationTreeService.invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters)).thenReturn(invalidateNodeInfos);
+        doReturn(buildInfos).when(networkModificationTreeService).getBuildInfos(nodeUuid, rootNetworkUuid);
+        doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationTreeService).getNodeBuildStatus(nodeUuid, rootNetworkUuid);
+        doNothing().when(networkModificationTreeService).updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
-        when(networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid)).thenReturn(buildInfos);
-        when(networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid)).thenReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT));
         doReturn(loadflowResultUuid).when(loadFlowRestService).createRunningStatus();
+
+        when(rootNetworkNodeInfoService.invalidateRootNetworkNode(any(UUID.class), any(UUID.class), any(InvalidateNodeTreeParameters.class))).thenReturn(new InvalidateNodeInfos());
+        when(rootNetworkNodeInfoService.invalidateRootNetworkNodes(any(UUID.class), anyList(), any(InvalidateNodeTreeParameters.class))).thenReturn(invalidateNodeInfos);
 
         // execute loadflow rerun
         studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
 
         // node invalidation
-        verify(networkModificationTreeService, times(1)).invalidateNodeTree(nodeUuid, rootNetworkUuid, expectedInvalidationParameters);
+        verify(networkModificationTreeService, times(1))
+            .invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, expectedInvalidationParameters, false);
         verify(networkModificationService, times(1)).deleteIndexedModifications(invalidateNodeInfos.getGroupUuids(), networkUuid);
         verify(notificationService, times(1 /* only all computation without lf */))
             .emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, UPDATE_TYPE_ALL_COMPUTATION_STATUS_WITHOUT_LOADFLOW);

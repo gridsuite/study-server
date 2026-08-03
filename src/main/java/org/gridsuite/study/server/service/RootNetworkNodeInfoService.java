@@ -266,13 +266,24 @@ public class RootNetworkNodeInfoService {
         });
     }
 
+    @Transactional(readOnly = true)
+    public InvalidateNodeInfos invalidateRootNetworkNodes(UUID rootNetworkUuid, List<UUID> nodeUuids, InvalidateNodeTreeParameters invalidateNodeParameters) {
+        List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = getRootNetworkNodes(rootNetworkUuid, nodeUuids);
+        InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
+        rootNetworkNodeInfoEntities.forEach(child ->
+            invalidateNodeInfos.add(invalidateRootNetworkNode(child, invalidateNodeParameters))
+        );
+        return invalidateNodeInfos;
+    }
+
+    @Transactional(readOnly = true)
     public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(NOT_FOUND,
                 ROOT_NETWORK_NOT_FOUND));
         return invalidateRootNetworkNode(rootNetworkNodeInfoEntity, invalidateTreeParameters);
     }
 
-    public InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters) {
+    private InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters) {
         boolean notOnlyChildrenBuildStatus = !invalidateTreeParameters.isOnlyChildrenBuildStatus();
 
         // Always update blocked build info

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026, RTE (http://www.rte-france.com)
+ * Copyright (c) 20226, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -32,18 +32,16 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 @Service
 public abstract class AbstractComputationService {
-    private final StudyRepository studyRepository;
-    private final ComputationParametersService computationParametersService;
+    protected final StudyRepository studyRepository;
     protected final NotificationService notificationService;
+    protected final ComputationParametersService computationParametersService;
     protected final RootNetworkNodeInfoService rootNetworkNodeInfoService;
 
-    protected AbstractComputationService(StudyRepository studyRepository,
-                                         ComputationParametersService computationParametersService,
-                                         NotificationService notificationService,
-                                         RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+    protected AbstractComputationService(StudyRepository studyRepository, NotificationService notificationService,
+                                         ComputationParametersService computationParametersService, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
         this.studyRepository = studyRepository;
-        this.computationParametersService = computationParametersService;
         this.notificationService = notificationService;
+        this.computationParametersService = computationParametersService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
     }
 

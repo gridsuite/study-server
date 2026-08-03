@@ -16,6 +16,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
@@ -46,6 +47,7 @@ public class RootNetworkService {
     private final NetworkService networkService;
     private final CaseService caseService;
     private final ReportService reportService;
+    private final StudyRepository studyRepository;
 
     private final RootNetworkRequestRepository rootNetworkRequestRepository;
     private final StudyServerExecutionService studyServerExecutionService;
@@ -62,7 +64,7 @@ public class RootNetworkService {
                               RootNetworkRequestRepository rootNetworkRequestRepository,
                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
                               NetworkService networkService,
-                              CaseService caseService,
+                              CaseService caseService, StudyRepository studyRepository,
                               StudyServerExecutionService studyServerExecutionService,
                               ReportService reportService,
                               EquipmentInfosService equipmentInfosService,
@@ -73,6 +75,7 @@ public class RootNetworkService {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.networkService = networkService;
         this.caseService = caseService;
+        this.studyRepository = studyRepository;
         this.reportService = reportService;
         this.rootNetworkRequestRepository = rootNetworkRequestRepository;
         this.studyServerExecutionService = studyServerExecutionService;
@@ -353,6 +356,15 @@ public class RootNetworkService {
     public boolean isRootNetworkTagExistsInStudy(UUID studyUuid, String rootNetworkTag) {
         return rootNetworkRepository.findByTagAndStudyId(rootNetworkTag, studyUuid).isPresent() ||
                 rootNetworkRequestRepository.findByTagAndStudyUuid(rootNetworkTag, studyUuid).isPresent();
+    }
+
+    private StudyEntity getStudy(UUID studyUuid) {
+        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
+    }
+
+    public List<RootNetworkEntity> getStudyRootNetworks(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return getStudyRootNetwork(studyEntity);
     }
 
     public List<RootNetworkEntity> getStudyRootNetwork(StudyEntity study) {

@@ -22,6 +22,7 @@ import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMargin
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.slf4j.Logger;
@@ -56,6 +57,8 @@ public class SupervisionService {
     private final NetworkModificationTreeService networkModificationTreeService;
 
     private final ReportService reportService;
+
+    private final LoadFlowService loadFlowService;
 
     private final LoadFlowRestService loadFlowRestService;
 
@@ -92,7 +95,7 @@ public class SupervisionService {
     private static final String SUPERVISION_USER = "Supervision";
 
     public SupervisionService(StudyService studyService,
-                              NetworkModificationTreeService networkModificationTreeService,
+                              NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                               ReportService reportService,
                               LoadFlowRestService loadFlowRestService,
@@ -113,6 +116,7 @@ public class SupervisionService {
                               NotificationService notificationService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
+        this.loadFlowService = loadFlowService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.reportService = reportService;
         this.loadFlowRestService = loadFlowRestService;
@@ -209,7 +213,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         List<UUID> studyUuids = rootNetworkNodeInfoEntities.stream().map(rnnie -> rnnie.getRootNetwork().getStudy().getId()).distinct().toList();
-        studyUuids.forEach(studyService::invalidateAllStudyLoadFlowStatus);
+        studyUuids.forEach(loadFlowService::invalidateAllStudyLoadFlowStatus);
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.LOAD_FLOW, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }

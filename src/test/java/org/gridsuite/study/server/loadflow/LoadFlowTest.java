@@ -33,6 +33,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -195,6 +196,8 @@ class LoadFlowTest {
 
     private static WireMockServer wireMockServer;
     private WireMockStubs wireMockStubs;
+    @Autowired
+    private LoadFlowService loadFlowService;
 
     @BeforeAll
     static void initWireMock(@Autowired InputDestination input) {
@@ -886,7 +889,7 @@ class LoadFlowTest {
         wireMockStubs.reportServer.stubDeleteReport();
 
         // run loadflow invalidation on all study after parameter change
-        studyService.setLoadFlowParameters(studyUuid, null, NO_PROFILE_USER_ID);
+        loadFlowService.setLoadFlowParameters(studyUuid, null, NO_PROFILE_USER_ID);
 
         wireMockStubs.userAdminServer.verifyGetUserProfile(NO_PROFILE_USER_ID);
         wireMockStubs.loadflowServer.verifyPutLoadflowParameters(LOADFLOW_PARAMETERS_UUID_STRING, null);

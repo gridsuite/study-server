@@ -8,18 +8,23 @@
 package org.gridsuite.study.server.service.loadflow;
 
 import com.powsybl.loadflow.LoadFlowParameters;
+import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
+import org.gridsuite.study.server.dto.UserProfileInfos;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.AbstractComputationService;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 
@@ -30,14 +35,16 @@ import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 @Service
 public class LoadFlowService extends AbstractComputationService {
     private final LoadFlowRestService loadflowRestService;
+    private final NetworkModificationTreeService networkModificationTreeService;
 
     public LoadFlowService(StudyRepository studyRepository,
                            LoadFlowRestService loadflowRestService,
                            NotificationService notificationService,
-                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                           ComputationParametersService computationParametersService) {
-        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+                           ComputationParametersService computationParametersService,
+                           RootNetworkNodeInfoService rootNetworkNodeInfoService, NetworkModificationTreeService networkModificationTreeService) {
+        super(studyRepository, notificationService, computationParametersService, rootNetworkNodeInfoService);
         this.loadflowRestService = loadflowRestService;
+        this.networkModificationTreeService = networkModificationTreeService;
     }
 
     @Transactional
@@ -83,5 +90,68 @@ public class LoadFlowService extends AbstractComputationService {
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         return loadflowResultUuid;
+    }
+
+    @Transactional
+    public boolean setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
+        return setComputationParameters(
+            studyUuid,
+            parameters,
+            userId,
+            StudyEntity::getLoadFlowParametersUuid,
+            StudyEntity::setLoadFlowParametersUuid,
+            UserProfileInfos::getLoadFlowParameterId,
+            loadflowRestService,
+            loadflowRestService::createLoadFlowParameters,
+            loadflowRestService::updateLoadFlowParameters,
+            LOAD_FLOW,
+            List.of(
+                this::invalidateAllStudyLoadFlowStatus
+            //this::invalidateSecurityAnalysisStatusOnAllNodes,
+            //this::invalidateSensitivityAnalysisStatusOnAllNodes,
+            //this::invalidateDynamicSimulationStatusOnAllNodes,
+            //this::invalidateDynamicSecurityAnalysisStatusOnAllNodes,
+            // this::invalidateDynamicMarginCalculationStatusOnAllNodes
+            ),
+            NotificationService.UPDATE_TYPE_LOADFLOW_STATUS,
+            NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS,
+            NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS,
+            NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
+            NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS,
+            NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS
+        );
+    }
+
+    public void invalidateAllStudyLoadFlowStatus(UUID studyUuid) {
+        invalidateSecurityNodeTreeWithLoadFlowResults(studyUuid);
+        invalidateLoadFlowStatusOnAllNodes(studyUuid);
+    }
+
+    private void invalidateSecurityNodeTreeWithLoadFlowResults(UUID studyUuid) {
+        Map<UUID, List<RootNetworkNodeInfoEntity>> rootNetworkNodeInfosWithLFByRootNetwork = rootNetworkNodeInfoService.getAllByStudyUuidWithLoadFlowResultsNotNull(studyUuid).stream()
+            .collect(Collectors.groupingBy(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getRootNetwork().getId()));
+
+        rootNetworkNodeInfosWithLFByRootNetwork.forEach((rootNetworkUuid, rootNetworkNodeInfoEntities) -> {
+            // since invalidateNodeTree is costly, optimise node tree invalidation by keeping only least deep parents from the set to invalidate them and all their children
+            Set<NodeEntity> nodesToInvalidate = rootNetworkNodeInfoEntities.stream().map(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getNodeInfo().getNode()).collect(Collectors.toSet());
+            Set<NodeEntity> nodeTreesToInvalidate = new HashSet<>(nodesToInvalidate);
+
+            nodesToInvalidate.forEach(node -> {
+                NodeEntity currentNode = node.getParentNode();
+                while (currentNode != null) {
+                    if (nodesToInvalidate.contains(currentNode)) {
+                        nodeTreesToInvalidate.remove(node);
+                        break;
+                    }
+                    currentNode = currentNode.getParentNode();
+                }
+            });
+
+            nodeTreesToInvalidate.forEach(node -> networkModificationTreeService.invalidateNodeTree(studyUuid, node.getIdNode(), rootNetworkUuid, InvalidateNodeTreeParameters.ALL, false));
+        });
+    }
+
+    private void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
+        loadflowRestService.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
     }
 }
