@@ -62,7 +62,7 @@ class SpreadsheetParametersEntityTest {
         SpreadsheetParametersEntity spreadsheetParametersEntity = SpreadsheetParametersEntity.builder().build();
         SpreadsheetParameters newParameters = SpreadsheetParameters.builder()
             .branch(SpreadsheetParameters.BranchSpreadsheetParameters.builder().operationalLimitsGroups(true).build())
-            .generator(SpreadsheetParameters.GeneratorSpreadsheetParameters.builder().regulatingTerminal(true).build())
+            .generator(SpreadsheetParameters.RegulatingEquipmentSpreadsheetParameters.builder().regulatingTerminal(true).build())
             .build();
 
         spreadsheetParametersEntity.update(newParameters);
@@ -80,7 +80,7 @@ class SpreadsheetParametersEntityTest {
             .branch(SpreadsheetParameters.BranchSpreadsheetParameters.builder().operationalLimitsGroups(true).build())
             .line(SpreadsheetParameters.BranchSpreadsheetParameters.builder().operationalLimitsGroups(true).build())
             .twt(SpreadsheetParameters.BranchSpreadsheetParameters.builder().operationalLimitsGroups(true).build())
-            .generator(SpreadsheetParameters.GeneratorSpreadsheetParameters.builder().regulatingTerminal(true).build())
+            .generator(SpreadsheetParameters.RegulatingEquipmentSpreadsheetParameters.builder().regulatingTerminal(true).build())
             .bus(SpreadsheetParameters.BusSpreadsheetParameters.builder().networkComponents(true).build())
             .build();
 
