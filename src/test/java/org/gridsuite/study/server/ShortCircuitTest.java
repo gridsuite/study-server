@@ -26,6 +26,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -34,7 +35,6 @@ import org.gridsuite.study.server.utils.wiremock.*;
 import org.json.JSONObject;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,8 +63,7 @@ import static org.gridsuite.study.server.utils.TestUtils.USER_DEFAULT_PROFILE_JS
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -145,7 +144,7 @@ class ShortCircuitTest implements WithAssertions {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
-    private ShortCircuitRestService shortCircuitService;
+    private ShortCircuitRestService shortCircuitRestService;
 
     @MockitoSpyBean
     private UserAdminService userAdminService;
@@ -194,7 +193,7 @@ class ShortCircuitTest implements WithAssertions {
         computationServerStubs = new ComputationServerStubs(wireMockServer);
         reportServerStubs = new ReportServerStubs(wireMockServer);
 
-        shortCircuitService.setShortCircuitServerBaseUri(wireMockServer.baseUrl());
+        shortCircuitRestService.setShortCircuitServerBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
 
@@ -605,12 +604,12 @@ class ShortCircuitTest implements WithAssertions {
         assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
         assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
 
-        StudyService studyService = Mockito.mock(StudyService.class);
+        ShortCircuitService shortCircuitService = mock(ShortCircuitService.class);
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), shortCircuitAnalysisFailedDestination);
             return resultUuid;
-        }).when(studyService).runShortCircuit(any(), any(), any(), any(), anyBoolean(), any());
-        studyService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, Optional.empty(), false, "user_1");
+        }).when(shortCircuitService).runShortCircuit(any(), any(), any(), any(), anyBoolean(), any());
+        shortCircuitService.runShortCircuit(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, Optional.empty(), false, "user_1");
 
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, ComputationType.SHORT_CIRCUIT));
