@@ -14,13 +14,13 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.AbstractComputationService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.client.loadflow.LoadFlowClient;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import org.gridsuite.study.server.service.client.loadflow.LoadFlowClient;
 
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 
@@ -88,6 +88,7 @@ public class LoadFlowService extends AbstractComputationService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         return loadflowResultUuid;
     }
+
     public String getProviders() {
         return loadFlowClient.getProviders();
     }

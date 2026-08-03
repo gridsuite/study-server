@@ -14,6 +14,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.client.pccmin.PccMinClient;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +26,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
-import org.gridsuite.study.server.service.client.pccmin.PccMinClient;
 
 import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
 
@@ -147,6 +147,7 @@ public class PccMinService extends AbstractComputationService {
     public void invalidatePccMinStatusOnAllNodes(UUID studyUuid) {
         pccMinRestService.invalidatePccMinStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, PCC_MIN));
     }
+
     public String getPccMinParametersByUuid(UUID parameterUuid) {
         return pccMinClient.getParameters(parameterUuid);
     }

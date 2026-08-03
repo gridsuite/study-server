@@ -14,7 +14,10 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.client.stateestimation.StateEstimationClient;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,9 +28,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
-import org.gridsuite.study.server.service.client.stateestimation.StateEstimationClient;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -122,6 +122,7 @@ public class StateEstimationService extends AbstractComputationService {
     private void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
         stateEstimationRestService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
     }
+
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
         return stateEstimationClient.downloadDebugFile(resultUuid);
     }

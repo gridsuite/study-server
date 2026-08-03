@@ -25,9 +25,17 @@ public class LoadFlowClient extends AbstractRestClient {
         super(remoteServicesProperties.getServiceUri("loadflow-server"), restTemplate);
     }
 
-    public String getProviders() { return getRestTemplate().getForObject(getBaseUri() + DELIMITER + LOADFLOW_API_VERSION + "/providers", String.class); }
-    public String getSpecificParameters() { return getRestTemplate().getForObject(getBaseUri() + DELIMITER + LOADFLOW_API_VERSION + "/specific-parameters", String.class); }
-    public String getDefaultLimitReductions() { return getRestTemplate().getForObject(getBaseUri() + DELIMITER + LOADFLOW_API_VERSION + "/parameters/default-limit-reductions", String.class); }
+    public String getProviders() {
+        return getRestTemplate().getForObject(getBaseUri() + DELIMITER + LOADFLOW_API_VERSION + "/providers", String.class);
+    }
+
+    public String getSpecificParameters() {
+        return getRestTemplate().getForObject(getBaseUri() + DELIMITER + LOADFLOW_API_VERSION + "/specific-parameters", String.class);
+    }
+
+    public String getDefaultLimitReductions() {
+        return getRestTemplate().getForObject(getBaseUri() + DELIMITER + LOADFLOW_API_VERSION + "/parameters/default-limit-reductions", String.class);
+    }
 
     public LoadFlowParametersInfos getParameters(UUID parameterUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();

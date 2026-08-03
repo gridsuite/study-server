@@ -21,6 +21,7 @@ public class PccMinClient extends AbstractRestClient {
     public PccMinClient(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         super(remoteServicesProperties.getServiceUri("pcc-min-server"), restTemplate);
     }
+
     public String getParameters(UUID parameterUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
         return getRestTemplate().getForObject(getBaseUri() + path, String.class);

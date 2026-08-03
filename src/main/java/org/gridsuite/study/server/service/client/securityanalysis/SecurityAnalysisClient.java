@@ -23,12 +23,20 @@ public class SecurityAnalysisClient extends AbstractRestClient {
     public SecurityAnalysisClient(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         super(remoteServicesProperties.getServiceUri("security-analysis-server"), restTemplate);
     }
-    public String getProviders() { return getRestTemplate().getForObject(getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/providers", String.class); }
-    public String getDefaultLimitReductions() { return getRestTemplate().getForObject(getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default-limit-reductions", String.class); }
+
+    public String getProviders() {
+        return getRestTemplate().getForObject(getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/providers", String.class);
+    }
+
+    public String getDefaultLimitReductions() {
+        return getRestTemplate().getForObject(getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default-limit-reductions", String.class);
+    }
+
     public String getParameters(UUID parameterUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
         return getRestTemplate().getForObject(getBaseUri() + path, String.class);
     }
+
     public void updateParameters(UUID parameterUuid, @Nullable String parameters) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();

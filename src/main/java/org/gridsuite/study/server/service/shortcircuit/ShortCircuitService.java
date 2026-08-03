@@ -15,6 +15,8 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.shortcircuit.ShortCircuitClient;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.pccmin.PccMinService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,8 +28,6 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
 import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_BUS;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -135,6 +135,7 @@ public class ShortCircuitService extends AbstractComputationService {
                 rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT_ONE_BUS).stream()
         ).toList());
     }
+
     public String getParameters(UUID parameterUuid) {
         return shortCircuitClient.getParameters(parameterUuid);
     }

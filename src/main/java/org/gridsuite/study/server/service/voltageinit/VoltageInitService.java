@@ -21,9 +21,12 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.client.voltageinit.VoltageInitClient;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,9 +37,6 @@ import java.util.UUID;
 
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
-import org.gridsuite.study.server.service.client.voltageinit.VoltageInitClient;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -177,6 +177,7 @@ public class VoltageInitService extends AbstractComputationService {
 
         return userProfileIssue;
     }
+
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
         return voltageInitClient.downloadDebugFile(resultUuid);
     }

@@ -10,16 +10,16 @@ package org.gridsuite.study.server.service;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
+import org.gridsuite.study.server.service.client.useradmin.UserAdminClient;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Map;
 import java.util.UUID;
-import org.gridsuite.study.server.service.client.useradmin.UserAdminClient;
-import org.springframework.http.ResponseEntity;
 
 import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.StudyConstants.USER_ADMIN_API_VERSION;
@@ -91,6 +91,7 @@ public class UserAdminService {
                 .toUriString();
         restTemplate.postForEntity(userAdminServerBaseUri + path, null, Void.class);
     }
+
     public ResponseEntity<String> getUserDetail(String sub) {
         return userAdminClient.getUserDetail(sub);
     }

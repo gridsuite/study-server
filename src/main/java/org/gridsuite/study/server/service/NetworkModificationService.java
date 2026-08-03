@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
+import org.gridsuite.study.server.service.client.networkmodification.NetworkModificationClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.util.Pair;
@@ -31,7 +32,6 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import org.gridsuite.study.server.service.client.networkmodification.NetworkModificationClient;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.utils.JsonUtils.getModificationContextJsonString;

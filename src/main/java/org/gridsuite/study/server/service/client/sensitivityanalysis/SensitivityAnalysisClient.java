@@ -23,11 +23,16 @@ public class SensitivityAnalysisClient extends AbstractRestClient {
     public SensitivityAnalysisClient(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         super(remoteServicesProperties.getServiceUri("sensitivity-analysis-server"), restTemplate);
     }
-    public String getProviders() { return getRestTemplate().getForObject(getBaseUri() + DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/providers", String.class); }
+
+    public String getProviders() {
+        return getRestTemplate().getForObject(getBaseUri() + DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/providers", String.class);
+    }
+
     public String getParameters(UUID parameterUuid) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
         return getRestTemplate().getForObject(getBaseUri() + path, String.class);
     }
+
     public void updateParameters(UUID parameterUuid, @Nullable String parameters) {
         String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
         HttpHeaders headers = new HttpHeaders();

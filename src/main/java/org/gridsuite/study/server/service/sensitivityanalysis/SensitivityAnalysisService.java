@@ -13,6 +13,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.client.sensitivityanalysis.SensitivityAnalysisClient;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +22,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.gridsuite.study.server.service.client.sensitivityanalysis.SensitivityAnalysisClient;
 
 import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
 
@@ -122,6 +122,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         notificationService.emitElementUpdated(study.getId(), userId);
         return result;
     }
+
     public String getProviders() {
         return sensitivityAnalysisClient.getProviders();
     }

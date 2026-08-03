@@ -25,6 +25,8 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.UncheckedIOException;
@@ -38,8 +40,6 @@ import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.TIME_SERIES_BAD_TYPE;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
@@ -240,6 +240,7 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             throw new StudyException(COMPUTATION_RUNNING);
         }
     }
+
     @Override
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
         return dynamicSimulationClient.downloadDebugFile(resultUuid);

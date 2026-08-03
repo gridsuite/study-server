@@ -12,10 +12,10 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.UUID;
-import org.springframework.web.client.RestTemplate;
 
 import static org.gridsuite.study.server.StudyConstants.SHORT_CIRCUIT_API_VERSION;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;

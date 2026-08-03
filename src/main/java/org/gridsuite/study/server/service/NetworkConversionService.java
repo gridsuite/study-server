@@ -23,6 +23,7 @@ import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.service.client.networkconversion.NetworkConversionClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.Resource;
@@ -37,7 +38,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import org.gridsuite.study.server.service.client.networkconversion.NetworkConversionClient;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NETWORK_EXPORT_FAILED;
@@ -183,6 +183,7 @@ public class NetworkConversionService {
         };
         return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
     }
+
     public String getCaseImportParameters(UUID caseUuid) {
         return networkConversionClient.getCaseImportParameters(caseUuid);
     }
