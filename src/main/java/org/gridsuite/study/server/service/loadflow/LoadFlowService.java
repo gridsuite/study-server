@@ -19,6 +19,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.AbstractComputationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,16 +36,16 @@ import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 @Service
 public class LoadFlowService extends AbstractComputationService {
     private final LoadFlowRestService loadflowRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
 
     public LoadFlowService(StudyRepository studyRepository,
                            LoadFlowRestService loadflowRestService,
                            NotificationService notificationService,
                            ComputationParametersService computationParametersService,
-                           RootNetworkNodeInfoService rootNetworkNodeInfoService, NetworkModificationTreeService networkModificationTreeService) {
-        super(studyRepository, notificationService, computationParametersService, rootNetworkNodeInfoService);
+                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                           NetworkModificationTreeService networkModificationTreeService,
+                           RootNetworkService rootNetworkService) {
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
         this.loadflowRestService = loadflowRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
     }
 
     @Transactional

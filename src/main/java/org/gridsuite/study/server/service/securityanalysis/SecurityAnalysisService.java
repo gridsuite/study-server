@@ -35,9 +35,7 @@ import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
 public class SecurityAnalysisService extends AbstractComputationService {
 
     private final SecurityAnalysisRestService securityAnalysisRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
     private final ObjectMapper objectMapper;
-    private final RootNetworkService rootNetworkService;
     private final UserAdminService userAdminService;
 
     public SecurityAnalysisService(StudyRepository studyRepository,
@@ -49,11 +47,9 @@ public class SecurityAnalysisService extends AbstractComputationService {
                                    RootNetworkService rootNetworkService,
                                    RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                    UserAdminService userAdminService) {
-        super(studyRepository, notificationService, computationParametersService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
         this.securityAnalysisRestService = securityAnalysisRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
-        this.rootNetworkService = rootNetworkService;
         this.userAdminService = userAdminService;
     }
 

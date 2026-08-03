@@ -33,9 +33,7 @@ import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_B
 @Service
 public class ShortCircuitService extends AbstractComputationService {
     private final ShortCircuitRestService shortCircuitRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
     private final UserAdminService userAdminService;
-    private final RootNetworkService rootNetworkService;
     private final PccMinService pccMinService;
 
     protected ShortCircuitService(StudyRepository studyRepository,
@@ -47,11 +45,9 @@ public class ShortCircuitService extends AbstractComputationService {
                                   UserAdminService userAdminService,
                                   RootNetworkService rootNetworkService,
                                   PccMinService pccMinService) {
-        super(studyRepository, notificationService, computationParametersService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
         this.shortCircuitRestService = shortCircuitServicerRest;
-        this.networkModificationTreeService = networkModificationTreeService;
         this.userAdminService = userAdminService;
-        this.rootNetworkService = rootNetworkService;
         this.pccMinService = pccMinService;
     }
 

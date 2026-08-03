@@ -34,15 +34,21 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 public abstract class AbstractComputationService {
     protected final StudyRepository studyRepository;
     protected final NotificationService notificationService;
-    protected final ComputationParametersService computationParametersService;
+    protected final NetworkModificationTreeService networkModificationTreeService;
     protected final RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    protected final RootNetworkService rootNetworkService;
+    protected final ComputationParametersService computationParametersService;
 
     protected AbstractComputationService(StudyRepository studyRepository, NotificationService notificationService,
-                                         ComputationParametersService computationParametersService, RootNetworkNodeInfoService rootNetworkNodeInfoService) {
+                                         NetworkModificationTreeService networkModificationTreeService,
+                                         RootNetworkNodeInfoService rootNetworkNodeInfoService, RootNetworkService rootNetworkService,
+                                         ComputationParametersService computationParametersService) {
         this.studyRepository = studyRepository;
         this.notificationService = notificationService;
-        this.computationParametersService = computationParametersService;
+        this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
+        this.rootNetworkService = rootNetworkService;
+        this.computationParametersService = computationParametersService;
     }
 
     protected StudyEntity getStudy(UUID studyUuid) {

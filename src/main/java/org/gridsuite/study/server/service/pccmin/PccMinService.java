@@ -35,10 +35,8 @@ import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
 @Service
 public class PccMinService extends AbstractComputationService {
     private final PccMinRestService pccMinRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
     private final UserAdminService userAdminService;
     private final ObjectMapper objectMapper;
-    private final RootNetworkService rootNetworkService;
     private static final Logger LOGGER = LoggerFactory.getLogger(PccMinService.class);
 
     protected PccMinService(StudyRepository studyRepository,
@@ -50,12 +48,10 @@ public class PccMinService extends AbstractComputationService {
                             UserAdminService userAdminService,
                             ObjectMapper objectMapper,
                             RootNetworkService rootNetworkService) {
-        super(studyRepository, notificationService, computationParametersService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
         this.pccMinRestService = pccMinRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
         this.userAdminService = userAdminService;
         this.objectMapper = objectMapper;
-        this.rootNetworkService = rootNetworkService;
     }
 
     @Transactional

@@ -32,8 +32,6 @@ import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSI
 public class SensitivityAnalysisService extends AbstractComputationService {
 
     private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
-    private final NetworkModificationTreeService networkModificationTreeService;
-    private final RootNetworkService rootNetworkService;
     private final UserAdminService userAdminService;
     private final DirectoryService directoryService;
 
@@ -46,10 +44,8 @@ public class SensitivityAnalysisService extends AbstractComputationService {
                                          RootNetworkService rootNetworkService,
                                          UserAdminService userAdminService,
                                          DirectoryService directoryService) {
-        super(studyRepository, notificationService, computationParametersService, rootNetworkNodeInfoService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
         this.sensitivityAnalysisRestService = sensitivityAnalysisRestService;
-        this.networkModificationTreeService = networkModificationTreeService;
-        this.rootNetworkService = rootNetworkService;
         this.userAdminService = userAdminService;
         this.directoryService = directoryService;
     }
