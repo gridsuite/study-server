@@ -425,7 +425,6 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         assertThat(resultCount).isEqualTo(expectedResultCount);
     }
 
-
     @Test
     void testGetProviders() {
         String url = buildEndPointUrl("", DYNAMIC_SECURITY_ANALYSIS_API_VERSION, "providers");

@@ -488,7 +488,6 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         assertThat(resultCount).isZero();
     }
 
-
     @Test
     void testGetProviders() {
         String url = buildEndPointUrl("", DYNAMIC_SIMULATION_API_VERSION, "providers");

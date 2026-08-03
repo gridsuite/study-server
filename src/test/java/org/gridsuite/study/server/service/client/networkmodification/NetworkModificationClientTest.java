@@ -66,18 +66,21 @@ class NetworkModificationClientTest extends AbstractWireMockRestClientTest {
             .willReturn(WireMock.ok().withBody(RESPONSE)));
 
         assertThat(networkModificationClient.getLineTypeWithLimits(uuid, "FR", "25", "1.0")).isEqualTo(RESPONSE);
-        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/network-modifications/catalog/line_types/" + uuid + "/with-limits")));
+        wireMockServer.verify(WireMock.getRequestedFor(
+            WireMock.urlPathEqualTo("/v1/network-modifications/catalog/line_types/" + uuid + "/with-limits")));
     }
 
     @Test
     void testGetNetworkModificationsFromComposite() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching("/v1/network-composite-modifications/network-modifications\\?.*" + firstUuid + ".*" + secondUuid + ".*onlyMetadata=false.*"))
-            .willReturn(WireMock.ok().withBody(RESPONSE)));
+        wireMockServer.stubFor(WireMock.get(
+            WireMock.urlMatching("/v1/network-composite-modifications/network-modifications\\?.*" + firstUuid + ".*" + secondUuid + ".*onlyMetadata=false.*"))
+                .willReturn(WireMock.ok().withBody(RESPONSE)));
 
         assertThat(networkModificationClient.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false)).isEqualTo(RESPONSE);
-        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlMatching("/v1/network-composite-modifications/network-modifications\\?.*" + firstUuid + ".*" + secondUuid + ".*onlyMetadata=false.*")));
+        wireMockServer.verify(WireMock.getRequestedFor(
+            WireMock.urlMatching("/v1/network-composite-modifications/network-modifications\\?.*" + firstUuid + ".*" + secondUuid + ".*onlyMetadata=false.*")));
     }
 
     @Test
@@ -92,11 +95,13 @@ class NetworkModificationClientTest extends AbstractWireMockRestClientTest {
 
     @Test
     void testGetBusBarSectionsForNewCoupler() {
-        wireMockServer.stubFor(WireMock.get(WireMock.urlMatching("/v1/network-modifications/busbar-sections-for-new-coupler\\?.*voltageLevelId=VL1.*busBarCount=2.*sectionCount=4.*BREAKER.*DISCONNECTOR.*"))
+        wireMockServer.stubFor(WireMock.get(
+            WireMock.urlMatching("/v1/network-modifications/busbar-sections-for-new-coupler\\?.*voltageLevelId=VL1.*busBarCount=2.*sectionCount=4.*BREAKER.*DISCONNECTOR.*"))
             .willReturn(WireMock.ok().withBody(RESPONSE)));
 
         assertThat(networkModificationClient.getBusBarSectionsForNewCoupler("VL1", 2, 4, List.of("BREAKER", "DISCONNECTOR"))).isEqualTo(RESPONSE);
-        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlMatching("/v1/network-modifications/busbar-sections-for-new-coupler\\?.*voltageLevelId=VL1.*busBarCount=2.*sectionCount=4.*BREAKER.*DISCONNECTOR.*")));
+        wireMockServer.verify(WireMock.getRequestedFor(
+            WireMock.urlMatching("/v1/network-modifications/busbar-sections-for-new-coupler\\?.*voltageLevelId=VL1.*busBarCount=2.*sectionCount=4.*BREAKER.*DISCONNECTOR.*")));
     }
 
     @Test

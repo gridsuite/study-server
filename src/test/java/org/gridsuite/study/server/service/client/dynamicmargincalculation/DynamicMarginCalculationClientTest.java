@@ -426,7 +426,6 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         assertThat(resultCount).isEqualTo(expectedResultCount);
     }
 
-
     @Test
     void testGetProviders() {
         String url = buildEndPointUrl("", DYNAMIC_MARGIN_CALCULATION_API_VERSION, "providers");
