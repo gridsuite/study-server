@@ -91,3 +91,7 @@ class ShortCircuitParametersControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
             .andExpect(content().string(""));
+
+        verify(shortCircuitService).updateParameters(parameterUuid, PARAMETERS);
+    }
+}

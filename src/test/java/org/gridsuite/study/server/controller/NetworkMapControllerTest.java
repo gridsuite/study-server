@@ -46,3 +46,4 @@ class NetworkMapControllerTest {
 
         verify(networkMapService).getElementSchema("LINE", "FORM");
     }
+}

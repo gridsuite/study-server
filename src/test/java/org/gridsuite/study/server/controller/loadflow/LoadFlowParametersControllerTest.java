@@ -105,3 +105,5 @@ class LoadFlowParametersControllerTest {
             .andExpect(content().string(""));
 
         verify(loadFlowService).updateLoadFlowParameters(parameterUuid, PARAMETERS);
+    }
+}

@@ -77,3 +77,6 @@ class SensitivityAnalysisParametersControllerTest {
             .andExpect(status().isOk())
             .andExpect(content().string(""));
 
+        verify(sensitivityAnalysisService).updateSensitivityAnalysisParameters(parameterUuid, PARAMETERS);
+    }
+}

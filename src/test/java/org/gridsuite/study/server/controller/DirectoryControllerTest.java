@@ -80,4 +80,5 @@ class DirectoryControllerTest {
         mockMvc.perform(head(BASE_URL + "/directories/{directoryUuid}/elements/{elementName}/types/{type}", directoryUuid, "elementName", "STUDY"))
             .andExpect(status().isNoContent())
             .andExpect(content().string(""));
-
+    }
+}

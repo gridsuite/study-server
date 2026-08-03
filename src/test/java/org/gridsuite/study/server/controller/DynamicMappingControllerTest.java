@@ -48,3 +48,6 @@ class DynamicMappingControllerTest {
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(content().json(models));
 
+        verify(dynamicMappingService).getMappedModels(mappingId);
+    }
+}

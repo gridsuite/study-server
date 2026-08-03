@@ -91,3 +91,5 @@ class SecurityAnalysisParametersControllerTest {
             .andExpect(content().string(""));
 
         verify(securityAnalysisService).updateSecurityAnalysisParameters(parameterUuid, PARAMETERS);
+    }
+}

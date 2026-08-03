@@ -69,3 +69,7 @@ class VoltageInitParametersControllerTest {
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
             .andExpect(jsonPath("$.reactiveSlacksThreshold").value(1.5))
             .andExpect(jsonPath("$.updateBusVoltage").value(true));
+
+        verify(voltageInitService).getVoltageInitParametersByUuid(parameterUuid);
+    }
+}
