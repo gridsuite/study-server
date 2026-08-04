@@ -270,7 +270,7 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public InvalidateNodeInfos invalidateRootNetworkNodes(UUID rootNetworkUuid, List<UUID> nodeUuids, InvalidateNodeTreeParameters invalidateNodeParameters) {
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = getRootNetworkNodes(rootNetworkUuid, nodeUuids);
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
@@ -280,7 +280,7 @@ public class RootNetworkNodeInfoService {
         return invalidateNodeInfos;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public InvalidateNodeInfos invalidateRootNetworkNode(UUID nodeUuid, UUID rootNetworUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworUuid).orElseThrow(() -> new StudyException(NOT_FOUND,
                 ROOT_NETWORK_NOT_FOUND));

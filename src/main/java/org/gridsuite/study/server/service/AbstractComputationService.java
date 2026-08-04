@@ -126,12 +126,12 @@ public abstract class AbstractComputationService {
     }
 
     protected void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        Objects.nonNull(securityAnalysisRestService);
+        Objects.requireNonNull(securityAnalysisRestService);
         securityAnalysisRestService.invalidateSaStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
     }
 
     public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        Objects.nonNull(sensitivityAnalysisRestService);
+        Objects.requireNonNull(sensitivityAnalysisRestService);
         sensitivityAnalysisRestService.invalidateSensitivityAnalysisStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
     }
 }
