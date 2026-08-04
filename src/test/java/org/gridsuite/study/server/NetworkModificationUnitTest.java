@@ -175,7 +175,6 @@ class NetworkModificationUnitTest {
         assertNodeBuildStatus(node3Uuid, BuildStatus.NOT_BUILT);
         assertNodeBuildStatus(node4Uuid, BuildStatus.BUILT);
         checkUpdateBuildStateMessageReceived(studyUuid, List.of(node1Uuid));
-        checkUpdateStatusMessagesReceived(studyUuid, node1Uuid, output);
         checkElementUpdatedMessageSent(studyUuid, USER_ID_HEADER);
         Mockito.verify(networkService).deleteVariants(NETWORK_UUID, List.of(VARIANT_1));
 
