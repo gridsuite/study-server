@@ -2561,6 +2561,27 @@ public class StudyService {
                 .orElse(true);
     }
 
+    @Transactional(readOnly = true)
+    public UUID getFirstNetworkUuid(UUID studyUuid) {
+        return studyRepository.findWithRootNetworksById(studyUuid)
+                .map(study -> study.getFirstRootNetwork().getNetworkUuid())
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
+    }
+
+    // --- Dynamic Mapping service methods BEGIN --- //
+
+    public String getNetworkValuesFromStudy(UUID studyUuid) {
+        UUID networkUuid = this.self.getFirstNetworkUuid(studyUuid);
+        return dynamicMappingService.getNetworkValues(networkUuid);
+    }
+
+    public String getNetworkMatchesFromStudy(UUID studyUuid, String ruleToMatch) {
+        UUID networkUuid = this.self.getFirstNetworkUuid(studyUuid);
+        return dynamicMappingService.getNetworkMatches(networkUuid, ruleToMatch);
+    }
+
+    // --- Dynamic Mapping service methods END --- //
+
     public String getNetworkElementsIds(UUID nodeUuid, UUID rootNetworkUuid, List<String> substationsIds, boolean inUpstreamBuiltParentNode, String equipmentType, List<Double> nominalVoltages) {
         UUID nodeUuidToSearchIn = getNodeUuidToSearchIn(nodeUuid, rootNetworkUuid, inUpstreamBuiltParentNode);
         return networkMapService.getElementsIds(rootNetworkService.getNetworkUuid(rootNetworkUuid), networkModificationTreeService.getVariantId(nodeUuidToSearchIn, rootNetworkUuid),
