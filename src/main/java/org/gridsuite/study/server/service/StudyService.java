@@ -49,7 +49,6 @@ import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
@@ -240,7 +239,6 @@ public class StudyService {
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.dynamicMarginCalculationService = dynamicMarginCalculationService;
         this.voltageInitService = voltageInitService;
-        this.dynamicMarginCalculationService = dynamicMarginCalculationService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
         this.studyConfigService = studyConfigService;
@@ -252,8 +250,6 @@ public class StudyService {
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
         this.securityAnalysisService = securityAnalysisService;
-        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
-        this.dynamicSimulationService = dynamicSimulationService;
     }
 
     private CreatedStudyBasicInfos toStudyInfos(UUID studyUuid) {
