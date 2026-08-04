@@ -1,0 +1,58 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="labidiayo" id="1785000000000-1">
+        <createTable tableName="node_activity">
+            <column name="id" type="UUID">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="node_activityPK"/>
+            </column>
+            <column name="study_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="node_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="root_network_id" type="UUID"/>
+            <column name="type" type="VARCHAR(64)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="started_at" type="timestamptz">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="node_activity" columnNames="node_id, root_network_id"
+                             constraintName="node_activity_node_rn_uq"/>
+        <createIndex tableName="node_activity" indexName="node_activity_study_id_idx">
+            <column name="study_id"/>
+        </createIndex>
+        <addForeignKeyConstraint baseTableName="node_activity" baseColumnNames="study_id"
+                                 constraintName="node_activity_study_fk"
+                                 referencedTableName="study" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="node_activity" baseColumnNames="node_id"
+                                 constraintName="node_activity_node_fk"
+                                 referencedTableName="node" referencedColumnNames="id_node" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="node_activity" baseColumnNames="root_network_id"
+                                 constraintName="node_activity_rn_fk"
+                                 referencedTableName="root_network" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet author="labidiayo" id="1785000000000-2" dbms="postgresql">
+        <sql>CREATE UNIQUE INDEX node_activity_node_all_rn_uq ON node_activity (node_id) WHERE root_network_id IS NULL</sql>
+    </changeSet>
+
+    <changeSet author="labidiayo" id="1785000000000-3">
+        <dropColumn tableName="root_network_node_info" columnName="blocked_node"/>
+    </changeSet>
+
+    <changeSet author="labidiayo" id="1785000000000-4">
+        <update tableName="root_network_node_info">
+            <column name="local_build_status" value="NOT_BUILT"/>
+            <where>local_build_status = 'BUILDING'</where>
+        </update>
+        <update tableName="root_network_node_info">
+            <column name="global_build_status" value="NOT_BUILT"/>
+            <where>global_build_status = 'BUILDING'</where>
+        </update>
+    </changeSet>
+</databaseChangeLog>

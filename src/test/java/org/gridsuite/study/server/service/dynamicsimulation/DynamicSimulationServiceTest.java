@@ -286,23 +286,6 @@ class DynamicSimulationServiceTest {
     }
 
     @Test
-    void testAssertDynamicSimulationNotRunning() {
-
-        // test not running
-        assertDoesNotThrow(() -> dynamicSimulationService.assertDynamicSimulationNotRunning(RESULT_UUID));
-    }
-
-    @Test
-    void testAssertDynamicSimulationRunning() {
-        // setup for running node
-        given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING);
-        given(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID_RUNNING, ROOTNETWORK_UUID, ComputationType.DYNAMIC_SIMULATION)).willReturn(RESULT_UUID_RUNNING);
-
-        // test running
-        assertThrows(StudyException.class, () -> dynamicSimulationService.assertDynamicSimulationNotRunning(RESULT_UUID_RUNNING));
-    }
-
-    @Test
     void testGetParameters() {
         given(dynamicSimulationClient.getParameters(PARAMETERS_UUID)).willReturn(PARAMETERS_JSON);
 

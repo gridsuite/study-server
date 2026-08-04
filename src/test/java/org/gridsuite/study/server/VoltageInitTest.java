@@ -1212,7 +1212,7 @@ class VoltageInitTest {
         jsonObject.put("modificationGroupUuid", modificationGroupUuid);
         mnBodyJson = jsonObject.toString();
 
-        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+        doReturn(List.of()).when(studyService).getRootNetworksToBuildAfterCreation(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
@@ -1224,7 +1224,7 @@ class VoltageInitTest {
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(NodeBuildStatus.from(buildStatus)).build());
 
-        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+        verify(studyService, times(1)).getRootNetworksToBuildAfterCreation(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
         return modificationNode;
     }
 

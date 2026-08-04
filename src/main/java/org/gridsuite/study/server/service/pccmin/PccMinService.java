@@ -67,7 +67,6 @@ public class PccMinService extends AbstractComputationService {
     @Transactional
     public UUID runPccMin(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
         UUID result = handlePccMinRequest(studyEntity, nodeUuid, rootNetworkUuid, userId);
 

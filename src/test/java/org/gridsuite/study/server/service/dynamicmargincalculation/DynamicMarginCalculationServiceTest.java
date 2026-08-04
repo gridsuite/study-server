@@ -21,9 +21,6 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.StudyConstants.DYNAWO_PROVIDER;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
-import static org.gridsuite.study.server.utils.TestUtils.assertStudyException;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -174,26 +171,6 @@ class DynamicMarginCalculationServiceTest {
         Integer resultsCount = dynamicMarginCalculationService.getResultsCount();
 
         assertThat(resultsCount).isEqualTo(10);
-    }
-
-    @Test
-    void testAssertDynamicSecurityAnalysisNotRunning() {
-        when(dynamicMarginCalculationClient.getStatus(RESULT_UUID)).thenReturn(DynamicMarginCalculationStatus.SUCCEED);
-
-        // test not running
-        assertDoesNotThrow(() -> dynamicMarginCalculationService.assertDynamicMarginCalculationNotRunning(RESULT_UUID));
-
-        verify(dynamicMarginCalculationClient, times(1)).getStatus(RESULT_UUID);
-    }
-
-    @Test
-    void testAssertDynamicSecurityAnalysisRunning() {
-        // setup for running node
-        given(dynamicMarginCalculationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicMarginCalculationStatus.RUNNING);
-
-        // test running
-        assertStudyException(() -> dynamicMarginCalculationService.assertDynamicMarginCalculationNotRunning(RESULT_UUID_RUNNING),
-            COMPUTATION_RUNNING, null);
     }
 
     @Test

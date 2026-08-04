@@ -23,17 +23,7 @@ class BuildStatusTest {
         assertFalse(BUILT_WITH_ERROR.isNotBuilt());
         assertFalse(BUILT_WITH_WARNING.isNotBuilt());
         assertFalse(BUILT.isNotBuilt());
-        assertFalse(BUILDING.isNotBuilt());
         assertTrue(NOT_BUILT.isNotBuilt());
-    }
-
-    @Test
-    void checkIsBuilding() {
-        assertFalse(BUILT_WITH_ERROR.isBuilding());
-        assertFalse(BUILT_WITH_WARNING.isBuilding());
-        assertFalse(BUILT.isBuilding());
-        assertTrue(BUILDING.isBuilding());
-        assertFalse(NOT_BUILT.isBuilding());
     }
 
     @Test
@@ -41,7 +31,6 @@ class BuildStatusTest {
         assertTrue(BUILT_WITH_ERROR.isBuilt());
         assertTrue(BUILT_WITH_WARNING.isBuilt());
         assertTrue(BUILT.isBuilt());
-        assertFalse(BUILDING.isBuilt());
         assertFalse(NOT_BUILT.isBuilt());
     }
 

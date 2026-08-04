@@ -220,13 +220,6 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
         }
     }
 
-    public void assertSecurityAnalysisNotRunning(UUID resultUuid) {
-        SecurityAnalysisStatus sas = getSecurityAnalysisStatus(resultUuid);
-        if (sas == SecurityAnalysisStatus.RUNNING) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
-    }
-
     public void updateSecurityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
         var uriBuilder = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{uuid}");
         String path = uriBuilder.buildAndExpand(parametersUuid).toUriString();

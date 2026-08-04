@@ -74,7 +74,6 @@ public class VoltageInitService extends AbstractComputationService {
     @Transactional
     public UUID runVoltageInit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId, boolean debug) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
         UUID result = handleVoltageInitRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 

@@ -66,7 +66,6 @@ public class SecurityAnalysisService extends AbstractComputationService {
     @Transactional
     public UUID runSecurityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId) {
         StudyEntity study = getStudy(studyUuid);
-        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
         UUID result = handleSecurityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
 

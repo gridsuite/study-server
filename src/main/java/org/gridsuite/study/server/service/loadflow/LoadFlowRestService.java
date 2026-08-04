@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
@@ -32,7 +31,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 
 /**
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
@@ -189,13 +187,6 @@ public class LoadFlowRestService extends AbstractComputationRestService implemen
 
     public void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {
         this.loadFlowServerBaseUri = loadFlowServerBaseUri;
-    }
-
-    public void assertLoadFlowNotRunning(UUID resultUuid) {
-        LoadFlowStatus loadFlowStatus = getLoadFlowStatus(resultUuid);
-        if (LoadFlowStatus.RUNNING.equals(loadFlowStatus)) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
     }
 
     public List<LimitViolationInfos> getLimitViolations(UUID resultUuid, String filters, String globalFilters, Sort sort, UUID networkUuid, String variantId) {

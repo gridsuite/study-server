@@ -56,7 +56,6 @@ import java.util.stream.Stream;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -221,7 +220,6 @@ class LoadFLowIntegrationTest {
 
         // verify that the node is blocked
         // build is forbidden, for example
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid).header(HEADER_USER_ID, userId))
             .andExpect(status().isForbidden());
 
@@ -230,7 +228,6 @@ class LoadFLowIntegrationTest {
         MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", loadflowResultUuid.toString(), "withRatioTapChangers", withRatioTapChangers, HEADER_RECEIVER, resultUuidJson));
         consumerService.consumeLoadFlowResult().accept(MessageBuilder.createMessage("", messageHeaders));
 
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
     }
 
     private void rerunLoadFlow(boolean withRatioTapChangers, boolean isSecurityNode) throws Exception {
@@ -243,8 +240,6 @@ class LoadFLowIntegrationTest {
         UUID runLoadflowStubUuid = wireMockStubs.stubRunLoadFlow(networkUuid, withRatioTapChangers, null, objectMapper.writeValueAsString(loadflowResultUuid));
 
         doReturn(parametersUuid).when(loadFlowRestService).createDefaultParameters();
-
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, nodeUuid, userId)
                 .param(QUERY_WITH_TAP_CHANGER, withRatioTapChangers ? "true" : "false")
@@ -266,7 +261,6 @@ class LoadFLowIntegrationTest {
 
         // verify that the node is blocked
         // build is forbidden, for example
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid).header(HEADER_USER_ID, userId))
             .andExpect(status().isForbidden());
 
@@ -275,13 +269,6 @@ class LoadFLowIntegrationTest {
         MessageHeaders messageHeaders = new MessageHeaders(Map.of("resultUuid", loadflowResultUuid.toString(), "withRatioTapChangers", withRatioTapChangers, HEADER_RECEIVER, resultUuidJson));
         consumerService.consumeLoadFlowResult().accept(MessageBuilder.createMessage("", messageHeaders));
 
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
-    }
-
-    private void assertNodeBlocked(UUID nodeUuid, UUID rootNetworkUuid, boolean isNodeBlocked) {
-        Optional<RootNetworkNodeInfoEntity> networkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
-        assertTrue(networkNodeInfoEntity.isPresent());
-        assertEquals(isNodeBlocked, networkNodeInfoEntity.get().getBlockedNode());
     }
 
     private StudyEntity insertStudy() {
@@ -305,7 +292,7 @@ class LoadFLowIntegrationTest {
     private void createNodeLinks(RootNetworkEntity rootNetworkEntity, NetworkModificationNodeInfoEntity modificationNodeInfoEntity,
                                  String variantId, UUID reportUuid, BuildStatus buildStatus) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = RootNetworkNodeInfoEntity.builder().variantId(variantId).modificationReports(Map.of(modificationNodeInfoEntity.getId(),
-                reportUuid)).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).blockedNode(false).build();
+                reportUuid)).nodeBuildStatus(NodeBuildStatus.from(buildStatus).toEntity()).build();
         modificationNodeInfoEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);

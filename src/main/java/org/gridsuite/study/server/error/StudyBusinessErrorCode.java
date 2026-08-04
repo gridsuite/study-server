@@ -33,7 +33,8 @@ public enum StudyBusinessErrorCode implements BusinessErrorCode {
     TOO_MANY_MAP_CARDS("study.tooManyMapCards"),
     ELEMENT_ALREADY_EXISTS("study.elementAlreadyExists"),
     UNPROCESSABLE_IMPORT_PARAMETER("study.unprocessableImportParameter"),
-    MAX_OPERATION_TYPE_EXCEEDED("study.maxOperationTypeExceeded");
+    MAX_OPERATION_TYPE_EXCEEDED("study.maxOperationTypeExceeded"),
+    NODE_ACTIVITY_CONFLICT("study.nodeActivityConflict");
 
     private final String value;
 

@@ -90,7 +90,9 @@ class StudyServiceTest {
         mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
         mockNodeBuild(node3.getIdNode(), rootNetworkUuid);
 
-        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+        studyService.buildNodes(studyUuid,
+            studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
+            rootNetworkUuid, userId);
 
         verifyNodeBuild(node2.getIdNode(), rootNetworkUuid);
         verifyNodeBuild(node3.getIdNode(), rootNetworkUuid);
@@ -128,7 +130,9 @@ class StudyServiceTest {
         doReturn(Map.of(QuotaType.BUILD, 10)).when(userAdminService).getUserMaxQuota(userId);
         doReturn(10L).when(networkModificationTreeService).countBuiltNodes(studyUuid, rootNetworkUuid);
 
-        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+        studyService.buildNodes(studyUuid,
+            studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
+            rootNetworkUuid, userId);
 
         verify(networkModificationService, times(0)).buildNode(eq(node2.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
         verify(networkModificationService, times(0)).buildNode(eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
@@ -166,7 +170,9 @@ class StudyServiceTest {
 
         mockNodeBuild(node2.getIdNode(), rootNetworkUuid);
 
-        studyService.buildFirstLevelChildren(studyUuid, node1.getIdNode(), rootNetworkUuid, userId);
+        studyService.buildNodes(studyUuid,
+            studyService.getFirstLevelChildrenToBuild(studyUuid, node1.getIdNode(), rootNetworkUuid, userId),
+            rootNetworkUuid, userId);
 
         verifyNodeBuild(node2.getIdNode(), rootNetworkUuid);
         verify(networkModificationService, times(0)).buildNode(eq(node3.getIdNode()), eq(rootNetworkUuid), any(), eq(null));
@@ -262,12 +268,10 @@ class StudyServiceTest {
     private void mockNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
         doReturn(new BuildInfos()).when(networkModificationTreeService).getBuildInfos(nodeUuid, rootNetworkUuid);
         doNothing().when(networkModificationTreeService).setModificationReports(eq(nodeUuid), eq(rootNetworkUuid), any());
-        doNothing().when(networkModificationTreeService).updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationTreeService).getNodeBuildStatus(nodeUuid, rootNetworkUuid);
     }
 
     private void verifyNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
-        verify(networkModificationTreeService, times(1)).updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         verify(networkModificationService, times(1)).buildNode(eq(nodeUuid), eq(rootNetworkUuid), any(), eq(null));
     }
 }

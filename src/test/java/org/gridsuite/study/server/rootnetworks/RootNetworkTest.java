@@ -22,7 +22,6 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -717,7 +716,6 @@ class RootNetworkTest {
         NetworkModificationNode modificationNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
         assertEqualsRootNetworkInDB(rootNetworkInfos);
-        assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), false);
 
         // update root network
         final UUID newCaseUuid = UUID.randomUUID();
@@ -753,7 +751,6 @@ class RootNetworkTest {
 
         // verify that the node is blocked
         // build is forbidden, for example
-        assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), true);
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyEntity.getId(), rootNetworkInfos.getId(), modificationNode.getId()).header(
                 HEADER_USER_ID, USER_ID))
             .andExpect(status().isForbidden());
@@ -762,13 +759,6 @@ class RootNetworkTest {
         createAndConsumeMessageCaseImport(studyEntity.getId(), rootNetworkUpdateInfos, CaseImportAction.ROOT_NETWORK_MODIFICATION);
 
         assertEqualsRootNetworkInDB(rootNetworkInfos);
-        assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), false);
-    }
-
-    private void assertNodeBlocked(UUID nodeUuid, UUID rootNetworkUuid, boolean isNodeBlocked) {
-        Optional<RootNetworkNodeInfoEntity> networkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
-        assertTrue(networkNodeInfoEntity.isPresent());
-        assertEquals(isNodeBlocked, networkNodeInfoEntity.get().getBlockedNode());
     }
 
     private void assertEqualsRootNetworkInDB(RootNetworkInfos rootNetworkInfos) {

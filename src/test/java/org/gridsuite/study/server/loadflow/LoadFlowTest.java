@@ -256,17 +256,11 @@ class LoadFlowTest {
         LOADFLOW_DEFAULT_PARAMETERS_JSON = objectMapper.writeValueAsString(loadFlowParametersInfos);
     }
 
-    private void assertNodeBlocked(UUID nodeUuid, UUID rootNetworkUuid, boolean isNodeBlocked) {
-        Optional<RootNetworkNodeInfoEntity> networkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid);
-        assertTrue(networkNodeInfoEntity.isPresent());
-        assertEquals(isNodeBlocked, networkNodeInfoEntity.get().getBlockedNode());
-    }
-
     private void consumeLoadFlowResult(UUID studyUuid, UUID rootNetworkUuid, NetworkModificationNode modificationNode) throws JsonProcessingException {
         UUID nodeUuid = modificationNode.getId();
 
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, true);
-        doNothing().when(studyService).buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, "userId");
+        doReturn(List.of()).when(studyService).getFirstLevelChildrenToBuild(studyUuid, nodeUuid, rootNetworkUuid, "userId");
+        doNothing().when(studyService).buildNodes(eq(studyUuid), anyList(), eq(rootNetworkUuid), eq("userId"));
 
         // consume loadflow result
         String resultUuidJson = objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid));
@@ -283,11 +277,11 @@ class LoadFlowTest {
         checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_STATUS);
         checkUpdateStatusMessageReceived(studyUuid, NotificationService.UPDATE_TYPE_LOADFLOW_RESULT);
 
-        assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
         if (modificationNode.isSecurityNode()) {
             // if running successful loadflow on security node -> first children are built
             wireMockStubs.loadflowServer.verifyGetLoadflowStatus(UUID.fromString(LOADFLOW_RESULT_UUID));
-            verify(studyService, times(1)).buildFirstLevelChildren(studyUuid, nodeUuid, rootNetworkUuid, "userId");
+            verify(studyService, times(1)).getFirstLevelChildrenToBuild(studyUuid, nodeUuid, rootNetworkUuid, "userId");
+            verify(studyService, times(1)).buildNodes(eq(studyUuid), anyList(), eq(rootNetworkUuid), eq("userId"));
         }
     }
 
@@ -997,7 +991,7 @@ class LoadFlowTest {
         mnBodyJson = jsonObject.toString();
 
         reset(studyService);
-        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+        doReturn(List.of()).when(studyService).getRootNetworksToBuildAfterCreation(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
@@ -1009,7 +1003,7 @@ class LoadFlowTest {
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).build());
 
-        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+        verify(studyService, times(1)).getRootNetworksToBuildAfterCreation(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         return modificationNode;
     }

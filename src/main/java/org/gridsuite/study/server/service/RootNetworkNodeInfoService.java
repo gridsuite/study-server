@@ -162,7 +162,6 @@ public class RootNetworkNodeInfoService {
             .variantId(UUID.randomUUID().toString())
             .modificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())))
             .modificationsUuidsToExclude(modificationsToExclude)
-            .blockedNode(false)
             .build();
     }
 
@@ -278,11 +277,6 @@ public class RootNetworkNodeInfoService {
 
     public InvalidateNodeInfos invalidateRootNetworkNode(RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity, InvalidateNodeTreeParameters invalidateTreeParameters) {
         boolean notOnlyChildrenBuildStatus = !invalidateTreeParameters.isOnlyChildrenBuildStatus();
-
-        // Always update blocked build info
-        if (invalidateTreeParameters.withBlockedNode()) {
-            rootNetworkNodeInfoEntity.setBlockedNode(true);
-        }
 
         // No need to delete node results with a status different of "BUILT"
         if (!rootNetworkNodeInfoEntity.getNodeBuildStatus().toDto().isBuilt()) {
@@ -499,26 +493,6 @@ public class RootNetworkNodeInfoService {
         return rootNetworkNodeInfoRepository.findAllByRootNetworkStudyIdAndNodeInfoNodeTypeAndLoadFlowResultUuidNotNull(studyUuid, NetworkModificationNodeType.SECURITY);
     }
 
-    public void assertNoBuildingNode(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndBuildStatus(rootNetworkUuid, nodesUuids, BuildStatus.BUILDING)) {
-            throw new StudyException(NOT_ALLOWED, "No modification is allowed during a node building.");
-        }
-    }
-
-    public void assertNoBlockedNode(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        if (rootNetworkNodeInfoRepository.existsByNodeUuidsAndBlockedNode(rootNetworkUuid, nodesUuids)) {
-            throw new StudyException(NOT_ALLOWED, "Another action is in progress in this branch !");
-        }
-    }
-
-    public void blockNodes(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        getRootNetworkNodes(rootNetworkUuid, nodesUuids).forEach(rnn -> rnn.setBlockedNode(true));
-    }
-
-    public void unblockNodes(UUID rootNetworkUuid, List<UUID> nodesUuids) {
-        getRootNetworkNodes(rootNetworkUuid, nodesUuids).forEach(rnn -> rnn.setBlockedNode(false));
-    }
-
     private void addLink(NetworkModificationNodeInfoEntity nodeInfoEntity, RootNetworkEntity rootNetworkEntity, RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity) {
         nodeInfoEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
         rootNetworkEntity.addRootNetworkNodeInfo(rootNetworkNodeInfoEntity);
@@ -674,20 +648,6 @@ public class RootNetworkNodeInfoService {
             rootNetworkNodeInfo.getComputationReports().values().stream())
             .flatMap(Function.identity())
             .toList();
-    }
-
-    public void assertComputationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        loadFlowRestService.assertLoadFlowNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW));
-        securityAnalysisService.assertSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS));
-        dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
-        dynamicSecurityAnalysisService.assertDynamicSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS));
-        dynamicMarginCalculationService.assertDynamicMarginCalculationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION));
-        sensitivityAnalysisService.assertSensitivityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SENSITIVITY_ANALYSIS));
-        shortCircuitService.assertShortCircuitAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SHORT_CIRCUIT), getComputationResultUuid(nodeUuid, rootNetworkUuid,
-                SHORT_CIRCUIT_ONE_BUS));
-        voltageInitService.assertVoltageInitNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION));
-        stateEstimationService.assertStateEstimationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION));
-        pccMinService.assertPccMinNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN));
     }
 
     /***************************

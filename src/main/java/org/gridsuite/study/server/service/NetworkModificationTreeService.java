@@ -1077,28 +1077,12 @@ public class NetworkModificationTreeService {
 
         InvalidateNodeTreeParameters invalidateChildrenParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
-            .withBlockedNode(invalidateTreeParameters.withBlockedNode())
             .build();
         rootNetworkNodeInfoEntities.forEach(child ->
             invalidateNodeInfos.add(rootNetworkNodeInfoService.invalidateRootNetworkNode(child, invalidateChildrenParameters))
         );
 
         return invalidateNodeInfos;
-    }
-
-    @Transactional
-    public void unblockNodeTree(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.unblockNodes(rootNetworkUuid, getNodeTreeUuids(nodeUuid));
-    }
-
-    @Transactional
-    public void unblockNode(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.unblockNodes(rootNetworkUuid, List.of(nodeUuid));
-    }
-
-    @Transactional
-    public void blockNode(UUID rootNetworkUuid, UUID nodeUuid) {
-        rootNetworkNodeInfoService.blockNodes(rootNetworkUuid, List.of(nodeUuid));
     }
 
     /**

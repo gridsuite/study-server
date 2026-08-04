@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.pccmin.PccMinService;
@@ -22,10 +23,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -38,11 +41,13 @@ public class PccMinController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final StudyService studyService;
     private final PccMinService pccMinService;
+    private final NodeActivityService nodeActivityService;
 
-    public PccMinController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService, PccMinService pccMinService) {
+    public PccMinController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService, PccMinService pccMinService, NodeActivityService nodeActivityService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.studyService = studyService;
         this.pccMinService = pccMinService;
+        this.nodeActivityService = nodeActivityService;
     }
 
     @PostMapping(value = "/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -78,7 +83,8 @@ public class PccMinController {
 
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(PCC_MIN, userId);
-        pccMinService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId);
+        nodeActivityService.setNodeActivityUntilResult(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+            () -> pccMinService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
 

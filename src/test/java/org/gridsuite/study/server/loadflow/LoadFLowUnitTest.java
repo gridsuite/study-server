@@ -152,7 +152,6 @@ class LoadFLowUnitTest {
         InvalidateNodeTreeParameters expectedInvalidationParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
             .computationsInvalidationMode(InvalidateNodeTreeParameters.ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
-            .withBlockedNode(true)
             .build();
 
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();

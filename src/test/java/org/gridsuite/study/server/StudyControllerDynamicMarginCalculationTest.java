@@ -198,7 +198,7 @@ class StudyControllerDynamicMarginCalculationTest {
                 .children(Collections.emptyList()).build();
 
         reset(spyStudyService);
-        doNothing().when(spyStudyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+        doReturn(List.of()).when(spyStudyService).getRootNetworksToBuildAfterCreation(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
                         .content(objectMapper.writeValueAsString(modificationNode))
@@ -214,7 +214,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getOneRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
 
-        verify(spyStudyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq("userId"));
+        verify(spyStudyService, times(1)).getRootNetworksToBuildAfterCreation(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         return modificationNode;
     }

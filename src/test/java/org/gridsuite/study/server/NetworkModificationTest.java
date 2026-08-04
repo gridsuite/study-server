@@ -35,10 +35,13 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.nodeactivity.NodeActivityEntity;
+import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
@@ -245,6 +248,9 @@ class NetworkModificationTest {
 
     @MockitoSpyBean
     private RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
+
+    @Autowired
+    private NodeActivityRepository nodeActivityRepository;
 
     @MockitoSpyBean
     private RootNetworkNodeInfoService rootNetworkNodeInfoService;
@@ -623,10 +629,7 @@ class NetworkModificationTest {
             Set.of());
 
         // Mark the node 1 status as building
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1.getId(),
-                studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
-        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
+        markNodeBuilding(studyNameUserIdUuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid), modificationNode1.getId());
 
         // Build all nodes branch1 is not ok
         // Build all nodes branch2 is ok
@@ -636,11 +639,8 @@ class NetworkModificationTest {
         );
 
         // Mark the node 2 status as building
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo2Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode2.getId(),
-                studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
-        rootNetworkNodeInfo2Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
-        rootNetworkNodeInfoRepository.saveAll(List.of(rootNetworkNodeInfo1Entity, rootNetworkNodeInfo2Entity));
+        clearNodeActivities();
+        markNodeBuilding(studyNameUserIdUuid, rootNetworkUuid, modificationNode2.getId());
 
         // Build all nodes branch1 is not ok
         // Build all nodes branch2 is ok
@@ -650,11 +650,8 @@ class NetworkModificationTest {
         );
 
         // Mark the node 4 status as building
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo4Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode4.getId(),
-                studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        rootNetworkNodeInfo2Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT));
-        rootNetworkNodeInfo4Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
-        rootNetworkNodeInfoRepository.saveAll(List.of(rootNetworkNodeInfo2Entity, rootNetworkNodeInfo4Entity));
+        clearNodeActivities();
+        markNodeBuilding(studyNameUserIdUuid, rootNetworkUuid, modificationNode4.getId());
 
         // Build all nodes branch1 is ok
         // Build all nodes branch2 is not ok
@@ -663,7 +660,14 @@ class NetworkModificationTest {
             Set.of(modificationNode3.getId(), modificationNode4.getId(), modificationNode5.getId())
         );
 
-        verify(rootNetworkNodeInfoService, times(20)).assertNoBuildingNode(any(), any());
+    }
+
+    private void markNodeBuilding(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid) {
+        nodeActivityRepository.save(NodeActivityEntity.from(NodeActivityType.BUILD, studyUuid, rootNetworkUuid, nodeUuid));
+    }
+
+    private void clearNodeActivities() {
+        nodeActivityRepository.deleteAll();
     }
 
     private void testBuildAsserts(UUID studyUuid, UUID rootNetworkUuid, Set<UUID> nodesUuidsOk, Set<UUID> nodesUuidsNotOk) throws Exception {
@@ -923,7 +927,7 @@ class NetworkModificationTest {
         body.replace("minActivePower", "100.0");
         body.replace("maxActivePower", "200.0");
         String bodyJsonCreateBis = mapper.writeValueAsString(body);
-        when(rootNetworkNodeInfoRepository.existsByNodeUuidsAndBuildStatus(eq(firstRootNetworkUuid), any(List.class), eq(BuildStatus.BUILDING))).thenReturn(true);
+        markNodeBuilding(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid);
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(bodyJsonCreateBis).contentType(MediaType.APPLICATION_JSON)
                         .header(USER_ID_HEADER, userId))
@@ -981,7 +985,7 @@ class NetworkModificationTest {
         String createShuntCompensatorAttributes2 = "{\"type\":\"" + ModificationType.SHUNT_COMPENSATOR_CREATION
                 + "\",\"shuntCompensatorId\":\"shuntCompensatorId3\",\"shuntCompensatorName\":\"shuntCompensatorName3\",\"voltageLevelId\":\"idVL1\",\"busOrBusbarSectionId\":\"idBus1\"}";
 
-        when(rootNetworkNodeInfoRepository.existsByNodeUuidsAndBuildStatus(firstRootNetworkUuid, List.of(modificationNode1Uuid), BuildStatus.BUILDING)).thenReturn(true);
+        markNodeBuilding(studyNameUserIdUuid, firstRootNetworkUuid, modificationNode1Uuid);
         // create shunt compensator on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createShuntCompensatorAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -1069,10 +1073,7 @@ class NetworkModificationTest {
                 + "\"voltageLevelId1\":\"idVL1\"," + "\"busOrBusbarSectionId1\":\"idBus1\","
                 + "\"voltageLevelId2\":\"idVL2\"," + "\"busOrBusbarSectionId2\":\"idBus2\"}";
         // Mark the node 1 status as building
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid,
-                studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
-        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
+        markNodeBuilding(studyNameUserIdUuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid), modificationNode1Uuid);
         // create line on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createLineAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -1153,10 +1154,7 @@ class NetworkModificationTest {
                         + "\"magnetizingSusceptance\":\"100\",\"ratedVoltage1\":\"480\",\"ratedVoltage2\":\"380\",\"voltageLevelId1\":\"CHOO5P6\",\"busOrBusbarSectionId1\":\"CHOO5P6_1\","
                                 + "\"voltageLevelId2\":\"CHOO5P6\",\"busOrBusbarSectionId2\":\"CHOO5P6_1\"}";
         // Mark the node 1 status as building
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid,
-                studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
-        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
+        markNodeBuilding(studyNameUserIdUuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid), modificationNode1Uuid);
         // create Two Windings Transformer on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createTwoWindingsTransformerAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -1464,10 +1462,7 @@ class NetworkModificationTest {
                 + "\",\"loadId\":\"loadId3\",\"loadName\":\"loadName3\",\"loadType\":\"UNDEFINED\",\"activePower\":\"100.0\",\"reactivePower\":\"50.0\",\"voltageLevelId\":\"idVL1\","
                         + "\"busId\":\"idBus1\"}";
         // Mark the node 3 status as built
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo3Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode3Uuid,
-                studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        rootNetworkNodeInfo3Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
-        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo3Entity);
+        markNodeBuilding(studyNameUserIdUuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid), modificationNode3Uuid);
 
         // create load on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode3Uuid)
@@ -1662,10 +1657,7 @@ class NetworkModificationTest {
 
         String createSubstationAttributes2 = "{\"type\":\"" + ModificationType.SUBSTATION_CREATION + "\",\"substationId\":\"substationId2\",\"substationName\":\"substationName2\",\"country\":\"AD\"}";
         // Mark the node 1 status as built
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid,
-                studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
-        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
+        markNodeBuilding(studyNameUserIdUuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid), modificationNode1Uuid);
         // create substation on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createSubstationAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -1739,10 +1731,7 @@ class NetworkModificationTest {
         String createVoltageLevelAttributes2 = "{\"type\":\"" + ModificationType.VOLTAGE_LEVEL_CREATION + "\",\"voltageLevelId\":\"voltageLevelId3\",\"voltageLevelName\":\"voltageLevelName3\""
                 + ",\"nominalVoltage\":\"379.1\", \"substationId\":\"s2\"}";
         // Mark the node 1 status as building
-        RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(modificationNode1Uuid,
-                studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
-        rootNetworkNodeInfo1Entity.setNodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.BUILDING));
-        rootNetworkNodeInfoRepository.save(rootNetworkNodeInfo1Entity);
+        markNodeBuilding(studyNameUserIdUuid, studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid), modificationNode1Uuid);
         // create voltage level on building node
         mockMvc.perform(post(URI_NETWORK_MODIF, studyNameUserIdUuid, modificationNode1Uuid)
                         .content(createVoltageLevelAttributes2).contentType(MediaType.APPLICATION_JSON)
@@ -3065,7 +3054,7 @@ class NetworkModificationTest {
         WireMockUtils.verifyGetRequest(wireMockServer, profileStubId, "/v1/users/" + userId + "/quota/max", Map.of());
         assertEquals(BuildStatus.BUILT, networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).getGlobalBuildStatus());  // node is built
 
-        networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
+        markNodeBuilding(studyUuid, rootNetworkUuid, nodeUuid);
 
         // stop build
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build/stop", studyUuid, rootNetworkUuid, nodeUuid))
@@ -3309,7 +3298,7 @@ class NetworkModificationTest {
         mnBodyJson = jsonObject.toString();
 
         reset(studyService);
-        doNothing().when(studyService).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq(userId));
+        doReturn(List.of()).when(studyService).getRootNetworksToBuildAfterCreation(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).header(USER_ID_HEADER, userId).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk());
@@ -3322,7 +3311,7 @@ class NetworkModificationTest {
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).nodeBuildStatus(NodeBuildStatus.from(buildStatus)).build());
 
-        verify(studyService, times(1)).createNodePostAction(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class), eq(userId));
+        verify(studyService, times(1)).getRootNetworksToBuildAfterCreation(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         return modificationNode;
     }

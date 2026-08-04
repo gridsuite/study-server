@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.TIME_SERIES_BAD_TYPE;
 
 /**
@@ -226,11 +225,4 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         return dynamicSimulationClient.getResultsCount();
     }
 
-    @Override
-    public void assertDynamicSimulationNotRunning(UUID resultUuid) {
-        DynamicSimulationStatus status = getStatus(resultUuid);
-        if (DynamicSimulationStatus.RUNNING == status) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
-    }
 }

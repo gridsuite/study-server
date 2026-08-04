@@ -107,6 +107,7 @@ public class NotificationService {
     public static final String UPDATE_COMPUTATION_RESULT_GLOBAL_FILTER = "computationResultGlobalFilterUpdated";
 
     public static final String UPDATE_NETWORK_VISUALIZATION_PARAMETERS = "networkVisualizationParametersUpdated";
+    public static final String UPDATE_NODE_ACTIVITIES = "nodeActivitiesUpdated";
     public static final String UPDATE_SPREADSHEET_NODE_ALIASES = "nodeAliasesUpdated";
     public static final String UPDATE_SPREADSHEET_TAB = "spreadsheetTabUpdated";
     public static final String UPDATE_SPREADSHEET_COLLECTION = "spreadsheetCollectionUpdated";
@@ -227,6 +228,11 @@ public class NotificationService {
                 .setHeader(HEADER_COMPUTATION_TYPE, computationType)
                 .setHeader(HEADER_COMPUTATION_SUBTYPE, computationSubtype)
         );
+    }
+
+    @PostCompletion
+    public void emitNodeActivityUpdated(UUID studyUuid) {
+        sendStudyUpdateMessage(studyUuid, UPDATE_NODE_ACTIVITIES, MessageBuilder.withPayload(""));
     }
 
     @PostCompletion

@@ -12,16 +12,19 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
+import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.voltageinit.VoltageInitService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -35,11 +38,13 @@ public class VoltageInitController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
+    private final NodeActivityService nodeActivityService;
 
-    public VoltageInitController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService, VoltageInitService voltageInitService) {
+    public VoltageInitController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService, VoltageInitService voltageInitService, NodeActivityService nodeActivityService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;
+        this.nodeActivityService = nodeActivityService;
     }
 
     @PutMapping(value = "/run")
@@ -54,7 +59,8 @@ public class VoltageInitController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(VOLTAGE_INITIALIZATION, userId);
-        voltageInitService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug);
+        nodeActivityService.setNodeActivityUntilResult(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+            () -> voltageInitService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().build();
     }
 

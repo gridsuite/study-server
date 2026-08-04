@@ -105,9 +105,6 @@ public class RootNetworkNodeInfoEntity {
     @Column(name = "pccMinResultUuid")
     private UUID pccMinResultUuid;
 
-    @Column(name = "blockedNode")
-    private Boolean blockedNode;
-
     @Embedded
     @AttributeOverrides(value = {
         @AttributeOverride(name = "localBuildStatus", column = @Column(name = "localBuildStatus", nullable = false)),

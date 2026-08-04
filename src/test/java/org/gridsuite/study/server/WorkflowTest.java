@@ -12,8 +12,8 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
-import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.ConsumerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -60,6 +60,8 @@ class WorkflowTest {
     private NotificationService notificationService;
     @MockitoBean
     private LoadFlowService loadFlowService;
+    @MockitoBean
+    private NodeActivityService nodeActivityService;
 
     @Test
     void testConsumeBuildResultInRerunLoadFlowWorkflow() throws JsonProcessingException {
@@ -79,7 +81,8 @@ class WorkflowTest {
         MessageHeaders messageHeaders = new MessageHeaders(headers);
 
         when(networkModificationTreeService.getStudyUuidForNodeId(nodeUuid)).thenReturn(studyUuid);
-        when(networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid)).thenReturn(NodeBuildStatus.from(BuildStatus.BUILDING));
+        when(networkModificationTreeService.isSecurityNode(nodeUuid)).thenReturn(true);
+        when(nodeActivityService.isNodeActivityRunning(NodeActivityType.LOADFLOW_ON_SECURITY_NODE, rootNetworkUuid, nodeUuid)).thenReturn(true);
 
         // execute consume
         consumerService.consumeBuildResult().accept(MessageBuilder.createMessage(networkModificationResult, messageHeaders));
