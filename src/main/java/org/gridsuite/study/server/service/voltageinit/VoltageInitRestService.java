@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.voltageinit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,7 +18,8 @@ import org.gridsuite.study.server.dto.VoltageInitStatus;
 import org.gridsuite.study.server.dto.voltageinit.ContextInfos;
 import org.gridsuite.study.server.dto.voltageinit.parameters.VoltageInitParametersInfos;
 import org.gridsuite.study.server.error.StudyException;
-import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
@@ -38,7 +39,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
 @Service
-public class VoltageInitService extends AbstractComputationService implements ComputationParameters {
+public class VoltageInitRestService extends AbstractComputationRestService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
     static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
@@ -51,9 +52,9 @@ public class VoltageInitService extends AbstractComputationService implements Co
 
     private final RestTemplate restTemplate;
 
-    public VoltageInitService(RemoteServicesProperties remoteServicesProperties,
-                              RestTemplate restTemplate,
-                              ObjectMapper objectMapper) {
+    public VoltageInitRestService(RemoteServicesProperties remoteServicesProperties,
+                                  RestTemplate restTemplate,
+                                  ObjectMapper objectMapper) {
         this.voltageInitServerBaseUri = remoteServicesProperties.getServiceUri("voltage-init-server");
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;

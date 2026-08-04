@@ -14,7 +14,13 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
+import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -46,16 +52,16 @@ public class ComputationParametersService {
     ) {
     }
 
-    public ComputationParametersService(SecurityAnalysisService securityAnalysisService,
-                                        SensitivityAnalysisService sensitivityAnalysisService,
-                                        LoadFlowService loadFlowService,
-                                        ShortCircuitService shortCircuitService,
-                                        VoltageInitService voltageInitService,
+    public ComputationParametersService(SecurityAnalysisRestService securityAnalysisService,
+                                        SensitivityAnalysisRestService sensitivityAnalysisService,
+                                        LoadFlowRestService loadFlowRestService,
+                                        ShortCircuitRestService shortCircuitService,
+                                        VoltageInitRestService voltageInitService,
                                         DynamicSimulationService dynamicSimulationService,
                                         DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                                         DynamicMarginCalculationService dynamicMarginCalculationService,
-                                        StateEstimationService stateEstimationService,
-                                        PccMinService pccMinService,
+                                        StateEstimationRestService stateEstimationService,
+                                        PccMinRestService pccMinService,
                                         UserAdminService userAdminService) {
 
         this.userAdminService = userAdminService;
@@ -64,7 +70,7 @@ public class ComputationParametersService {
                         ComputationType.LOAD_FLOW,
                         StudyEntity::getLoadFlowParametersUuid,
                         UserProfileInfos::getLoadFlowParameterId,
-                        loadFlowService,
+                    loadFlowRestService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::loadFlowParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.SHORT_CIRCUIT,

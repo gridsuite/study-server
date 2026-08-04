@@ -31,10 +31,16 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.service.shortcircuit.ShortcircuitAnalysisType;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
+import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -62,36 +68,36 @@ public class RootNetworkNodeInfoService {
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
     private final StudyServerExecutionService studyServerExecutionService;
-    private final LoadFlowService loadFlowService;
-    private final SecurityAnalysisService securityAnalysisService;
-    private final SensitivityAnalysisService sensitivityAnalysisService;
-    private final ShortCircuitService shortCircuitService;
-    private final VoltageInitService voltageInitService;
+    private final LoadFlowRestService loadFlowRestService;
+    private final SecurityAnalysisRestService securityAnalysisService;
+    private final SensitivityAnalysisRestService sensitivityAnalysisService;
+    private final ShortCircuitRestService shortCircuitService;
+    private final VoltageInitRestService voltageInitService;
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
-    private final StateEstimationService stateEstimationService;
-    private final PccMinService pccMinService;
+    private final StateEstimationRestService stateEstimationService;
+    private final PccMinRestService pccMinService;
     private final ReportService reportService;
 
     public RootNetworkNodeInfoService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                                       NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                                       StudyServerExecutionService studyServerExecutionService,
-                                      LoadFlowService loadFlowService,
-                                      SecurityAnalysisService securityAnalysisService,
-                                      SensitivityAnalysisService sensitivityAnalysisService,
-                                      ShortCircuitService shortCircuitService,
-                                      VoltageInitService voltageInitService,
+                                      LoadFlowRestService loadFlowRestService,
+                                      SecurityAnalysisRestService securityAnalysisService,
+                                      SensitivityAnalysisRestService sensitivityAnalysisService,
+                                      ShortCircuitRestService shortCircuitService,
+                                      VoltageInitRestService voltageInitService,
                                       DynamicSimulationService dynamicSimulationService,
                                       DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
                                       DynamicMarginCalculationService dynamicMarginCalculationService,
-                                      StateEstimationService stateEstimationService,
-                                      PccMinService pccMinService,
+                                      StateEstimationRestService stateEstimationService,
+                                      PccMinRestService pccMinService,
                                       ReportService reportService) {
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.studyServerExecutionService = studyServerExecutionService;
-        this.loadFlowService = loadFlowService;
+        this.loadFlowRestService = loadFlowRestService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
@@ -612,7 +618,7 @@ public class RootNetworkNodeInfoService {
     public List<CompletableFuture<?>> getRemoteDeletions(RemoteDeletionInfos infos) {
         return List.of(
             studyServerExecutionService.runAsync(() -> reportService.deleteReports(infos.getReportUuids())),
-            studyServerExecutionService.runAsync(() -> loadFlowService.deleteLoadFlowResults(infos.getLoadFlowResultUuids())),
+            studyServerExecutionService.runAsync(() -> loadFlowRestService.deleteLoadFlowResults(infos.getLoadFlowResultUuids())),
             studyServerExecutionService.runAsync(() -> securityAnalysisService.deleteSecurityAnalysisResults(infos.getSecurityAnalysisResultUuids())),
             studyServerExecutionService.runAsync(() -> sensitivityAnalysisService.deleteSensitivityAnalysisResults(infos.getSensitivityAnalysisResultUuids())),
             studyServerExecutionService.runAsync(() -> shortCircuitService.deleteShortCircuitAnalysisResults(infos.getShortCircuitAnalysisResultUuids())),
@@ -671,7 +677,7 @@ public class RootNetworkNodeInfoService {
     }
 
     public void assertComputationNotRunning(UUID nodeUuid, UUID rootNetworkUuid) {
-        loadFlowService.assertLoadFlowNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW));
+        loadFlowRestService.assertLoadFlowNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW));
         securityAnalysisService.assertSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, SECURITY_ANALYSIS));
         dynamicSimulationService.assertDynamicSimulationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION));
         dynamicSecurityAnalysisService.assertDynamicSecurityAnalysisNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS));
@@ -690,7 +696,7 @@ public class RootNetworkNodeInfoService {
     @Transactional(readOnly = true)
     public String getLoadFlowResult(UUID nodeUuid, UUID rootNetworkUuid, String filters, Sort sort) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
-        return loadFlowService.getLoadFlowResult(resultUuid, filters, sort);
+        return loadFlowRestService.getLoadFlowResult(resultUuid, filters, sort);
     }
 
     @Transactional(readOnly = true)
@@ -833,7 +839,7 @@ public class RootNetworkNodeInfoService {
 
     private LoadFlowStatus getBasicLoadFlowStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
-        return loadFlowService.getLoadFlowStatus(resultUuid);
+        return loadFlowRestService.getLoadFlowStatus(resultUuid);
     }
 
     public LoadFlowComputationInfos getLoadFlowComputationInfos(UUID nodeUuid, UUID rootNetworkUuid) {
@@ -853,7 +859,7 @@ public class RootNetworkNodeInfoService {
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result of loadflow was not found");
         }
-        return loadFlowService.getLoadFlowModifications(resultUuid);
+        return loadFlowRestService.getLoadFlowModifications(resultUuid);
     }
 
     @Transactional(readOnly = true)
@@ -920,7 +926,7 @@ public class RootNetworkNodeInfoService {
     @Transactional
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, String userId) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
-        loadFlowService.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
+        loadFlowRestService.stopLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, resultUuid, userId);
     }
 
     @Transactional

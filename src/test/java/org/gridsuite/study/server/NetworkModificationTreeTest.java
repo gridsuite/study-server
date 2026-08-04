@@ -47,7 +47,12 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -143,7 +148,7 @@ class NetworkModificationTreeTest {
     private NetworkModificationService networkModificationService;
 
     @Autowired
-    private SensitivityAnalysisService sensitivityAnalysisService;
+    private SensitivityAnalysisRestService sensitivityAnalysisService;
 
     @Autowired
     private NetworkMapService networkMapService;
@@ -152,22 +157,22 @@ class NetworkModificationTreeTest {
     private ReportService reportService;
 
     @Autowired
-    private SecurityAnalysisService securityAnalysisService;
+    private SecurityAnalysisRestService securityAnalysisService;
 
     @Autowired
-    private ShortCircuitService shortCircuitService;
+    private ShortCircuitRestService shortCircuitService;
 
     @Autowired
-    private StateEstimationService stateEstimationService;
+    private StateEstimationRestService stateEstimationService;
 
     @Autowired
-    private PccMinService pccMinService;
+    private PccMinRestService pccMinService;
 
     @Autowired
     private SingleLineDiagramService singleLineDiagramService;
 
     @Autowired
-    private LoadFlowService loadflowService;
+    private LoadFlowRestService loadflowRestService;
 
     @Autowired
     private GeoDataService geoDataService;
@@ -265,7 +270,7 @@ class NetworkModificationTreeTest {
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
         geoDataService.setGeoDataServerBaseUri(baseUrl);
         networkMapService.setNetworkMapServerBaseUri(baseUrl);
-        loadflowService.setLoadFlowServerBaseUri(baseUrl);
+        loadflowRestService.setLoadFlowServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         actionsService.setActionsServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);

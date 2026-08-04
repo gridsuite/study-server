@@ -18,6 +18,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.ConsumerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +58,8 @@ class WorkflowTest {
     private StudyService studyService;
     @MockitoBean
     private NotificationService notificationService;
+    @MockitoBean
+    private LoadFlowService loadFlowService;
 
     @Test
     void testConsumeBuildResultInRerunLoadFlowWorkflow() throws JsonProcessingException {
@@ -111,6 +114,6 @@ class WorkflowTest {
 
         // check loadflow is actually ran after build is completed
         verify(notificationService, times(1)).emitNodeBuildFailed(studyUuid, nodeUuid, rootNetworkUuid, errorMessage);
-        verify(studyService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid);
+        verify(loadFlowService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid);
     }
 }
