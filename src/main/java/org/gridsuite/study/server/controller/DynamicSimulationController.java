@@ -6,52 +6,35 @@
  */
 package org.gridsuite.study.server.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.springframework.core.io.Resource;
-import org.springframework.http.MediaType;
+import org.gridsuite.study.server.service.proxy.EntryPointAuthorization;
+import org.gridsuite.study.server.service.proxy.TransparentProxyService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.UUID;
+import java.util.List;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/dynamic-simulation")
 public class DynamicSimulationController {
-    private final DynamicSimulationClient dynamicSimulationClient;
-    private final DynamicSimulationService dynamicSimulationService;
+    private static final String DOWNSTREAM_SERVICE = "dynamic-simulation-server";
 
-    public DynamicSimulationController(DynamicSimulationClient dynamicSimulationClient,
-                                       DynamicSimulationService dynamicSimulationService) {
-        this.dynamicSimulationClient = dynamicSimulationClient;
-        this.dynamicSimulationService = dynamicSimulationService;
+    private final TransparentProxyService transparentProxyService;
+    private final List<EntryPointAuthorization> authorizationChecks;
+
+    public DynamicSimulationController(TransparentProxyService transparentProxyService,
+                                       List<EntryPointAuthorization> authorizationChecks) {
+        this.transparentProxyService = transparentProxyService;
+        this.authorizationChecks = authorizationChecks;
     }
 
-    @GetMapping(value = "/providers", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> getProviders() {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicSimulationService.getProviders());
-    }
-
-    @GetMapping(value = "/parameters/{parameterUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> getParameters(@PathVariable UUID parameterUuid) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicSimulationService.getParameters(parameterUuid));
-    }
-
-    @PutMapping(value = "/parameters/{parameterUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Void> updateParameters(@PathVariable UUID parameterUuid,
-                                                @RequestBody String parameters) {
-        dynamicSimulationService.updateParameters(parameterUuid, parameters);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/results/{resultUuid}/download-debug-file", produces = "application/json")
-    public ResponseEntity<Resource> downloadDebugFile(@PathVariable UUID resultUuid) {
-        return dynamicSimulationClient.downloadDebugFile(resultUuid);
+    @RequestMapping("/**")
+    public ResponseEntity<byte[]> forward(HttpServletRequest request,
+                                          @RequestBody(required = false) byte[] body) {
+        authorizationChecks.forEach(authorization -> authorization.authorize(request));
+        return transparentProxyService.forward(DOWNSTREAM_SERVICE, request, body);
     }
 }

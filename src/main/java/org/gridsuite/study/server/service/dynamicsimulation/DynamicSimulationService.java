@@ -26,8 +26,6 @@ public interface DynamicSimulationService extends ComputationParameters {
 
     // --- Parameters related methods --- //
 
-    String getProviders();
-
     String getProvider(UUID parametersUuid);
 
     String getParameters(UUID parametersUuid);
