@@ -15,15 +15,20 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
+import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSIS;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
@@ -38,6 +43,9 @@ public abstract class AbstractComputationService {
     protected final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     protected final RootNetworkService rootNetworkService;
     protected final ComputationParametersService computationParametersService;
+
+    protected SecurityAnalysisRestService securityAnalysisRestService = null;
+    protected SensitivityAnalysisRestService sensitivityAnalysisRestService = null;
 
     protected AbstractComputationService(StudyRepository studyRepository, NotificationService notificationService,
                                          NetworkModificationTreeService networkModificationTreeService,
@@ -115,5 +123,15 @@ public abstract class AbstractComputationService {
 
     protected void updateComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID computationResultUuid, ComputationType computationType) {
         rootNetworkNodeInfoService.updateComputationResultUuid(nodeUuid, rootNetworkUuid, computationResultUuid, computationType);
+    }
+
+    protected void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
+        Objects.nonNull(securityAnalysisRestService);
+        securityAnalysisRestService.invalidateSaStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
+    }
+
+    public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
+        Objects.nonNull(sensitivityAnalysisRestService);
+        sensitivityAnalysisRestService.invalidateSensitivityAnalysisStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
     }
 }

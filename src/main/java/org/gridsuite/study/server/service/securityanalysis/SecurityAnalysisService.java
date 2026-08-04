@@ -34,7 +34,6 @@ import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
 @Service
 public class SecurityAnalysisService extends AbstractComputationService {
 
-    private final SecurityAnalysisRestService securityAnalysisRestService;
     private final ObjectMapper objectMapper;
     private final UserAdminService userAdminService;
 
@@ -114,9 +113,4 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS
         );
     }
-
-    public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        securityAnalysisRestService.invalidateSaStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
-    }
-
 }

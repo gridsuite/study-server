@@ -31,7 +31,6 @@ import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSI
 @Service
 public class SensitivityAnalysisService extends AbstractComputationService {
 
-    private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
     private final UserAdminService userAdminService;
     private final DirectoryService directoryService;
 
@@ -73,10 +72,6 @@ public class SensitivityAnalysisService extends AbstractComputationService {
                 List.of(this::invalidateSensitivityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS
         );
-    }
-
-    public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        sensitivityAnalysisRestService.invalidateSensitivityAnalysisStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
     }
 
     @Transactional

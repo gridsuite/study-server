@@ -21,6 +21,8 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,9 +45,13 @@ public class LoadFlowService extends AbstractComputationService {
                            ComputationParametersService computationParametersService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            NetworkModificationTreeService networkModificationTreeService,
-                           RootNetworkService rootNetworkService) {
+                           RootNetworkService rootNetworkService,
+                           SecurityAnalysisRestService securityAnalysisRestService,
+                           SensitivityAnalysisRestService sensitivityAnalysisRestService) {
         super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
         this.loadflowRestService = loadflowRestService;
+        this.securityAnalysisRestService = securityAnalysisRestService;
+        this.sensitivityAnalysisRestService = sensitivityAnalysisRestService;
     }
 
     @Transactional
@@ -107,9 +113,9 @@ public class LoadFlowService extends AbstractComputationService {
             loadflowRestService::updateLoadFlowParameters,
             LOAD_FLOW,
             List.of(
-                this::invalidateAllStudyLoadFlowStatus
-            //this::invalidateSecurityAnalysisStatusOnAllNodes,
-            //this::invalidateSensitivityAnalysisStatusOnAllNodes,
+                this::invalidateAllStudyLoadFlowStatus,
+                this::invalidateSecurityAnalysisStatusOnAllNodes,
+                this::invalidateSensitivityAnalysisStatusOnAllNodes
             //this::invalidateDynamicSimulationStatusOnAllNodes,
             //this::invalidateDynamicSecurityAnalysisStatusOnAllNodes,
             // this::invalidateDynamicMarginCalculationStatusOnAllNodes
