@@ -9,7 +9,6 @@ package org.gridsuite.study.server.service.client.networkconversion;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.StudyApplication;
 import org.gridsuite.study.server.service.NetworkConversionService;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -25,7 +24,6 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
-
 
 @AutoConfigureMockMvc
 @SpringBootTest
