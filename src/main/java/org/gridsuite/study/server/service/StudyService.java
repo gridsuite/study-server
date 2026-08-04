@@ -130,6 +130,7 @@ public class StudyService {
     private final NetworkMapService networkMapService;
     private final SecurityAnalysisRestService securityAnalysisRestService;
     private final SecurityAnalysisService securityAnalysisService;
+    private final DynamicMappingService dynamicMappingService;
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
     private final SensitivityAnalysisService sensitivityAnalysisService;
@@ -174,44 +175,44 @@ public class StudyService {
 
     @Autowired
     public StudyService(
-            StudyRepository studyRepository,
-            StudyCreationRequestRepository studyCreationRequestRepository,
-            NetworkService networkStoreService,
-            NetworkModificationService networkModificationService,
-            ReportService reportService,
-            UserAdminService userAdminService,
-            StudyInfosService studyInfosService,
-            EquipmentInfosService equipmentInfosService,
-            NetworkModificationTreeService networkModificationTreeService,
-            ObjectMapper objectMapper,
-            StudyServerExecutionService studyServerExecutionService,
-            NotificationService notificationService,
-            LoadFlowRestService loadflowRestService,
-            LoadFlowService loadFlowService,
-            ShortCircuitRestService shortCircuitService,
-            SingleLineDiagramService singleLineDiagramService,
-            NetworkConversionService networkConversionService,
-            GeoDataService geoDataService,
-            NetworkMapService networkMapService,
-            SecurityAnalysisRestService securityAnalysisRestService,
-            SecurityAnalysisService securityAnalysisService,
-            ActionsService actionsService,
-            CaseService caseService,
-            DynamicSimulationRestService dynamicSimulationRestService,
-            VoltageInitRestService voltageInitService,
-            DynamicMarginCalculationService dynamicMarginCalculationService,
-            SensitivityAnalysisService sensitivityAnalysisService,
-            DynamicSimulationEventService dynamicSimulationEventService,
-            StudyConfigService studyConfigService,
-            NadConfigService nadConfigService,
-            FilterService filterService,
-            @Lazy StudyService studyService,
-            RootNetworkService rootNetworkService,
-            RootNetworkNodeInfoService rootNetworkNodeInfoService,
-            DirectoryService directoryService,
-            ComputationParametersService computationParametersService,
-            DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-            DynamicSimulationService dynamicSimulationService) {
+        StudyRepository studyRepository,
+        StudyCreationRequestRepository studyCreationRequestRepository,
+        NetworkService networkStoreService,
+        NetworkModificationService networkModificationService,
+        ReportService reportService,
+        UserAdminService userAdminService,
+        StudyInfosService studyInfosService,
+        EquipmentInfosService equipmentInfosService,
+        NetworkModificationTreeService networkModificationTreeService,
+        ObjectMapper objectMapper,
+        StudyServerExecutionService studyServerExecutionService,
+        NotificationService notificationService,
+        LoadFlowRestService loadflowRestService,
+        LoadFlowService loadFlowService,
+        ShortCircuitRestService shortCircuitService,
+        SingleLineDiagramService singleLineDiagramService,
+        NetworkConversionService networkConversionService,
+        GeoDataService geoDataService,
+        NetworkMapService networkMapService,
+        SecurityAnalysisRestService securityAnalysisRestService,
+        SecurityAnalysisService securityAnalysisService,
+        ActionsService actionsService,
+        CaseService caseService,
+        DynamicMappingService dynamicMappingService,
+        DynamicSimulationService dynamicSimulationService,
+        DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+        DynamicMarginCalculationService dynamicMarginCalculationService,
+        VoltageInitRestService voltageInitService,
+        SensitivityAnalysisService sensitivityAnalysisService,
+        DynamicSimulationEventService dynamicSimulationEventService,
+        StudyConfigService studyConfigService,
+        NadConfigService nadConfigService,
+        FilterService filterService,
+        @Lazy StudyService studyService,
+        RootNetworkService rootNetworkService,
+        RootNetworkNodeInfoService rootNetworkNodeInfoService,
+        DirectoryService directoryService,
+        ComputationParametersService computationParametersService) {
         this.studyRepository = studyRepository;
         this.studyCreationRequestRepository = studyCreationRequestRepository;
         this.networkStoreService = networkStoreService;
@@ -234,6 +235,10 @@ public class StudyService {
         this.securityAnalysisRestService = securityAnalysisRestService;
         this.actionsService = actionsService;
         this.caseService = caseService;
+        this.dynamicMappingService = dynamicMappingService;
+        this.dynamicSimulationService = dynamicSimulationService;
+        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
+        this.dynamicMarginCalculationService = dynamicMarginCalculationService;
         this.voltageInitService = voltageInitService;
         this.dynamicMarginCalculationService = dynamicMarginCalculationService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
