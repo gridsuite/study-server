@@ -23,7 +23,6 @@ import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
-import org.gridsuite.study.server.service.client.networkconversion.NetworkConversionClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.Resource;
@@ -46,7 +45,6 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NETWORK_EX
 public class NetworkConversionService {
 
     private final RestTemplate restTemplate;
-    private final NetworkConversionClient networkConversionClient;
 
     @Setter
     @Getter
@@ -56,12 +54,10 @@ public class NetworkConversionService {
 
     public NetworkConversionService(@Value("${powsybl.services.network-conversion-server.base-uri:http://network-conversion-server/}") String networkConversionServerBaseUri,
             ObjectMapper objectMapper,
-            RestTemplate restTemplate,
-            NetworkConversionClient networkConversionClient) {
+            RestTemplate restTemplate) {
         this.networkConversionServerBaseUri = networkConversionServerBaseUri;
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;
-        this.networkConversionClient = networkConversionClient;
     }
 
     /**
@@ -185,7 +181,9 @@ public class NetworkConversionService {
     }
 
     public String getCaseImportParameters(UUID caseUuid) {
-        return networkConversionClient.getCaseImportParameters(caseUuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/cases/{caseUuid}/import-parameters")
+            .buildAndExpand(caseUuid).toUriString();
+        return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.GET, null, String.class).getBody();
     }
 
 }

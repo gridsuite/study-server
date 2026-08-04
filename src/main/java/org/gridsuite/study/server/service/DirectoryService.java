@@ -13,13 +13,9 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.ElementAttributes;
 import org.gridsuite.study.server.dto.ReferenceAttributes;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
-import org.gridsuite.study.server.service.client.directory.DirectoryClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -42,17 +38,15 @@ public class DirectoryService {
     public static final String PARAM_RECURSIVE_CHECK = "recursiveCheck";
 
     private final RestTemplate restTemplate;
-    private final DirectoryClient directoryClient;
 
     @Setter
     @Getter
     private String directoryServerServerBaseUri;
 
     @Autowired
-    public DirectoryService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate, DirectoryClient directoryClient) {
+    public DirectoryService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.directoryServerServerBaseUri = remoteServicesProperties.getServiceUri("directory-server");
         this.restTemplate = restTemplate;
-        this.directoryClient = directoryClient;
     }
 
     public String getElementName(UUID elementUuid) {
@@ -93,11 +87,26 @@ public class DirectoryService {
     }
 
     public String getElements(List<UUID> elementUuids, List<String> elementTypes, boolean strictMode, String userId) {
-        return directoryClient.getElements(elementUuids, elementTypes, strictMode, userId);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements")
+            .queryParam("ids", elementUuids)
+            .queryParam("elementTypes", elementTypes)
+            .queryParam("strictMode", strictMode)
+            .build().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
     }
 
     public boolean elementExists(UUID directoryUuid, String elementName, String type) {
-        return directoryClient.elementExists(directoryUuid, elementName, type);
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements/{elementName}/types/{type}");
+        String path = pathBuilder.buildAndExpand(directoryUuid, elementName, type).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+        ResponseEntity<Void> response = restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.HEAD, request, Void.class);
+        return response.getStatusCode() == HttpStatus.OK;
     }
 
     /**
