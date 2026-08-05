@@ -133,6 +133,7 @@ public class StudyService {
     private final NetworkMapService networkMapService;
     private final SecurityAnalysisRestService securityAnalysisRestService;
     private final SecurityAnalysisService securityAnalysisService;
+    private final DynamicMappingService dynamicMappingService;
     private final DynamicSimulationService dynamicSimulationService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
@@ -201,6 +202,7 @@ public class StudyService {
         SecurityAnalysisService securityAnalysisService,
         ActionsService actionsService,
         CaseService caseService,
+        DynamicMappingService dynamicMappingService,
         DynamicSimulationService dynamicSimulationService,
         DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
         DynamicMarginCalculationService dynamicMarginCalculationService,
@@ -237,6 +239,7 @@ public class StudyService {
         this.securityAnalysisRestService = securityAnalysisRestService;
         this.actionsService = actionsService;
         this.caseService = caseService;
+        this.dynamicMappingService = dynamicMappingService;
         this.dynamicSimulationService = dynamicSimulationService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
         this.dynamicMarginCalculationService = dynamicMarginCalculationService;
@@ -2748,6 +2751,27 @@ public class StudyService {
                 .map(StudyVoltageInitParametersEntity::shouldApplyModifications)
                 .orElse(true);
     }
+
+    @Transactional(readOnly = true)
+    public UUID getFirstNetworkUuid(UUID studyUuid) {
+        return studyRepository.findWithRootNetworksById(studyUuid)
+                .map(study -> study.getFirstRootNetwork().getNetworkUuid())
+                .orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
+    }
+
+    // --- Dynamic Mapping service methods BEGIN --- //
+
+    public String getNetworkValuesFromStudy(UUID studyUuid) {
+        UUID networkUuid = this.self.getFirstNetworkUuid(studyUuid);
+        return dynamicMappingService.getNetworkValues(networkUuid);
+    }
+
+    public String getNetworkMatchesFromStudy(UUID studyUuid, String ruleToMatch) {
+        UUID networkUuid = this.self.getFirstNetworkUuid(studyUuid);
+        return dynamicMappingService.getNetworkMatches(networkUuid, ruleToMatch);
+    }
+
+    // --- Dynamic Mapping service methods END --- //
 
     // --- Dynamic Simulation service methods BEGIN --- //
 

@@ -1130,6 +1130,17 @@ public class StudyController {
                 .body(studyService.searchModifications(rootNetworkUuid, userInput));
     }
 
+    @GetMapping(value = "/nodes/infos", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the name and the study of each given node")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Infos of the found nodes, unknown nodes are omitted"),
+    })
+    public ResponseEntity<List<NodeInfos>> getNodesInfos(
+            @Parameter(description = "Node UUIDs") @RequestParam("ids") List<UUID> nodeUuids) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(networkModificationTreeService.getNodesInfos(nodeUuids));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
     @Operation(summary = "Create a node as before / after the given node ID")
     @ApiResponses(value = {
@@ -1375,6 +1386,24 @@ public class StudyController {
         studyService.notify(studyUuid);
         return ResponseEntity.ok().build();
     }
+
+    // --- Dynamic Mapping Endpoints BEGIN --- //
+
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-mapping/network/values")
+    @Operation(summary = "Fetch attribute values of the first root network of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of attribute values of the first root network")})
+    public ResponseEntity<String> getNetworkValuesFromStudy(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkValuesFromStudy(studyUuid));
+    }
+
+    @PostMapping(value = "/studies/{studyUuid}/dynamic-mapping/network/matches/rule")
+    @Operation(summary = "Get the equipment ids that matches the given rule.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Equipment ids that matches the given rule")})
+    public ResponseEntity<String> getNetworkMatchesFromStudy(@PathVariable("studyUuid") UUID studyUuid, @RequestBody String ruleToMatch) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkMatchesFromStudy(studyUuid, ruleToMatch));
+    }
+
+    // --- Dynamic Mapping Endpoints END --- //
 
     // --- Dynamic Simulation Endpoints BEGIN --- //
 
