@@ -7,6 +7,7 @@
 package org.gridsuite.study.server;
 
 import lombok.AllArgsConstructor;
+import org.gridsuite.study.server.utils.PathPatternUtils;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -29,7 +30,7 @@ public class StudyWebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(studyAccessInterceptor)
-            .addPathPatterns("/" + StudyApi.API_VERSION + "/studies/{studyUuid}",
-                "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/**");
+            .addPathPatterns("/" + StudyApi.API_VERSION + "/studies/" + PathPatternUtils.uuidVariable("studyUuid"),
+                "/" + StudyApi.API_VERSION + "/studies/" + PathPatternUtils.uuidVariable("studyUuid") + "/**");
     }
 }

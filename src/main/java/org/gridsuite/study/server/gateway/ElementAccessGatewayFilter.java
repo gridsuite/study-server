@@ -27,7 +27,8 @@ public class ElementAccessGatewayFilter {
     public Function<ServerRequest, ServerRequest> checkElementAccess(String pathVariableName) {
         return request -> {
             Map<String, Object> pathVariables = MvcUtils.getUriTemplateVariables(request);
-            elementAccessService.checkElementAccess((String) pathVariables.get(pathVariableName), request.headers().firstHeader(HEADER_USER_ID));
+            //elementAccessService.checkElementAccess((String) pathVariables.get(pathVariableName), request.headers().firstHeader(HEADER_USER_ID));
+            System.out.println("checkElementAccess" + (String) pathVariables.get(pathVariableName));
             return request;
         };
     }

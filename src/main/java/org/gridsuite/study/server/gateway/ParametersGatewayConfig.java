@@ -14,7 +14,7 @@ import org.springframework.web.servlet.function.ServerResponse;
 
 import java.net.URI;
 
-import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.uri;
+import static org.springframework.cloud.gateway.server.mvc.filter.BeforeFilterFunctions.*;
 import static org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions.route;
 import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions.http;
 
@@ -33,12 +33,20 @@ public class ParametersGatewayConfig {
             .GET(API_PREFIX + "/loadflow/specific-parameters", http())
             .GET(API_PREFIX + "/loadflow/parameters/default-limit-reductions", http())
             .before(uri(uri))
+            .before(rewritePath(
+                API_PREFIX + "/loadflow/(?<remaining>.*)",
+                API_PREFIX + "/${remaining}"
+            ))
             .build()
             .and(route("secured_loadflow_parameters_forwarding")
                 .GET(API_PREFIX + "/loadflow/parameters/{parameterUuid}", http())
                 .PUT(API_PREFIX + "/loadflow/parameters/{parameterUuid}", http())
                 .before(uri(uri))
                 .before(accessFilter.checkElementAccess(PARAMETER_UUID))
+                .before(rewritePath(
+                    API_PREFIX + "/loadflow/(?<remaining>.*)",
+                    API_PREFIX + "/${remaining}"
+                ))
                 .build());
     }
 
