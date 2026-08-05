@@ -18,6 +18,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
+import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadRestService;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -85,7 +86,7 @@ public class SupervisionService {
 
     private final PccMinRestService pccMinService;
 
-    private final AsymmetricalLoadService asymmetricalLoadService;
+    private final AsymmetricalLoadRestService asymmetricalLoadRestService;
 
     private final ElasticsearchOperations elasticsearchOperations;
 
@@ -110,7 +111,7 @@ public class SupervisionService {
                               ShortCircuitRestService shortCircuitService,
                               VoltageInitRestService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
-                              AsymmetricalLoadService asymmetricalLoadService,
+                              AsymmetricalLoadRestService asymmetricalLoadRestService,
                               StateEstimationRestService stateEstimationService,
                               PccMinRestService pccMinService,
                               ElasticsearchOperations elasticsearchOperations,
@@ -133,7 +134,7 @@ public class SupervisionService {
         this.equipmentInfosService = equipmentInfosService;
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
-        this.asymmetricalLoadService = asymmetricalLoadService;
+        this.asymmetricalLoadRestService = asymmetricalLoadRestService;
         this.elasticsearchOperations = elasticsearchOperations;
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
@@ -164,7 +165,7 @@ public class SupervisionService {
             case PCC_MIN ->
                 dryRun ? pccMinService.getPccMinResultsCount() : deletePccMinResults();
             case ASYMMETRICAL_LOAD ->
-                dryRun ? asymmetricalLoadService.getAsymmetricalLoadResultsCount() : deleteAsymmetricalLoadResults();
+                dryRun ? asymmetricalLoadRestService.getAsymmetricalLoadResultsCount() : deleteAsymmetricalLoadResults();
         };
     }
 
@@ -384,7 +385,7 @@ public class SupervisionService {
             rootNetworkNodeInfo.getComputationReports().remove(ComputationType.ASYMMETRICAL_LOAD.name());
         });
         reportService.deleteReports(reportsToDelete);
-        asymmetricalLoadService.deleteAllAsymmetricalLoadResults();
+        asymmetricalLoadRestService.deleteAllAsymmetricalLoadResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.ASYMMETRICAL_LOAD, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeInfoEntities.size();
     }

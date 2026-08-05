@@ -27,6 +27,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadRestService;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -143,7 +144,7 @@ class AsymmetricalLoadTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
     @MockitoSpyBean
-    private AsymmetricalLoadService asymmetricalLoadService;
+    private AsymmetricalLoadRestService asymmetricalLoadRestService;
     @Autowired
     private StudyRepository studyRepository;
     @Autowired
@@ -176,7 +177,7 @@ class AsymmetricalLoadTest {
         configureFor("localhost", wireMockServer.port());
         String baseUrl = wireMockServer.baseUrl();
 
-        asymmetricalLoadService.setPccMinServerBaseUri(baseUrl);
+        asymmetricalLoadRestService.setPccMinServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 
@@ -519,7 +520,7 @@ class AsymmetricalLoadTest {
         );
         PageRequest pageRequest = PageRequest.of(0, 20);
         assertThrows(HttpClientErrorException.NotFound.class, () ->
-            asymmetricalLoadService.getAsymmetricalLoadResultsPage(params, null, null, pageRequest)
+            asymmetricalLoadRestService.getAsymmetricalLoadResultsPage(params, null, null, pageRequest)
         );
         wireMockServer.resetRequests();
 
@@ -531,7 +532,7 @@ class AsymmetricalLoadTest {
             null,
             null
         );
-        String result = asymmetricalLoadService.getAsymmetricalLoadResultsPage(params2, null, null, PageRequest.of(0, 20));
+        String result = asymmetricalLoadRestService.getAsymmetricalLoadResultsPage(params2, null, null, PageRequest.of(0, 20));
         assertNull(result);
         wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlMatching("/v1/asymmetrical-load/results/.*")));
     }
@@ -599,7 +600,7 @@ class AsymmetricalLoadTest {
 
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> asymmetricalLoadService.getAsymmetricalLoadParameters(wrongParamUuid)
+            () -> asymmetricalLoadRestService.getAsymmetricalLoadParameters(wrongParamUuid)
         );
     }
 
@@ -620,7 +621,7 @@ class AsymmetricalLoadTest {
             .willReturn(WireMock.notFound()));
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> asymmetricalLoadService.updateAsymmetricalLoadParameters(wrongParamUuid, "parameterToUpdate")
+            () -> asymmetricalLoadRestService.updateAsymmetricalLoadParameters(wrongParamUuid, "parameterToUpdate")
         );
     }
 
@@ -632,7 +633,7 @@ class AsymmetricalLoadTest {
         wireMockServer.stubFor(post(urlPathEqualTo("/v1/asymmetrical-load/parameters"))
             .willReturn(okJson("\"" + expectedUuid + "\"")));
 
-        UUID paramUuid = asymmetricalLoadService.createAsymmetricalLoadParameters(parameterToCreate);
+        UUID paramUuid = asymmetricalLoadRestService.createAsymmetricalLoadParameters(parameterToCreate);
 
         assertEquals(expectedUuid, paramUuid);
         wireMockServer.verify(postRequestedFor(urlPathEqualTo("/v1/asymmetrical-load/parameters"))
@@ -643,7 +644,7 @@ class AsymmetricalLoadTest {
             .willReturn(notFound()));
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> asymmetricalLoadService.createAsymmetricalLoadParameters(parameterToCreate)
+            () -> asymmetricalLoadRestService.createAsymmetricalLoadParameters(parameterToCreate)
         );
     }
 
@@ -677,7 +678,7 @@ class AsymmetricalLoadTest {
             .willReturn(WireMock.notFound()));
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> asymmetricalLoadService.createDefaultParameters()
+            () -> asymmetricalLoadRestService.createDefaultParameters()
         );
     }
 
@@ -723,8 +724,8 @@ class AsymmetricalLoadTest {
 
         // test csv failure
         assertThrows(HttpClientErrorException.NotFound.class, () ->
-            asymmetricalLoadService.exportAsymmetricalLoadResultsAsCsv(notFoundUuid, "", null, null, Sort.unsorted(), null, null));
+            asymmetricalLoadRestService.exportAsymmetricalLoadResultsAsCsv(notFoundUuid, "", null, null, Sort.unsorted(), null, null));
         assertThrows(StudyException.class, () ->
-            asymmetricalLoadService.exportAsymmetricalLoadResultsAsCsv(null, "", null, null, Sort.unsorted(), null, null));
+            asymmetricalLoadRestService.exportAsymmetricalLoadResultsAsCsv(null, "", null, null, Sort.unsorted(), null, null));
     }
 }

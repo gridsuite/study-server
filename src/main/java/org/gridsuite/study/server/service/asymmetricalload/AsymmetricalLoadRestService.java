@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.asymmetricalload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,7 +17,8 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.RunAsymmetricalLoadParametersInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.StudyUtils;
@@ -49,7 +50,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
  * @author Etienne Lesot <etienne.lesot at rte-france.com>
  */
 @Service
-public class AsymmetricalLoadService extends AbstractComputationService implements ComputationParameters {
+public class AsymmetricalLoadRestService extends AbstractComputationRestService implements ComputationParameters {
     static final String RESULT_UUID = "resultUuid";
     static final String RESULTS = "results";
     static final String BUS_ID = "busId";
@@ -66,8 +67,8 @@ public class AsymmetricalLoadService extends AbstractComputationService implemen
     private String pccMinServerBaseUri;
 
     @Autowired
-    public AsymmetricalLoadService(RemoteServicesProperties remoteServicesProperties,
-                                   ObjectMapper objectMapper, RestTemplate restTemplate) {
+    public AsymmetricalLoadRestService(RemoteServicesProperties remoteServicesProperties,
+                                       ObjectMapper objectMapper, RestTemplate restTemplate) {
         this.pccMinServerBaseUri = remoteServicesProperties.getServiceUri("pcc-min-server");
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;

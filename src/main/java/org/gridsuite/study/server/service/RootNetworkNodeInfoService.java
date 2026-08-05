@@ -28,6 +28,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
+import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadRestService;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -79,7 +80,7 @@ public class RootNetworkNodeInfoService {
     private final StateEstimationRestService stateEstimationService;
     private final PccMinRestService pccMinService;
     private final ReportService reportService;
-    private final AsymmetricalLoadService asymmetricalLoadService;
+    private final AsymmetricalLoadRestService asymmetricalLoadRestService;
 
     public RootNetworkNodeInfoService(RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                                       NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
@@ -94,7 +95,7 @@ public class RootNetworkNodeInfoService {
                                       DynamicMarginCalculationService dynamicMarginCalculationService,
                                       StateEstimationRestService stateEstimationService,
                                       PccMinRestService pccMinService,
-                                      AsymmetricalLoadService asymmetricalLoadService,
+                                      AsymmetricalLoadRestService asymmetricalLoadRestService,
                                       ReportService reportService) {
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
@@ -110,7 +111,7 @@ public class RootNetworkNodeInfoService {
         this.stateEstimationService = stateEstimationService;
         this.pccMinService = pccMinService;
         this.reportService = reportService;
-        this.asymmetricalLoadService = asymmetricalLoadService;
+        this.asymmetricalLoadRestService = asymmetricalLoadRestService;
     }
 
     public void createRootNetworkLinks(@NonNull UUID studyUuid, @NonNull RootNetworkEntity rootNetworkEntity) {
@@ -640,7 +641,7 @@ public class RootNetworkNodeInfoService {
             studyServerExecutionService.runAsync(() -> dynamicMarginCalculationService.deleteResults(infos.getDynamicMarginCalculationResultUuids())),
             studyServerExecutionService.runAsync(() -> stateEstimationService.deleteStateEstimationResults(infos.getStateEstimationResultUuids())),
             studyServerExecutionService.runAsync(() -> pccMinService.deletePccMinResults(infos.getPccMinResultUuids())),
-            studyServerExecutionService.runAsync(() -> asymmetricalLoadService.deleteAsymmetricalLoadResults(infos.getAsymmetricalLoadResultUuids()))
+            studyServerExecutionService.runAsync(() -> asymmetricalLoadRestService.deleteAsymmetricalLoadResults(infos.getAsymmetricalLoadResultUuids()))
         );
     }
 
@@ -701,7 +702,7 @@ public class RootNetworkNodeInfoService {
         voltageInitService.assertVoltageInitNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, VOLTAGE_INITIALIZATION));
         stateEstimationService.assertStateEstimationNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, STATE_ESTIMATION));
         pccMinService.assertPccMinNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN));
-        asymmetricalLoadService.assertAsymmetricalLoadNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, ASYMMETRICAL_LOAD));
+        asymmetricalLoadRestService.assertAsymmetricalLoadNotRunning(getComputationResultUuid(nodeUuid, rootNetworkUuid, ASYMMETRICAL_LOAD));
     }
 
     /***************************
@@ -789,7 +790,7 @@ public class RootNetworkNodeInfoService {
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
         UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ASYMMETRICAL_LOAD);
-        return asymmetricalLoadService.exportAsymmetricalLoadResultsAsCsv(resultUuid, csvHeaders, networkUuid, variantId, sort, filters, globalFilters);
+        return asymmetricalLoadRestService.exportAsymmetricalLoadResultsAsCsv(resultUuid, csvHeaders, networkUuid, variantId, sort, filters, globalFilters);
     }
 
     @Transactional(readOnly = true)
@@ -848,7 +849,7 @@ public class RootNetworkNodeInfoService {
         UUID networkUuid = rootNetworkNodeInfoEntity.getRootNetwork().getNetworkUuid();
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ASYMMETRICAL_LOAD);
         ResultParameters asymmetricalLoadParameters = new ResultParameters(rootNetworkUuid, nodeUuid, variantId, networkUuid, resultUuid);
-        return asymmetricalLoadService.getAsymmetricalLoadResultsPage(asymmetricalLoadParameters, filters, globalFilters, pageable);
+        return asymmetricalLoadRestService.getAsymmetricalLoadResultsPage(asymmetricalLoadParameters, filters, globalFilters, pageable);
     }
 
     /**************************
@@ -958,7 +959,7 @@ public class RootNetworkNodeInfoService {
     @Transactional(readOnly = true)
     public String getAsymmetricalLoadStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ASYMMETRICAL_LOAD);
-        return asymmetricalLoadService.getAsymmetricalLoadStatus(resultUuid);
+        return asymmetricalLoadRestService.getAsymmetricalLoadStatus(resultUuid);
     }
 
     /*******************************
@@ -1009,6 +1010,6 @@ public class RootNetworkNodeInfoService {
     @Transactional
     public void stopAsymmetricalLoad(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, ASYMMETRICAL_LOAD);
-        asymmetricalLoadService.stopAsymmetricalLoad(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
+        asymmetricalLoadRestService.stopAsymmetricalLoad(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
     }
 }

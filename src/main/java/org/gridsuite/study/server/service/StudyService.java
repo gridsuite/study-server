@@ -46,6 +46,7 @@ import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
+import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
@@ -142,7 +143,7 @@ public class StudyService {
     private final FilterService filterService;
     private final ActionsService actionsService;
     private final CaseService caseService;
-    private final AsymmetricalLoadService asymmetricalLoadService;
+    private final AsymmetricalLoadRestService asymmetricalLoadRestService;
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
@@ -212,7 +213,7 @@ public class StudyService {
         StudyConfigService studyConfigService,
         NadConfigService nadConfigService,
         FilterService filterService,
-        AsymmetricalLoadService asymmetricalLoadService,
+        AsymmetricalLoadRestService asymmetricalLoadRestService,
         @Lazy StudyService studyService,
         RootNetworkService rootNetworkService,
         RootNetworkNodeInfoService rootNetworkNodeInfoService,
@@ -250,7 +251,7 @@ public class StudyService {
         this.studyConfigService = studyConfigService;
         this.nadConfigService = nadConfigService;
         this.filterService = filterService;
-        this.asymmetricalLoadService = asymmetricalLoadService;
+        this.asymmetricalLoadRestService = asymmetricalLoadRestService;
         this.self = studyService;
         this.rootNetworkService = rootNetworkService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
@@ -1359,7 +1360,7 @@ public class StudyService {
     }
 
     public void invalidateAsymmetricalLoadStatusOnAllNodes(UUID studyUuid) {
-        asymmetricalLoadService.invalidateAsymmetricalLoadStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, ASYMMETRICAL_LOAD));
+        asymmetricalLoadRestService.invalidateAsymmetricalLoadStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, ASYMMETRICAL_LOAD));
     }
 
     private StudyEntity updateRootNetworkIndexationStatus(StudyEntity studyEntity, RootNetworkEntity rootNetworkEntity, RootNetworkIndexationStatus indexationStatus) {
@@ -3077,11 +3078,11 @@ public class StudyService {
 
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, ASYMMETRICAL_LOAD);
         if (prevResultUuid != null) {
-            asymmetricalLoadService.deleteAsymmetricalLoadResults(List.of(prevResultUuid));
+            asymmetricalLoadRestService.deleteAsymmetricalLoadResults(List.of(prevResultUuid));
         }
         var runAsymmetricalLoadParametersInfos = new RunAsymmetricalLoadParametersInfos(studyEntity.getShortCircuitParametersUuid(), studyEntity.getAsymmetricalLoadParametersUuid(), null);
 
-        UUID result = asymmetricalLoadService.runAsymmetricalLoad(networkUuid, variantId, runAsymmetricalLoadParametersInfos, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
+        UUID result = asymmetricalLoadRestService.runAsymmetricalLoad(networkUuid, variantId, runAsymmetricalLoadParametersInfos, new ReportInfos(reportUuid, nodeUuid), receiver, userId);
         updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, ASYMMETRICAL_LOAD);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_ASYMMETRICAL_LOAD_STATUS);
         notificationService.emitElementUpdated(studyEntity.getId(), userId);
@@ -3091,7 +3092,7 @@ public class StudyService {
     @Transactional
     public String getAsymmetricalLoadParameters(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
-        return asymmetricalLoadService.getAsymmetricalLoadParameters(asymmetricalLoadService.getAsymmetricalLoadParametersUuidOrElseCreateDefaults(studyEntity));
+        return asymmetricalLoadRestService.getAsymmetricalLoadParameters(asymmetricalLoadRestService.getAsymmetricalLoadParametersUuidOrElseCreateDefaults(studyEntity));
     }
 
     @Transactional
@@ -3114,9 +3115,9 @@ public class StudyService {
         if (parameters == null && userProfileInfos.getAsymmetricalLoadParameterId() != null) {
             // reset case, with existing profile, having default asymmetrical load params
             try {
-                UUID asymmetricalLoadParametersFromProfileUuid = asymmetricalLoadService.duplicateParameters(userProfileInfos.getAsymmetricalLoadParameterId());
+                UUID asymmetricalLoadParametersFromProfileUuid = asymmetricalLoadRestService.duplicateParameters(userProfileInfos.getAsymmetricalLoadParameterId());
                 studyEntity.setAsymmetricalLoadParametersUuid(asymmetricalLoadParametersFromProfileUuid);
-                asymmetricalLoadService.doDeleteComputationParameters(existingAsymmetricalLoadParametersUuid, ASYMMETRICAL_LOAD.getLabel(), LOGGER);
+                asymmetricalLoadRestService.doDeleteComputationParameters(existingAsymmetricalLoadParametersUuid, ASYMMETRICAL_LOAD.getLabel(), LOGGER);
                 return userProfileIssue;
             } catch (Exception e) {
                 userProfileIssue = true;
@@ -3126,10 +3127,10 @@ public class StudyService {
             }
         }
         if (existingAsymmetricalLoadParametersUuid == null) {
-            existingAsymmetricalLoadParametersUuid = asymmetricalLoadService.createAsymmetricalLoadParameters(parameters);
+            existingAsymmetricalLoadParametersUuid = asymmetricalLoadRestService.createAsymmetricalLoadParameters(parameters);
             studyEntity.setAsymmetricalLoadParametersUuid(existingAsymmetricalLoadParametersUuid);
         } else {
-            asymmetricalLoadService.updateAsymmetricalLoadParameters(existingAsymmetricalLoadParametersUuid, parameters);
+            asymmetricalLoadRestService.updateAsymmetricalLoadParameters(existingAsymmetricalLoadParametersUuid, parameters);
         }
         return userProfileIssue;
     }
