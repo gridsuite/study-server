@@ -12,6 +12,7 @@ import org.gridsuite.study.server.dto.studyexport.CaseExportInfos;
 import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.StudyExportInfos;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,8 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
@@ -138,8 +140,15 @@ class StudyImportExportTest extends StudyTestBase {
 
         countDownLatch.await();
 
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
-        assertNotNull(message);
+        Message<byte[]> startedMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(startedMessage);
+        assertEquals("testUser", startedMessage.getHeaders().get(HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, startedMessage.getHeaders().get(HEADER_UPDATE_TYPE));
+
+        Message<byte[]> finishedMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(finishedMessage);
+        assertEquals("testUser", finishedMessage.getHeaders().get(HEADER_USER_ID));
+        assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, finishedMessage.getHeaders().get(HEADER_UPDATE_TYPE));
 
         wireMockStubs.networkConversionServer.verifyImportNetwork(postNetworkStubId, caseUuid.toString(), FIRST_VARIANT_ID);
         wireMockStubs.userAdminServer.verifyGetUserProfile("testUser");

@@ -38,6 +38,7 @@ import org.springframework.stereotype.Service;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -234,6 +235,7 @@ public class ConsumerService {
         UUID caseUuid = receiver.getCaseUuid();
         UUID studyUuid = receiver.getStudyUuid();
         String userId = receiver.getUserId();
+        Long startTime = receiver.getStartTime();
         UUID importReportUuid = receiver.getReportUuid();
         UUID rootNetworkUuid = receiver.getRootNetworkUuid();
         CaseImportAction caseImportAction = receiver.getCaseImportAction();
@@ -282,15 +284,24 @@ public class ConsumerService {
             LOGGER.error("Error while importing case", e);
         } finally {
             // if studyEntity is already existing, we don't delete anything in the end of the process
-            // For STUDY_IMPORT, only delete if failed (success=false), not if completed successfully
-            // because additional root networks will arrive async
-            if (caseImportAction == CaseImportAction.STUDY_CREATION || caseImportAction == CaseImportAction.STUDY_IMPORT && !success) {
+            if (caseImportAction == CaseImportAction.STUDY_CREATION) {
+                studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
+            } else if (caseImportAction == CaseImportAction.STUDY_IMPORT) {
+                if (!success) {
+                    // the study entity may already have been committed (root node is saved eagerly in its own
+                    // transaction) before a later import step failed: clear the creation-request row first so
+                    // deleteStudyIfNotCreationInProgress falls back to deleting the partially imported study
+                    // instead of only clearing the in-progress flag. Additional root networks otherwise arrive async.
+                    studyService.deleteStudyCreationRequest(studyUuid);
+                }
                 studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
             }
             if (caseImportAction == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
                 UUID rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
                 networkModificationTreeService.unblockNodeTree(rootNetworkUuid, rootNodeUuid);
             }
+            LOGGER.trace("{} for study uuid '{}' : {} seconds", caseImportAction.getLabel(), studyUuid,
+                    TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
         }
     }
 

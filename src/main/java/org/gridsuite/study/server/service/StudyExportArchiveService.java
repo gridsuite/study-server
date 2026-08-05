@@ -74,7 +74,7 @@ public class StudyExportArchiveService {
                 String caseName = rootNetworkInfos.getCaseInfos().getCaseName();
                 exportCaseFile(caseUuid, caseName, casesDir);
             }
-            zipFile = Files.createTempFile("study-export-" + studyUuid, ".zip");
+            zipFile = createTempExportFile(studyUuid);
             try (OutputStream fos = Files.newOutputStream(zipFile);
                  ZipOutputStream zipOut = new ZipOutputStream(fos)) {
                 writeZipEntries(tempDir, zipOut);
@@ -116,6 +116,16 @@ public class StudyExportArchiveService {
             return Files.createTempDirectory("study-export-" + studyUuid, attr);
         } catch (IOException e) {
             throw new StudyException(EXPORT_STUDY_ERROR, "Failed to create temp directory for study: " + studyUuid);
+        }
+    }
+
+    private Path createTempExportFile(UUID studyUuid) {
+        try {
+            FileAttribute<Set<PosixFilePermission>> attr =
+                    PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
+            return Files.createTempFile("study-export-" + studyUuid, ".zip", attr);
+        } catch (IOException e) {
+            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to create temp file for study: " + studyUuid);
         }
     }
 

@@ -18,8 +18,8 @@ import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.dto.CompressionType;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
-import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
+import org.gridsuite.study.server.dto.caseimport.CaseImportRequestInfos;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
@@ -72,24 +72,19 @@ public class NetworkConversionService {
      * - one variant for root node - INITIAL_VARIANT
      * - one variant cloned from the previous one for the 1st node - *variantId*
      */
-    public void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, String userId, UUID importReportUuid, Map<String, Object> importParameters,
-            CaseImportAction caseImportAction, org.gridsuite.study.server.dto.studyexport.StudyImportContext importContext) {
-
-        // Store StudyImportContext in cache if provided (for STUDY_IMPORT action)
-        Boolean hasImportContext = false;
-        if (importContext != null) {
-            LOGGER.info("persistNetwork: Storing import context in cache for study {}", studyUuid);
-            studyImportContextService.storeImportContext(studyUuid, importContext);
+    public void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, CaseImportRequestInfos requestInfos) {
+        boolean hasImportContext = false;
+        if (requestInfos.importContext() != null) {
+            studyImportContextService.storeImportContext(studyUuid, requestInfos.importContext());
             hasImportContext = true;
-            LOGGER.info("persistNetwork: Import context stored successfully for study {}", studyUuid);
         }
 
         String receiver;
         try {
             CaseImportReceiver caseImportReceiver = new CaseImportReceiver(
                     studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getCaseInfos().getCaseUuid(),
-                    rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), importReportUuid, userId,
-                    System.nanoTime(), caseImportAction, hasImportContext);
+                    rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), requestInfos.importReportUuid(), requestInfos.userId(),
+                    System.nanoTime(), requestInfos.caseImportAction(), hasImportContext);
 
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(caseImportReceiver), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
@@ -99,7 +94,7 @@ public class NetworkConversionService {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/networks")
             .queryParam(CASE_UUID, rootNetworkInfos.getCaseInfos().getCaseUuid())
             .queryParamIfPresent(QUERY_PARAM_VARIANT_ID, Optional.ofNullable(variantId))
-            .queryParam(REPORT_UUID, importReportUuid)
+            .queryParam(REPORT_UUID, requestInfos.importReportUuid())
             .queryParam(QUERY_PARAM_RECEIVER, receiver)
             .queryParam(CASE_FORMAT, rootNetworkInfos.getCaseInfos().getCaseFormat());
 
@@ -109,7 +104,7 @@ public class NetworkConversionService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(importParameters, headers);
+        HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(requestInfos.importParameters(), headers);
 
         restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.POST, httpEntity,
                 Void.class);

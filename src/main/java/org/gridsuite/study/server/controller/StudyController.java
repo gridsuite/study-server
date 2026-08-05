@@ -26,6 +26,7 @@ import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.studyexport.StudyImportRequestInfos;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
@@ -1919,7 +1920,8 @@ public class StudyController {
             @Parameter(description = "Parent directory UUID") @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
             @Parameter(description = "Request body with importParameters and studyExportInfos") @RequestBody Map<String, Object> requestBody,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.importStudyWithCaseImportAction(studyUuid, caseUuid, caseFormat, studyName, description, parentDirectoryUuid, requestBody, userId);
+        StudyImportRequestInfos requestInfos = new StudyImportRequestInfos(studyUuid, caseUuid, caseFormat, studyName, description, parentDirectoryUuid);
+        studyService.importStudyWithCaseImportAction(requestInfos, requestBody, userId);
         return ResponseEntity.ok().build();
     }
 }
