@@ -63,4 +63,5 @@ public interface DynamicSimulationClient extends RestClient {
     void deleteAllResults();
 
     Integer getResultsCount();
+
 }

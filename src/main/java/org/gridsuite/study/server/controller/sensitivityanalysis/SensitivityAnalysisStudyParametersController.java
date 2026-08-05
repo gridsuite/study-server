@@ -26,10 +26,10 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/sensitivity-analysis")
 @Tag(name = "Study server - Sensitivity analysis parameters")
-public class SensitivityAnalysisParametersController {
+public class SensitivityAnalysisStudyParametersController {
     private final SensitivityAnalysisService sensitivityAnalysisService;
 
-    public SensitivityAnalysisParametersController(SensitivityAnalysisService sensitivityAnalysisService) {
+    public SensitivityAnalysisStudyParametersController(SensitivityAnalysisService sensitivityAnalysisService) {
         this.sensitivityAnalysisService = sensitivityAnalysisService;
     }
 

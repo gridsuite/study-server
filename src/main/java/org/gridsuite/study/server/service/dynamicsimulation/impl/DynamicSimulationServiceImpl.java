@@ -233,4 +233,5 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             throw new StudyException(COMPUTATION_RUNNING);
         }
     }
+
 }

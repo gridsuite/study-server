@@ -121,4 +121,5 @@ public class ShortCircuitService extends AbstractComputationService {
                 rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT_ONE_BUS).stream()
         ).toList());
     }
+
 }

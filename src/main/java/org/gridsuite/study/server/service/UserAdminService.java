@@ -10,8 +10,10 @@ package org.gridsuite.study.server.service;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
+import org.gridsuite.study.server.service.client.useradmin.UserAdminClient;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -35,11 +37,13 @@ public class UserAdminService {
     private static final String USERS_END_QUOTA_URI = USERS_QUOTA_URI + "/{operation}/{operation_id}/end";
 
     private final RestTemplate restTemplate;
+    private final UserAdminClient userAdminClient;
     private String userAdminServerBaseUri;
 
-    public UserAdminService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
+    public UserAdminService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate, UserAdminClient userAdminClient) {
         this.userAdminServerBaseUri = remoteServicesProperties.getServiceUri("user-admin-server");
         this.restTemplate = restTemplate;
+        this.userAdminClient = userAdminClient;
     }
 
     public void setUserAdminServerBaseUri(String serverBaseUri) {
@@ -87,4 +91,13 @@ public class UserAdminService {
                 .toUriString();
         restTemplate.postForEntity(userAdminServerBaseUri + path, null, Void.class);
     }
+
+    public ResponseEntity<String> getUserDetail(String sub) {
+        return userAdminClient.getUserDetail(sub);
+    }
+
+    public ResponseEntity<String> getCurrentAnnouncement() {
+        return userAdminClient.getCurrentAnnouncement();
+    }
+
 }

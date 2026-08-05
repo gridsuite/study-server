@@ -26,11 +26,11 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/pcc-min")
 @Tag(name = "Study server - Pcc min")
-public class PccMinParametersController {
+public class PccMinStudyParametersController {
 
     private final PccMinService pccMinService;
 
-    public PccMinParametersController(PccMinService pccMinService) {
+    public PccMinStudyParametersController(PccMinService pccMinService) {
         this.pccMinService = pccMinService;
     }
 

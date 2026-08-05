@@ -179,4 +179,5 @@ public class NetworkConversionService {
         };
         return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
     }
+
 }

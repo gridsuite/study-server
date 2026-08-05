@@ -116,4 +116,5 @@ public class StateEstimationService extends AbstractComputationService {
     private void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
         stateEstimationRestService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
     }
+
 }

@@ -118,4 +118,5 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         notificationService.emitElementUpdated(study.getId(), userId);
         return result;
     }
+
 }

@@ -118,4 +118,5 @@ public interface DynamicSimulationService extends ComputationParameters {
      * @return a list of time-series metadata
      */
     List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID resultUuid);
+
 }

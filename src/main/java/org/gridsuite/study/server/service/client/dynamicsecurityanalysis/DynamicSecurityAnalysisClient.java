@@ -224,4 +224,5 @@ public class DynamicSecurityAnalysisClient extends AbstractRestClient {
         // call dynamic-security-analysis REST API
         return getRestTemplate().getForObject(url, Integer.class);
     }
+
 }

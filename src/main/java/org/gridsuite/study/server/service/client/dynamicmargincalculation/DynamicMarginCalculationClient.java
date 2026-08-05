@@ -245,4 +245,5 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
         // call dynamic-margin-calculation REST API
         return getRestTemplate().getForObject(url, Integer.class);
     }
+
 }

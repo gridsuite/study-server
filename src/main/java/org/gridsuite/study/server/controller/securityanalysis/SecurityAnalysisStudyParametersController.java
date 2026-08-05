@@ -27,10 +27,10 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/security-analysis")
 @Tag(name = "Study server - Security analysis parameters")
-public class SecurityAnalysisParametersController {
+public class SecurityAnalysisStudyParametersController {
     private final SecurityAnalysisService securityAnalysisService;
 
-    public SecurityAnalysisParametersController(SecurityAnalysisService securityAnalysisService) {
+    public SecurityAnalysisStudyParametersController(SecurityAnalysisService securityAnalysisService) {
         this.securityAnalysisService = securityAnalysisService;
     }
 

@@ -424,4 +424,5 @@ class DynamicSecurityAnalysisClientTest extends AbstractWireMockRestClientTest {
         Integer resultCount = dynamicSecurityAnalysisClient.getResultsCount();
         assertThat(resultCount).isEqualTo(expectedResultCount);
     }
+
 }

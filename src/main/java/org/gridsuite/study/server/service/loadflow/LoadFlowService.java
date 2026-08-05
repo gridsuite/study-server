@@ -84,4 +84,5 @@ public class LoadFlowService extends AbstractComputationService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         return loadflowResultUuid;
     }
+
 }

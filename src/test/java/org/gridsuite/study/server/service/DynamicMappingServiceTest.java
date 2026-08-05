@@ -88,4 +88,5 @@ class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
         assertThat(result).isEqualTo(NETWORK_MATCHES_JSON);
 
     }
+
 }

@@ -27,11 +27,11 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/voltage-init")
 @Tag(name = "Study server - Voltage init parameters")
-public class VoltageInitParametersController {
+public class VoltageInitStudyParametersController {
 
     private final VoltageInitService voltageInitService;
 
-    public VoltageInitParametersController(VoltageInitService voltageInitService) {
+    public VoltageInitStudyParametersController(VoltageInitService voltageInitService) {
         this.voltageInitService = voltageInitService;
     }
 

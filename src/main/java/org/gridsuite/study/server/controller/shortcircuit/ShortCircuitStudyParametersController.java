@@ -27,11 +27,11 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/short-circuit-analysis")
 @Tag(name = "Study server - Short circuit parameters")
-public class ShortCircuitControllerParameters {
+public class ShortCircuitStudyParametersController {
 
     private final ShortCircuitService shortCircuitService;
 
-    public ShortCircuitControllerParameters(ShortCircuitService shortCircuitService) {
+    public ShortCircuitStudyParametersController(ShortCircuitService shortCircuitService) {
         this.shortCircuitService = shortCircuitService;
     }
 

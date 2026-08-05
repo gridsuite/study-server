@@ -171,4 +171,5 @@ public class VoltageInitService extends AbstractComputationService {
 
         return userProfileIssue;
     }
+
 }

@@ -425,4 +425,5 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         Integer resultCount = dynamicMarginCalculationClient.getResultsCount();
         assertThat(resultCount).isEqualTo(expectedResultCount);
     }
+
 }

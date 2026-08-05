@@ -487,4 +487,5 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         // check result
         assertThat(resultCount).isZero();
     }
+
 }

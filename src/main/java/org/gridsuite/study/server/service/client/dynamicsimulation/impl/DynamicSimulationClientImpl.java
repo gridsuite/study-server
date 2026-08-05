@@ -252,4 +252,5 @@ public class DynamicSimulationClientImpl extends AbstractRestClient implements D
         // call dynamic-simulation REST API
         return getRestTemplate().getForObject(uriComponents.toUriString(), Integer.class);
     }
+
 }

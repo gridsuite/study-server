@@ -15,12 +15,7 @@ import org.gridsuite.study.server.dto.ReferenceAttributes;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -58,6 +53,16 @@ public class DirectoryService {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements/{elementUuid}/name");
         String path = pathBuilder.buildAndExpand(elementUuid).toUriString();
         return restTemplate.getForObject(getDirectoryServerServerBaseUri() + path, String.class);
+    }
+
+    public void checkElement(UUID elementUuid, String userId) {
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + "directory-server/check-element/{elementUuid}");
+        String path = pathBuilder.buildAndExpand(elementUuid).toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+
+        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
     }
 
     public Map<UUID, String> getElementNames(Set<UUID> elementUuids) {

@@ -127,4 +127,5 @@ public class DynamicMarginCalculationService implements ComputationParameters {
     public String getProvider(UUID parametersUuid) {
         return dynamicMarginCalculationClient.getProvider(parametersUuid);
     }
+
 }
