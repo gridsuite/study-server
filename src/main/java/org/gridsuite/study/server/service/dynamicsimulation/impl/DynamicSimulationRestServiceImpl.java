@@ -172,8 +172,7 @@ public class DynamicSimulationRestServiceImpl implements DynamicSimulationRestSe
             UUID timelineUuid = dynamicSimulationClient.getTimelineResult(resultUuid); // get timeline uuid
             if (timelineUuid != null) {
                 // get timeline data
-                List<TimeSeries> timelines = CollectionUtils.emptyIfNull(timeSeriesClient.getTimeSeriesGroup(timelineUuid, null))
-                        .stream().toList();
+                List<TimeSeries> timelines = timeSeriesClient.getTimeSeriesGroup(timelineUuid, null);
 
                 // get first element to check type
                 if (!CollectionUtils.isEmpty(timelines) &&
@@ -185,7 +184,7 @@ public class DynamicSimulationRestServiceImpl implements DynamicSimulationRestSe
 
                 // convert {@link StringTimeSeries} to {@link TimelineEventInfos}
                 // note that each {@link StringTimeSeries} corresponds to an array of {@link TimelineEventInfos}
-                return timelines.stream()
+                return CollectionUtils.emptyIfNull(timelines).stream()
                         .flatMap(series -> Stream.of(((StringTimeSeries) series).toArray()))
                         .map(eventJson -> {
                             try {
