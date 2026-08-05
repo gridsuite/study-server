@@ -25,7 +25,7 @@ import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -119,7 +119,7 @@ class StudyControllerDynamicMarginCalculationTest {
     private UserAdminService userAdminService;
 
     @MockitoSpyBean
-    private DynamicMarginCalculationService spyDynamicMarginCalculationService;
+    private DynamicMarginCalculationRestService spyDynamicMarginCalculationRestService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -233,7 +233,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // setup DynamicMarginCalculationService spy
         doAnswer(invocation -> RESULT_UUID)
-            .when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(
+            .when(spyDynamicMarginCalculationRestService).runDynamicMarginCalculation(
                 eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
                 any(), any(), any(), any(), any(), eq(true));
 
@@ -315,7 +315,7 @@ class StudyControllerDynamicMarginCalculationTest {
         // create a construction node
         NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
-        doAnswer(invocation -> DYNAWO_PROVIDER).when(spyDynamicMarginCalculationService).getProvider(any());
+        doAnswer(invocation -> DYNAWO_PROVIDER).when(spyDynamicMarginCalculationRestService).getProvider(any());
 
         // --- call endpoint to be tested --- //
         // run on root node => forbidden
@@ -338,7 +338,7 @@ class StudyControllerDynamicMarginCalculationTest {
         when(mockLoadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
 
         // setup DynamicMarginCalculationService mock
-        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(
+        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationRestService).runDynamicMarginCalculation(
             eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), any(), eq(false));
 
         MvcResult result;
@@ -383,7 +383,7 @@ class StudyControllerDynamicMarginCalculationTest {
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_RESULT);
 
         //Test result count
-        doAnswer(invocation -> 1).when(spyDynamicMarginCalculationService).getResultsCount();
+        doAnswer(invocation -> 1).when(spyDynamicMarginCalculationRestService).getResultsCount();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_MARGIN_CALCULATION.toString())
                         .queryParam("dryRun", "true"))
@@ -392,7 +392,7 @@ class StudyControllerDynamicMarginCalculationTest {
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        doNothing().when(spyDynamicMarginCalculationService).deleteAllResults();
+        doNothing().when(spyDynamicMarginCalculationRestService).deleteAllResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_MARGIN_CALCULATION.toString())
                         .queryParam("dryRun", "false"))
@@ -414,7 +414,7 @@ class StudyControllerDynamicMarginCalculationTest {
         when(mockLoadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
 
         // setup DynamicMarginCalculationService mock
-        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationService).runDynamicMarginCalculation(
+        doAnswer(invocation -> RESULT_UUID).when(spyDynamicMarginCalculationRestService).runDynamicMarginCalculation(
             eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
@@ -455,7 +455,7 @@ class StudyControllerDynamicMarginCalculationTest {
     @Test
     void testGetDynamicMarginCalculationStatusResultGivenNodeNotRun() throws Exception {
         // setup DynamicMarginCalculationService mock
-        doAnswer(invocation -> null).when(spyDynamicMarginCalculationService).getStatus(RESULT_UUID);
+        doAnswer(invocation -> null).when(spyDynamicMarginCalculationRestService).getStatus(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet run
@@ -470,7 +470,7 @@ class StudyControllerDynamicMarginCalculationTest {
         // setup DynamicMarginCalculationService mock
         Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicMarginCalculationResultUuid(RESULT_UUID).build()))
             .when(spyRootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOT_NETWORK_UUID);
-        doAnswer(invocation -> DynamicMarginCalculationStatus.FAILED).when(spyDynamicMarginCalculationService).getStatus(RESULT_UUID);
+        doAnswer(invocation -> DynamicMarginCalculationStatus.FAILED).when(spyDynamicMarginCalculationRestService).getStatus(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get status from a node done
@@ -498,9 +498,9 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // setup DynamicMarginCalculationService mock
         doAnswer(invocation -> PARAMETERS_UUID)
-                .when(spyDynamicMarginCalculationService).createParameters(any());
+                .when(spyDynamicMarginCalculationRestService).createParameters(any());
         doAnswer(invocation -> jsonParameters)
-                .when(spyDynamicMarginCalculationService).getParameters(PARAMETERS_UUID, "userId");
+                .when(spyDynamicMarginCalculationRestService).getParameters(PARAMETERS_UUID, "userId");
 
         MvcResult result;
 

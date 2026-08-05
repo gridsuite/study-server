@@ -23,7 +23,7 @@ import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
@@ -101,7 +101,7 @@ class StudyControllerCreationTest {
     @MockitoBean
     private VoltageInitRestService voltageInitService;
     @MockitoBean
-    private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
     @MockitoBean
     private StateEstimationRestService stateEstimationService;
     @MockitoBean
@@ -257,7 +257,7 @@ class StudyControllerCreationTest {
         verify(securityAnalysisService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(sensitivityAnalysisService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(voltageInitService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
-        verify(dynamicSecurityAnalysisService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
+        verify(dynamicSecurityAnalysisRestService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(stateEstimationService, times(1)).doCreateDefaultParameters(any(), any(), any(), any(), any());
         verify(studyConfigService, times(1)).createDefaultSpreadsheetConfigCollection();
     }

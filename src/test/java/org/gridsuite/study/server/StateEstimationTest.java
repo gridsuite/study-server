@@ -162,7 +162,7 @@ class StateEstimationTest {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
-        stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
+        stateEstimationService.setBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 

@@ -193,7 +193,7 @@ class ShortCircuitTest implements WithAssertions {
         computationServerStubs = new ComputationServerStubs(wireMockServer);
         reportServerStubs = new ReportServerStubs(wireMockServer);
 
-        shortCircuitRestService.setShortCircuitServerBaseUri(wireMockServer.baseUrl());
+        shortCircuitRestService.setBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
 
