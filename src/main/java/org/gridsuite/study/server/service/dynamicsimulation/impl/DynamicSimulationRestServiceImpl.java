@@ -172,13 +172,14 @@ public class DynamicSimulationRestServiceImpl implements DynamicSimulationRestSe
             UUID timelineUuid = dynamicSimulationClient.getTimelineResult(resultUuid); // get timeline uuid
             if (timelineUuid != null) {
                 // get timeline data
-                List<TimeSeries> timelines = timeSeriesClient.getTimeSeriesGroup(timelineUuid, null);
+                List<TimeSeries> timelines = CollectionUtils.emptyIfNull(timeSeriesClient.getTimeSeriesGroup(timelineUuid, null))
+                        .stream().toList();
 
                 // get first element to check type
                 if (!CollectionUtils.isEmpty(timelines) &&
-                    !(timelines.get(0) instanceof StringTimeSeries)) {
+                    !(timelines.getFirst() instanceof StringTimeSeries)) {
                     throw new StudyException(TIME_SERIES_BAD_TYPE, "Timelines can not be a type: "
-                                                                                       + timelines.get(0).getClass().getSimpleName()
+                                                                                       + timelines.getFirst().getClass().getSimpleName()
                                                                                        + ", expected type: " + StringTimeSeries.class.getSimpleName());
                 }
 
