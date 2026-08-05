@@ -16,10 +16,10 @@ import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNo
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.AbstractComputationService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;

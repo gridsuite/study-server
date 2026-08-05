@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2025, RTE (http://www.rte-france.com)
+/**
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -7,122 +7,135 @@
 
 package org.gridsuite.study.server.service.dynamicsecurityanalysis;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.collections4.CollectionUtils;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAnalysisStatus;
+import lombok.NonNull;
+import org.gridsuite.study.server.dto.QuotaType;
+import org.gridsuite.study.server.dto.UserProfileInfos;
+import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
-import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.UserAdminService;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.UncheckedIOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATION_RUNNING;
+import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SECURITY_ANALYSIS;
+import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWED;
 
 /**
- * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
  */
+
 @Service
-public class DynamicSecurityAnalysisService implements ComputationParameters {
+public class DynamicSecurityAnalysisService extends AbstractComputationService {
+    private final DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
+    private final UserAdminService userAdminService;
 
-    private final ObjectMapper objectMapper;
-
-    private final DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
-
-    public DynamicSecurityAnalysisService(ObjectMapper objectMapper,
-                                          DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient) {
-        this.objectMapper = objectMapper;
-        this.dynamicSecurityAnalysisClient = dynamicSecurityAnalysisClient;
+    protected DynamicSecurityAnalysisService(StudyRepository studyRepository,
+                                             ComputationParametersService computationParametersService,
+                                             NotificationService notificationService,
+                                             RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                                             DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService,
+                                             NetworkModificationTreeService networkModificationTreeService,
+                                             UserAdminService userAdminService, RootNetworkService rootNetworkService) {
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
+        this.dynamicSecurityAnalysisRestService = dynamicSecurityAnalysisRestService;
+        this.userAdminService = userAdminService;
     }
 
-    public String getParameters(UUID parametersUuid) {
-        return dynamicSecurityAnalysisClient.getParameters(parametersUuid);
+    public String getDynamicSecurityAnalysisProvider(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return dynamicSecurityAnalysisRestService.getProvider(studyEntity.getDynamicSecurityAnalysisParametersUuid());
     }
 
-    public UUID createParameters(String parameters) {
-        return dynamicSecurityAnalysisClient.createParameters(parameters);
+    @Transactional
+    public String getDynamicSecurityAnalysisParameters(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return dynamicSecurityAnalysisRestService.getParameters(
+                dynamicSecurityAnalysisRestService.getDynamicSecurityAnalysisParametersUuidOrElseCreateDefault(studyEntity));
     }
 
-    @Override
-    public UUID createDefaultParameters() {
-        return dynamicSecurityAnalysisClient.createDefaultParameters();
+    @Transactional
+    public boolean setDynamicSecurityAnalysisParameters(UUID studyUuid, String dsaParameter, String userId) {
+        return setComputationParameters(
+                studyUuid,
+                dsaParameter,
+                userId,
+                StudyEntity::getDynamicSecurityAnalysisParametersUuid,
+                StudyEntity::setDynamicSecurityAnalysisParametersUuid,
+                UserProfileInfos::getDynamicSecurityAnalysisParameterId,
+                dynamicSecurityAnalysisRestService,
+                dynamicSecurityAnalysisRestService::createParameters,
+                dynamicSecurityAnalysisRestService::updateParameters,
+                DYNAMIC_SECURITY_ANALYSIS,
+                List.of(this::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS
+        );
     }
 
-    public void updateParameters(UUID parametersUuid, String parametersInfos) {
-        dynamicSecurityAnalysisClient.updateParameters(parametersUuid, parametersInfos);
+    public void invalidateDynamicSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
+        dynamicSecurityAnalysisRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SECURITY_ANALYSIS));
     }
 
-    @Override
-    public UUID duplicateParameters(UUID sourceParameterId) {
-        return dynamicSecurityAnalysisClient.duplicateParameters(sourceParameterId);
+    @Transactional
+    public UUID runDynamicSecurityAnalysis(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
+
+        UUID result = handleDynamicSecurityAnalysisRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_SECURITY_ANALYSIS), result);
+        return result;
     }
 
-    public void deleteParameters(UUID parametersUuid) {
-        dynamicSecurityAnalysisClient.deleteParameters(parametersUuid);
-    }
+    private UUID handleDynamicSecurityAnalysisRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
 
-    public UUID runDynamicSecurityAnalysis(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
-        String variantId, UUID reportUuid, UUID dynamicSimulationResultUuid, UUID parametersUuid, String userId, boolean debug) {
-
-        // create receiver for getting back the notification in rabbitmq
-        String receiver;
-
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)),
-                    StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
+        // pre-condition check
+        if (!rootNetworkNodeInfoService.isLoadflowConverged(nodeUuid, rootNetworkUuid)) {
+            throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic security analysis");
         }
 
-        return dynamicSecurityAnalysisClient.run(receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), dynamicSimulationResultUuid, parametersUuid, userId, debug);
-    }
-
-    public DynamicSecurityAnalysisStatus getStatus(UUID resultUuid) {
-        return resultUuid == null ? null : dynamicSecurityAnalysisClient.getStatus(resultUuid);
-    }
-
-    public void invalidateStatus(List<UUID> resultUuids) {
-        if (CollectionUtils.isNotEmpty(resultUuids)) {
-            dynamicSecurityAnalysisClient.invalidateStatus(resultUuids);
+        String dsStatus = rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid);
+        if (!DynamicSimulationStatus.CONVERGED.name().equals(dsStatus)) {
+            throw new StudyException(NOT_ALLOWED, "Dynamic simulation must run successfully before running dynamic security analysis");
         }
-    }
 
-    public void deleteResults(List<UUID> resultUuids) {
-        dynamicSecurityAnalysisClient.deleteResults(resultUuids);
-    }
-
-    public void deleteAllResults() {
-        deleteResults(null);
-    }
-
-    public Integer getResultsCount() {
-        return dynamicSecurityAnalysisClient.getResultsCount();
-    }
-
-    public void assertDynamicSecurityAnalysisNotRunning(UUID resultUuid) {
-        DynamicSecurityAnalysisStatus status = getStatus(resultUuid);
-        if (DynamicSecurityAnalysisStatus.RUNNING == status) {
-            throw new StudyException(COMPUTATION_RUNNING);
+        // clean previous result if exist
+        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS);
+        if (prevResultUuid != null) {
+            dynamicSecurityAnalysisRestService.deleteResults(List.of(prevResultUuid));
         }
-    }
 
-    public UUID getDynamicSecurityAnalysisParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {
-        if (studyEntity.getDynamicSecurityAnalysisParametersUuid() == null) {
-            // not supposed to happen because we create it as the study creation
-            studyEntity.setDynamicSecurityAnalysisParametersUuid(dynamicSecurityAnalysisClient.createDefaultParameters());
-        }
-        return studyEntity.getDynamicSecurityAnalysisParametersUuid();
-    }
+        // get dynamic simulation result uuid
+        UUID dynamicSimulationResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
 
-    public String getProvider(UUID parametersUuid) {
-        return dynamicSecurityAnalysisClient.getProvider(parametersUuid);
+        // get dynamic security analysis parameters uuid
+        UUID dynamicSecurityAnalysisParametersUuid = studyEntity.getDynamicSecurityAnalysisParametersUuid();
+
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(DYNAMIC_SECURITY_ANALYSIS.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SECURITY_ANALYSIS, reportUuid);
+
+        // launch dynamic security analysis
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        UUID dynamicSecurityAnalysisResultUuid = dynamicSecurityAnalysisRestService.runDynamicSecurityAnalysis(
+                nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid,
+                dynamicSimulationResultUuid, dynamicSecurityAnalysisParametersUuid, userId, debug);
+
+        // update result uuid and notification
+        updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSecurityAnalysisResultUuid, DYNAMIC_SECURITY_ANALYSIS);
+        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
+
+        return dynamicSecurityAnalysisResultUuid;
     }
 }
