@@ -29,6 +29,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -124,7 +125,7 @@ class LoadFLowIntegrationTest {
     @MockitoSpyBean
     NetworkModificationTreeService networkModificationTreeService;
     @MockitoSpyBean
-    LoadFlowService loadFlowService;
+    LoadFlowRestService loadFlowRestService;
 
     private WireMockServer wireMockServer;
     private WireMockStubs wireMockStubs;
@@ -134,7 +135,7 @@ class LoadFLowIntegrationTest {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
         wireMockServer.start();
         String baseUrlWireMock = wireMockServer.baseUrl();
-        loadFlowService.setLoadFlowServerBaseUri(baseUrlWireMock);
+        loadFlowRestService.setLoadFlowServerBaseUri(baseUrlWireMock);
         wireMockStubs = new WireMockStubs(wireMockServer);
 
         rootNodeInfoRepository.deleteAll();
@@ -241,7 +242,7 @@ class LoadFLowIntegrationTest {
         UUID loadFlowProviderStubUuid = wireMockStubs.stubLoadFlowProvider(parametersUuid, testProvider);
         UUID runLoadflowStubUuid = wireMockStubs.stubRunLoadFlow(networkUuid, withRatioTapChangers, null, objectMapper.writeValueAsString(loadflowResultUuid));
 
-        doReturn(parametersUuid).when(loadFlowService).createDefaultParameters();
+        doReturn(parametersUuid).when(loadFlowRestService).createDefaultParameters();
 
         assertNodeBlocked(nodeUuid, rootNetworkUuid, false);
 

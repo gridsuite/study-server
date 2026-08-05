@@ -44,7 +44,13 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
+import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -202,22 +208,22 @@ class NetworkModificationTest {
     private ReportService reportService;
 
     @Autowired
-    private SecurityAnalysisService securityAnalysisService;
+    private SecurityAnalysisRestService securityAnalysisService;
 
     @Autowired
-    private LoadFlowService loadFlowService;
+    private LoadFlowRestService loadFlowRestService;
 
     @Autowired
-    private SensitivityAnalysisService sensitivityAnalysisService;
+    private SensitivityAnalysisRestService sensitivityAnalysisService;
 
     @Autowired
-    private ShortCircuitService shortCircuitService;
+    private ShortCircuitRestService shortCircuitService;
 
     @Autowired
-    private VoltageInitService voltageInitService;
+    private VoltageInitRestService voltageInitService;
 
     @Autowired
-    private StateEstimationService stateEstimationService;
+    private StateEstimationRestService stateEstimationService;
 
     @MockitoSpyBean
     private UserAdminService userAdminService;
@@ -266,7 +272,7 @@ class NetworkModificationTest {
     private static final String ERROR_MESSAGE = "nullPointerException: unexpected null somewhere";
 
     @Autowired
-    private PccMinService pccMinService;
+    private PccMinRestService pccMinService;
     @MockitoSpyBean
     private StudyService studyService;
 
@@ -294,7 +300,7 @@ class NetworkModificationTest {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         String baseUrl = wireMockServer.baseUrl();
         reportService.setReportServerBaseUri(baseUrl);
-        loadFlowService.setLoadFlowServerBaseUri(baseUrl);
+        loadFlowRestService.setLoadFlowServerBaseUri(baseUrl);
         securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
         sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
         shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
@@ -2210,9 +2216,9 @@ class NetworkModificationTest {
         NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
         UUID nodeUuid1 = node1.getId();
-        CompositeInfos modification1 = new CompositeInfos(UUID.randomUUID(), "composite 1", false);
+        CompositeInfos modification1 = new CompositeInfos(UUID.randomUUID(), "composite 1", false, "description1");
         UUID sharedNetModId = UUID.randomUUID();
-        CompositeInfos modification2 = new CompositeInfos(sharedNetModId, "composite 2", true);
+        CompositeInfos modification2 = new CompositeInfos(sharedNetModId, "composite 2", true, "description2");
         String compositesData = mapper.writeValueAsString(
                 Arrays.asList(
                         modification1,

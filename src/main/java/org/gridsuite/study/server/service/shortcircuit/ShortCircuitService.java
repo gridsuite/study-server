@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -7,335 +7,118 @@
 
 package org.gridsuite.study.server.service.shortcircuit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.shortcircuit.ShortCircuitParameters;
-import lombok.Setter;
-import org.apache.commons.lang3.StringUtils;
-import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.ShortCircuitStatus;
-import org.gridsuite.study.server.dto.VariantInfos;
-import org.gridsuite.study.server.error.StudyException;
-import org.gridsuite.study.server.service.StudyService;
-import org.gridsuite.study.server.service.common.AbstractComputationService;
-import org.gridsuite.study.server.service.common.ComputationParameters;
-import org.gridsuite.study.server.utils.ResultParameters;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.http.*;
+import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyEntity;
+import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.pccmin.PccMinService;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
-import java.io.UncheckedIOException;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
-import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
-import static org.gridsuite.study.server.utils.StudyUtils.*;
+import java.util.stream.Stream;
+
+import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT;
+import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_BUS;
 
 /**
- * @author Etienne Homer <etienne.homer at rte-france.com>
- * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
+ * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
  */
+
 @Service
-public class ShortCircuitService extends AbstractComputationService implements ComputationParameters {
+public class ShortCircuitService extends AbstractComputationService {
+    private final ShortCircuitRestService shortCircuitRestService;
+    private final NetworkModificationTreeService networkModificationTreeService;
+    private final UserAdminService userAdminService;
+    private final RootNetworkService rootNetworkService;
+    private final PccMinService pccMinService;
 
-    static final String RESULT_UUID = "resultUuid";
-
-    private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
-
-    @Setter
-    private String shortCircuitServerBaseUri;
-
-    private final ObjectMapper objectMapper;
-    private final RestTemplate restTemplate;
-
-    @Autowired
-    public ShortCircuitService(RemoteServicesProperties remoteServicesProperties,
-                               RestTemplate restTemplate,
-                               ObjectMapper objectMapper) {
-        this.shortCircuitServerBaseUri = remoteServicesProperties.getServiceUri("shortcircuit-server");
-        this.restTemplate = restTemplate;
-        this.objectMapper = objectMapper;
+    protected ShortCircuitService(StudyRepository studyRepository,
+                                  ComputationParametersService computationParametersService,
+                                  NotificationService notificationService,
+                                  RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                                  ShortCircuitRestService shortCircuitServicerRest,
+                                  NetworkModificationTreeService networkModificationTreeService,
+                                  UserAdminService userAdminService,
+                                  RootNetworkService rootNetworkService,
+                                  PccMinService pccMinService) {
+        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        this.shortCircuitRestService = shortCircuitServicerRest;
+        this.networkModificationTreeService = networkModificationTreeService;
+        this.userAdminService = userAdminService;
+        this.rootNetworkService = rootNetworkService;
+        this.pccMinService = pccMinService;
     }
 
-    public UUID runShortCircuit(UUID rootNetworkUuid, VariantInfos variantInfos, String busId, UUID parametersUuid, ReportInfos reportInfos, String userId, boolean debug) {
-
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(reportInfos.nodeUuid(), rootNetworkUuid)), StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
+    @Transactional
+    public String getShortCircuitParametersInfo(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        if (studyEntity.getShortCircuitParametersUuid() == null) {
+            studyEntity.setShortCircuitParametersUuid(shortCircuitRestService.createParameters(null));
+            studyRepository.save(studyEntity);
         }
+        return shortCircuitRestService.getParameters(studyEntity.getShortCircuitParametersUuid());
+    }
 
-        var uriComponentsBuilder = UriComponentsBuilder
-                .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/networks/{networkUuid}/run-and-save")
-                .queryParam(QUERY_PARAM_RECEIVER, receiver)
-                .queryParam(QUERY_PARAM_REPORT_UUID, reportInfos.reportUuid().toString())
-                .queryParam(QUERY_PARAM_REPORTER_ID, reportInfos.nodeUuid().toString())
-                .queryParam(QUERY_PARAM_REPORT_TYPE, StringUtils.isBlank(busId) ? StudyService.ReportType.SHORT_CIRCUIT.reportKey :
-                        StudyService.ReportType.SHORT_CIRCUIT_ONE_BUS.reportKey)
-                .queryParam(QUERY_PARAM_PARAMETERS_UUID, parametersUuid);
+    @Transactional
+    public UUID runShortCircuit(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, Optional<String> busId, boolean debug, String userId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-        if (!StringUtils.isBlank(busId)) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_BUS_ID, busId);
+        UUID result = handleShortCircuitRequest(studyEntity, nodeUuid, rootNetworkUuid, busId, debug, userId);
+
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SHORT_CIRCUIT), result);
+        return result;
+    }
+
+    private UUID handleShortCircuitRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, Optional<String> busId, boolean debug, String userId) {
+        ComputationType computationType = busId.isEmpty() ? SHORT_CIRCUIT : SHORT_CIRCUIT_ONE_BUS;
+        UUID shortCircuitResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, computationType);
+        if (shortCircuitResultUuid != null) {
+            shortCircuitRestService.deleteShortCircuitAnalysisResults(List.of(shortCircuitResultUuid));
         }
-
-        if (!StringUtils.isBlank(variantInfos.getVariantId())) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_VARIANT_ID, variantInfos.getVariantId());
-        }
-
-        if (debug) {
-            uriComponentsBuilder.queryParam(QUERY_PARAM_DEBUG, true);
-        }
-
-        var path = uriComponentsBuilder.buildAndExpand(variantInfos.getNetworkUuid()).toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<ShortCircuitParameters> httpEntity = new HttpEntity<>(headers);
-
-        return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        UUID scReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(computationType.name(), UUID.randomUUID());
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, computationType, scReportUuid);
+        final UUID result = shortCircuitRestService.runShortCircuit(rootNetworkUuid, new VariantInfos(networkUuid, variantId), busId.orElse(null), studyEntity.getShortCircuitParametersUuid(),
+                new ReportInfos(scReportUuid, nodeUuid), userId, debug);
+        updateComputationResultUuid(nodeUuid, rootNetworkUuid, result, computationType);
+        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid,
+                busId.isEmpty() ? NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS : NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
+        return result;
     }
 
-    private String getShortCircuitAnalysisResultResourcePath(UUID resultUuid) {
-        if (resultUuid == null) {
-            return null;
-        }
-        return UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results" + "/{resultUuid}").buildAndExpand(resultUuid).toUriString();
+    @Transactional
+    public boolean setShortCircuitParameters(UUID studyUuid, @Nullable String shortCircuitParametersInfos, String userId) {
+        return setComputationParameters(
+                studyUuid,
+                shortCircuitParametersInfos,
+                userId,
+                StudyEntity::getShortCircuitParametersUuid,
+                StudyEntity::setShortCircuitParametersUuid,
+                UserProfileInfos::getShortcircuitParameterId,
+                shortCircuitRestService,
+                shortCircuitRestService::createParameters,
+                shortCircuitRestService::updateParameters,
+                SHORT_CIRCUIT,
+                List.of(this::invalidateShortCircuitStatusOnAllNodes, pccMinService::invalidatePccMinStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
+                NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
+                NotificationService.UPDATE_TYPE_PCC_MIN_STATUS
+        );
     }
 
-    private String getShortCircuitAnalysisResultsPageResourcePath(UUID resultUuid, ShortcircuitAnalysisType type) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid);
-        if (resultPath == null) {
-            return null;
-        }
-        if (type == ShortcircuitAnalysisType.ALL_BUSES) {
-            resultPath += "/fault_results";
-        } else if (type == ShortcircuitAnalysisType.ONE_BUS) {
-            resultPath += "/feeder_results";
-        }
-        return resultPath + "/paged";
-    }
-
-    public String getShortCircuitAnalysisResult(ResultParameters resultParameters, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, String globalFilters, boolean paged, Pageable
-            pageable) {
-        if (paged) {
-            return getShortCircuitAnalysisResultsPage(resultParameters, mode, type, filters, globalFilters, pageable);
-        } else {
-            return getShortCircuitAnalysisResult(resultParameters.getResultUuid(), mode);
-        }
-    }
-
-    private String getShortCircuitAnalysisCsvResultResourcePath(UUID resultUuid) {
-        if (resultUuid == null) {
-            throw new StudyException(NOT_FOUND, "Result of short circuit analysis was not found");
-        }
-        String path = DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/csv";
-        return UriComponentsBuilder.fromPath(path).buildAndExpand(resultUuid).toUriString();
-    }
-
-    public byte[] getShortCircuitAnalysisCsvResultResource(URI resourcePath, String headersCsv) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> entity = new HttpEntity<>(headersCsv, headers);
-        return restTemplate.exchange(resourcePath, HttpMethod.POST, entity, byte[].class).getBody();
-    }
-
-    public byte[] getShortCircuitAnalysisCsvResult(UUID resultUuid, UUID networkUuid, String variantId, String filters, String globalFilters, Sort sort, String headersCsv) {
-        String resultPath = getShortCircuitAnalysisCsvResultResourcePath(resultUuid);
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath)
-                .queryParam(QUERY_PARAM_NETWORK_UUID, networkUuid)
-                .queryParam(QUERY_PARAM_VARIANT_ID, variantId);
-
-        addFiltersToQueryParams(builder, filters, globalFilters);
-        addSortToQueryParams(builder, sort);
-
-        return getShortCircuitAnalysisCsvResultResource(builder.build().encode().toUri(), headersCsv); // need to encode because of filter JSON array
-    }
-
-    public String getShortCircuitAnalysisResult(UUID resultUuid, FaultResultsMode mode) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid);
-        if (resultPath == null) {
-            return null;
-        }
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath)
-                .queryParam(QUERY_PARAM_MODE, mode);
-
-        return getShortCircuitAnalysisResource(builder.build().toUri());
-    }
-
-    public String getShortCircuitAnalysisResultsPage(ResultParameters resultParameters, FaultResultsMode mode, ShortcircuitAnalysisType type, String filters, String globalFilters, Pageable pageable) {
-        String resultsPath = getShortCircuitAnalysisResultsPageResourcePath(resultParameters.getResultUuid(), type);
-        if (resultsPath == null) {
-            return null;
-        }
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultsPath)
-                .queryParam(QUERY_PARAM_NETWORK_UUID, resultParameters.getNetworkUuid())
-                .queryParam(QUERY_PARAM_VARIANT_ID, resultParameters.getVariantId())
-                .queryParam(QUERY_PARAM_MODE, mode);
-
-        addFiltersToQueryParams(builder, filters, globalFilters);
-        addPageableToQueryParams(builder, pageable);
-
-        return getShortCircuitAnalysisResource(builder.build().encode().toUri()); // need to encode because of filter JSON array
-    }
-
-    public String getShortCircuitAnalysisStatus(UUID resultUuid) {
-        String resultPath = getShortCircuitAnalysisResultResourcePath(resultUuid);
-        if (resultPath == null) {
-            return null;
-        }
-
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath + "/status");
-
-        return getShortCircuitAnalysisResource(builder.build().toUri());
-    }
-
-    public String getShortCircuitAnalysisResource(URI resourcePath) {
-        return restTemplate.getForObject(resourcePath, String.class);
-    }
-
-    public void stopShortCircuitAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
-        Objects.requireNonNull(studyUuid);
-        Objects.requireNonNull(nodeUuid);
-        Objects.requireNonNull(userId);
-
-        if (resultUuid == null) {
-            return;
-        }
-
-        String receiver;
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)), StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException("Failed to serialize node receiver", e);
-        }
-        String path = UriComponentsBuilder
-                .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/stop")
-                .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
-    }
-
-    public void deleteShortCircuitAnalysisResults(List<UUID> resultsUuids) {
-        deleteCalculationResults(resultsUuids, DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results", restTemplate, shortCircuitServerBaseUri);
-    }
-
-    public void deleteAllShortCircuitAnalysisResults() {
-        deleteShortCircuitAnalysisResults(null);
-    }
-
-    public Integer getShortCircuitResultsCount() {
-        String path = UriComponentsBuilder
-            .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/supervision/results-count").toUriString();
-        return restTemplate.getForObject(shortCircuitServerBaseUri + path, Integer.class);
-    }
-
-    public void assertShortCircuitAnalysisNotRunning(UUID scsResultUuid, UUID oneBusScsResultUuid) {
-        String scs = getShortCircuitAnalysisStatus(scsResultUuid);
-        String oneBusScs = getShortCircuitAnalysisStatus(oneBusScsResultUuid);
-        if (ShortCircuitStatus.RUNNING.name().equals(scs) || ShortCircuitStatus.RUNNING.name().equals(oneBusScs)) {
-            throw new StudyException(COMPUTATION_RUNNING);
-        }
-    }
-
-    public void invalidateShortCircuitStatus(List<UUID> uuids) {
-        if (!uuids.isEmpty()) {
-            String path = UriComponentsBuilder
-                    .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/invalidate-status")
-                    .queryParam(RESULT_UUID, uuids).build().toUriString();
-
-            restTemplate.put(shortCircuitServerBaseUri + path, Void.class);
-        }
-    }
-
-    @Override
-    public List<String> getEnumValues(String enumName, UUID resultUuid) {
-        return getEnumValues(enumName, resultUuid, SHORT_CIRCUIT_API_VERSION, shortCircuitServerBaseUri, restTemplate);
-    }
-
-    private UriComponentsBuilder getBaseUriForParameters() {
-        return UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri).pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters");
-    }
-
-    public UUID createParameters(@Nullable final String parametersInfos) {
-        final UriComponentsBuilder uri = getBaseUriForParameters();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-        if (StringUtils.isBlank(parametersInfos)) {
-            return restTemplate.postForObject(uri.pathSegment("default").build().toUri(), new HttpEntity<>(headers), UUID.class);
-        } else {
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            return restTemplate.postForObject(uri.build().toUri(), new HttpEntity<>(parametersInfos, headers), UUID.class);
-        }
-    }
-
-    @Override
-    public UUID createDefaultParameters() {
-        return createParameters(null);
-    }
-
-    public void updateParameters(final UUID parametersUuid, @Nullable final String parametersInfos) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        restTemplate.put(getBaseUriForParameters()
-            .pathSegment("{parametersUuid}")
-            .buildAndExpand(parametersUuid)
-            .toUri(), new HttpEntity<>(parametersInfos, headers));
-    }
-
-    public String getParameters(UUID parametersUuid) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-        return restTemplate.exchange(getBaseUriForParameters()
-            .pathSegment("{parametersUuid}")
-            .buildAndExpand(parametersUuid)
-            .toUri(), HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
-    }
-
-    @Override
-    public UUID duplicateParameters(UUID parametersUuid) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-        return restTemplate.postForObject(getBaseUriForParameters()
-            .pathSegment("{parametersUuid}", "duplicate")
-            .buildAndExpand(parametersUuid)
-            .toUri(), new HttpEntity<>(headers), UUID.class);
-    }
-
-    @Override
-    public void deleteParameters(UUID uuid) {
-        Objects.requireNonNull(uuid);
-        String path = UriComponentsBuilder.fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + PARAMETERS_URI)
-            .buildAndExpand(uuid)
-            .toUriString();
-
-        restTemplate.delete(shortCircuitServerBaseUri + path);
-    }
-
-    public Map<String, Double> getVoltageLevelIccValues(UUID resultUuid, String voltageLevelId) {
-        String path = UriComponentsBuilder
-            .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/{resultUuid}/fault_results/icc")
-            .queryParam(QUERY_PARAM_VOLTAGE_LEVEL_ID, voltageLevelId)
-            .buildAndExpand(resultUuid)
-            .toUriString();
-        return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<Map<String, Double>>() { }).getBody();
+    public void invalidateShortCircuitStatusOnAllNodes(UUID studyUuid) {
+        shortCircuitRestService.invalidateShortCircuitStatus(Stream.concat(
+                rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT).stream(),
+                rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT_ONE_BUS).stream()
+        ).toList());
     }
 }

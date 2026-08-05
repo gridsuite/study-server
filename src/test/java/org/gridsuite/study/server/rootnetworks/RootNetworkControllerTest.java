@@ -17,7 +17,8 @@ import org.gridsuite.study.server.dto.BasicStudyInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -114,10 +115,10 @@ class RootNetworkControllerTest {
     private NetworkStoreService networkStoreService;
 
     @MockitoBean
-    private LoadFlowService loadFlowService;
+    private LoadFlowRestService loadFlowRestService;
 
     @MockitoBean
-    private ShortCircuitService shortCircuitService;
+    private ShortCircuitRestService shortCircuitService;
 
     @MockitoBean
     private StudyConfigService studyConfigService;
@@ -289,7 +290,7 @@ class RootNetworkControllerTest {
                 "20140116_0830_2D4_UX1_pst", WireMockStubs.FIRST_VARIANT_ID, "UCTE", "20140116_0830_2D4_UX1_pst.ucte", countDownLatch);
         UUID disableCaseExpirationStubId = wireMockStubs.caseServer.stubDisableCaseExpiration(RootNetworkControllerTest.CASE_UUID.toString());
         reportServerStubs.stubSendReport();
-        when(loadFlowService.createDefaultParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
+        when(loadFlowRestService.createDefaultParameters()).thenReturn(LOADFLOW_PARAMETERS_UUID);
         when(shortCircuitService.createParameters(null)).thenReturn(SHORTCIRCUIT_PARAMETERS_UUID);
         when(studyConfigService.createDefaultSpreadsheetConfigCollection()).thenReturn(SPREADSHEET_CONFIG_COLLECTION_UUID);
         MvcResult result = mockMvc.perform(post("/v1/studies/cases/{caseUuid}", RootNetworkControllerTest.CASE_UUID)

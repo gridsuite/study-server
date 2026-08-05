@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.pccmin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +14,8 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.StudyUtils;
@@ -41,7 +42,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
  */
 @Service
-public class PccMinService extends AbstractComputationService implements ComputationParameters {
+public class PccMinRestService extends AbstractComputationRestService implements ComputationParameters {
     static final String RESULT_UUID = "resultUuid";
     static final String RESULTS = "results";
     static final String BUS_ID = "busId";
@@ -57,8 +58,8 @@ public class PccMinService extends AbstractComputationService implements Computa
     private String pccMinServerBaseUri;
 
     @Autowired
-    public PccMinService(RemoteServicesProperties remoteServicesProperties,
-                         ObjectMapper objectMapper, RestTemplate restTemplate) {
+    public PccMinRestService(RemoteServicesProperties remoteServicesProperties,
+                             ObjectMapper objectMapper, RestTemplate restTemplate) {
         this.pccMinServerBaseUri = remoteServicesProperties.getServiceUri("pcc-min-server");
         this.objectMapper = objectMapper;
         this.restTemplate = restTemplate;

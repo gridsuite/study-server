@@ -4,7 +4,7 @@
   License, v. 2.0. If a copy of the MPL was not distributed with this
   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.sensitivityanalysis;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,7 +15,8 @@ import org.gridsuite.study.server.dto.SensitivityAnalysisStatus;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -45,7 +46,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
  * @author Franck Lecuyer <franck.lecuyer at rte-france.com>
  */
 @Service
-public class SensitivityAnalysisService extends AbstractComputationService implements ComputationParameters {
+public class SensitivityAnalysisRestService extends AbstractComputationRestService implements ComputationParameters {
 
     static final String RESULT_UUID = "resultUuid";
     private static final String RESULTS = "results";
@@ -58,9 +59,9 @@ public class SensitivityAnalysisService extends AbstractComputationService imple
 
     private final ObjectMapper objectMapper;
 
-    SensitivityAnalysisService(RemoteServicesProperties remoteServicesProperties,
-                               RestTemplate restTemplate,
-                               ObjectMapper objectMapper) {
+    SensitivityAnalysisRestService(RemoteServicesProperties remoteServicesProperties,
+                                   RestTemplate restTemplate,
+                                   ObjectMapper objectMapper) {
         this.sensitivityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("sensitivity-analysis-server");
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
