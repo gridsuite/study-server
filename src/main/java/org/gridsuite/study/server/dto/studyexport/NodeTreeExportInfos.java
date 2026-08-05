@@ -6,6 +6,9 @@
  */
 package org.gridsuite.study.server.dto.studyexport;
 
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -16,7 +19,8 @@ public record NodeTreeExportInfos(
         String name,
         String type,
         UUID modificationGroupUuid,
-        String buildStatus,
+        BuildStatus buildStatus,
+        NetworkModificationNodeType nodeType,
         List<NodeTreeExportInfos> children
 ) {
 }

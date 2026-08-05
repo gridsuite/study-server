@@ -38,10 +38,7 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -3210,11 +3207,13 @@ public class StudyService {
     private NodeTreeExportInfos toNodeTreeExportInfos(AbstractNode node) {
         List<NodeTreeExportInfos> children = CollectionUtils.emptyIfNull(node.getChildren()).stream().map(this::toNodeTreeExportInfos).toList();
         UUID modificationGroupUuid = null;
-        String buildStatus = null;
+        BuildStatus buildStatus = BuildStatus.NOT_BUILT;
+        NetworkModificationNodeType nodeType = NetworkModificationNodeType.CONSTRUCTION;
         if (node instanceof NetworkModificationNode modificationNode) {
             modificationGroupUuid = modificationNode.getModificationGroupUuid();
+            nodeType = modificationNode.getNodeType();
             if (modificationNode.getNodeBuildStatus() != null) {
-                buildStatus = modificationNode.getNodeBuildStatus().getGlobalBuildStatus().name();
+                buildStatus = modificationNode.getNodeBuildStatus().getGlobalBuildStatus();
             }
         }
         return new NodeTreeExportInfos(
@@ -3222,6 +3221,7 @@ public class StudyService {
                 node.getType().name(),
                 modificationGroupUuid,
                 buildStatus,
+                nodeType,
                 children
         );
     }
@@ -3305,23 +3305,51 @@ public class StudyService {
      * Import a complete study using STUDY_IMPORT action (async via consumer).
      * This method parses the request body and delegates to importStudyWithCase.
      */
-    @SuppressWarnings("unchecked")
     public void importStudyWithCaseImportAction(StudyImportRequestInfos requestInfos, Map<String, Object> requestBody, String userId) {
-        Map<String, Object> importParameters = (Map<String, Object>) requestBody.get("importParameters");
-        Object studyExportInfosObj = requestBody.get("studyExportInfos");
-        StudyExportInfos studyExportInfos;
-        try {
-            if (studyExportInfosObj instanceof StudyExportInfos alreadyTypedStudyExportInfos) {
-                studyExportInfos = alreadyTypedStudyExportInfos;
-            } else {
-                studyExportInfos = objectMapper.convertValue(studyExportInfosObj, StudyExportInfos.class);
-            }
-        } catch (Exception e) {
-            throw new StudyException(IMPORT_STUDY_ERROR, "Invalid study export data format");
-        }
-
+        Map<String, Object> importParameters = extractImportParameters(requestBody);
+        StudyExportInfos studyExportInfos = extractStudyExportInfos(requestBody);
+        validateNodeTree(studyExportInfos.nodeTree());
         StudyImportContext importContext = new StudyImportContext(studyExportInfos, requestInfos.studyName(), requestInfos.description(), requestInfos.parentDirectoryUuid());
         importStudyWithCase(requestInfos.studyUuid(), requestInfos.caseUuid(), requestInfos.caseFormat(), importContext, importParameters, userId);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> extractImportParameters(Map<String, Object> requestBody) {
+        Object raw = requestBody.get("importParameters");
+        if (raw == null) {
+            return Collections.emptyMap();
+        }
+        if (!(raw instanceof Map)) {
+            throw new StudyException(IMPORT_STUDY_ERROR, "importParameters must be an object");
+        }
+        return (Map<String, Object>) raw;
+    }
+
+    private void validateNodeTree(NodeTreeExportInfos node) {
+        if (node.name() == null || node.type() == null) {
+            throw new StudyException(IMPORT_STUDY_ERROR, "Invalid node in study export tree");
+        }
+        if (node.children() == null) {
+            throw new StudyException(IMPORT_STUDY_ERROR, "Invalid node tree: missing children list for node " + node.name());
+        }
+    }
+
+    private StudyExportInfos extractStudyExportInfos(Map<String, Object> requestBody) {
+        Object studyExportInfosObj = requestBody.get("studyExportInfos");
+        if (studyExportInfosObj == null) {
+            throw new StudyException(IMPORT_STUDY_ERROR, "studyExportInfos is required");
+        }
+        try {
+            StudyExportInfos studyExportInfos = studyExportInfosObj instanceof StudyExportInfos alreadyTyped
+                    ? alreadyTyped
+                    : objectMapper.convertValue(studyExportInfosObj, StudyExportInfos.class);
+            if (studyExportInfos == null || studyExportInfos.nodeTree() == null || studyExportInfos.rootNetworks() == null || studyExportInfos.rootNetworks().isEmpty()) {
+                throw new StudyException(IMPORT_STUDY_ERROR, "Invalid study export data format");
+            }
+            return studyExportInfos;
+        } catch (IllegalArgumentException e) {
+            throw new StudyException(IMPORT_STUDY_ERROR, "Invalid study export data format");
+        }
     }
 
     private void createNodeRecursively(StudyEntity studyEntity, UUID parentNodeUuid, NodeTreeExportInfos exportNode, String userId) {
@@ -3336,6 +3364,8 @@ public class StudyService {
                 parentNodeUuid,
                 NetworkModificationNode.builder()
                         .name(exportNode.name())
+                        .nodeType(NetworkModificationNodeType.valueOf(exportNode.nodeType().name()))
+                        // buildStatus intentionally left at default (NOT_BUILT):
                         .modificationGroupUuid(newGroupUuid)
                         .build(),
                 InsertMode.CHILD,

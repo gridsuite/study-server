@@ -12,6 +12,8 @@ import org.gridsuite.study.server.dto.studyexport.CaseExportInfos;
 import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.StudyExportInfos;
+import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.Test;
@@ -24,6 +26,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.io.ByteArrayInputStream;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -138,7 +141,7 @@ class StudyImportExportTest extends StudyTestBase {
                         .content(requestJson))
                 .andExpect(status().isOk());
 
-        countDownLatch.await();
+        assertTrue(countDownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timed out waiting for the case-import callback");
 
         Message<byte[]> startedMessage = output.receive(TIMEOUT, studyUpdateDestination);
         assertNotNull(startedMessage);
@@ -164,9 +167,9 @@ class StudyImportExportTest extends StudyTestBase {
     private StudyExportInfos createSampleStudyExportInfos(UUID studyUuid) {
         CaseExportInfos caseInfo = new CaseExportInfos(CASE_UUID, "testCase.xiidm");
         List<NodeTreeExportInfos> children = new ArrayList<>();
-        children.add(new NodeTreeExportInfos("Test Node 1", "NETWORK_MODIFICATION", UUID.randomUUID(), "BUILT", Collections.emptyList()));
-        children.add(new NodeTreeExportInfos("Test Node 2", "NETWORK_MODIFICATION", UUID.randomUUID(), "BUILT", Collections.emptyList()));
-        NodeTreeExportInfos nodeTreeExportInfos = new NodeTreeExportInfos("Root", "ROOT", null, null, children);
+        children.add(new NodeTreeExportInfos("Test Node 1", "NETWORK_MODIFICATION", UUID.randomUUID(), BuildStatus.BUILT, NetworkModificationNodeType.CONSTRUCTION, Collections.emptyList()));
+        children.add(new NodeTreeExportInfos("Test Node 2", "NETWORK_MODIFICATION", UUID.randomUUID(), BuildStatus.BUILT, NetworkModificationNodeType.CONSTRUCTION, Collections.emptyList()));
+        NodeTreeExportInfos nodeTreeExportInfos = new NodeTreeExportInfos("Root", "ROOT", null, null, NetworkModificationNodeType.CONSTRUCTION, children);
         RootNetworkExportInfos rootNetwork = new RootNetworkExportInfos("Network 1", "1", "XIIDM", caseInfo, Collections.emptyMap());
         return new StudyExportInfos(studyUuid, Collections.singletonList(rootNetwork), nodeTreeExportInfos);
     }
