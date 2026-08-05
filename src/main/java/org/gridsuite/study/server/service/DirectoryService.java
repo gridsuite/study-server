@@ -55,6 +55,16 @@ public class DirectoryService {
         return restTemplate.getForObject(getDirectoryServerServerBaseUri() + path, String.class);
     }
 
+    public void checkElement(UUID elementUuid, String userId) {
+        UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + "directory-server/check-element/{elementUuid}");
+        String path = pathBuilder.buildAndExpand(elementUuid).toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+
+        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+    }
+
     public Map<UUID, String> getElementNames(Set<UUID> elementUuids) {
         Objects.requireNonNull(elementUuids);
 
