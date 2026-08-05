@@ -17,6 +17,7 @@ import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -65,13 +66,16 @@ class StudyServiceDynamicSimulationTest {
     private NotificationService notificationService;
 
     @MockitoBean
-    private DynamicSimulationService dynamicSimulationService;
+    private DynamicSimulationRestService dynamicSimulationRestService;
 
     @MockitoBean
     private UserAdminService userAdminService;
 
     @Autowired
     private StudyService studyService;
+
+    @Autowired
+    private DynamicSimulationService dynamicSimulationService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -103,14 +107,14 @@ class StudyServiceDynamicSimulationTest {
     @Test
     void testRunDynamicSimulation() {
         // setup DynamicSimulationService mock
-        given(dynamicSimulationService.runDynamicSimulation(eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any(), any(), eq(false))).willReturn(RESULT_UUID);
-        willDoNothing().given(dynamicSimulationService).deleteResults(anyList());
+        given(dynamicSimulationRestService.runDynamicSimulation(eq(NODE_UUID), eq(ROOTNETWORK_UUID), any(), any(), any(), any(), any(), any(), eq(false))).willReturn(RESULT_UUID);
+        willDoNothing().given(dynamicSimulationRestService).deleteResults(anyList());
         given(rootNetworkNodeInfoService.isLoadflowConverged(NODE_UUID, ROOTNETWORK_UUID)).willReturn(true);
 
         // call method to be tested
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, UUID.randomUUID(), "caseName", "", UUID.randomUUID());
         studyRepository.save(studyEntity);
-        UUID resultUuid = studyService.runDynamicSimulation(studyEntity.getId(), NODE_UUID, ROOTNETWORK_UUID, "testUserId", false);
+        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(studyEntity.getId(), NODE_UUID, ROOTNETWORK_UUID, "testUserId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);
@@ -126,7 +130,7 @@ class StudyServiceDynamicSimulationTest {
                 TimeSeries.createDouble("NETWORK__BUS____1_TN_Upu_value", index, 1.059970, 1.059970, 1.059970, 1.059970)
         ));
 
-        given(dynamicSimulationService.getTimeSeriesResult(RESULT_UUID, null)).willReturn(timeSeries);
+        given(dynamicSimulationRestService.getTimeSeriesResult(RESULT_UUID, null)).willReturn(timeSeries);
 
         // call method to be tested
         String timeSeriesResultJson = TimeSeries.toJson(rootNetworkNodeInfoService.getDynamicSimulationTimeSeries(NODE_UUID, ROOTNETWORK_UUID, null));
@@ -149,7 +153,7 @@ class StudyServiceDynamicSimulationTest {
                 new TimelineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
         );
 
-        given(dynamicSimulationService.getTimelineResult(RESULT_UUID)).willReturn(timelineEventInfosList);
+        given(dynamicSimulationRestService.getTimelineResult(RESULT_UUID)).willReturn(timelineEventInfosList);
 
         // call method to be tested
         List<TimelineEventInfos> timelineEventInfosListResult = rootNetworkNodeInfoService.getDynamicSimulationTimeline(NODE_UUID, ROOTNETWORK_UUID);
@@ -162,7 +166,7 @@ class StudyServiceDynamicSimulationTest {
     @Test
     void testGetDynamicSimulationStatus() {
         // setup
-        given(dynamicSimulationService.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
+        given(dynamicSimulationRestService.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
 
         // call method to be tested
         String status = rootNetworkNodeInfoService.getDynamicSimulationStatus(NODE_UUID, ROOTNETWORK_UUID);
