@@ -15,7 +15,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.client.securityanalysis.SecurityAnalysisClient;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +35,6 @@ import static org.gridsuite.study.server.dto.ComputationType.SECURITY_ANALYSIS;
 public class SecurityAnalysisService extends AbstractComputationService {
 
     private final SecurityAnalysisRestService securityAnalysisRestService;
-    private final SecurityAnalysisClient securityAnalysisClient;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final ObjectMapper objectMapper;
     private final RootNetworkService rootNetworkService;
@@ -46,7 +44,6 @@ public class SecurityAnalysisService extends AbstractComputationService {
                                    ComputationParametersService computationParametersService,
                                    NotificationService notificationService,
                                    SecurityAnalysisRestService securityAnalysisRestService,
-                                   SecurityAnalysisClient securityAnalysisClient,
                                    NetworkModificationTreeService networkModificationTreeService,
                                    ObjectMapper objectMapper,
                                    RootNetworkService rootNetworkService,
@@ -54,7 +51,6 @@ public class SecurityAnalysisService extends AbstractComputationService {
                                    UserAdminService userAdminService) {
         super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
         this.securityAnalysisRestService = securityAnalysisRestService;
-        this.securityAnalysisClient = securityAnalysisClient;
         this.networkModificationTreeService = networkModificationTreeService;
         this.objectMapper = objectMapper;
         this.rootNetworkService = rootNetworkService;
@@ -125,22 +121,6 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
         securityAnalysisRestService.invalidateSaStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
-    }
-
-    public String getProviders() {
-        return securityAnalysisClient.getProviders();
-    }
-
-    public String getSecurityAnalysisParameters(UUID parameterUuid) {
-        return securityAnalysisClient.getParameters(parameterUuid);
-    }
-
-    public String getDefaultLimitReductions() {
-        return securityAnalysisClient.getDefaultLimitReductions();
-    }
-
-    public void updateSecurityAnalysisParameters(UUID parameterUuid, String parameters) {
-        securityAnalysisClient.updateParameters(parameterUuid, parameters);
     }
 
 }

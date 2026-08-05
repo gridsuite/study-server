@@ -17,10 +17,10 @@ import java.util.function.Function;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 @Component
-public class NetworkModificationGatewayAccessFilter {
+public class ElementAccessGatewayFilter {
     private final ElementAccessService elementAccessService;
 
-    public NetworkModificationGatewayAccessFilter(ElementAccessService elementAccessService) {
+    public ElementAccessGatewayFilter(ElementAccessService elementAccessService) {
         this.elementAccessService = elementAccessService;
     }
 

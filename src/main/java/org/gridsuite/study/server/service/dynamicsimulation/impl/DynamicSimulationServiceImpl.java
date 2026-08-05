@@ -25,8 +25,6 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.UncheckedIOException;
@@ -59,11 +57,6 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         this.objectMapper = objectMapper;
         this.timeSeriesClient = timeSeriesClient;
         this.dynamicSimulationClient = dynamicSimulationClient;
-    }
-
-    @Override
-    public String getProviders() {
-        return dynamicSimulationClient.getProviders();
     }
 
     @Override
@@ -239,11 +232,6 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
         if (DynamicSimulationStatus.RUNNING == status) {
             throw new StudyException(COMPUTATION_RUNNING);
         }
-    }
-
-    @Override
-    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
-        return dynamicSimulationClient.downloadDebugFile(resultUuid);
     }
 
 }

@@ -14,7 +14,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.client.pccmin.PccMinClient;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +35,6 @@ import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
 @Service
 public class PccMinService extends AbstractComputationService {
     private final PccMinRestService pccMinRestService;
-    private final PccMinClient pccMinClient;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final UserAdminService userAdminService;
     private final ObjectMapper objectMapper;
@@ -48,14 +46,12 @@ public class PccMinService extends AbstractComputationService {
                             NotificationService notificationService,
                             RootNetworkNodeInfoService rootNetworkNodeInfoService,
                             PccMinRestService pccMinRestService,
-                            PccMinClient pccMinClient,
                             NetworkModificationTreeService networkModificationTreeService,
                             UserAdminService userAdminService,
                             ObjectMapper objectMapper,
                             RootNetworkService rootNetworkService) {
         super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
         this.pccMinRestService = pccMinRestService;
-        this.pccMinClient = pccMinClient;
         this.networkModificationTreeService = networkModificationTreeService;
         this.userAdminService = userAdminService;
         this.objectMapper = objectMapper;
@@ -146,10 +142,6 @@ public class PccMinService extends AbstractComputationService {
 
     public void invalidatePccMinStatusOnAllNodes(UUID studyUuid) {
         pccMinRestService.invalidatePccMinStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, PCC_MIN));
-    }
-
-    public String getPccMinParametersByUuid(UUID parameterUuid) {
-        return pccMinClient.getParameters(parameterUuid);
     }
 
 }

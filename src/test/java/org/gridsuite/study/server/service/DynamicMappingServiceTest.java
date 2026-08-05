@@ -14,8 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.UUID;
@@ -91,16 +89,4 @@ class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
 
     }
 
-    @Test
-    void testGetMappedModels() {
-        UUID mappingId = UUID.randomUUID();
-        String response = "[{\"name\":\"model\"}]";
-        String url = "/mappings/" + mappingId + "/models";
-
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
-            .willReturn(WireMock.ok().withBody(response).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
-
-        assertThat(dynamicMappingService.getMappedModels(mappingId)).isEqualTo(response);
-        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(url)));
-    }
 }

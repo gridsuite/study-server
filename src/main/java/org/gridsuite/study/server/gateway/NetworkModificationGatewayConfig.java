@@ -26,7 +26,7 @@ public class NetworkModificationGatewayConfig {
 
     @Bean
     public RouterFunction<ServerResponse> networkModificationGatewayRoutes(RemoteServicesProperties remoteServicesProperties,
-                                                                           NetworkModificationGatewayAccessFilter accessFilter) {
+                                                                           ElementAccessGatewayFilter accessFilter) {
         URI networkModificationServerUri = URI.create(remoteServicesProperties.getServiceUri(NETWORK_MODIFICATION_SERVER));
 
         RouterFunction<ServerResponse> forwardingRoutes = route("network_modification_forwarding")

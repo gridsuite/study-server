@@ -17,8 +17,6 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.common.ComputationParameters;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.UncheckedIOException;
@@ -43,10 +41,6 @@ public class DynamicSecurityAnalysisService implements ComputationParameters {
                                           DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient) {
         this.objectMapper = objectMapper;
         this.dynamicSecurityAnalysisClient = dynamicSecurityAnalysisClient;
-    }
-
-    public String getProviders() {
-        return dynamicSecurityAnalysisClient.getProviders();
     }
 
     public String getParameters(UUID parametersUuid) {
@@ -130,10 +124,6 @@ public class DynamicSecurityAnalysisService implements ComputationParameters {
 
     public String getProvider(UUID parametersUuid) {
         return dynamicSecurityAnalysisClient.getProvider(parametersUuid);
-    }
-
-    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
-        return dynamicSecurityAnalysisClient.downloadDebugFile(resultUuid);
     }
 
 }

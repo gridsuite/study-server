@@ -12,11 +12,8 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.client.shortcircuit.ShortCircuitClient;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.pccmin.PccMinService;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +33,6 @@ import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_B
 @Service
 public class ShortCircuitService extends AbstractComputationService {
     private final ShortCircuitRestService shortCircuitRestService;
-    private final ShortCircuitClient shortCircuitClient;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final UserAdminService userAdminService;
     private final RootNetworkService rootNetworkService;
@@ -47,26 +43,16 @@ public class ShortCircuitService extends AbstractComputationService {
                                   NotificationService notificationService,
                                   RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                   ShortCircuitRestService shortCircuitServicerRest,
-                                  ShortCircuitClient shortCircuitClient,
                                   NetworkModificationTreeService networkModificationTreeService,
                                   UserAdminService userAdminService,
                                   RootNetworkService rootNetworkService,
                                   PccMinService pccMinService) {
         super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
         this.shortCircuitRestService = shortCircuitServicerRest;
-        this.shortCircuitClient = shortCircuitClient;
         this.networkModificationTreeService = networkModificationTreeService;
         this.userAdminService = userAdminService;
         this.rootNetworkService = rootNetworkService;
         this.pccMinService = pccMinService;
-    }
-
-    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
-        return shortCircuitClient.downloadDebugFile(resultUuid);
-    }
-
-    public String getSpecificParameters() {
-        return shortCircuitClient.getSpecificParameters();
     }
 
     @Transactional
@@ -134,14 +120,6 @@ public class ShortCircuitService extends AbstractComputationService {
                 rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT).stream(),
                 rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SHORT_CIRCUIT_ONE_BUS).stream()
         ).toList());
-    }
-
-    public String getParameters(UUID parameterUuid) {
-        return shortCircuitClient.getParameters(parameterUuid);
-    }
-
-    public void updateParameters(UUID parameterUuid, String parameters) {
-        shortCircuitClient.updateParameters(parameterUuid, parameters);
     }
 
 }

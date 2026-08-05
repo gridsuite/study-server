@@ -60,9 +60,4 @@ public class DynamicMappingService {
         return restTemplate.postForObject(url, httpEntity, String.class);
     }
 
-    public String getMappedModels(UUID mappingId) {
-        String networkBasePath = buildEndPointUrl(dynamicMappingServerBaseUri, API_VERSION, null);
-        String url = UriComponentsBuilder.fromUriString(networkBasePath + "/mappings/{mappingId}/models").buildAndExpand(mappingId).toUriString();
-        return restTemplate.getForObject(url, String.class);
-    }
 }

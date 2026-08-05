@@ -488,27 +488,4 @@ class DynamicSimulationClientTest extends AbstractWireMockRestClientTest {
         assertThat(resultCount).isZero();
     }
 
-    @Test
-    void testGetProviders() {
-        String url = buildEndPointUrl("", DYNAMIC_SIMULATION_API_VERSION, "providers");
-        String providers = "[\"Dynawo\"]";
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
-            .willReturn(WireMock.ok().withBody(providers).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
-
-        assertThat(dynamicSimulationClient.getProviders()).isEqualTo(providers);
-        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(url)));
-    }
-
-    @Test
-    void testDownloadDebugFile() throws Exception {
-        String body = "{\"debug\":true}";
-        String url = DYNAMIC_SIMULATION_RESULT_BASE_URL + DELIMITER + RESULT_UUID + DELIMITER + "download-debug-file";
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url)).willReturn(WireMock.ok().withBody(body)));
-
-        var response = dynamicSimulationClient.downloadDebugFile(RESULT_UUID);
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(new String(response.getBody().getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)).isEqualTo(body);
-        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(url)));
-    }
-
 }

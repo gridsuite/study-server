@@ -180,10 +180,4 @@ public class NetworkConversionService {
         return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.HEAD, null, typeRef).getStatusCode() == HttpStatus.OK;
     }
 
-    public String getCaseImportParameters(UUID caseUuid) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_CONVERSION_API_VERSION + "/cases/{caseUuid}/import-parameters")
-            .buildAndExpand(caseUuid).toUriString();
-        return restTemplate.exchange(getNetworkConversionServerBaseUri() + path, HttpMethod.GET, null, String.class).getBody();
-    }
-
 }

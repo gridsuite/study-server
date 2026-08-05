@@ -96,18 +96,6 @@ public class DirectoryService {
         }
     }
 
-    public String getElements(List<UUID> elementUuids, List<String> elementTypes, boolean strictMode, String userId) {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements")
-            .queryParam("ids", elementUuids)
-            .queryParam("elementTypes", elementTypes)
-            .queryParam("strictMode", strictMode)
-            .build().toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HEADER_USER_ID, userId);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        return restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
-    }
-
     public boolean elementExists(UUID directoryUuid, String elementName, String type) {
         UriComponentsBuilder pathBuilder = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/directories/{directoryUuid}/elements/{elementName}/types/{type}");
         String path = pathBuilder.buildAndExpand(directoryUuid, elementName, type).toUriString();

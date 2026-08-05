@@ -17,8 +17,6 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.common.ComputationParameters;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.UncheckedIOException;
@@ -43,10 +41,6 @@ public class DynamicMarginCalculationService implements ComputationParameters {
                                            DynamicMarginCalculationClient dynamicMarginCalculationClient) {
         this.objectMapper = objectMapper;
         this.dynamicMarginCalculationClient = dynamicMarginCalculationClient;
-    }
-
-    public String getProviders() {
-        return dynamicMarginCalculationClient.getProviders();
     }
 
     public String getParameters(UUID parametersUuid, String userId) {
@@ -132,10 +126,6 @@ public class DynamicMarginCalculationService implements ComputationParameters {
 
     public String getProvider(UUID parametersUuid) {
         return dynamicMarginCalculationClient.getProvider(parametersUuid);
-    }
-
-    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
-        return dynamicMarginCalculationClient.downloadDebugFile(resultUuid);
     }
 
 }

@@ -16,7 +16,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.IdentifiableInfos;
 import org.gridsuite.study.server.dto.InfoTypeParameters;
-import org.gridsuite.study.server.service.client.networkmap.NetworkMapClient;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -36,18 +35,12 @@ import static org.gridsuite.study.server.StudyConstants.*;
 @Service
 public class NetworkMapService {
     private final RestTemplate restTemplate;
-    private final NetworkMapClient networkMapClient;
 
     private String networkMapServerBaseUri;
 
-    public NetworkMapService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate, NetworkMapClient networkMapClient) {
+    public NetworkMapService(RemoteServicesProperties remoteServicesProperties, RestTemplate restTemplate) {
         this.networkMapServerBaseUri = remoteServicesProperties.getServiceUri("network-map-server");
         this.restTemplate = restTemplate;
-        this.networkMapClient = networkMapClient;
-    }
-
-    public String getElementSchema(String elementType, String infoType) {
-        return networkMapClient.getElementSchema(elementType, infoType);
     }
 
     public String getElementsInfos(UUID networkUuid,
