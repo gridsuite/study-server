@@ -10,18 +10,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.studyexport.StudyExportInfos;
 import org.gridsuite.study.server.error.StudyException;
-import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.InputStreamResource;
-import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -34,8 +35,6 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import static org.gridsuite.study.server.StudyConstants.CASE_API_VERSION;
-import static org.gridsuite.study.server.StudyConstants.DELIMITER;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STUDY_ERROR;
 
 /**
@@ -43,58 +42,80 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STU
  */
 @Service
 public class StudyExportArchiveService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportArchiveService.class);
 
     private final StudyService studyService;
     private final RootNetworkService rootNetworkService;
-    private final RestTemplate restTemplate;
+    private final CaseService caseService;
     private final ObjectMapper objectMapper;
+    private final StudyExportArchiveService self;
 
-    @Value("${powsybl.services.case-server.base-uri:http://case-server/}")
-    private String caseServerBaseUri;
-
-    public StudyExportArchiveService(StudyService studyService, RootNetworkService rootNetworkService, RestTemplate restTemplate, ObjectMapper objectMapper) {
+    public StudyExportArchiveService(@Lazy StudyExportArchiveService self, StudyService studyService, RootNetworkService rootNetworkService, CaseService caseService, ObjectMapper objectMapper) {
+        this.self = self;
         this.studyService = studyService;
         this.rootNetworkService = rootNetworkService;
-        this.restTemplate = restTemplate;
+        this.caseService = caseService;
         this.objectMapper = objectMapper;
     }
 
     /**
-     * Export a study as a zip archive
+     * Export a study as a gzip archive
      * @param studyUuid the study UUID
      * @return InputStreamResource containing the zip archive
      */
-    @Transactional(readOnly = true)
     public InputStreamResource exportStudyArchive(UUID studyUuid) {
+        Path tempDir = createTempWorkDir(studyUuid);
+        Path zipFile = null;
         try {
-            FileAttribute<Set<PosixFilePermission>> attr = PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"));
-            Path tempDir = Files.createTempDirectory("study-export-" + studyUuid, attr);
-            Path casesDir = tempDir.resolve("cases");
-            Files.createDirectories(casesDir);
-
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-                StudyExportInfos studyExportInfos = studyService.exportStudy(studyUuid);
-                List<RootNetworkInfos> rootNetworkInfosList = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
-                for (RootNetworkInfos rootNetworkInfos : rootNetworkInfosList) {
-                    UUID caseUuid = rootNetworkInfos.getCaseInfos().getCaseUuid();
-                    String caseName = rootNetworkInfos.getCaseInfos().getCaseName();
-                    exportCaseFile(caseUuid, caseName, casesDir);
-                }
-                Path studyJsonPath = tempDir.resolve("study.json");
-                objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), studyExportInfos);
-                try (ZipOutputStream zipOut = new ZipOutputStream(baos)) {
-                    writeZipEntries(tempDir, zipOut);
-                    zipOut.finish();
-                }
-                ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-                return new InputStreamResource(bais);
-
-            } finally {
-                deleteDirectory(tempDir);
+            List<RootNetworkInfos> rootNetworkInfosList = self.loadRootNetworkInfosAndWriteTree(studyUuid, tempDir);
+            Path casesDir = Files.createDirectories(tempDir.resolve("cases"));
+            for (RootNetworkInfos rootNetworkInfos : rootNetworkInfosList) {
+                UUID caseUuid = rootNetworkInfos.getCaseInfos().getCaseUuid();
+                String caseName = rootNetworkInfos.getCaseInfos().getCaseName();
+                exportCaseFile(caseUuid, caseName, casesDir);
             }
+            zipFile = Files.createTempFile("study-export-" + studyUuid, ".zip");
+            try (OutputStream fos = Files.newOutputStream(zipFile);
+                 ZipOutputStream zipOut = new ZipOutputStream(fos)) {
+                writeZipEntries(tempDir, zipOut);
+            }
+            InputStream stream = Files.newInputStream(zipFile, StandardOpenOption.DELETE_ON_CLOSE);
+            zipFile = null;
+            return new InputStreamResource(stream);
+        } catch (IOException e) {
+            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to export study: " + studyUuid);
+        } finally {
+            try {
+                deleteDirectory(tempDir);
+            } catch (IOException e) {
+                LOGGER.warn("Failed to clean up temp export directory {} for study {}", tempDir, studyUuid, e);
+            }
+            if (zipFile != null) {
+                try {
+                    Files.deleteIfExists(zipFile);
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to delete temp zip file {} for study {}", zipFile, studyUuid, e);
+                }
+            }
+        }
+    }
 
-        } catch (Exception e) {
-            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to export study: " + e.getMessage());
+    @Transactional(readOnly = true)
+    protected List<RootNetworkInfos> loadRootNetworkInfosAndWriteTree(UUID studyUuid, Path tempDir) throws IOException {
+        StudyExportInfos studyExportInfos = studyService.exportStudy(studyUuid);
+        List<RootNetworkInfos> rootNetworkInfosList = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
+        Path studyJsonPath = tempDir.resolve("tree.json");
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), studyExportInfos);
+        return rootNetworkInfosList;
+    }
+
+    private Path createTempWorkDir(UUID studyUuid) {
+        try {
+            FileAttribute<Set<PosixFilePermission>> attr =
+                    PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"));
+            return Files.createTempDirectory("study-export-" + studyUuid, attr);
+        } catch (IOException e) {
+            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to create temp directory for study: " + studyUuid);
         }
     }
 
@@ -102,22 +123,18 @@ public class StudyExportArchiveService {
      * Export a case file from case-server
      */
     private void exportCaseFile(UUID caseUuid, String caseName, Path casesDir) throws IOException {
-        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}").buildAndExpand(caseUuid).toUriString();
-        ResponseEntity<byte[]> response = restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, byte[].class);
+        ResponseEntity<byte[]> response = caseService.getCaseContent(caseUuid);
         byte[] body = response.getBody();
         if (body != null) {
             Path caseDir = casesDir.resolve(caseUuid.toString());
             Files.createDirectories(caseDir);
-            if (isGzipCompressed(body)) {
+            String contentEncoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
+            if ("gzip".equalsIgnoreCase(contentEncoding)) {
                 body = decompressGzip(body);
             }
             Path caseFile = caseDir.resolve(caseName);
             Files.write(caseFile, body);
         }
-    }
-
-    private static boolean isGzipCompressed(byte[] data) {
-        return data.length > 2 && data[0] == (byte) 0x1F && data[1] == (byte) 0x8B;
     }
 
     private static byte[] decompressGzip(byte[] data) throws IOException {

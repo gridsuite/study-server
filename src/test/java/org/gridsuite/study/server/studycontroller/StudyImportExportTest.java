@@ -12,7 +12,6 @@ import org.gridsuite.study.server.dto.studyexport.CaseExportInfos;
 import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.StudyExportInfos;
-import org.gridsuite.study.server.service.StudyExportArchiveService;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,30 +40,22 @@ class StudyImportExportTest extends StudyTestBase {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Autowired
-    private StudyExportArchiveService studyExportArchiveService;
-
     @Test
     void testExportStudyArchive() throws Exception {
         // Create a study
         UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
-
-        // Point StudyExportArchiveService's case-server base URI to WireMock
-        ReflectionTestUtils.setField(studyExportArchiveService, "caseServerBaseUri", wireMockServer.baseUrl());
-
+        ReflectionTestUtils.setField(caseService, "caseServerBaseUri", wireMockServer.baseUrl());
         // Stub the case content download used during export
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
                 .willReturn(WireMock.aResponse().withStatus(200)
                         .withHeader("Content-Type", "application/octet-stream")
                         .withBody("dummy case content".getBytes())));
-
         // Export as archive
         MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export-archive", studyUuid).header(HEADER_USER_ID, "testUser"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "attachment; filename=study-" + studyUuid + ".gz"))
+                .andExpect(header().string("Content-Disposition", "attachment; filename=" + studyUuid + ".gz"))
                 .andExpect(header().string("Content-Type", "application/gzip"))
                 .andReturn();
-
         // Verify the response contains data
         byte[] archiveContent = result.getResponse().getContentAsByteArray();
         assertNotNull(archiveContent);
@@ -73,13 +64,12 @@ class StudyImportExportTest extends StudyTestBase {
         try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(archiveContent))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
-                if ("study.json".equals(entry.getName())) {
+                if ("tree.json".equals(entry.getName())) {
                     exportInfos = objectMapper.readValue(zis.readAllBytes(), StudyExportInfos.class);
                     break;
                 }
             }
         }
-
         // Verify export structure
         assertNotNull(exportInfos);
         assertEquals(studyUuid, exportInfos.studyUuid());
@@ -90,7 +80,6 @@ class StudyImportExportTest extends StudyTestBase {
         assertEquals("ROOT", exportInfos.nodeTree().type());
         assertNotNull(exportInfos.nodeTree().children());
         assertEquals(1, exportInfos.nodeTree().children().size());
-
         // Verify the case content download call
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
     }
@@ -166,9 +155,9 @@ class StudyImportExportTest extends StudyTestBase {
     private StudyExportInfos createSampleStudyExportInfos(UUID studyUuid) {
         CaseExportInfos caseInfo = new CaseExportInfos(CASE_UUID, "testCase.xiidm");
         List<NodeTreeExportInfos> children = new ArrayList<>();
-        children.add(new NodeTreeExportInfos(UUID.randomUUID(), "Test Node 1", "NETWORK_MODIFICATION", UUID.randomUUID(), "BUILT", Collections.emptyList()));
-        children.add(new NodeTreeExportInfos(UUID.randomUUID(), "Test Node 2", "NETWORK_MODIFICATION", UUID.randomUUID(), "BUILT", Collections.emptyList()));
-        NodeTreeExportInfos nodeTreeExportInfos = new NodeTreeExportInfos(UUID.randomUUID(), "Root", "ROOT", null, null, children);
+        children.add(new NodeTreeExportInfos("Test Node 1", "NETWORK_MODIFICATION", UUID.randomUUID(), "BUILT", Collections.emptyList()));
+        children.add(new NodeTreeExportInfos("Test Node 2", "NETWORK_MODIFICATION", UUID.randomUUID(), "BUILT", Collections.emptyList()));
+        NodeTreeExportInfos nodeTreeExportInfos = new NodeTreeExportInfos("Root", "ROOT", null, null, children);
         RootNetworkExportInfos rootNetwork = new RootNetworkExportInfos("Network 1", "1", "XIIDM", caseInfo, Collections.emptyMap());
         return new StudyExportInfos(studyUuid, Collections.singletonList(rootNetwork), nodeTreeExportInfos);
     }

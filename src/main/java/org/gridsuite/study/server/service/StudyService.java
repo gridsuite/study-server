@@ -3515,7 +3515,6 @@ public class StudyService {
             }
         }
         return new NodeTreeExportInfos(
-                node.getId(),
                 node.getName(),
                 node.getType().name(),
                 modificationGroupUuid,

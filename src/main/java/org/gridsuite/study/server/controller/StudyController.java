@@ -33,7 +33,6 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.service.*;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -1869,19 +1868,14 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/export-archive", produces = "application/gzip")
-    @Operation(summary = "Export a study as a gzip archive containing study.json and case files")
+    @Operation(summary = "Export a study as a gzip archive containing tree.json and case files")
     @ApiResponse(responseCode = "200", description = "The study archive as gzip")
     @ApiResponse(responseCode = "404", description = "Study or root network not found")
     public ResponseEntity<Resource> exportStudyArchive(@PathVariable("studyUuid") UUID studyUuid) {
-        InputStreamResource resource = studyExportArchiveService.exportStudyArchive(studyUuid);
-
         HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=study-" + studyUuid + ".gz");
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + studyUuid + ".gz");
         headers.add(HttpHeaders.CONTENT_TYPE, "application/gzip");
-
-        return ResponseEntity.ok()
-                .headers(headers)
-                .body(resource);
+        return ResponseEntity.ok().headers(headers).body(studyExportArchiveService.exportStudyArchive(studyUuid));
     }
 
     @PostMapping(value = "/studies/import-with-case-import-action/{caseUuid}")
