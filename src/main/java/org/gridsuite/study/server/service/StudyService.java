@@ -110,17 +110,10 @@ public class StudyService {
     private final UserAdminService userAdminService;
     private final StudyInfosService studyInfosService;
     private final EquipmentInfosService equipmentInfosService;
-    private final LoadFlowRestService loadflowRestService;
-    private final LoadFlowService loadFlowService;
-    private final ShortCircuitRestService shortCircuitRestService;
-    private final VoltageInitRestService voltageInitRestService;
     private final SingleLineDiagramService singleLineDiagramService;
     private final NetworkConversionService networkConversionService;
     private final GeoDataService geoDataService;
     private final NetworkMapService networkMapService;
-    private final SecurityAnalysisRestService securityAnalysisRestService;
-    private final DynamicMappingService dynamicMappingService;
-    private final DynamicSimulationEventService dynamicSimulationEventService;
     private final StudyConfigService studyConfigService;
     private final NadConfigService nadConfigService;
     private final FilterService filterService;
@@ -129,7 +122,15 @@ public class StudyService {
     private final RootNetworkService rootNetworkService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
+
     private final ComputationParametersService computationParametersService;
+    private final LoadFlowRestService loadflowRestService;
+    private final LoadFlowService loadFlowService;
+    private final SecurityAnalysisRestService securityAnalysisRestService;
+    private final DynamicMappingService dynamicMappingService;
+    private final DynamicSimulationEventService dynamicSimulationEventService;
+    private final ShortCircuitRestService shortCircuitRestService;
+    private final VoltageInitRestService voltageInitRestService;
 
     private final ObjectMapper objectMapper;
 
