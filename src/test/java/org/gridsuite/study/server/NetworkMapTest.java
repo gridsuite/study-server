@@ -170,7 +170,7 @@ class NetworkMapTest {
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
         networkMapService.setNetworkMapServerBaseUri(baseUrl);
-        loadFlowRestService.setLoadFlowServerBaseUri(baseUrl);
+        loadFlowRestService.setBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         filterService.setBaseUri(wireMockServer.baseUrl());
 
