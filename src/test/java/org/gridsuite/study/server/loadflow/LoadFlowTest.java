@@ -209,7 +209,7 @@ class LoadFlowTest {
         wireMockStubs = new WireMockStubs(wireMockServer);
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
-        loadFlowRestService.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
+        loadFlowRestService.setBaseUri(wireMockServer.baseUrl());
         networkModificationService.setNetworkModificationServerBaseUri(wireMockServer.baseUrl());
 
         List<LimitViolationInfos> limitViolations = List.of(LimitViolationInfos.builder()

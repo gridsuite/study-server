@@ -45,8 +45,12 @@ import org.gridsuite.study.server.service.client.dynamicmargincalculation.Dynami
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
+import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.gridsuite.study.server.utils.MatcherJson;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
@@ -296,13 +300,13 @@ class NetworkModificationTest {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         String baseUrl = wireMockServer.baseUrl();
         reportService.setReportServerBaseUri(baseUrl);
-        loadFlowRestService.setLoadFlowServerBaseUri(baseUrl);
-        securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
-        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
-        shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
-        voltageInitService.setVoltageInitServerBaseUri(baseUrl);
-        stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
-        pccMinService.setPccMinServerBaseUri(baseUrl);
+        loadFlowRestService.setBaseUri(baseUrl);
+        securityAnalysisService.setBaseUri(baseUrl);
+        sensitivityAnalysisService.setBaseUri(baseUrl);
+        shortCircuitService.setBaseUri(baseUrl);
+        voltageInitService.setBaseUri(baseUrl);
+        stateEstimationService.setBaseUri(baseUrl);
+        pccMinService.setBaseUri(baseUrl);
 
         doReturn(baseUrl).when(dynamicSimulationClient).getBaseUri();
         doReturn(baseUrl).when(dynamicSecurityAnalysisClient).getBaseUri();
@@ -2212,9 +2216,9 @@ class NetworkModificationTest {
         NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
                 UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
         UUID nodeUuid1 = node1.getId();
-        CompositeInfos modification1 = new CompositeInfos(UUID.randomUUID(), "composite 1", false);
+        CompositeInfos modification1 = new CompositeInfos(UUID.randomUUID(), "composite 1", false, "description1");
         UUID sharedNetModId = UUID.randomUUID();
-        CompositeInfos modification2 = new CompositeInfos(sharedNetModId, "composite 2", true);
+        CompositeInfos modification2 = new CompositeInfos(sharedNetModId, "composite 2", true, "description2");
         String compositesData = mapper.writeValueAsString(
                 Arrays.asList(
                         modification1,

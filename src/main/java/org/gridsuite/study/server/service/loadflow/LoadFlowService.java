@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 20226, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -12,8 +12,8 @@ import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.AbstractComputationService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

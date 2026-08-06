@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.common;
 
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
@@ -13,8 +13,7 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.common.ComputationParameters;
-import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -32,7 +31,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 @Service
 public abstract class AbstractComputationService {
-    private final StudyRepository studyRepository;
+    protected final StudyRepository studyRepository;
     private final ComputationParametersService computationParametersService;
     protected final NotificationService notificationService;
     protected final RootNetworkNodeInfoService rootNetworkNodeInfoService;
@@ -78,7 +77,27 @@ public abstract class AbstractComputationService {
         return userProfileIssue;
     }
 
-    private void emitComputationParametersChanged(UUID studyUuid, String userId,
+    protected <T> void setComputationParameters(UUID studyUuid, T parameters, String userId,
+                                              Function<StudyEntity, UUID> studyParameterGetter,
+                                              BiConsumer<StudyEntity, UUID> studyParameterSetter,
+                                              Function<T, UUID> createParameters,
+                                              BiConsumer<UUID, T> updateParameters,
+                                              ComputationType computationType,
+                                              List<Consumer<UUID>> statusInvalidations,
+                                              String... statusUpdateTypes) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        computationParametersService.createOrUpdateParameters(
+                studyEntity,
+                parameters,
+                studyParameterGetter,
+                studyParameterSetter,
+                createParameters,
+                updateParameters
+        );
+        emitComputationParametersChanged(studyUuid, userId, computationType, statusInvalidations, statusUpdateTypes);
+    }
+
+    protected void emitComputationParametersChanged(UUID studyUuid, String userId,
                                                   ComputationType computationType,
                                                   List<Consumer<UUID>> statusInvalidations,
                                                   String... statusUpdateTypes) {
