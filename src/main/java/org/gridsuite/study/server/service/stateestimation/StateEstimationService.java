@@ -34,7 +34,6 @@ import static org.gridsuite.study.server.dto.ComputationType.STATE_ESTIMATION;
 @Service
 public class StateEstimationService extends AbstractComputationService {
     private final StateEstimationRestService stateEstimationRestService;
-    private final UserAdminService userAdminService;
     private final ObjectMapper objectMapper;
 
     protected StateEstimationService(StudyRepository studyRepository,
@@ -45,9 +44,8 @@ public class StateEstimationService extends AbstractComputationService {
                                      StateEstimationRestService stateEstimationRestService,
                                      UserAdminService userAdminService,
                                      ObjectMapper objectMapper) {
-        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService, userAdminService);
         this.stateEstimationRestService = stateEstimationRestService;
-        this.userAdminService = userAdminService;
         this.objectMapper = objectMapper;
     }
 

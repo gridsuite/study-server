@@ -43,7 +43,6 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 @Service
 public class VoltageInitService extends AbstractComputationService {
     private final VoltageInitRestService voltageInitRestService;
-    private final UserAdminService userAdminService;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VoltageInitService.class);
 
@@ -55,9 +54,9 @@ public class VoltageInitService extends AbstractComputationService {
                                  NetworkModificationTreeService networkModificationTreeService,
                                  UserAdminService userAdminService,
                                  RootNetworkService rootNetworkService) {
-        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.voltageInitRestService = voltageInitRestService;
-        this.userAdminService = userAdminService;
     }
 
     public StudyVoltageInitParameters getVoltageInitParameters(UUID studyUuid) {

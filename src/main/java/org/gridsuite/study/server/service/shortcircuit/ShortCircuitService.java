@@ -11,10 +11,13 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
-import org.gridsuite.study.server.service.pccmin.PccMinService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,8 +37,6 @@ import static org.gridsuite.study.server.dto.ComputationType.SHORT_CIRCUIT_ONE_B
 @Service
 public class ShortCircuitService extends AbstractComputationService {
     private final ShortCircuitRestService shortCircuitRestService;
-    private final UserAdminService userAdminService;
-    private final PccMinService pccMinService;
 
     protected ShortCircuitService(StudyRepository studyRepository,
                                   ComputationParametersService computationParametersService,
@@ -45,11 +46,11 @@ public class ShortCircuitService extends AbstractComputationService {
                                   NetworkModificationTreeService networkModificationTreeService,
                                   UserAdminService userAdminService,
                                   RootNetworkService rootNetworkService,
-                                  PccMinService pccMinService) {
-        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
+                                  PccMinRestService pccMinRestService) {
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.shortCircuitRestService = shortCircuitServicerRest;
-        this.userAdminService = userAdminService;
-        this.pccMinService = pccMinService;
+        this.pccMinRestService = pccMinRestService;
     }
 
     @Transactional
@@ -105,7 +106,7 @@ public class ShortCircuitService extends AbstractComputationService {
                 shortCircuitRestService::createParameters,
                 shortCircuitRestService::updateParameters,
                 SHORT_CIRCUIT,
-                List.of(this::invalidateShortCircuitStatusOnAllNodes, pccMinService::invalidatePccMinStatusOnAllNodes),
+                List.of(this::invalidateShortCircuitStatusOnAllNodes, this::invalidatePccMinStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
                 NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
                 NotificationService.UPDATE_TYPE_PCC_MIN_STATUS

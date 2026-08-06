@@ -32,8 +32,6 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWE
 
 @Service
 public class DynamicMarginCalculationService extends AbstractComputationService {
-    private final DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
-    private final UserAdminService userAdminService;
 
     protected DynamicMarginCalculationService(StudyRepository studyRepository,
                                               ComputationParametersService computationParametersService,
@@ -43,9 +41,9 @@ public class DynamicMarginCalculationService extends AbstractComputationService 
                                               NetworkModificationTreeService networkModificationTreeService,
                                               UserAdminService userAdminService,
                                               RootNetworkService rootNetworkService) {
-        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.dynamicMarginCalculationRestService = dynamicMarginCalculationRestService;
-        this.userAdminService = userAdminService;
     }
 
     public String getDynamicMarginCalculationProvider(UUID studyUuid) {
@@ -76,10 +74,6 @@ public class DynamicMarginCalculationService extends AbstractComputationService 
                 List.of(this::invalidateDynamicMarginCalculationStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS
         );
-    }
-
-    public void invalidateDynamicMarginCalculationStatusOnAllNodes(UUID studyUuid) {
-        dynamicMarginCalculationRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_MARGIN_CALCULATION));
     }
 
     @Transactional

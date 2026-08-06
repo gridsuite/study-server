@@ -37,8 +37,6 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWE
 
 @Service
 public class DynamicSecurityAnalysisService extends AbstractComputationService {
-    private final DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
-    private final UserAdminService userAdminService;
 
     protected DynamicSecurityAnalysisService(StudyRepository studyRepository,
                                              ComputationParametersService computationParametersService,
@@ -47,9 +45,9 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
                                              DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService,
                                              NetworkModificationTreeService networkModificationTreeService,
                                              UserAdminService userAdminService, RootNetworkService rootNetworkService) {
-        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService,
+            computationParametersService, userAdminService);
         this.dynamicSecurityAnalysisRestService = dynamicSecurityAnalysisRestService;
-        this.userAdminService = userAdminService;
     }
 
     public String getDynamicSecurityAnalysisProvider(UUID studyUuid) {
@@ -80,10 +78,6 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
                 List.of(this::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS
         );
-    }
-
-    public void invalidateDynamicSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        dynamicSecurityAnalysisRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SECURITY_ANALYSIS));
     }
 
     @Transactional

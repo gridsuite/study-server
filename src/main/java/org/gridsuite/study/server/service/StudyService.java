@@ -43,12 +43,8 @@ import org.gridsuite.study.server.repository.*;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
-import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationEventService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
@@ -76,7 +72,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -189,9 +184,6 @@ public class StudyService {
         ActionsService actionsService,
         CaseService caseService,
         DynamicMappingService dynamicMappingService,
-        DynamicSimulationService dynamicSimulationService,
-        DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-        DynamicMarginCalculationService dynamicMarginCalculationService,
         VoltageInitRestService voltageInitService,
         DynamicSimulationEventService dynamicSimulationEventService,
         StudyConfigService studyConfigService,
@@ -1110,33 +1102,6 @@ public class StudyService {
                 || networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt())) {
             throw new StudyException(NODE_NOT_BUILT);
         }
-    }
-
-    private <T> boolean setComputationParameters(UUID studyUuid, T parameters, String userId,
-                                                 Function<StudyEntity, UUID> studyParameterGetter,
-                                                 BiConsumer<StudyEntity, UUID> studyParameterSetter,
-                                                 Function<UserProfileInfos, UUID> profileParameterGetter,
-                                                 ComputationParameters computationParameters,
-                                                 Function<T, UUID> createParameters,
-                                                 BiConsumer<UUID, T> updateParameters,
-                                                 ComputationType computationType,
-                                                 List<Consumer<UUID>> statusInvalidations,
-                                                 String... statusUpdateTypes) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        boolean userProfileIssue = computationParametersService.createOrUpdateParameters(
-                studyEntity,
-                parameters,
-                userId,
-                studyParameterGetter,
-                studyParameterSetter,
-                profileParameterGetter,
-                computationParameters,
-                createParameters,
-                updateParameters,
-                computationType.getLabel()
-        );
-        emitComputationParametersChanged(studyUuid, userId, computationType, statusInvalidations, statusUpdateTypes);
-        return userProfileIssue;
     }
 
     private void emitComputationParametersChanged(UUID studyUuid, String userId,

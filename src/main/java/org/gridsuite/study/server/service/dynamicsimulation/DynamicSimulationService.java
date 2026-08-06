@@ -20,7 +20,7 @@ import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,26 +36,23 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWE
 
 @Service
 public class DynamicSimulationService extends AbstractComputationService {
-    private final DynamicSimulationRestService dynamicSimulationRestService;
-    private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
     private final DynamicSimulationEventService dynamicSimulationEventService;
-    private final UserAdminService userAdminService;
 
     protected DynamicSimulationService(StudyRepository studyRepository,
                                        ComputationParametersService computationParametersService,
                                        NotificationService notificationService,
                                        RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                        DynamicSimulationRestService dynamicSimulationRestService,
-                                       DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+                                       DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService,
                                        DynamicSimulationEventService dynamicSimulationEventService,
                                        NetworkModificationTreeService networkModificationTreeService,
-                                       UserAdminService userAdminService,
-                                       RootNetworkService rootNetworkService) {
-        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
+                                       UserAdminService userAdminService, RootNetworkService rootNetworkService
+    ) {
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.dynamicSimulationRestService = dynamicSimulationRestService;
-        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
+        this.dynamicSecurityAnalysisRestService = dynamicSecurityAnalysisRestService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
-        this.userAdminService = userAdminService;
     }
 
     @Transactional
@@ -79,14 +76,10 @@ public class DynamicSimulationService extends AbstractComputationService {
                 dynamicSimulationRestService::updateParameters,
                 DYNAMIC_SIMULATION,
                 List.of(this::invalidateDynamicSimulationStatusOnAllNodes,
-                        dynamicSecurityAnalysisService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
+                        this::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
                 NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS
         );
-    }
-
-    public void invalidateDynamicSimulationStatusOnAllNodes(UUID studyUuid) {
-        dynamicSimulationRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SIMULATION));
     }
 
     public String getDynamicSimulationProvider(UUID studyUuid) {

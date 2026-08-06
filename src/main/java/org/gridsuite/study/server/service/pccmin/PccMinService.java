@@ -35,8 +35,6 @@ import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
 
 @Service
 public class PccMinService extends AbstractComputationService {
-    private final PccMinRestService pccMinRestService;
-    private final UserAdminService userAdminService;
     private final ObjectMapper objectMapper;
     private static final Logger LOGGER = LoggerFactory.getLogger(PccMinService.class);
 
@@ -49,9 +47,9 @@ public class PccMinService extends AbstractComputationService {
                             UserAdminService userAdminService,
                             ObjectMapper objectMapper,
                             RootNetworkService rootNetworkService) {
-        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService, rootNetworkService, computationParametersService);
+        super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
+            rootNetworkService, computationParametersService, userAdminService);
         this.pccMinRestService = pccMinRestService;
-        this.userAdminService = userAdminService;
         this.objectMapper = objectMapper;
     }
 
@@ -135,9 +133,5 @@ public class PccMinService extends AbstractComputationService {
             pccMinRestService.updatePccMinParameters(existingPccMinParametersUuid, parameters);
         }
         return userProfileIssue;
-    }
-
-    public void invalidatePccMinStatusOnAllNodes(UUID studyUuid) {
-        pccMinRestService.invalidatePccMinStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, PCC_MIN));
     }
 }
