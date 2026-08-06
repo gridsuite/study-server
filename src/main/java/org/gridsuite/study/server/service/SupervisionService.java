@@ -19,9 +19,9 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadRestService;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
@@ -64,11 +64,11 @@ public class SupervisionService {
 
     private final LoadFlowRestService loadFlowRestService;
 
-    private final DynamicSimulationService dynamicSimulationService;
+    private final DynamicSimulationRestService dynamicSimulationRestService;
 
-    private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private final DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
 
-    private final DynamicMarginCalculationService dynamicMarginCalculationService;
+    private final DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
 
     private final SecurityAnalysisRestService securityAnalysisService;
 
@@ -103,9 +103,9 @@ public class SupervisionService {
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                               ReportService reportService,
                               LoadFlowRestService loadFlowRestService,
-                              DynamicSimulationService dynamicSimulationService,
-                              DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                              DynamicMarginCalculationService dynamicMarginCalculationService,
+                              DynamicSimulationRestService dynamicSimulationRestService,
+                              DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService,
+                              DynamicMarginCalculationRestService dynamicMarginCalculationRestService,
                               SecurityAnalysisRestService securityAnalysisService,
                               SensitivityAnalysisRestService sensitivityAnalysisService,
                               ShortCircuitRestService shortCircuitService,
@@ -124,9 +124,9 @@ public class SupervisionService {
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.reportService = reportService;
         this.loadFlowRestService = loadFlowRestService;
-        this.dynamicSimulationService = dynamicSimulationService;
-        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
-        this.dynamicMarginCalculationService = dynamicMarginCalculationService;
+        this.dynamicSimulationRestService = dynamicSimulationRestService;
+        this.dynamicSecurityAnalysisRestService = dynamicSecurityAnalysisRestService;
+        this.dynamicMarginCalculationRestService = dynamicMarginCalculationRestService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
@@ -147,11 +147,11 @@ public class SupervisionService {
         return switch (computationType) {
             case LOAD_FLOW -> dryRun ? loadFlowRestService.getLoadFlowResultsCount() : deleteLoadflowResults();
             case DYNAMIC_SIMULATION ->
-                dryRun ? dynamicSimulationService.getResultsCount() : deleteDynamicSimulationResults();
+                dryRun ? dynamicSimulationRestService.getResultsCount() : deleteDynamicSimulationResults();
             case DYNAMIC_SECURITY_ANALYSIS ->
-                dryRun ? dynamicSecurityAnalysisService.getResultsCount() : deleteDynamicSecurityAnalysisResults();
+                dryRun ? dynamicSecurityAnalysisRestService.getResultsCount() : deleteDynamicSecurityAnalysisResults();
             case DYNAMIC_MARGIN_CALCULATION ->
-                dryRun ? dynamicMarginCalculationService.getResultsCount() : deleteDynamicMarginCalculationResults();
+                dryRun ? dynamicMarginCalculationRestService.getResultsCount() : deleteDynamicMarginCalculationResults();
             case SECURITY_ANALYSIS ->
                 dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
             case SENSITIVITY_ANALYSIS ->
@@ -230,7 +230,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSimulationResultUuid(null));
-        dynamicSimulationService.deleteAllResults();
+        dynamicSimulationRestService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SIMULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
@@ -240,7 +240,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicSecurityAnalysisResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSecurityAnalysisResultUuid(null));
-        dynamicSecurityAnalysisService.deleteAllResults();
+        dynamicSecurityAnalysisRestService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
@@ -250,7 +250,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicMarginCalculationResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicMarginCalculationResultUuid(null));
-        dynamicMarginCalculationService.deleteAllResults();
+        dynamicMarginCalculationRestService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_MARGIN_CALCULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }

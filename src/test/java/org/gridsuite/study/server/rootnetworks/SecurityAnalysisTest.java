@@ -285,11 +285,11 @@ class SecurityAnalysisTest {
 
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
-        securityAnalysisRestService.setSecurityAnalysisServerBaseUri(wireMockServer.baseUrl());
+        securityAnalysisRestService.setBaseUri(wireMockServer.baseUrl());
         actionsService.setActionsServerBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
 
-        loadFlowRestService.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
+        loadFlowRestService.setBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
         limitTypeJson = objectMapper.writeValueAsString(List.of(LimitViolationType.CURRENT.name(), LimitViolationType.HIGH_VOLTAGE.name()));
 

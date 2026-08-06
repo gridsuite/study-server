@@ -11,9 +11,9 @@ import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
@@ -57,9 +57,9 @@ public class ComputationParametersService {
                                         LoadFlowRestService loadFlowRestService,
                                         ShortCircuitRestService shortCircuitService,
                                         VoltageInitRestService voltageInitService,
-                                        DynamicSimulationService dynamicSimulationService,
-                                        DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                                        DynamicMarginCalculationService dynamicMarginCalculationService,
+                                        DynamicSimulationRestService dynamicSimulationRestService,
+                                        DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService,
+                                        DynamicMarginCalculationRestService dynamicMarginCalculationRestService,
                                         StateEstimationRestService stateEstimationService,
                                         PccMinRestService pccMinService,
                                         UserAdminService userAdminService) {
@@ -82,7 +82,7 @@ public class ComputationParametersService {
                         ComputationType.DYNAMIC_SIMULATION,
                         StudyEntity::getDynamicSimulationParametersUuid,
                         UserProfileInfos::getDynamicSimulationParameterId,
-                        dynamicSimulationService,
+                        dynamicSimulationRestService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicSimulationParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.VOLTAGE_INITIALIZATION,
@@ -106,13 +106,13 @@ public class ComputationParametersService {
                         ComputationType.DYNAMIC_SECURITY_ANALYSIS,
                         StudyEntity::getDynamicSecurityAnalysisParametersUuid,
                         UserProfileInfos::getDynamicSecurityAnalysisParameterId,
-                        dynamicSecurityAnalysisService,
+                        dynamicSecurityAnalysisRestService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicSecurityAnalysisParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.DYNAMIC_MARGIN_CALCULATION,
                         StudyEntity::getDynamicMarginCalculationParametersUuid,
                         UserProfileInfos::getDynamicMarginCalculationParameterId,
-                        dynamicMarginCalculationService,
+                        dynamicMarginCalculationRestService,
                         ComputationParameterUUIDs.ComputationParameterUUIDsBuilder::dynamicMarginCalculationParametersUuid),
                 new ComputationParametersDefinition(
                         ComputationType.STATE_ESTIMATION,
