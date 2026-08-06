@@ -56,13 +56,13 @@ public class NodeActivityEntity {
     public static NodeActivityEntity from(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid) {
         Objects.requireNonNull(studyUuid);
         Objects.requireNonNull(nodeUuid);
-        if (!type.isAffectsAllRootNetworks()) {
+        if (!type.affectsAllRootNetworks()) {
             Objects.requireNonNull(rootNetworkUuid, () -> type + " runs in one root network");
         }
         return builder()
             .studyId(studyUuid)
             .nodeId(nodeUuid)
-            .rootNetworkId(type.isAffectsAllRootNetworks() ? null : rootNetworkUuid)
+            .rootNetworkId(rootNetworkUuid)
             .type(type)
             .startedAt(Instant.now())
             .build();

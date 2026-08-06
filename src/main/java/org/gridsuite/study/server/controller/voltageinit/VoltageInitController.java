@@ -59,7 +59,7 @@ public class VoltageInitController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(VOLTAGE_INITIALIZATION, userId);
-        nodeActivityService.setNodeActivityUntilResult(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> voltageInitService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().build();
     }

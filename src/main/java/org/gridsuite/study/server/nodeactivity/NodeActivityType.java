@@ -8,6 +8,7 @@ package org.gridsuite.study.server.nodeactivity;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.experimental.Accessors;
 
 import static org.gridsuite.study.server.nodeactivity.NodeActivityLabel.*;
 
@@ -17,22 +18,30 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityLabel.*;
 @Getter
 @AllArgsConstructor
 public enum NodeActivityType {
-    BUILD(BUILDING, false, false),
-    UNBUILD(UNBUILDING, false, false),
-    UNBUILD_CHILDREN(UNBUILDING, true, false),
-    UNBUILD_ALL(UNBUILDING, true, true),
-    COMPUTE(COMPUTING, false, false),
-    LOADFLOW_ON_SECURITY_NODE(COMPUTING, true, false),
-    REIMPORT_CASE(UPDATING, true, false),
-    EDIT_TREE(UPDATING, true, true),
-    EDIT_MODIFICATIONS(UPDATING, true, true),
-    EDIT_PARAMETERS(UPDATING, true, true),
-    DELETE_NODES(DELETING, true, true),
-    EDIT_EVENTS(UPDATING, false, true);
+    // label, invalidates children, affects all root networks, removed by a result message
+    BUILD(BUILDING, false, false, true),
+    UNBUILD(UNBUILDING, false, false, false),
+    UNBUILD_CHILDREN(UNBUILDING, true, false, false),
+    UNBUILD_ALL(UNBUILDING, true, true, false),
+    COMPUTE(COMPUTING, false, false, true),
+    COMPUTE_AND_UNBUILD_CHILDREN(COMPUTING, true, false, true),
+    REIMPORT_CASE(UPDATING, true, false, true),
+    EDIT_TREE(UPDATING, true, true, false),
+    EDIT_MODIFICATIONS(UPDATING, true, true, false),
+    DELETE_NODES(DELETING, true, true, false),
+    EDIT_EVENTS(UPDATING, false, true, false);
 
     private final NodeActivityLabel label;
 
+    @Accessors(fluent = true)
     private final boolean invalidatesChildren;
 
+    @Accessors(fluent = true)
     private final boolean affectsAllRootNetworks;
+
+    /**
+     * The row outlives the request, so every path a result message can take through ConsumerService
+     * must remove the activity. When false the row goes as soon as the call returns.
+     */
+    private final boolean removedByResultMessage;
 }

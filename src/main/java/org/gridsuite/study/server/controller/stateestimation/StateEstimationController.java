@@ -57,7 +57,7 @@ public class StateEstimationController {
                                                    @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(STATE_ESTIMATION, userId);
-        nodeActivityService.setNodeActivityUntilResult(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> stateEstimationService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().build();
     }

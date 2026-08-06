@@ -13,7 +13,6 @@ import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
-import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.ConsumerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -82,7 +81,6 @@ class WorkflowTest {
 
         when(networkModificationTreeService.getStudyUuidForNodeId(nodeUuid)).thenReturn(studyUuid);
         when(networkModificationTreeService.isSecurityNode(nodeUuid)).thenReturn(true);
-        when(nodeActivityService.isNodeActivityRunning(NodeActivityType.LOADFLOW_ON_SECURITY_NODE, rootNetworkUuid, nodeUuid)).thenReturn(true);
 
         // execute consume
         consumerService.consumeBuildResult().accept(MessageBuilder.createMessage(networkModificationResult, messageHeaders));

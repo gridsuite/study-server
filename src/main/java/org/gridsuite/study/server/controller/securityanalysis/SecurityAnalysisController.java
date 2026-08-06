@@ -60,7 +60,7 @@ public class SecurityAnalysisController {
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(SECURITY_ANALYSIS, userId);
-        nodeActivityService.setNodeActivityUntilResult(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> securityAnalysisService.runSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }

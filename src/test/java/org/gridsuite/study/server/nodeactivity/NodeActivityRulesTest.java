@@ -23,15 +23,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NODE_ACTIVITY_CONFLICT;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityService.assertNoConflict;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityRules.assertNoConflict;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.BUILD;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE_AND_UNBUILD_CHILDREN;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.DELETE_NODES;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_EVENTS;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_MODIFICATIONS;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_PARAMETERS;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_TREE;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.LOADFLOW_ON_SECURITY_NODE;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.REIMPORT_CASE;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_ALL;
@@ -43,6 +42,7 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_C
 class NodeActivityRulesTest {
 
     private static final UUID STUDY = UUID.randomUUID();
+
     private static final UUID ROOT_NETWORK = UUID.randomUUID();
     private static final UUID OTHER_ROOT_NETWORK = UUID.randomUUID();
 
@@ -57,7 +57,7 @@ class NodeActivityRulesTest {
     *    |- NODE - CHILD - GRANDCHILD
     *    |- SIBLING
     */
-    private static final Map<UUID, Set<UUID>> PARENTS = Map.of(
+    private static final Map<UUID, Set<UUID>> ANCESTORS = Map.of(
         ROOT, Set.of(),
         NODE, Set.of(ROOT),
         CHILD, Set.of(ROOT, NODE),
@@ -66,18 +66,29 @@ class NodeActivityRulesTest {
 
     private static final List<UUID> EVERY_NODE = List.of(ROOT, NODE, CHILD, GRANDCHILD, SIBLING);
 
+    static Stream<Arguments> everyPairOfTypes() {
+        return Arrays.stream(NodeActivityType.values())
+            .flatMap(runningType -> Arrays.stream(NodeActivityType.values())
+                .map(requestedType -> Arguments.of(runningType, requestedType)));
+    }
+
+    private static UUID rootNetworkOf(NodeActivityType type, UUID rootNetworkUuid) {
+        return type.affectsAllRootNetworks() ? null : rootNetworkUuid;
+    }
+
     private static boolean refused(NodeActivityType runningType, UUID runningNode,
                                    NodeActivityType requestedType, UUID requestedNode) {
-        return refused(runningType, runningNode, ROOT_NETWORK, requestedType, requestedNode, ROOT_NETWORK);
+        return refused(runningType, runningNode, rootNetworkOf(runningType, ROOT_NETWORK),
+                       requestedType, requestedNode, rootNetworkOf(requestedType, ROOT_NETWORK));
     }
 
     private static boolean refused(NodeActivityType runningType, UUID runningNode, UUID runningRootNetwork,
                                    NodeActivityType requestedType, UUID requestedNode, UUID requestedRootNetwork) {
-        List<NodeActivityEntity> runningActivities =
+        List<NodeActivityEntity> running =
             List.of(NodeActivityEntity.from(runningType, STUDY, runningRootNetwork, runningNode));
-        List<UUID> requestedNodes = List.of(requestedNode);
         try {
-            assertNoConflict(runningActivities, requestedType, requestedRootNetwork, requestedNodes, PARENTS);
+            assertNoConflict(running,
+                NodeActivityEntity.from(requestedType, STUDY, requestedRootNetwork, requestedNode), ANCESTORS);
             return false;
         } catch (StudyException e) {
             assertThat(e.getBusinessErrorCode()).isEqualTo(NODE_ACTIVITY_CONFLICT);
@@ -85,10 +96,38 @@ class NodeActivityRulesTest {
         }
     }
 
-    static Stream<Arguments> everyPairOfTypes() {
-        return Arrays.stream(NodeActivityType.values())
-            .flatMap(runningType -> Arrays.stream(NodeActivityType.values())
-                .map(requestedType -> Arguments.of(runningType, requestedType)));
+    @Test
+    void everyTypeSaysWhetherItInvalidatesChildren() {
+        List<NodeActivityType> touchOnlyTheirNode = List.of(BUILD, UNBUILD, COMPUTE, EDIT_EVENTS);
+        List<NodeActivityType> invalidateTheirChildren = List.of(UNBUILD_CHILDREN, UNBUILD_ALL,
+            COMPUTE_AND_UNBUILD_CHILDREN, REIMPORT_CASE, EDIT_TREE, EDIT_MODIFICATIONS, DELETE_NODES);
+
+        assertThat(touchOnlyTheirNode).noneMatch(NodeActivityType::invalidatesChildren);
+        assertThat(invalidateTheirChildren).allMatch(NodeActivityType::invalidatesChildren);
+        assertThat(Stream.concat(touchOnlyTheirNode.stream(), invalidateTheirChildren.stream()))
+            .as("a new type has to be classified here, not only added to the enum")
+            .containsExactlyInAnyOrder(NodeActivityType.values());
+    }
+
+    @Test
+    void everyTypeSaysWhetherItAffectsAllRootNetworks() {
+        List<NodeActivityType> oneRootNetwork = List.of(BUILD, UNBUILD, UNBUILD_CHILDREN, COMPUTE,
+            COMPUTE_AND_UNBUILD_CHILDREN, REIMPORT_CASE);
+        List<NodeActivityType> allRootNetworks = List.of(UNBUILD_ALL, EDIT_TREE, EDIT_MODIFICATIONS,
+            DELETE_NODES, EDIT_EVENTS);
+
+        assertThat(oneRootNetwork).noneMatch(NodeActivityType::affectsAllRootNetworks);
+        assertThat(allRootNetworks).allMatch(NodeActivityType::affectsAllRootNetworks);
+        assertThat(Stream.concat(oneRootNetwork.stream(), allRootNetworks.stream()))
+            .as("a new type has to be classified here, not only added to the enum")
+            .containsExactlyInAnyOrder(NodeActivityType.values());
+    }
+
+    @Test
+    void theTypesRemovedByAResultMessage() {
+        assertThat(Arrays.stream(NodeActivityType.values()).filter(NodeActivityType::isRemovedByResultMessage))
+            .as("each of these needs a removeNodeActivity in ConsumerService")
+            .containsExactlyInAnyOrder(BUILD, COMPUTE, COMPUTE_AND_UNBUILD_CHILDREN, REIMPORT_CASE);
     }
 
     @ParameterizedTest(name = "{0} running, {1} requested")
@@ -99,25 +138,36 @@ class NodeActivityRulesTest {
 
     @ParameterizedTest(name = "{0} running, {1} requested")
     @MethodSource("everyPairOfTypes")
-    void unrelatedNodesNeverConflict(NodeActivityType runningType, NodeActivityType requestedType) {
+    void activitiesOnUnrelatedNodesNeverConflict(NodeActivityType runningType, NodeActivityType requestedType) {
         assertThat(refused(runningType, NODE, requestedType, SIBLING)).isFalse();
     }
 
-    @ParameterizedTest(name = "{0} on the parent, {1} on a child")
+    @ParameterizedTest(name = "{0} on an ancestor, {1} on a descendant")
     @MethodSource("everyPairOfTypes")
-    void aParentConflictsWithItsChildrenOnlyWhenItInvalidatesThem(NodeActivityType onParent, NodeActivityType onChild) {
-        assertThat(refused(onParent, NODE, onChild, GRANDCHILD))
-            .as("%s running on the parent, %s requested on a child", onParent, onChild)
-            .isEqualTo(onParent.isInvalidatesChildren());
+    void anAncestorConflictsWithADescendantOnlyWhenItInvalidatesChildren(NodeActivityType onAncestor,
+                                                                        NodeActivityType onDescendant) {
+        assertThat(refused(onAncestor, NODE, onDescendant, GRANDCHILD))
+            .as("%s running on an ancestor, %s requested on a descendant", onAncestor, onDescendant)
+            .isEqualTo(onAncestor.invalidatesChildren());
 
-        assertThat(refused(onChild, GRANDCHILD, onParent, NODE))
-            .as("%s running on a child, %s requested on the parent", onChild, onParent)
-            .isEqualTo(onParent.isInvalidatesChildren());
+        assertThat(refused(onDescendant, GRANDCHILD, onAncestor, NODE))
+            .as("%s running on a descendant, %s requested on an ancestor", onDescendant, onAncestor)
+            .isEqualTo(onAncestor.invalidatesChildren());
+    }
+
+    @ParameterizedTest(name = "{0} in one root network, {1} in another")
+    @MethodSource("everyPairOfTypes")
+    void activitiesInDifferentRootNetworksConflictOnlyWhenOneAffectsAllRootNetworks(NodeActivityType runningType,
+                                                                                    NodeActivityType requestedType) {
+        assertThat(refused(runningType, NODE, rootNetworkOf(runningType, ROOT_NETWORK),
+                           requestedType, NODE, rootNetworkOf(requestedType, OTHER_ROOT_NETWORK)))
+            .as("%s in one root network, %s in another", runningType, requestedType)
+            .isEqualTo(runningType.affectsAllRootNetworks() || requestedType.affectsAllRootNetworks());
     }
 
     @ParameterizedTest(name = "{0} against {1}")
     @MethodSource("everyPairOfTypes")
-    void theVerdictIsTheSameWhicheverStartedFirst(NodeActivityType oneType, NodeActivityType otherType) {
+    void theConflictIsTheSameWhicheverStartedFirst(NodeActivityType oneType, NodeActivityType otherType) {
         for (UUID oneNode : EVERY_NODE) {
             for (UUID otherNode : EVERY_NODE) {
                 assertThat(refused(oneType, oneNode, otherType, otherNode))
@@ -128,7 +178,7 @@ class NodeActivityRulesTest {
     }
 
     @Test
-    void theRootNodeIsAParentOfEverything() {
+    void theRootNodeIsAnAncestorOfEverything() {
         assertThat(refused(REIMPORT_CASE, ROOT, BUILD, GRANDCHILD)).isTrue();
         assertThat(refused(REIMPORT_CASE, ROOT, COMPUTE, SIBLING)).isTrue();
     }
@@ -140,44 +190,34 @@ class NodeActivityRulesTest {
     }
 
     @Test
-    void aNodeAndItsParentMayBuildInParallel() {
+    void aNodeAndItsAncestorMayBuildInParallel() {
         assertThat(refused(BUILD, NODE, BUILD, CHILD)).isFalse();
         assertThat(refused(UNBUILD, NODE, BUILD, CHILD)).isFalse();
     }
 
     @Test
-    void onlyALoadflowOnASecurityNodeInvalidatesChildren() {
-        assertThat(refused(LOADFLOW_ON_SECURITY_NODE, NODE, BUILD, CHILD)).isTrue();
+    void aComputeReachesChildrenOnlyWhenItAlsoUnbuildsThem() {
+        assertThat(refused(COMPUTE_AND_UNBUILD_CHILDREN, NODE, BUILD, CHILD)).isTrue();
         assertThat(refused(COMPUTE, NODE, BUILD, CHILD)).isFalse();
     }
 
     @Test
-    void activitiesInDifferentRootNetworksNeverConflict() {
-        assertThat(refused(BUILD, NODE, ROOT_NETWORK, BUILD, NODE, OTHER_ROOT_NETWORK)).isFalse();
-        assertThat(refused(UNBUILD_CHILDREN, NODE, ROOT_NETWORK, BUILD, CHILD, OTHER_ROOT_NETWORK)).isFalse();
-    }
-
-    @Test
-    void anActivityOnSharedDataConflictsInEveryRootNetwork() {
+    void anActivityAffectingAllRootNetworksReachesEveryRootNetwork() {
         assertThat(refused(EDIT_TREE, NODE, null, BUILD, CHILD, ROOT_NETWORK)).isTrue();
         assertThat(refused(EDIT_TREE, NODE, null, BUILD, CHILD, OTHER_ROOT_NETWORK)).isTrue();
         assertThat(refused(BUILD, CHILD, OTHER_ROOT_NETWORK, EDIT_TREE, NODE, null)).isTrue();
     }
 
     @Test
-    void theActivityFamiliesTheFrontendAssumesStillHold() {
-        assertThat(List.of(BUILD, UNBUILD, COMPUTE, EDIT_EVENTS))
-            .noneMatch(NodeActivityType::isInvalidatesChildren);
-        assertThat(List.of(UNBUILD_CHILDREN, UNBUILD_ALL, LOADFLOW_ON_SECURITY_NODE, REIMPORT_CASE,
-                EDIT_TREE, EDIT_MODIFICATIONS, EDIT_PARAMETERS, DELETE_NODES))
-            .allMatch(NodeActivityType::isInvalidatesChildren);
-        assertThat(NodeActivityType.values()).hasSize(12);
+    void anActivityInOneRootNetworkDoesNotReachAnother() {
+        assertThat(refused(UNBUILD_CHILDREN, NODE, ROOT_NETWORK, BUILD, CHILD, OTHER_ROOT_NETWORK)).isFalse();
     }
 
     @Test
     void nothingIsRefusedWhenNoActivityIsRunning() {
         List<NodeActivityEntity> nothingRunning = List.of();
-        assertThatCode(() -> assertNoConflict(nothingRunning, EDIT_TREE, null, EVERY_NODE, PARENTS))
+        assertThatCode(() -> EVERY_NODE.forEach(nodeUuid ->
+            assertNoConflict(nothingRunning, NodeActivityEntity.from(EDIT_TREE, STUDY, null, nodeUuid), ANCESTORS)))
             .doesNotThrowAnyException();
     }
 
@@ -185,8 +225,8 @@ class NodeActivityRulesTest {
     void theRefusalSaysWhatIsHoldingTheNode() {
         List<NodeActivityEntity> running =
             List.of(NodeActivityEntity.from(UNBUILD_CHILDREN, STUDY, ROOT_NETWORK, NODE));
-        List<UUID> requestedNodes = List.of(GRANDCHILD);
-        assertThatThrownBy(() -> assertNoConflict(running, BUILD, ROOT_NETWORK, requestedNodes, PARENTS))
+        assertThatThrownBy(() ->
+            assertNoConflict(running, NodeActivityEntity.from(BUILD, STUDY, ROOT_NETWORK, GRANDCHILD), ANCESTORS))
             .isInstanceOf(StudyException.class)
             .hasMessageContaining("BUILD on node " + GRANDCHILD)
             .hasMessageContaining("UNBUILD_CHILDREN is running on node " + NODE);

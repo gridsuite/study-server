@@ -1316,7 +1316,7 @@ public class StudyService {
         Set<NodeEntity> nodesWithLoadFlowResults = rootNetworkNodeInfoService.getAllByStudyUuidWithLoadFlowResultsNotNull(studyUuid).stream()
             .map(rootNetworkNodeInfoEntity -> rootNetworkNodeInfoEntity.getNodeInfo().getNode())
             .collect(Collectors.toSet());
-        // a row on an ancestor already covers its descendants, since EDIT_PARAMETERS invalidates children
+        // a row on an ancestor already covers its descendants, since the activity invalidates children
         return getHighestNodes(nodesWithLoadFlowResults).stream().map(NodeEntity::getIdNode).toList();
     }
 
@@ -1558,7 +1558,7 @@ public class StudyService {
 
         // if loadflow was run on a security node, all children node might have been impacted with loadflow modifications
         // we need to invalidate them all
-        if (isSecurityNodeWithLoadflowDone(nodeUuid, rootNetworkUuid)) {
+        if (self.isSecurityNodeWithLoadflowDone(nodeUuid, rootNetworkUuid)) {
             invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid);
         } else {
             invalidateNode(studyUuid, nodeUuid, rootNetworkUuid);
@@ -1742,7 +1742,7 @@ public class StudyService {
     }
 
     private void invalidateNodeTreeWithLF(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, ComputationsInvalidationMode computationsInvalidationMode) {
-        boolean invalidateAll = isSecurityNodeWithLoadflowDone(nodeUuid, rootNetworkUuid);
+        boolean invalidateAll = self.isSecurityNodeWithLoadflowDone(nodeUuid, rootNetworkUuid);
         InvalidateNodeTreeParameters invalidateNodeTreeParameters = InvalidateNodeTreeParameters.builder()
             .invalidationMode(invalidateAll ? InvalidationMode.ALL : InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
             .computationsInvalidationMode(invalidateAll ? ComputationsInvalidationMode.ALL : computationsInvalidationMode)

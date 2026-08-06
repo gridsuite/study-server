@@ -83,7 +83,7 @@ public class PccMinController {
 
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(PCC_MIN, userId);
-        nodeActivityService.setNodeActivityUntilResult(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> pccMinService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }

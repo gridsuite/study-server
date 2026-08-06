@@ -31,7 +31,7 @@ import static org.gridsuite.study.server.StudyConstants.DYNA_FLOW_PROVIDER;
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.LOAD_FLOW;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.LOADFLOW_ON_SECURITY_NODE;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE_AND_UNBUILD_CHILDREN;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -73,8 +73,8 @@ public class LoadFlowController {
         UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW);
         // a loadflow on a security node writes solved values onto its own variant and invalidates its children
         NodeActivityType activityType = networkModificationTreeService.isSecurityNode(nodeUuid)
-            ? LOADFLOW_ON_SECURITY_NODE : COMPUTE;
-        nodeActivityService.setNodeActivityUntilResult(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid), () -> {
+            ? COMPUTE_AND_UNBUILD_CHILDREN : COMPUTE;
+        nodeActivityService.runWithNodeActivity(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid), () -> {
             if (prevResultUuid != null) {
                 handleRerunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers, userId);
             } else {

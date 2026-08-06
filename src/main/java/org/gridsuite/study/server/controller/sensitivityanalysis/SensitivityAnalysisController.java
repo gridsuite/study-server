@@ -74,7 +74,7 @@ public class SensitivityAnalysisController {
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(SENSITIVITY_ANALYSIS, userId);
-        nodeActivityService.setNodeActivityUntilResult(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> sensitivityAnalysisService.runSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }

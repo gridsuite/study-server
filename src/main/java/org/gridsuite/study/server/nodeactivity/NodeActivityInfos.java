@@ -25,7 +25,7 @@ public record NodeActivityInfos(
             activity.getNodeId(),
             activity.getRootNetworkId(),
             activity.getType().getLabel(),
-            activity.getType().isInvalidatesChildren(),
+            activity.getType().invalidatesChildren(),
             activity.getStartedAt());
     }
 }

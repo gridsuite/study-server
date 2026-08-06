@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>

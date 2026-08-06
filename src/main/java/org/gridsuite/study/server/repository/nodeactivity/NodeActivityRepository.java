@@ -7,11 +7,7 @@
 package org.gridsuite.study.server.repository.nodeactivity;
 
 import org.gridsuite.study.server.nodeactivity.NodeActivityEntity;
-import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
@@ -24,15 +20,9 @@ public interface NodeActivityRepository extends JpaRepository<NodeActivityEntity
 
     List<NodeActivityEntity> findAllByStudyId(UUID studyId);
 
-    void deleteByTypeAndNodeIdInAndRootNetworkId(NodeActivityType type, List<UUID> nodeIds, UUID rootNetworkId);
+    void deleteByNodeIdInAndRootNetworkId(List<UUID> nodeIds, UUID rootNetworkId);
 
-    void deleteByTypeAndNodeIdInAndRootNetworkIdIsNull(NodeActivityType type, List<UUID> nodeIds);
-
-    boolean existsByTypeAndNodeIdAndRootNetworkId(NodeActivityType type, UUID nodeId, UUID rootNetworkId);
+    void deleteByNodeIdInAndRootNetworkIdIsNull(List<UUID> nodeIds);
 
     List<NodeActivityEntity> findAllByStartedAtBefore(Instant cutoff);
-
-    @Modifying(clearAutomatically = true)
-    @Query("DELETE FROM NodeActivityEntity activity WHERE activity.startedAt < :startedBefore")
-    int deleteByStartedAtBefore(@Param("startedBefore") Instant startedBefore);
 }
