@@ -1104,17 +1104,6 @@ public class StudyService {
         }
     }
 
-    private void emitComputationParametersChanged(UUID studyUuid, String userId,
-                                                  ComputationType computationType,
-                                                  List<Consumer<UUID>> statusInvalidations,
-                                                  String... statusUpdateTypes) {
-        statusInvalidations.forEach(invalidate -> invalidate.accept(studyUuid));
-        Arrays.stream(statusUpdateTypes)
-                .forEach(updateType -> notificationService.emitStudyChanged(studyUuid, null, null, updateType));
-        notificationService.emitElementUpdated(studyUuid, userId);
-        notificationService.emitComputationParamsChanged(studyUuid, computationType);
-    }
-
     @Transactional
     public String getNetworkVisualizationParametersValues(UUID studyUuid) {
         StudyEntity studyEntity = getStudy(studyUuid);
