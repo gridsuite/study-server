@@ -134,7 +134,7 @@ class LoadFLowIntegrationTest {
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
         wireMockServer.start();
         String baseUrlWireMock = wireMockServer.baseUrl();
-        loadFlowRestService.setLoadFlowServerBaseUri(baseUrlWireMock);
+        loadFlowRestService.setBaseUri(baseUrlWireMock);
         wireMockStubs = new WireMockStubs(wireMockServer);
 
         rootNodeInfoRepository.deleteAll();

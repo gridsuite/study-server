@@ -305,15 +305,15 @@ class VoltageInitTest {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
-        voltageInitService.setVoltageInitServerBaseUri(baseUrl);
+        voltageInitService.setBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
-        loadFlowRestService.setLoadFlowServerBaseUri(baseUrl);
-        securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
-        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
-        shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
-        stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
-        pccMinService.setPccMinServerBaseUri(baseUrl);
+        loadFlowRestService.setBaseUri(baseUrl);
+        securityAnalysisService.setBaseUri(baseUrl);
+        sensitivityAnalysisService.setBaseUri(baseUrl);
+        shortCircuitService.setBaseUri(baseUrl);
+        stateEstimationService.setBaseUri(baseUrl);
+        pccMinService.setBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 
         String voltageInitResultUuidStr = objectMapper.writeValueAsString(VOLTAGE_INIT_RESULT_UUID);

@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.common;
 
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
@@ -13,8 +13,7 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.common.ComputationParameters;
-import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;

@@ -32,7 +32,7 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @ContextConfigurationWithTestChannel
 @DisableElasticsearch
-class DynamicSecurityAnalysisServiceTest {
+class DynamicSecurityAnalysisRestServiceTest {
     private static final String VARIANT_1_ID = "variant_1";
     private static final String PARAMETERS_JSON = "parametersJson";
 
@@ -52,13 +52,13 @@ class DynamicSecurityAnalysisServiceTest {
     @MockitoBean
     DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
     @Autowired
-    private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
 
     @Test
     void testGetParameters() {
         given(dynamicSecurityAnalysisClient.getParameters(PARAMETERS_UUID)).willReturn(PARAMETERS_JSON);
 
-        String parametersJson = dynamicSecurityAnalysisService.getParameters(PARAMETERS_UUID);
+        String parametersJson = dynamicSecurityAnalysisRestService.getParameters(PARAMETERS_UUID);
 
         assertThat(parametersJson).isEqualTo(PARAMETERS_JSON);
     }
@@ -67,7 +67,7 @@ class DynamicSecurityAnalysisServiceTest {
     void testCreateParameters() {
         given(dynamicSecurityAnalysisClient.createParameters(PARAMETERS_JSON)).willReturn(PARAMETERS_UUID);
 
-        UUID parametersUuid = dynamicSecurityAnalysisService.createParameters(PARAMETERS_JSON);
+        UUID parametersUuid = dynamicSecurityAnalysisRestService.createParameters(PARAMETERS_JSON);
 
         assertThat(parametersUuid).isEqualTo(PARAMETERS_UUID);
     }
@@ -76,7 +76,7 @@ class DynamicSecurityAnalysisServiceTest {
     void testCreateDefaultParameters() {
         given(dynamicSecurityAnalysisClient.createDefaultParameters()).willReturn(PARAMETERS_UUID);
 
-        UUID parametersUuid = dynamicSecurityAnalysisService.createDefaultParameters();
+        UUID parametersUuid = dynamicSecurityAnalysisRestService.createDefaultParameters();
 
         assertThat(parametersUuid).isEqualTo(PARAMETERS_UUID);
     }
@@ -85,7 +85,7 @@ class DynamicSecurityAnalysisServiceTest {
     void testUpdateParameters() {
         doNothing().when(dynamicSecurityAnalysisClient).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
 
-        dynamicSecurityAnalysisService.updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
+        dynamicSecurityAnalysisRestService.updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
 
         verify(dynamicSecurityAnalysisClient, times(1)).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
     }
@@ -94,7 +94,7 @@ class DynamicSecurityAnalysisServiceTest {
     void testDuplicateParameters() {
         when(dynamicSecurityAnalysisClient.duplicateParameters(PARAMETERS_UUID)).thenReturn(DUPLICATED_PARAMETERS_UUID);
 
-        UUID newParametersUuid = dynamicSecurityAnalysisService.duplicateParameters(PARAMETERS_UUID);
+        UUID newParametersUuid = dynamicSecurityAnalysisRestService.duplicateParameters(PARAMETERS_UUID);
 
         assertThat(newParametersUuid).isEqualTo(DUPLICATED_PARAMETERS_UUID);
     }
@@ -103,7 +103,7 @@ class DynamicSecurityAnalysisServiceTest {
     void testDeleteParameters() {
         doNothing().when(dynamicSecurityAnalysisClient).deleteParameters(PARAMETERS_UUID);
 
-        dynamicSecurityAnalysisService.deleteParameters(PARAMETERS_UUID);
+        dynamicSecurityAnalysisRestService.deleteParameters(PARAMETERS_UUID);
 
         verify(dynamicSecurityAnalysisClient, times(1)).deleteParameters(PARAMETERS_UUID);
     }
@@ -116,7 +116,7 @@ class DynamicSecurityAnalysisServiceTest {
                 .willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicSecurityAnalysisService.runDynamicSecurityAnalysis(NODE_UUID, ROOTNETWORK_UUID,
+        UUID resultUuid = dynamicSecurityAnalysisRestService.runDynamicSecurityAnalysis(NODE_UUID, ROOTNETWORK_UUID,
                 NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, DYNAMIC_SIMULATION_RESULT_UUID, PARAMETERS_UUID, "testUserId", false);
 
         // check result
@@ -129,7 +129,7 @@ class DynamicSecurityAnalysisServiceTest {
         given(dynamicSecurityAnalysisClient.getStatus(RESULT_UUID)).willReturn(DynamicSecurityAnalysisStatus.SUCCEED);
 
         // call method to be tested
-        DynamicSecurityAnalysisStatus status = dynamicSecurityAnalysisService.getStatus(RESULT_UUID);
+        DynamicSecurityAnalysisStatus status = dynamicSecurityAnalysisRestService.getStatus(RESULT_UUID);
 
         // check result
         // status must be "SUCCEED"
@@ -141,7 +141,7 @@ class DynamicSecurityAnalysisServiceTest {
         List<UUID> uuids = List.of(RESULT_UUID);
         doNothing().when(dynamicSecurityAnalysisClient).invalidateStatus(uuids);
 
-        dynamicSecurityAnalysisService.invalidateStatus(uuids);
+        dynamicSecurityAnalysisRestService.invalidateStatus(uuids);
 
         verify(dynamicSecurityAnalysisClient, times(1)).invalidateStatus(uuids);
     }
@@ -150,7 +150,7 @@ class DynamicSecurityAnalysisServiceTest {
     void testDeleteResult() {
         doNothing().when(dynamicSecurityAnalysisClient).deleteResults(List.of(RESULT_UUID));
 
-        dynamicSecurityAnalysisService.deleteResults(List.of(RESULT_UUID));
+        dynamicSecurityAnalysisRestService.deleteResults(List.of(RESULT_UUID));
 
         verify(dynamicSecurityAnalysisClient, times(1)).deleteResults(List.of(RESULT_UUID));
     }
@@ -159,7 +159,7 @@ class DynamicSecurityAnalysisServiceTest {
     void testDeleteResults() {
         doNothing().when(dynamicSecurityAnalysisClient).deleteResults(null);
 
-        dynamicSecurityAnalysisService.deleteAllResults();
+        dynamicSecurityAnalysisRestService.deleteAllResults();
         verify(dynamicSecurityAnalysisClient, times(1)).deleteResults(null);
     }
 
@@ -167,7 +167,7 @@ class DynamicSecurityAnalysisServiceTest {
     void testResultCount() {
         given(dynamicSecurityAnalysisClient.getResultsCount()).willReturn(10);
 
-        Integer resultsCount = dynamicSecurityAnalysisService.getResultsCount();
+        Integer resultsCount = dynamicSecurityAnalysisRestService.getResultsCount();
 
         assertThat(resultsCount).isEqualTo(10);
     }
@@ -176,7 +176,7 @@ class DynamicSecurityAnalysisServiceTest {
     void testGetProvider() {
         given(dynamicSecurityAnalysisClient.getProvider(PARAMETERS_UUID)).willReturn(DYNAWO_PROVIDER);
 
-        String provider = dynamicSecurityAnalysisService.getProvider(PARAMETERS_UUID);
+        String provider = dynamicSecurityAnalysisRestService.getProvider(PARAMETERS_UUID);
 
         assertThat(provider).isEqualTo(DYNAWO_PROVIDER);
     }

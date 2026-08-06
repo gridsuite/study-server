@@ -155,7 +155,7 @@ class PccMinTest {
         configureFor("localhost", wireMockServer.port());
         String baseUrl = wireMockServer.baseUrl();
 
-        pccMinService.setPccMinServerBaseUri(baseUrl);
+        pccMinService.setBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 

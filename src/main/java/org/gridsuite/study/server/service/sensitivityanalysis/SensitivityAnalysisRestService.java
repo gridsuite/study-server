@@ -51,22 +51,13 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
     private static final String QUERY_PARAM_RESULTS_SELECTOR = "selector";
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
 
-    private String sensitivityAnalysisServerBaseUri;
-
-    private final RestTemplate restTemplate;
-
     private final ObjectMapper objectMapper;
 
     SensitivityAnalysisRestService(RemoteServicesProperties remoteServicesProperties,
                                    RestTemplate restTemplate,
                                    ObjectMapper objectMapper) {
-        this.sensitivityAnalysisServerBaseUri = remoteServicesProperties.getServiceUri("sensitivity-analysis-server");
-        this.restTemplate = restTemplate;
+        super(remoteServicesProperties.getServiceUri("sensitivity-analysis-server"), restTemplate);
         this.objectMapper = objectMapper;
-    }
-
-    public void setSensitivityAnalysisServerBaseUri(String sensitivityAnalysisServerBaseUri) {
-        this.sensitivityAnalysisServerBaseUri = sensitivityAnalysisServerBaseUri + DELIMITER;
     }
 
     public UUID runSensitivityAnalysis(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
@@ -106,7 +97,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
         HttpEntity<Map<UUID, String>> httpEntity = new HttpEntity<>(elementsIdNameMap, headers);
 
-        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public String getSensitivityAnalysisResult(UUID resultUuid, UUID networkUuid, String variantId, String selector, String filters, String globalFilters) {
@@ -116,7 +107,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         }
 
         // initializing from uri string (not from path string) allows build() to escape selector content
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(baseUri)
             .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuid.toString())
             .queryParam(QUERY_PARAM_RESULTS_SELECTOR, selector);
 
@@ -141,7 +132,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
             throw new StudyException(NOT_FOUND, "Result of sensitivity analysis was not found");
         }
 
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(baseUri)
                 .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuid.toString(), "csv")
                 .queryParam(QUERY_PARAM_RESULTS_SELECTOR, selector);
         if (StringUtils.isNotBlank(filters)) {
@@ -169,7 +160,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         }
 
         // initializing from uri string (not from path string) allows build() to escape selector content
-        URI uri = UriComponentsBuilder.fromUriString(sensitivityAnalysisServerBaseUri)
+        URI uri = UriComponentsBuilder.fromUriString(baseUri)
                 .pathSegment(SENSITIVITY_ANALYSIS_API_VERSION, RESULTS, resultUuid.toString(), "filter-options")
                 .queryParam(QUERY_PARAM_RESULTS_SELECTOR, selector).build().encode().toUri();
 
@@ -184,7 +175,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results/{resultUuid}/status")
             .buildAndExpand(resultUuid).toUriString();
 
-        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
+        return restTemplate.getForObject(baseUri + path, String.class);
     }
 
     public void stopSensitivityAnalysis(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
@@ -210,7 +201,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(baseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     public void invalidateSensitivityAnalysisStatus(List<UUID> uuids) {
@@ -219,12 +210,12 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
                 .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results/invalidate-status")
                 .queryParam(RESULT_UUID, uuids).build().toUriString();
 
-            restTemplate.put(sensitivityAnalysisServerBaseUri + path, Void.class);
+            restTemplate.put(baseUri + path, Void.class);
         }
     }
 
     public void deleteSensitivityAnalysisResults(List<UUID> resultsUuids) {
-        deleteCalculationResults(resultsUuids, DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results", restTemplate, sensitivityAnalysisServerBaseUri);
+        deleteCalculationResults(resultsUuids, DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/results", restTemplate, baseUri);
     }
 
     public void deleteAllSensitivityAnalysisResults() {
@@ -234,7 +225,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
     public Integer getSensitivityAnalysisResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/supervision/results-count").toUriString();
-        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, Integer.class);
+        return restTemplate.getForObject(baseUri + path, Integer.class);
     }
 
     public UUID getSensitivityAnalysisParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {
@@ -252,7 +243,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
             .buildAndExpand(parametersUuid)
             .toUriString();
 
-        return restTemplate.getForObject(sensitivityAnalysisServerBaseUri + path, String.class);
+        return restTemplate.getForObject(baseUri + path, String.class);
     }
 
     @Override
@@ -263,7 +254,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
             .buildAndExpand()
             .toUriString();
 
-        return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, null, UUID.class);
+        return restTemplate.postForObject(baseUri + path, null, UUID.class);
     }
 
     public UUID createSensitivityAnalysisParameters(String parameters) {
@@ -279,7 +270,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, httpEntity, UUID.class);
+        return restTemplate.postForObject(baseUri + path, httpEntity, UUID.class);
     }
 
     @Override
@@ -292,7 +283,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
             .buildAndExpand(sourceParametersUuid)
             .toUriString();
 
-        return restTemplate.postForObject(sensitivityAnalysisServerBaseUri + path, null, UUID.class);
+        return restTemplate.postForObject(baseUri + path, null, UUID.class);
     }
 
     public void updateSensitivityAnalysisParameters(UUID parametersUuid, @Nullable String parameters) {
@@ -306,7 +297,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        restTemplate.put(sensitivityAnalysisServerBaseUri + path, httpEntity);
+        restTemplate.put(baseUri + path, httpEntity);
     }
 
     @Override
@@ -318,7 +309,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
             .buildAndExpand(uuid)
             .toUriString();
 
-        restTemplate.delete(sensitivityAnalysisServerBaseUri + path);
+        restTemplate.delete(baseUri + path);
     }
 
     public String getSensitivityAnalysisFactorCount(UUID networkUuid, String variantId, String sensitivityAnalysisParameters) {
@@ -334,7 +325,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(sensitivityAnalysisParameters, headers);
 
-        return restTemplate.exchange(sensitivityAnalysisServerBaseUri + path, HttpMethod.POST, httpEntity, String.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, String.class).getBody();
     }
 
     @Override
@@ -351,7 +342,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
 
         try {
             List<UUID> elementIds = restTemplate.exchange(
-                sensitivityAnalysisServerBaseUri + path,
+                baseUri + path,
                 HttpMethod.GET,
                 null,
                 new ParameterizedTypeReference<List<UUID>>() { }

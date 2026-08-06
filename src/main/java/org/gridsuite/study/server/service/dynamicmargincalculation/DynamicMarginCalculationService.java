@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -7,114 +7,132 @@
 
 package org.gridsuite.study.server.service.dynamicmargincalculation;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.collections4.CollectionUtils;
-import org.gridsuite.study.server.dto.NodeReceiver;
-import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
+import lombok.NonNull;
+import org.gridsuite.study.server.dto.QuotaType;
+import org.gridsuite.study.server.dto.UserProfileInfos;
+import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
-import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.UncheckedIOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_MARGIN_CALCULATION;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWED;
+
 /**
- * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
  */
+
 @Service
-public class DynamicMarginCalculationService implements ComputationParameters {
+public class DynamicMarginCalculationService extends AbstractComputationService {
+    private final DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
+    private final NetworkModificationTreeService networkModificationTreeService;
+    private final UserAdminService userAdminService;
+    private final RootNetworkService rootNetworkService;
 
-    private final ObjectMapper objectMapper;
-
-    private final DynamicMarginCalculationClient dynamicMarginCalculationClient;
-
-    public DynamicMarginCalculationService(ObjectMapper objectMapper,
-                                           DynamicMarginCalculationClient dynamicMarginCalculationClient) {
-        this.objectMapper = objectMapper;
-        this.dynamicMarginCalculationClient = dynamicMarginCalculationClient;
+    protected DynamicMarginCalculationService(StudyRepository studyRepository,
+                                              ComputationParametersService computationParametersService,
+                                              NotificationService notificationService,
+                                              RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                                              DynamicMarginCalculationRestService dynamicMarginCalculationRestService,
+                                              NetworkModificationTreeService networkModificationTreeService,
+                                              UserAdminService userAdminService,
+                                              RootNetworkService rootNetworkService) {
+        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        this.dynamicMarginCalculationRestService = dynamicMarginCalculationRestService;
+        this.networkModificationTreeService = networkModificationTreeService;
+        this.userAdminService = userAdminService;
+        this.rootNetworkService = rootNetworkService;
     }
 
-    public String getParameters(UUID parametersUuid, String userId) {
-        return dynamicMarginCalculationClient.getParameters(parametersUuid, userId);
+    public String getDynamicMarginCalculationProvider(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return dynamicMarginCalculationRestService.getProvider(studyEntity.getDynamicMarginCalculationParametersUuid());
     }
 
-    public UUID createParameters(String parameters) {
-        return dynamicMarginCalculationClient.createParameters(parameters);
+    @Transactional
+    public String getDynamicMarginCalculationParameters(UUID studyUuid, String userId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return dynamicMarginCalculationRestService.getParameters(
+                dynamicMarginCalculationRestService.getDynamicMarginCalculationParametersUuidOrElseCreateDefault(studyEntity), userId);
     }
 
-    @Override
-    public UUID createDefaultParameters() {
-        return dynamicMarginCalculationClient.createDefaultParameters();
+    @Transactional
+    public boolean setDynamicMarginCalculationParameters(UUID studyUuid, String dmcParameter, String userId) {
+        return setComputationParameters(
+                studyUuid,
+                dmcParameter,
+                userId,
+                StudyEntity::getDynamicMarginCalculationParametersUuid,
+                StudyEntity::setDynamicMarginCalculationParametersUuid,
+                UserProfileInfos::getDynamicMarginCalculationParameterId,
+                dynamicMarginCalculationRestService,
+                dynamicMarginCalculationRestService::createParameters,
+                dynamicMarginCalculationRestService::updateParameters,
+                DYNAMIC_MARGIN_CALCULATION,
+                List.of(this::invalidateDynamicMarginCalculationStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS
+        );
     }
 
-    public void updateParameters(UUID parametersUuid, String parametersInfos) {
-        dynamicMarginCalculationClient.updateParameters(parametersUuid, parametersInfos);
+    public void invalidateDynamicMarginCalculationStatusOnAllNodes(UUID studyUuid) {
+        dynamicMarginCalculationRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_MARGIN_CALCULATION));
     }
 
-    @Override
-    public UUID duplicateParameters(UUID sourceParameterId) {
-        return dynamicMarginCalculationClient.duplicateParameters(sourceParameterId);
+    @Transactional
+    public UUID runDynamicMarginCalculation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, String userId, boolean debug) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+
+        UUID result = handleDynamicMarginCalculationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
+
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_MARGIN_CALCULATION), result);
+        return result;
     }
 
-    public void deleteParameters(UUID parametersUuid) {
-        dynamicMarginCalculationClient.deleteParameters(parametersUuid);
-    }
+    private UUID handleDynamicMarginCalculationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
 
-    public UUID runDynamicMarginCalculation(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid,
-                                            String variantId, UUID reportUuid, UUID dynamicSimulationParametersUuid, UUID dynamicSecurityAnalysisParametersUuid, UUID parametersUuid, String userId,
-                                                    boolean debug) {
-
-        // create receiver for getting back the notification in rabbitmq
-        String receiver;
-
-        try {
-            receiver = URLEncoder.encode(objectMapper.writeValueAsString(new NodeReceiver(nodeUuid, rootNetworkUuid)),
-                    StandardCharsets.UTF_8);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
+        // pre-condition check
+        if (!rootNetworkNodeInfoService.isLoadflowConverged(nodeUuid, rootNetworkUuid)) {
+            throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic margin calculation");
         }
 
-        return dynamicMarginCalculationClient.run(receiver, networkUuid, variantId, new ReportInfos(reportUuid, nodeUuid), dynamicSimulationParametersUuid, dynamicSecurityAnalysisParametersUuid,
-                parametersUuid, userId, debug);
-    }
-
-    public DynamicMarginCalculationStatus getStatus(UUID resultUuid) {
-        return resultUuid == null ? null : dynamicMarginCalculationClient.getStatus(resultUuid);
-    }
-
-    public void invalidateStatus(List<UUID> resultUuids) {
-        if (CollectionUtils.isNotEmpty(resultUuids)) {
-            dynamicMarginCalculationClient.invalidateStatus(resultUuids);
+        // clean previous result if exist
+        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION);
+        if (prevResultUuid != null) {
+            dynamicMarginCalculationRestService.deleteResults(List.of(prevResultUuid));
         }
-    }
 
-    public void deleteResults(List<UUID> resultUuids) {
-        dynamicMarginCalculationClient.deleteResults(resultUuids);
-    }
+        // get dynamic simulation parameters uuid
+        UUID dynamicSimulationParametersUuid = studyEntity.getDynamicSimulationParametersUuid();
 
-    public void deleteAllResults() {
-        deleteResults(null);
-    }
+        // get dynamic security analysis parameters uuid
+        UUID dynamicSecurityAnalysisParametersUuid = studyEntity.getDynamicSecurityAnalysisParametersUuid();
 
-    public Integer getResultsCount() {
-        return dynamicMarginCalculationClient.getResultsCount();
-    }
+        // get dynamic margin calculation parameters uuid
+        UUID dynamicMarginCalculationParametersUuid = studyEntity.getDynamicMarginCalculationParametersUuid();
 
-    public UUID getDynamicMarginCalculationParametersUuidOrElseCreateDefault(StudyEntity studyEntity) {
-        if (studyEntity.getDynamicMarginCalculationParametersUuid() == null) {
-            // not supposed to happen because we create it as the study creation
-            studyEntity.setDynamicMarginCalculationParametersUuid(dynamicMarginCalculationClient.createDefaultParameters());
-        }
-        return studyEntity.getDynamicMarginCalculationParametersUuid();
-    }
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(DYNAMIC_MARGIN_CALCULATION.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, DYNAMIC_MARGIN_CALCULATION, reportUuid);
 
-    public String getProvider(UUID parametersUuid) {
-        return dynamicMarginCalculationClient.getProvider(parametersUuid);
+        // launch dynamic margin calculation
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        UUID dynamicMarginCalculationResultUuid = dynamicMarginCalculationRestService.runDynamicMarginCalculation(
+                nodeUuid, rootNetworkUuid, networkUuid, variantId, reportUuid,
+                dynamicSimulationParametersUuid, dynamicSecurityAnalysisParametersUuid, dynamicMarginCalculationParametersUuid, userId, debug);
+
+        // update result uuid and notification
+        updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicMarginCalculationResultUuid, DYNAMIC_MARGIN_CALCULATION);
+        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
+
+        return dynamicMarginCalculationResultUuid;
     }
 }

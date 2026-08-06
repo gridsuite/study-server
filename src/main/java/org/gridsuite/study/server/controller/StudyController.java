@@ -6,10 +6,8 @@
  */
 package org.gridsuite.study.server.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.powsybl.iidm.network.ThreeSides;
-import com.powsybl.timeseries.DoubleTimeSeries;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -20,14 +18,11 @@ import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.*;
-import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
-import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
-import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
@@ -53,12 +48,9 @@ import java.util.*;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MOVE_NETWORK_MODIFICATION_FORBIDDEN;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.BUILD;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.DELETE_NODES;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_EVENTS;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_MODIFICATIONS;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_TREE;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.REIMPORT_CASE;
@@ -82,7 +74,6 @@ public class StudyController {
     private final CaseService caseService;
     private final RemoteServicesInspector remoteServicesInspector;
     private final RootNetworkService rootNetworkService;
-    private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final RebuildNodeService rebuildNodeService;
     private final NodeActivityService nodeActivityService;
 
@@ -94,7 +85,6 @@ public class StudyController {
                            CaseService caseService,
                            RemoteServicesInspector remoteServicesInspector,
                            RootNetworkService rootNetworkService,
-                           RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            RebuildNodeService rebuildNodeService,
                            NodeActivityService nodeActivityService) {
         this.nodeActivityService = nodeActivityService;
@@ -106,7 +96,6 @@ public class StudyController {
         this.caseService = caseService;
         this.remoteServicesInspector = remoteServicesInspector;
         this.rootNetworkService = rootNetworkService;
-        this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.rebuildNodeService = rebuildNodeService;
     }
 
@@ -829,27 +818,6 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getResultEnumValues(nodeUuid, rootNetworkUuid, computingType, enumName));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/provider")
-    @Operation(summary = "Get dynamic simulation provider for a specified study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation provider is returned")})
-    public ResponseEntity<String> getDynamicSimulationProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getDynamicSimulationProvider(studyUuid));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/dynamic-security-analysis/provider")
-    @Operation(summary = "Get dynamic security analysis provider for a specified study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis provider is returned")})
-    public ResponseEntity<String> getDynamicSecurityAnalysisProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getDynamicSecurityAnalysisProvider(studyUuid));
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/dynamic-margin-calculation/provider")
-    @Operation(summary = "Get dynamic margin calculation provider for a specified study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation provider is returned")})
-    public ResponseEntity<String> getDynamicMarginCalculationProvider(@PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getDynamicMarginCalculationProvider(studyUuid));
-    }
-
     @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network/substations/{substationId}/svg")
     @Operation(summary = "get the substation diagram for the given network and substation")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The svg"),
@@ -1139,6 +1107,17 @@ public class StudyController {
                 () -> studyService.buildNode(studyUuid, createdNode.getId(), rootNetworkUuid, userId)));
     }
 
+    @GetMapping(value = "/nodes/infos", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get the name and the study of each given node")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Infos of the found nodes, unknown nodes are omitted"),
+    })
+    public ResponseEntity<List<NodeInfos>> getNodesInfos(
+            @Parameter(description = "Node UUIDs") @RequestParam("ids") List<UUID> nodeUuids) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
+                .body(networkModificationTreeService.getNodesInfos(nodeUuids));
+    }
+
     @PostMapping(value = "/studies/{studyUuid}/tree/nodes/{id}")
     @Operation(summary = "Create a node as before / after the given node ID")
     @ApiResponses(value = {
@@ -1396,272 +1375,23 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    // --- Dynamic Simulation Endpoints BEGIN --- //
+    // --- Dynamic Mapping Endpoints BEGIN --- //
 
-    @PostMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")
-    @Operation(summary = "Set dynamic simulation parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters are set")})
-    public ResponseEntity<Void> setDynamicSimulationParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String dsParameter,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.setDynamicSimulationParameters(studyUuid, dsParameter, userId);
-        return ResponseEntity.ok().build();
+    @GetMapping(value = "/studies/{studyUuid}/dynamic-mapping/network/values")
+    @Operation(summary = "Fetch attribute values of the first root network of a study")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "List of attribute values of the first root network")})
+    public ResponseEntity<String> getNetworkValuesFromStudy(@PathVariable("studyUuid") UUID studyUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkValuesFromStudy(studyUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/dynamic-simulation/parameters")
-    @Operation(summary = "Get dynamic simulation parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation parameters")})
-    public ResponseEntity<String> getDynamicSimulationParameters(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getDynamicSimulationParameters(studyUuid));
+    @PostMapping(value = "/studies/{studyUuid}/dynamic-mapping/network/matches/rule")
+    @Operation(summary = "Get the equipment ids that matches the given rule.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Equipment ids that matches the given rule")})
+    public ResponseEntity<String> getNetworkMatchesFromStudy(@PathVariable("studyUuid") UUID studyUuid, @RequestBody String ruleToMatch) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getNetworkMatchesFromStudy(studyUuid, ruleToMatch));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events")
-    @Operation(summary = "Get dynamic simulation events from a node")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The dynamic simulation events was returned"),
-        @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<List<EventInfos>> getDynamicSimulationEvents(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<EventInfos> dynamicSimulationEvents = studyService.getDynamicSimulationEvents(nodeUuid);
-        return ResponseEntity.ok().body(dynamicSimulationEvents);
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events", params = {"equipmentId"})
-    @Operation(summary = "Get dynamic simulation event from a node with a given equipment id")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The dynamic simulation event was returned"),
-        @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<EventInfos> getDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                               @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                               @Parameter(description = "Equipment id") @RequestParam(value = "equipmentId") String equipmentId) {
-        EventInfos dynamicSimulationEvent = studyService.getDynamicSimulationEvent(nodeUuid, equipmentId);
-        return dynamicSimulationEvent != null ? ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicSimulationEvent) :
-                ResponseEntity.noContent().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events")
-    @Operation(summary = "Create a dynamic simulation event for a node")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The network event was created"),
-        @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Void> createDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                             @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @RequestBody EventInfos event,
-                                                             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityService.runWithNodeActivity(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
-            () -> studyService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event));
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events")
-    @Operation(summary = "Update a dynamic simulation event for a node")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The dynamic simulation event was updated"),
-        @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Void> updateDynamicSimulationEvent(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                             @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                             @RequestBody EventInfos event,
-                                                             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityService.runWithNodeActivity(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
-            () -> studyService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event));
-        return ResponseEntity.ok().build();
-    }
-
-    @DeleteMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/dynamic-simulation/events")
-    @Operation(summary = "Delete dynamic simulation events for a node")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "The dynamic simulation events was deleted"),
-        @ApiResponse(responseCode = "404", description = "The study/node is not found")})
-    public ResponseEntity<Void> deleteDynamicSimulationEvents(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                              @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                              @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids,
-                                                              @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityService.runWithNodeActivity(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
-            () -> studyService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids));
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/run")
-    @Operation(summary = "run dynamic simulation on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic simulation has started")})
-    public ResponseEntity<Void> runDynamicSimulation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                     @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
-                                                     @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(DYNAMIC_SIMULATION, userId);
-        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSimulationProvider);
-        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-            () -> studyService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries/metadata")
-    @Operation(summary = "Get list of time series metadata of dynamic simulation result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Time series metadata of dynamic simulation result"),
-        @ApiResponse(responseCode = "204", description = "No dynamic simulation metadata"),
-        @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
-    public ResponseEntity<List<TimeSeriesMetadataInfos>> getDynamicSimulationTimeSeriesMetadata(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                                @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                                                @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<TimeSeriesMetadataInfos> result = rootNetworkNodeInfoService.getDynamicSimulationTimeSeriesMetadata(nodeUuid, rootNetworkUuid);
-        return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
-                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeseries")
-    @Operation(summary = "Get all time series of dynamic simulation result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "All time series of dynamic simulation result"),
-        @ApiResponse(responseCode = "204", description = "No dynamic simulation timeseries"),
-        @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
-    public ResponseEntity<List<DoubleTimeSeries>> getDynamicSimulationTimeSeriesResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                       @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                                                       @Parameter(description = "timeSeriesNames") @RequestParam(name = "timeSeriesNames",
-                                                                                               required = false) List<String> timeSeriesNames) {
-        List<DoubleTimeSeries> result = rootNetworkNodeInfoService.getDynamicSimulationTimeSeries(nodeUuid, rootNetworkUuid, timeSeriesNames);
-        return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
-                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/result/timeline")
-    @Operation(summary = "Get timeline events of dynamic simulation result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Timeline events of dynamic simulation result"),
-        @ApiResponse(responseCode = "204", description = "No dynamic simulation timeline events"),
-        @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
-    public ResponseEntity<List<TimelineEventInfos>> getDynamicSimulationTimelineResult(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                       @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                                       @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        List<TimelineEventInfos> result = rootNetworkNodeInfoService.getDynamicSimulationTimeline(nodeUuid, rootNetworkUuid);
-        return CollectionUtils.isEmpty(result) ? ResponseEntity.noContent().build() :
-                ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result);
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-simulation/status")
-    @Operation(summary = "Get the status of dynamic simulation result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The status of dynamic simulation result"),
-        @ApiResponse(responseCode = "204", description = "No dynamic simulation status"),
-        @ApiResponse(responseCode = "404", description = "The dynamic simulation has not been found")})
-    public ResponseEntity<String> getDynamicSimulationStatus(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                             @Parameter(description = "rootNetworkUuid") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                             @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getDynamicSimulationStatus(nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().body(result) : ResponseEntity.noContent().build();
-    }
-
-    // --- Dynamic Simulation Endpoints END --- //
-
-    // --- Dynamic Security Analysis Endpoints BEGIN --- //
-
-    @PostMapping(value = "/studies/{studyUuid}/dynamic-security-analysis/parameters")
-    @Operation(summary = "Set dynamic security analysis parameters on study, reset to default one if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis parameters are set")})
-    public ResponseEntity<Void> setDynamicSecurityAnalysisParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String dsaParameter,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return studyService.setDynamicSecurityAnalysisParameters(studyUuid, dsaParameter, userId) ?
-                ResponseEntity.noContent().build() :
-                ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/dynamic-security-analysis/parameters")
-    @Operation(summary = "Get dynamic security analysis parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis parameters")})
-    public ResponseEntity<String> getDynamicSecurityAnalysisParameters(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(studyService.getDynamicSecurityAnalysisParameters(studyUuid));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-security-analysis/run")
-    @Operation(summary = "run dynamic security analysis on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic security analysis has started")})
-    public ResponseEntity<Void> runDynamicSecurityAnalysis(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                     @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
-                                                     @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(DYNAMIC_SECURITY_ANALYSIS, userId);
-        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicSecurityAnalysisProvider);
-        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-            () -> studyService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-security-analysis/status")
-    @Operation(summary = "Get the status of dynamic security analysis result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The status of dynamic security analysis result"),
-        @ApiResponse(responseCode = "204", description = "No dynamic security analysis status"),
-        @ApiResponse(responseCode = "404", description = "The dynamic security analysis has not been found")})
-    public ResponseEntity<String> getDynamicSecurityAnalysisStatus(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                          @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getDynamicSecurityAnalysisStatus(nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().body(result) : ResponseEntity.noContent().build();
-    }
-
-    // --- Dynamic Security Analysis Endpoints END --- //
-
-    // --- Dynamic Margin Calculation Endpoints BEGIN --- //
-
-    @PostMapping(value = "/studies/{studyUuid}/dynamic-margin-calculation/parameters")
-    @Operation(summary = "Set dynamic margin calculation parameters on study, reset to default one if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation parameters are set")})
-    public ResponseEntity<Void> setDynamicMarginCalculationParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String dmcParameter,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return studyService.setDynamicMarginCalculationParameters(studyUuid, dmcParameter, userId) ?
-                ResponseEntity.noContent().build() :
-                ResponseEntity.ok().build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/dynamic-margin-calculation/parameters")
-    @Operation(summary = "Get dynamic margin calculation parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation parameters")})
-    public ResponseEntity<String> getDynamicMarginCalculationParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestHeader(HEADER_USER_ID) String userId
-    ) {
-        return ResponseEntity.ok().body(studyService.getDynamicMarginCalculationParameters(studyUuid, userId));
-    }
-
-    @PostMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-margin-calculation/run")
-    @Operation(summary = "run dynamic margin calculation on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The dynamic margin calculation has started")})
-    public ResponseEntity<Void> runDynamicMarginCalculation(@Parameter(description = "studyUuid") @PathVariable("studyUuid") UUID studyUuid,
-                                                     @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                     @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid,
-                                                     @Parameter(description = "debug") @RequestParam(name = "debug", required = false, defaultValue = "false") boolean debug,
-                                                     @RequestHeader(HEADER_USER_ID) String userId) throws JsonProcessingException {
-        studyService.assertIsNodeNotReadOnly(nodeUuid);
-        studyService.assertOnQuotasAvailability(DYNAMIC_MARGIN_CALCULATION, userId);
-        studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), studyService::getDynamicMarginCalculationProvider);
-        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
-            () -> studyService.runDynamicMarginCalculation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
-    }
-
-    @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/dynamic-margin-calculation/status")
-    @Operation(summary = "Get the status of dynamic margin calculation result on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The status of dynamic margin calculation result"),
-        @ApiResponse(responseCode = "204", description = "No dynamic margin calculation status"),
-        @ApiResponse(responseCode = "404", description = "The dynamic margin calculation has not been found")})
-    public ResponseEntity<String> getDynamicMarginCalculationStatus(@Parameter(description = "study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                          @Parameter(description = "root network id") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
-                                                                                          @Parameter(description = "nodeUuid") @PathVariable("nodeUuid") UUID nodeUuid) {
-        String result = rootNetworkNodeInfoService.getDynamicMarginCalculationStatus(nodeUuid, rootNetworkUuid);
-        return result != null ? ResponseEntity.ok().body(result) : ResponseEntity.noContent().build();
-    }
-
-    // --- Dynamic Margin Calculation Endpoints END --- //
+    // --- Dynamic Mapping Endpoints END --- //
 
     @GetMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Get the voltage init modifications from a node")

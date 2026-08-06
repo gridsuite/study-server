@@ -49,7 +49,7 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @DisableElasticsearch
 @ContextConfigurationWithTestChannel
-class DynamicSimulationServiceTest {
+class DynamicSimulationRestServiceTest {
 
     private static final String VARIANT_1_ID = "variant_1";
     private static final String PARAMETERS_JSON = "parametersJson";
@@ -86,7 +86,7 @@ class DynamicSimulationServiceTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private DynamicSimulationService dynamicSimulationService;
+    private DynamicSimulationRestService dynamicSimulationRestService;
 
     @MockitoBean
     private RootNetworkService rootNetworkService;
@@ -110,7 +110,7 @@ class DynamicSimulationServiceTest {
         given(dynamicSimulationClient.run(any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, NODE_UUID)), any(), any(), any(), eq(false))).willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(NODE_UUID, ROOTNETWORK_UUID, NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, PARAMETERS_UUID, null, "testUserId", false);
+        UUID resultUuid = dynamicSimulationRestService.runDynamicSimulation(NODE_UUID, ROOTNETWORK_UUID, NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, PARAMETERS_UUID, null, "testUserId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(RESULT_UUID);
@@ -130,7 +130,7 @@ class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroupMetadata(TIME_SERIES_UUID)).willReturn(timeSeriesGroupMetadata);
 
         // call method to be tested
-        List<TimeSeriesMetadataInfos> resultTimeSeriesMetadataList = dynamicSimulationService.getTimeSeriesMetadataList(RESULT_UUID);
+        List<TimeSeriesMetadataInfos> resultTimeSeriesMetadataList = dynamicSimulationRestService.getTimeSeriesMetadataList(RESULT_UUID);
 
         // check result
         // metadata must be identical to expected
@@ -155,7 +155,7 @@ class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
 
         // call method to be tested
-        List<DoubleTimeSeries> timeSeriesResult = dynamicSimulationService.getTimeSeriesResult(RESULT_UUID, null);
+        List<DoubleTimeSeries> timeSeriesResult = dynamicSimulationRestService.getTimeSeriesResult(RESULT_UUID, null);
 
         // check result
         // must contain two elements
@@ -178,7 +178,7 @@ class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
 
         // call method to be tested
-        assertThrows(StudyException.class, () -> dynamicSimulationService.getTimeSeriesResult(RESULT_UUID, null));
+        assertThrows(StudyException.class, () -> dynamicSimulationRestService.getTimeSeriesResult(RESULT_UUID, null));
     }
 
     @Test
@@ -209,7 +209,7 @@ class DynamicSimulationServiceTest {
         given(timeSeriesClient.getTimeSeriesGroup(TIMELINE_UUID, null)).willReturn(timelineSeries);
 
         // call method to be tested
-        List<TimelineEventInfos> timelineResult = dynamicSimulationService.getTimelineResult(RESULT_UUID);
+        List<TimelineEventInfos> timelineResult = dynamicSimulationRestService.getTimelineResult(RESULT_UUID);
 
         // check result
         // must contain 4 timeline events
@@ -230,7 +230,7 @@ class DynamicSimulationServiceTest {
 
         // call method to be tested
         assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
-            dynamicSimulationService.getTimelineResult(RESULT_UUID)
+            dynamicSimulationRestService.getTimelineResult(RESULT_UUID)
         ).withMessage("Timelines can not be a type: %s, expected type: %s",
                         timelines.get(0).getClass().getSimpleName(),
                         StringTimeSeries.class.getSimpleName());
@@ -258,7 +258,7 @@ class DynamicSimulationServiceTest {
 
         // call method to be tested
         assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() ->
-            dynamicSimulationService.getTimelineResult(RESULT_UUID)
+            dynamicSimulationRestService.getTimelineResult(RESULT_UUID)
         ).withMessage("Error while deserializing timeline event: %s", objectMapper.writeValueAsString(timelineEventInfosList.get(0)));
     }
 
@@ -268,7 +268,7 @@ class DynamicSimulationServiceTest {
         given(dynamicSimulationClient.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
 
         // call method to be tested
-        DynamicSimulationStatus status = dynamicSimulationService.getStatus(RESULT_UUID);
+        DynamicSimulationStatus status = dynamicSimulationRestService.getStatus(RESULT_UUID);
 
         // check result
         // status must be "CONVERGED"
@@ -277,19 +277,19 @@ class DynamicSimulationServiceTest {
 
     @Test
     void testInvalidateStatus() {
-        assertDoesNotThrow(() -> dynamicSimulationService.invalidateStatus(List.of(RESULT_UUID)));
+        assertDoesNotThrow(() -> dynamicSimulationRestService.invalidateStatus(List.of(RESULT_UUID)));
     }
 
     @Test
     void testDeleteResult() {
-        assertDoesNotThrow(() -> dynamicSimulationService.deleteResults(List.of(RESULT_UUID)));
+        assertDoesNotThrow(() -> dynamicSimulationRestService.deleteResults(List.of(RESULT_UUID)));
     }
 
     @Test
     void testGetParameters() {
         given(dynamicSimulationClient.getParameters(PARAMETERS_UUID)).willReturn(PARAMETERS_JSON);
 
-        String parametersJson = dynamicSimulationService.getParameters(PARAMETERS_UUID);
+        String parametersJson = dynamicSimulationRestService.getParameters(PARAMETERS_UUID);
 
         assertThat(parametersJson).isEqualTo(PARAMETERS_JSON);
     }
@@ -298,7 +298,7 @@ class DynamicSimulationServiceTest {
     void testCreateParameters() {
         given(dynamicSimulationClient.createParameters(PARAMETERS_JSON)).willReturn(PARAMETERS_UUID);
 
-        UUID parametersUuid = dynamicSimulationService.createParameters(PARAMETERS_JSON);
+        UUID parametersUuid = dynamicSimulationRestService.createParameters(PARAMETERS_JSON);
 
         assertThat(parametersUuid).isEqualTo(PARAMETERS_UUID);
     }
@@ -307,7 +307,7 @@ class DynamicSimulationServiceTest {
     void testCreateDefaultParameters() {
         given(dynamicSimulationClient.createDefaultParameters()).willReturn(PARAMETERS_UUID);
 
-        UUID parametersUuid = dynamicSimulationService.createDefaultParameters();
+        UUID parametersUuid = dynamicSimulationRestService.createDefaultParameters();
 
         assertThat(parametersUuid).isEqualTo(PARAMETERS_UUID);
     }
@@ -316,7 +316,7 @@ class DynamicSimulationServiceTest {
     void testUpdateParameters() {
         doNothing().when(dynamicSimulationClient).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
 
-        dynamicSimulationService.updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
+        dynamicSimulationRestService.updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
 
         verify(dynamicSimulationClient, times(1)).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
     }
@@ -325,7 +325,7 @@ class DynamicSimulationServiceTest {
     void testDuplicateParameters() {
         when(dynamicSimulationClient.duplicateParameters(PARAMETERS_UUID)).thenReturn(DUPLICATED_PARAMETERS_UUID);
 
-        UUID newParametersUuid = dynamicSimulationService.duplicateParameters(PARAMETERS_UUID);
+        UUID newParametersUuid = dynamicSimulationRestService.duplicateParameters(PARAMETERS_UUID);
 
         assertThat(newParametersUuid).isEqualTo(DUPLICATED_PARAMETERS_UUID);
     }
@@ -334,7 +334,7 @@ class DynamicSimulationServiceTest {
     void testDeleteParameters() {
         doNothing().when(dynamicSimulationClient).deleteParameters(PARAMETERS_UUID);
 
-        dynamicSimulationService.deleteParameters(PARAMETERS_UUID);
+        dynamicSimulationRestService.deleteParameters(PARAMETERS_UUID);
 
         verify(dynamicSimulationClient, times(1)).deleteParameters(PARAMETERS_UUID);
     }

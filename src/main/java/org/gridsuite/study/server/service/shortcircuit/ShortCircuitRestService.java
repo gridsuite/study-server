@@ -10,7 +10,6 @@ package org.gridsuite.study.server.service.shortcircuit;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.shortcircuit.ShortCircuitParameters;
-import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -52,19 +51,13 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
     static final String RESULT_UUID = "resultUuid";
 
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
-
-    @Setter
-    private String shortCircuitServerBaseUri;
-
     private final ObjectMapper objectMapper;
-    private final RestTemplate restTemplate;
 
     @Autowired
     public ShortCircuitRestService(RemoteServicesProperties remoteServicesProperties,
                                    RestTemplate restTemplate,
                                    ObjectMapper objectMapper) {
-        this.shortCircuitServerBaseUri = remoteServicesProperties.getServiceUri("shortcircuit-server");
-        this.restTemplate = restTemplate;
+        super(remoteServicesProperties.getServiceUri("shortcircuit-server"), restTemplate);
         this.objectMapper = objectMapper;
     }
 
@@ -106,7 +99,7 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
 
         HttpEntity<ShortCircuitParameters> httpEntity = new HttpEntity<>(headers);
 
-        return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     private String getShortCircuitAnalysisResultResourcePath(UUID resultUuid) {
@@ -155,7 +148,7 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
 
     public byte[] getShortCircuitAnalysisCsvResult(UUID resultUuid, UUID networkUuid, String variantId, String filters, String globalFilters, Sort sort, String headersCsv) {
         String resultPath = getShortCircuitAnalysisCsvResultResourcePath(resultUuid);
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath)
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUri + resultPath)
                 .queryParam(QUERY_PARAM_NETWORK_UUID, networkUuid)
                 .queryParam(QUERY_PARAM_VARIANT_ID, variantId);
 
@@ -170,7 +163,7 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
         if (resultPath == null) {
             return null;
         }
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath)
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUri + resultPath)
                 .queryParam(QUERY_PARAM_MODE, mode);
 
         return getShortCircuitAnalysisResource(builder.build().toUri());
@@ -181,7 +174,7 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
         if (resultsPath == null) {
             return null;
         }
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultsPath)
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUri + resultsPath)
                 .queryParam(QUERY_PARAM_NETWORK_UUID, resultParameters.getNetworkUuid())
                 .queryParam(QUERY_PARAM_VARIANT_ID, resultParameters.getVariantId())
                 .queryParam(QUERY_PARAM_MODE, mode);
@@ -198,7 +191,7 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
             return null;
         }
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri + resultPath + "/status");
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUri + resultPath + "/status");
 
         return getShortCircuitAnalysisResource(builder.build().toUri());
     }
@@ -230,11 +223,11 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(baseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     public void deleteShortCircuitAnalysisResults(List<UUID> resultsUuids) {
-        deleteCalculationResults(resultsUuids, DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results", restTemplate, shortCircuitServerBaseUri);
+        deleteCalculationResults(resultsUuids, DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results", restTemplate, baseUri);
     }
 
     public void deleteAllShortCircuitAnalysisResults() {
@@ -244,7 +237,7 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
     public Integer getShortCircuitResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/supervision/results-count").toUriString();
-        return restTemplate.getForObject(shortCircuitServerBaseUri + path, Integer.class);
+        return restTemplate.getForObject(baseUri + path, Integer.class);
     }
 
     public void invalidateShortCircuitStatus(List<UUID> uuids) {
@@ -253,17 +246,17 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
                     .fromPath(DELIMITER + SHORT_CIRCUIT_API_VERSION + "/results/invalidate-status")
                     .queryParam(RESULT_UUID, uuids).build().toUriString();
 
-            restTemplate.put(shortCircuitServerBaseUri + path, Void.class);
+            restTemplate.put(baseUri + path, Void.class);
         }
     }
 
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuid) {
-        return getEnumValues(enumName, resultUuid, SHORT_CIRCUIT_API_VERSION, shortCircuitServerBaseUri, restTemplate);
+        return getEnumValues(enumName, resultUuid, SHORT_CIRCUIT_API_VERSION, restTemplate);
     }
 
     private UriComponentsBuilder getBaseUriForParameters() {
-        return UriComponentsBuilder.fromUriString(shortCircuitServerBaseUri).pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters");
+        return UriComponentsBuilder.fromUriString(baseUri).pathSegment(SHORT_CIRCUIT_API_VERSION, "parameters");
     }
 
     public UUID createParameters(@Nullable final String parametersInfos) {
@@ -318,7 +311,7 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
             .buildAndExpand(uuid)
             .toUriString();
 
-        restTemplate.delete(shortCircuitServerBaseUri + path);
+        restTemplate.delete(baseUri + path);
     }
 
     public Map<String, Double> getVoltageLevelIccValues(UUID resultUuid, String voltageLevelId) {
@@ -327,6 +320,6 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
             .queryParam(QUERY_PARAM_VOLTAGE_LEVEL_ID, voltageLevelId)
             .buildAndExpand(resultUuid)
             .toUriString();
-        return restTemplate.exchange(shortCircuitServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<Map<String, Double>>() { }).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<Map<String, Double>>() { }).getBody();
     }
 }

@@ -53,13 +53,13 @@ class DynamicMarginCalculationServiceTest {
     @MockitoBean
     DynamicMarginCalculationClient dynamicMarginCalculationClient;
     @Autowired
-    private DynamicMarginCalculationService dynamicMarginCalculationService;
+    private DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
 
     @Test
     void testGetParameters() {
         given(dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID, "userId")).willReturn(PARAMETERS_JSON);
 
-        String parametersJson = dynamicMarginCalculationService.getParameters(PARAMETERS_UUID, "userId");
+        String parametersJson = dynamicMarginCalculationRestService.getParameters(PARAMETERS_UUID, "userId");
 
         assertThat(parametersJson).isEqualTo(PARAMETERS_JSON);
     }
@@ -68,7 +68,7 @@ class DynamicMarginCalculationServiceTest {
     void testCreateParameters() {
         given(dynamicMarginCalculationClient.createParameters(PARAMETERS_JSON)).willReturn(PARAMETERS_UUID);
 
-        UUID parametersUuid = dynamicMarginCalculationService.createParameters(PARAMETERS_JSON);
+        UUID parametersUuid = dynamicMarginCalculationRestService.createParameters(PARAMETERS_JSON);
 
         assertThat(parametersUuid).isEqualTo(PARAMETERS_UUID);
     }
@@ -77,7 +77,7 @@ class DynamicMarginCalculationServiceTest {
     void testCreateDefaultParameters() {
         given(dynamicMarginCalculationClient.createDefaultParameters()).willReturn(PARAMETERS_UUID);
 
-        UUID parametersUuid = dynamicMarginCalculationService.createDefaultParameters();
+        UUID parametersUuid = dynamicMarginCalculationRestService.createDefaultParameters();
 
         assertThat(parametersUuid).isEqualTo(PARAMETERS_UUID);
     }
@@ -86,7 +86,7 @@ class DynamicMarginCalculationServiceTest {
     void testUpdateParameters() {
         doNothing().when(dynamicMarginCalculationClient).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
 
-        dynamicMarginCalculationService.updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
+        dynamicMarginCalculationRestService.updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
 
         verify(dynamicMarginCalculationClient, times(1)).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
     }
@@ -95,7 +95,7 @@ class DynamicMarginCalculationServiceTest {
     void testDuplicateParameters() {
         when(dynamicMarginCalculationClient.duplicateParameters(PARAMETERS_UUID)).thenReturn(DUPLICATED_PARAMETERS_UUID);
 
-        UUID newParametersUuid = dynamicMarginCalculationService.duplicateParameters(PARAMETERS_UUID);
+        UUID newParametersUuid = dynamicMarginCalculationRestService.duplicateParameters(PARAMETERS_UUID);
 
         assertThat(newParametersUuid).isEqualTo(DUPLICATED_PARAMETERS_UUID);
     }
@@ -104,7 +104,7 @@ class DynamicMarginCalculationServiceTest {
     void testDeleteParameters() {
         doNothing().when(dynamicMarginCalculationClient).deleteParameters(PARAMETERS_UUID);
 
-        dynamicMarginCalculationService.deleteParameters(PARAMETERS_UUID);
+        dynamicMarginCalculationRestService.deleteParameters(PARAMETERS_UUID);
 
         verify(dynamicMarginCalculationClient, times(1)).deleteParameters(PARAMETERS_UUID);
     }
@@ -117,7 +117,7 @@ class DynamicMarginCalculationServiceTest {
                 .willReturn(RESULT_UUID);
 
         // call method to be tested
-        UUID resultUuid = dynamicMarginCalculationService.runDynamicMarginCalculation(NODE_UUID, ROOTNETWORK_UUID,
+        UUID resultUuid = dynamicMarginCalculationRestService.runDynamicMarginCalculation(NODE_UUID, ROOTNETWORK_UUID,
                 NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, DYNAMIC_SIMULATION_PARAMETERS_UUID, DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID, PARAMETERS_UUID, "testUserId", false);
 
         // check result
@@ -130,7 +130,7 @@ class DynamicMarginCalculationServiceTest {
         given(dynamicMarginCalculationClient.getStatus(RESULT_UUID)).willReturn(DynamicMarginCalculationStatus.SUCCEED);
 
         // call method to be tested
-        DynamicMarginCalculationStatus status = dynamicMarginCalculationService.getStatus(RESULT_UUID);
+        DynamicMarginCalculationStatus status = dynamicMarginCalculationRestService.getStatus(RESULT_UUID);
 
         // check result
         // status must be "SUCCEED"
@@ -142,7 +142,7 @@ class DynamicMarginCalculationServiceTest {
         List<UUID> uuids = List.of(RESULT_UUID);
         doNothing().when(dynamicMarginCalculationClient).invalidateStatus(uuids);
 
-        dynamicMarginCalculationService.invalidateStatus(uuids);
+        dynamicMarginCalculationRestService.invalidateStatus(uuids);
 
         verify(dynamicMarginCalculationClient, times(1)).invalidateStatus(uuids);
     }
@@ -151,7 +151,7 @@ class DynamicMarginCalculationServiceTest {
     void testDeleteResult() {
         doNothing().when(dynamicMarginCalculationClient).deleteResults(List.of(RESULT_UUID));
 
-        dynamicMarginCalculationService.deleteResults(List.of(RESULT_UUID));
+        dynamicMarginCalculationRestService.deleteResults(List.of(RESULT_UUID));
 
         verify(dynamicMarginCalculationClient, times(1)).deleteResults(List.of(RESULT_UUID));
     }
@@ -160,7 +160,7 @@ class DynamicMarginCalculationServiceTest {
     void testDeleteResults() {
         doNothing().when(dynamicMarginCalculationClient).deleteResults(null);
 
-        dynamicMarginCalculationService.deleteAllResults();
+        dynamicMarginCalculationRestService.deleteAllResults();
         verify(dynamicMarginCalculationClient, times(1)).deleteResults(null);
     }
 
@@ -168,7 +168,7 @@ class DynamicMarginCalculationServiceTest {
     void testResultCount() {
         given(dynamicMarginCalculationClient.getResultsCount()).willReturn(10);
 
-        Integer resultsCount = dynamicMarginCalculationService.getResultsCount();
+        Integer resultsCount = dynamicMarginCalculationRestService.getResultsCount();
 
         assertThat(resultsCount).isEqualTo(10);
     }
@@ -177,7 +177,7 @@ class DynamicMarginCalculationServiceTest {
     void testGetProvider() {
         given(dynamicMarginCalculationClient.getProvider(PARAMETERS_UUID)).willReturn(DYNAWO_PROVIDER);
 
-        String provider = dynamicMarginCalculationService.getProvider(PARAMETERS_UUID);
+        String provider = dynamicMarginCalculationRestService.getProvider(PARAMETERS_UUID);
 
         assertThat(provider).isEqualTo(DYNAWO_PROVIDER);
     }

@@ -8,6 +8,7 @@ package org.gridsuite.study.server.studycontroller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import org.gridsuite.study.server.dto.NodeInfos;
 import org.gridsuite.study.server.dto.ReportLog;
 import org.gridsuite.study.server.dto.ReportPage;
 import org.gridsuite.study.server.dto.RootNetworkNodeInfo;
@@ -27,6 +28,7 @@ import org.springframework.messaging.MessageHeaders;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -1080,5 +1082,31 @@ class NodeControllerTest extends StudyTestBase {
         assertEquals(newNodeUuid, message.getHeaders().get(NotificationService.HEADER_NEW_NODE));
         assertEquals(referenceNodeUuid, message.getHeaders().get(NotificationService.HEADER_PARENT_NODE));
 
+    }
+
+    @Test
+    void testGetNodesInfos() throws Exception {
+        String userId = "userId";
+        UUID study1Uuid = createStudyWithStubs(userId, CASE_UUID);
+        UUID study2Uuid = createStudyWithStubs(userId, CASE_UUID);
+        UUID root1Uuid = networkModificationTreeService.getStudyTree(study1Uuid, null).getId();
+        UUID root2Uuid = networkModificationTreeService.getStudyTree(study2Uuid, null).getId();
+
+        NetworkModificationNode node1 = createNetworkModificationNode(study1Uuid, root1Uuid, VARIANT_ID, "node1", userId);
+        NetworkModificationNode node2 = createNetworkModificationNode(study2Uuid, root2Uuid, VARIANT_ID_2, "node2", userId);
+        UUID unknownNodeUuid = UUID.randomUUID();
+
+        MvcResult result = mockMvc.perform(get("/v1/nodes/infos")
+                        .param("ids", node1.getId().toString(), node2.getId().toString(), unknownNodeUuid.toString()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        List<NodeInfos> nodesInfos = mapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() { });
+
+        // the unknown node uuid is omitted, each node carries its own study
+        assertEquals(2, nodesInfos.size());
+        Map<UUID, NodeInfos> infosByNodeUuid = nodesInfos.stream().collect(Collectors.toMap(NodeInfos::nodeUuid, Function.identity()));
+        assertEquals(new NodeInfos(node1.getId(), "node1", study1Uuid), infosByNodeUuid.get(node1.getId()));
+        assertEquals(new NodeInfos(node2.getId(), "node2", study2Uuid), infosByNodeUuid.get(node2.getId()));
     }
 }

@@ -76,7 +76,7 @@ class SingleLineDiagramWiremockTest {
         wireMockServer.start();
 
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(wireMockServer.baseUrl());
-        shortCircuitService.setShortCircuitServerBaseUri(wireMockServer.baseUrl());
+        shortCircuitService.setBaseUri(wireMockServer.baseUrl());
     }
 
     @Test
