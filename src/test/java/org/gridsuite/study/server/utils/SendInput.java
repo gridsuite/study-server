@@ -75,6 +75,7 @@ public class SendInput extends PostServeAction {
                 } catch (InterruptedException e) {
                     LOGGER.error("Interrupted wait for the latch to be released before sending the message", e);
                     Thread.currentThread().interrupt();
+                    return;
                 }
             }
 
