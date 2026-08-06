@@ -177,7 +177,7 @@ class AsymmetricalLoadTest {
         configureFor("localhost", wireMockServer.port());
         String baseUrl = wireMockServer.baseUrl();
 
-        asymmetricalLoadRestService.setPccMinServerBaseUri(baseUrl);
+        asymmetricalLoadRestService.setBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 

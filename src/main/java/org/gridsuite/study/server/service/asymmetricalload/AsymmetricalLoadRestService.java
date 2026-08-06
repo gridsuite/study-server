@@ -8,7 +8,6 @@ package org.gridsuite.study.server.service.asymmetricalload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.NodeReceiver;
@@ -59,19 +58,14 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     private static final String ASYMMETRICAL_LOAD_URI = DELIMITER + PCC_MIN_API_VERSION + DELIMITER + ASYMMETRICAL_LOAD;
     private static final String PARAMETERS_URI = ASYMMETRICAL_LOAD_URI + DELIMITER + PATH_PARAM_PARAMETERS;
     private static final String PARAMETER_URI = PARAMETERS_URI + DELIMITER + PARAMETER_UUID;
-    private final RestTemplate restTemplate;
 
     private final ObjectMapper objectMapper;
-
-    @Setter
-    private String pccMinServerBaseUri;
 
     @Autowired
     public AsymmetricalLoadRestService(RemoteServicesProperties remoteServicesProperties,
                                        ObjectMapper objectMapper, RestTemplate restTemplate) {
-        this.pccMinServerBaseUri = remoteServicesProperties.getServiceUri("pcc-min-server");
+        super(remoteServicesProperties.getServiceUri("pcc-min-server"), restTemplate);
         this.objectMapper = objectMapper;
-        this.restTemplate = restTemplate;
     }
 
     public UUID runAsymmetricalLoad(UUID networkUuid, String variantId, RunAsymmetricalLoadParametersInfos parametersInfos, ReportInfos reportInfos, String receiver, String userId) {
@@ -101,7 +95,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
 
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
-        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public void stopAsymmetricalLoad(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid) {
@@ -123,7 +117,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
             .fromPath(ASYMMETRICAL_LOAD_URI + DELIMITER + "results/{resultUuid}/stop")
             .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
-        restTemplate.put(pccMinServerBaseUri + path, Void.class);
+        restTemplate.put(baseUri + path, Void.class);
     }
 
     public String getAsymmetricalLoadStatus(UUID resultUuid) {
@@ -133,11 +127,11 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         String path = UriComponentsBuilder
             .fromPath(ASYMMETRICAL_LOAD_URI + DELIMITER + "results/{resultUuid}/status")
             .buildAndExpand(resultUuid).toUriString();
-        return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
+        return restTemplate.getForObject(baseUri + path, String.class);
     }
 
     public void deleteAsymmetricalLoadResults(List<UUID> resultsUuids) {
-        deleteCalculationResults(resultsUuids, ASYMMETRICAL_LOAD_URI + "/results", restTemplate, pccMinServerBaseUri);
+        deleteCalculationResults(resultsUuids, ASYMMETRICAL_LOAD_URI + "/results", restTemplate, baseUri);
     }
 
     public void deleteAllAsymmetricalLoadResults() {
@@ -147,7 +141,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
     public Integer getAsymmetricalLoadResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(DELIMITER + PCC_MIN_API_VERSION + DELIMITER + "supervision/asymmetrical-load/results-count").toUriString();
-        return restTemplate.getForObject(pccMinServerBaseUri + path, Integer.class);
+        return restTemplate.getForObject(baseUri + path, Integer.class);
     }
 
     public void assertAsymmetricalLoadNotRunning(UUID resultUuid) {
@@ -163,7 +157,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
                 .fromPath(ASYMMETRICAL_LOAD_URI + DELIMITER + "results/invalidate-status")
                 .queryParam(RESULT_UUID, uuids).build().toUriString();
 
-            restTemplate.put(pccMinServerBaseUri + path, Void.class);
+            restTemplate.put(baseUri + path, Void.class);
         }
     }
 
@@ -184,7 +178,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         if (resultsPath == null) {
             return null;
         }
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(pccMinServerBaseUri + resultsPath);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUri + resultsPath);
         if (filters != null && !filters.isEmpty()) {
             builder.queryParam(QUERY_PARAM_FILTERS, filters);
         }
@@ -209,7 +203,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public void updateAsymmetricalLoadParameters(UUID parametersUuid, @Nullable String parameters) {
@@ -220,7 +214,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        restTemplate.put(pccMinServerBaseUri + path, httpEntity);
+        restTemplate.put(baseUri + path, httpEntity);
     }
 
     public UUID getAsymmetricalLoadParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
@@ -237,7 +231,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
             .buildAndExpand()
             .toUriString();
 
-        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 
     public String getAsymmetricalLoadParameters(UUID parametersUuid) {
@@ -246,7 +240,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         String path = UriComponentsBuilder.fromPath(PARAMETER_URI)
             .buildAndExpand(parametersUuid).toUriString();
 
-        return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
+        return restTemplate.getForObject(baseUri + path, String.class);
     }
 
     @Override
@@ -258,7 +252,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
             .buildAndExpand(uuid)
             .toUriString();
 
-        restTemplate.delete(pccMinServerBaseUri + path);
+        restTemplate.delete(baseUri + path);
     }
 
     @Override
@@ -274,7 +268,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
-        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public byte[] exportAsymmetricalLoadResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
@@ -282,7 +276,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
             throw new StudyException(NOT_FOUND, "Result of asymmetrical load was not found");
         }
 
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(pccMinServerBaseUri)
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(baseUri)
             .pathSegment(PCC_MIN_API_VERSION, ASYMMETRICAL_LOAD, RESULTS, resultUuid.toString(), "csv");
 
         if (StringUtils.isNotBlank(filters)) {
