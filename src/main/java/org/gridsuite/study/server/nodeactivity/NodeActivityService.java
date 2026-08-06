@@ -135,17 +135,17 @@ public class NodeActivityService {
     }
 
     @Transactional
-    public int removeAbandonedNodeActivities(Instant startedBefore) {
+    public List<NodeActivityEntity> removeAbandonedNodeActivities(Instant startedBefore) {
         List<NodeActivityEntity> abandonedActivities = nodeActivityRepository.findAllByStartedAtBefore(startedBefore);
         if (abandonedActivities.isEmpty()) {
-            return 0;
+            return List.of();
         }
         nodeActivityRepository.deleteAllInBatch(abandonedActivities);
         abandonedActivities.stream()
             .map(NodeActivityEntity::getStudyId)
             .distinct()
             .forEach(notificationService::emitNodeActivityUpdated);
-        return abandonedActivities.size();
+        return abandonedActivities;
     }
 
     private static <T> Supplier<T> asSupplier(Runnable action) {

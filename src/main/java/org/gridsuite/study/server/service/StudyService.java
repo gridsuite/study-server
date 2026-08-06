@@ -1474,7 +1474,7 @@ public class StudyService {
         return networkModificationTreeService.getChildren(parentNodeUuid).stream()
             .map(NodeEntity::getIdNode)
             .filter(childUuid -> !networkModificationTreeService.getNodeBuildStatus(childUuid, rootNetworkUuid).isBuilt())
-            .limit(getAllowedBuildNodesUpToQuota(studyUuid, rootNetworkUuid, userId))
+            .limit(Math.max(0, getAllowedBuildNodesUpToQuota(studyUuid, rootNetworkUuid, userId)))
             .toList();
     }
 
@@ -1678,6 +1678,16 @@ public class StudyService {
 
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid) {
         invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ALL);
+    }
+
+    /** Nothing said how the abandoned work ended, so the node goes back to a state we can trust */
+    @Transactional
+    public void invalidateAbandonedNode(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
+        if (rootNetworkUuid == null) {
+            invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ALL);
+        } else {
+            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL);
+        }
     }
 
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
