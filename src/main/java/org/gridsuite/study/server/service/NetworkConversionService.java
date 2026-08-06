@@ -73,14 +73,14 @@ public class NetworkConversionService {
      * - one variant cloned from the previous one for the 1st node - *variantId*
      */
     public void persistNetwork(RootNetworkInfos rootNetworkInfos, UUID studyUuid, String variantId, CaseImportRequestInfos requestInfos) {
-        boolean hasImportContext = false;
-        if (requestInfos.importContext() != null) {
-            studyImportContextService.storeImportContext(studyUuid, requestInfos.importContext());
-            hasImportContext = true;
-        }
+        boolean hasImportContext = requestInfos.importContext() != null;
 
         String receiver;
         try {
+            if (hasImportContext) {
+                studyImportContextService.storeImportContext(studyUuid, requestInfos.importContext());
+            }
+
             CaseImportReceiver caseImportReceiver = new CaseImportReceiver(
                     studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getCaseInfos().getCaseUuid(),
                     rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(), requestInfos.importReportUuid(), requestInfos.userId(),
@@ -88,6 +88,9 @@ public class NetworkConversionService {
 
             receiver = URLEncoder.encode(objectMapper.writeValueAsString(caseImportReceiver), StandardCharsets.UTF_8);
         } catch (JsonProcessingException e) {
+            if (hasImportContext) {
+                studyImportContextService.removeImportContext(studyUuid);
+            }
             throw new UncheckedIOException(e);
         }
 

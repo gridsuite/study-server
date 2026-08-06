@@ -15,7 +15,7 @@ import org.gridsuite.study.server.StudyConstants;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.caseimport.CaseImportReceiver;
-import org.gridsuite.study.server.dto.computation.ComputationParameterUUIDs;
+import org.gridsuite.study.server.dto.computation.StudyCreationParameterUUIDs;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NetworkExportReceiver;
@@ -26,7 +26,6 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
 import org.gridsuite.study.server.notification.NotificationService;
-import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.slf4j.Logger;
@@ -43,6 +42,7 @@ import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.dto.ComputationType.*;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.IMPORT_STUDY_ERROR;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NODE_NOT_BUILDING;
 
 /**
@@ -69,10 +69,8 @@ public class ConsumerService {
     private final CaseService caseService;
     private final LoadFlowRestService loadFlowRestService;
     private final NetworkModificationTreeService networkModificationTreeService;
-    private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
-    private final ComputationParametersService computationParametersService;
     private final UserAdminService userAdminService;
     private final LoadFlowService loadFlowService;
     private final StudyImportContextService studyImportContextService;
@@ -83,10 +81,8 @@ public class ConsumerService {
                            CaseService caseService,
                            LoadFlowRestService loadFlowRestService,
                            NetworkModificationTreeService networkModificationTreeService,
-                           StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            DirectoryService directoryService,
-                           ComputationParametersService computationParametersService,
                            UserAdminService userAdminService,
                            LoadFlowService loadFlowService,
                            StudyImportContextService studyImportContextService) {
@@ -96,10 +92,8 @@ public class ConsumerService {
         this.caseService = caseService;
         this.loadFlowRestService = loadFlowRestService;
         this.networkModificationTreeService = networkModificationTreeService;
-        this.studyConfigService = studyConfigService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.directoryService = directoryService;
-        this.computationParametersService = computationParametersService;
         this.userAdminService = userAdminService;
         this.loadFlowService = loadFlowService;
         this.studyImportContextService = studyImportContextService;
@@ -240,6 +234,7 @@ public class ConsumerService {
         UUID rootNetworkUuid = receiver.getRootNetworkUuid();
         CaseImportAction caseImportAction = receiver.getCaseImportAction();
         boolean success = false;
+        String errorMessage = null;
 
         CaseInfos caseInfos = new CaseInfos(caseUuid, receiver.getOriginalCaseUuid(), caseName, caseFormat);
         NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
@@ -268,14 +263,15 @@ public class ConsumerService {
                             ? studyImportContextService.getAndRemoveImportContext(studyUuid)
                             : null;
 
-                    if (importContext != null) {
-                        // Insert the study with the first root network and import the complete node tree
-                        studyService.insertStudyWithImportedTree(studyUuid, userId, networkInfos, caseInfos,
-                                importParameters, importReportUuid, importContext.studyExportInfos());
-                        // Create directory element for the study
-                        directoryService.createElement(importContext.parentDirectoryUuid(), importContext.description(),
-                                studyUuid, importContext.studyName(), DirectoryService.STUDY, userId);
+                    if (importContext == null) {
+                        throw new StudyException(IMPORT_STUDY_ERROR, "Study import context not found or expired for study " + studyUuid);
                     }
+                    // Insert the study with the first root network and import the complete node tree
+                    studyService.insertStudyWithImportedTree(studyUuid, userId, networkInfos, caseInfos,
+                            importParameters, importReportUuid, importContext.studyExportInfos());
+                    // Create directory element for the study
+                    directoryService.createElement(importContext.parentDirectoryUuid(), importContext.description(),
+                            studyUuid, importContext.studyName(), DirectoryService.STUDY, userId);
                 }
             }
             caseService.disableCaseExpiration(caseUuid);
@@ -293,6 +289,7 @@ public class ConsumerService {
                     // deleteStudyIfNotCreationInProgress falls back to deleting the partially imported study
                     // instead of only clearing the in-progress flag. Additional root networks otherwise arrive async.
                     studyService.deleteStudyCreationRequest(studyUuid);
+                    notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
                 }
                 studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
             }
@@ -308,73 +305,14 @@ public class ConsumerService {
     private void insertStudy(UUID studyUuid, String userId, NetworkInfos networkInfos, CaseInfos caseInfos,
                              Map<String, Object> importParameters, UUID importReportUuid) {
         UserProfileInfos userProfileInfos = studyService.getUserProfile(userId);
+        StudyCreationParameterUUIDs studyCreationParameterUUIDs = studyService.createStudyCreationParameterUUIDs(userId, userProfileInfos);
 
-        ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
-        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
-        UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
-        UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
-
-        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, computationParameterUUIDs,
-            networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
+        studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos,
+            studyCreationParameterUUIDs.computationParameterUUIDs(),
+            studyCreationParameterUUIDs.networkVisualizationParametersUuid(),
+            studyCreationParameterUUIDs.spreadsheetConfigCollectionUuid(),
+            studyCreationParameterUUIDs.workspacesConfigUuid(),
             importParameters, importReportUuid);
-    }
-
-    private UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getNetworkVisualizationParameterId() != null) {
-            // try to access/duplicate the user profile network visualization parameters
-            try {
-                return studyConfigService.duplicateNetworkVisualizationParameters(userProfileInfos.getNetworkVisualizationParameterId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate network visualization parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getNetworkVisualizationParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad network visualization parameters in profile => use default values
-        try {
-            return studyConfigService.createDefaultNetworkVisualizationParameters();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating network visualization default parameters", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
-            // try to access/duplicate the user profile spreadsheet config collection
-            try {
-                return studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default spreadsheet config collection",
-                    userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad spreadsheet config collection in profile => use default values
-        try {
-            return studyConfigService.createDefaultSpreadsheetConfigCollection();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default spreadsheet config collection", e);
-            return null;
-        }
-    }
-
-    @SuppressWarnings("checkstyle:LambdaBodyLength")
-    private UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
-        try {
-            List<UUID> workspaceIds = new ArrayList<>();
-            if (userProfileInfos != null && userProfileInfos.getWorkspaceId() != null) {
-                // Create config with profile workspace as first, and two empty workspaces
-                workspaceIds.add(userProfileInfos.getWorkspaceId());
-                workspaceIds.add(null);
-                workspaceIds.add(null);
-            }
-            // Empty list will create default config
-            return studyConfigService.createWorkspacesConfigFromWorkspaces(workspaceIds);
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating workspace collection", e);
-            return null;
-        }
     }
 
     @Bean

@@ -14,7 +14,6 @@ import java.util.UUID;
 public record StudyImportRequestInfos(
         UUID studyUuid,
         UUID caseUuid,
-        String caseFormat,
         String studyName,
         String description,
         UUID parentDirectoryUuid

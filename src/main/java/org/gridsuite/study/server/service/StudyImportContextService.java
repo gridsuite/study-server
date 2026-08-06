@@ -6,15 +6,21 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.studyexport.StudyImportContext;
+import org.gridsuite.study.server.repository.StudyCreationRequestEntity;
+import org.gridsuite.study.server.repository.StudyCreationRequestRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
+import java.io.UncheckedIOException;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Temporary in-memory storage for StudyImportContext during async study import.
+ * Shared storage for StudyImportContext during async study import.
  * Stores the context between the import trigger and the consumer callback.
  *
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
@@ -22,33 +28,68 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class StudyImportContextService {
 
-    private final Map<UUID, StudyImportContext> importContexts = new ConcurrentHashMap<>();
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyImportContextService.class);
 
-    /**
-     * Store StudyImportContext for a study import operation
-     * @param studyUuid The study UUID
-     * @param importContext The import context to store
-     * @return The context key (same as studyUuid)
-     */
+    private final StudyCreationRequestRepository studyCreationRequestRepository;
+    private final ObjectMapper objectMapper;
+
+    public StudyImportContextService(StudyCreationRequestRepository studyCreationRequestRepository,
+                                      ObjectMapper objectMapper) {
+        this.studyCreationRequestRepository = studyCreationRequestRepository;
+        this.objectMapper = objectMapper;
+    }
+
+    @Transactional
     public UUID storeImportContext(UUID studyUuid, StudyImportContext importContext) {
-        importContexts.put(studyUuid, importContext);
+        try {
+            String serializedContext = objectMapper.writeValueAsString(importContext);
+            StudyCreationRequestEntity entity = studyCreationRequestRepository.findById(studyUuid)
+                    .orElseThrow(() -> new IllegalStateException("No pending creation request for study '" + studyUuid + "'"));
+            entity.setImportContext(serializedContext);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
         return studyUuid;
     }
 
     /**
-     * Retrieve and remove StudyImportContext for a study import operation
+     * Retrieve and clear the StudyImportContext for a study import operation
      * @param studyUuid The study UUID
-     * @return The stored import context, or null if not found
+     * @return The stored import context, or null if not found or expired
      */
+    @Transactional
     public StudyImportContext getAndRemoveImportContext(UUID studyUuid) {
-        return importContexts.remove(studyUuid);
+        StudyImportContext importContext = readIfNotExpired(studyUuid);
+        clearImportContext(studyUuid);
+        return importContext;
     }
 
     /**
-     * Remove import context without returning it
+     * Clear the import context without returning it
      * @param studyUuid The study UUID
      */
+    @Transactional
     public void removeImportContext(UUID studyUuid) {
-        importContexts.remove(studyUuid);
+        clearImportContext(studyUuid);
+    }
+
+    private void clearImportContext(UUID studyUuid) {
+        studyCreationRequestRepository.findById(studyUuid).ifPresent(entity -> {
+            entity.setImportContext(null);
+        });
+    }
+
+    private StudyImportContext readIfNotExpired(UUID studyUuid) {
+        return studyCreationRequestRepository.findById(studyUuid)
+                .filter(entity -> entity.getImportContext() != null)
+                .map(entity -> {
+                    try {
+                        return objectMapper.readValue(entity.getImportContext(), StudyImportContext.class);
+                    } catch (JsonProcessingException e) {
+                        LOGGER.error("Error while deserializing StudyImportContext for study '{}'", studyUuid, e);
+                        return null;
+                    }
+                })
+                .orElse(null);
     }
 }

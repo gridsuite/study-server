@@ -28,4 +28,16 @@ public class StudyCreationRequestEntity implements BasicStudyEntity {
 
     @Column(name = "firstRootNetworkName")
     private String firstRootNetworkName;
+
+    /**
+     * Serialized {@link org.gridsuite.study.server.dto.studyexport.StudyImportContext}, set only for a
+     * STUDY_IMPORT in progress.
+     * Lifecycle (see StudyService#importStudyWithCase and ConsumerService's success/failure handlers).
+     */
+    @Column(name = "importContext")
+    private String importContext;
+
+    public StudyCreationRequestEntity(UUID id, String firstRootNetworkName) {
+        this(id, firstRootNetworkName, null);
+    }
 }

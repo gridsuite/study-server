@@ -686,23 +686,28 @@ public class StudyService {
 
         // Get user profile and create parameters
         UserProfileInfos userProfileInfos = getUserProfile(userId);
-        ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
-        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
-        UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
-        UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
-
-        self.saveStudyThenCreateRootOnly(studyUuid, networkInfos, caseInfos, StudyCreationParameterUUIDs.builder()
-                .computationParameterUUIDs(computationParameterUUIDs)
-                .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
-                .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
-                .workspacesConfigUuid(workspacesConfigUuid)
-                .build(), importParameters, importReportUuid);
+        String firstRootNetworkTag = studyExportInfos.rootNetworks().getFirst().tag();
+        self.saveStudyThenCreateRootOnly(studyUuid, networkInfos, caseInfos,
+                createStudyCreationParameterUUIDs(userId, userProfileInfos), importParameters, importReportUuid, firstRootNetworkTag);
 
         StudyEntity studyEntity = getStudy(studyUuid);
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
         self.importStudy(studyUuid, studyExportInfos, userId);
         notificationService.emitStudyCreationFinished(studyUuid, userId);
+    }
+
+    /**
+     * Computes the default parameter UUIDs (computation parameters, network visualization, spreadsheet config,
+     * workspaces) used when creating a study, duplicating them from the user's profile when available.
+     */
+    StudyCreationParameterUUIDs createStudyCreationParameterUUIDs(String userId, UserProfileInfos userProfileInfos) {
+        return StudyCreationParameterUUIDs.builder()
+                .computationParameterUUIDs(computationParametersService.createDefaultComputationParameters(userId, userProfileInfos))
+                .networkVisualizationParametersUuid(createDefaultNetworkVisualizationParameters(userId, userProfileInfos))
+                .spreadsheetConfigCollectionUuid(createDefaultSpreadsheetConfigCollection(userId, userProfileInfos))
+                .workspacesConfigUuid(createWorkspacesConfig(userProfileInfos))
+                .build();
     }
 
     private UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
@@ -1495,7 +1500,8 @@ public class StudyService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     StudyEntity saveStudyThenCreateRootOnly(UUID studyUuid, NetworkInfos networkInfos,
                                                     CaseInfos caseInfos, StudyCreationParameterUUIDs studyCreationParameterUUIDs,
-                                                    Map<String, Object> importParameters, UUID importReportUuid) {
+                                                    Map<String, Object> importParameters, UUID importReportUuid,
+                                                    String firstRootNetworkTag) {
         ComputationParameterUUIDs computationParameterUUIDs = studyCreationParameterUUIDs.computationParameterUUIDs();
 
         StudyEntity studyEntity = StudyEntity.builder()
@@ -1527,7 +1533,7 @@ public class StudyService {
         }
         rootNetworkService.createRootNetwork(studyEntity,
                 RootNetworkInfos.builder().id(UUID.randomUUID()).name(firstRootNetworkName).networkInfos(networkInfos)
-                        .caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).tag("1").build());
+                        .caseInfos(caseInfos).reportUuid(importReportUuid).importParameters(importParameters).tag(firstRootNetworkTag).build());
 
         // Create only the root node (no N1 child node)
         networkModificationTreeService.createRoot(study);
@@ -3237,6 +3243,12 @@ public class StudyService {
         // Import additional root networks (skip first one as it's already imported)
         if (studyExportInfos.rootNetworks().size() > 1) {
             StudyEntity studyEntity = getStudy(studyUuid);
+            // Validate and register every additional root network before dispatching any async network
+            // conversion. Dispatch must happen last: a validation failure partway through must not leave an
+            // earlier root network's async conversion in flight against a study that the STUDY_IMPORT failure
+            // path (ConsumerService) is about to delete - that dispatch would otherwise complete later with no
+            // study left to attach to, orphaning the converted network/report on the remote services.
+            List<RootNetworkInfos> additionalRootNetworkInfos = new ArrayList<>();
             for (int i = 1; i < studyExportInfos.rootNetworks().size(); i++) {
                 RootNetworkExportInfos rootNetworkExport = studyExportInfos.rootNetworks().get(i);
                 // Assert can create root network
@@ -3257,16 +3269,17 @@ public class StudyService {
                         .build();
                 // Insert creation request
                 rootNetworkService.insertCreationRequest(studyEntity.getId(), rootNetworkInfos, userId);
-                // Import the network from the case (async via RabbitMQ)
-                // The consumer ROOT_NETWORK_CREATION will handle createRootNetwork when notification arrives
-                persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkExport.importParameters(), CaseImportAction.ROOT_NETWORK_CREATION);
+                additionalRootNetworkInfos.add(rootNetworkInfos);
             }
-            // Update study entity to multi-root if we have multiple root networks in the export
-            // The additional root networks will be created async when notifications arrive
-            if (studyExportInfos.rootNetworks().size() > 1) {
-                studyEntity.setMonoRoot(false);
-                studyRepository.save(studyEntity);
+            // Every additional root network is now validated and registered: safe to dispatch the async
+            // network conversions. The consumer ROOT_NETWORK_CREATION will handle createRootNetwork when
+            // notifications arrive.
+            for (RootNetworkInfos rootNetworkInfos : additionalRootNetworkInfos) {
+                persistNetwork(rootNetworkInfos, studyUuid, null, userId, rootNetworkInfos.getImportParameters(), CaseImportAction.ROOT_NETWORK_CREATION);
             }
+            // Update study entity to multi-root since we have multiple root networks in the export
+            studyEntity.setMonoRoot(false);
+            studyRepository.save(studyEntity);
         }
     }
 
@@ -3274,7 +3287,7 @@ public class StudyService {
      * Import a complete study with case import trigger.
      * This triggers an async case import, which will then call importStudy() via the consumer.
      */
-    public void importStudyWithCase(UUID studyUuid, UUID caseUuid, String caseFormat, StudyImportContext importContext,
+    public void importStudyWithCase(UUID studyUuid, UUID caseUuid, StudyImportContext importContext,
                                     Map<String, Object> importParameters, String userId) {
         StudyExportInfos studyExportInfos = importContext.studyExportInfos();
         if (studyExportInfos.rootNetworks() == null || studyExportInfos.rootNetworks().isEmpty()) {
@@ -3282,7 +3295,7 @@ public class StudyService {
         }
         var firstRootNetwork = studyExportInfos.rootNetworks().getFirst();
         insertStudyCreationRequest(userId, studyUuid, firstRootNetwork.name());
-        CaseInfos caseInfos = new CaseInfos(caseUuid, null, null, caseFormat);
+        CaseInfos caseInfos = new CaseInfos(caseUuid, null, null, firstRootNetwork.caseFormat());
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder()
                 .id(UUID.randomUUID())
                 .name(firstRootNetwork.name())
@@ -3310,7 +3323,7 @@ public class StudyService {
         StudyExportInfos studyExportInfos = extractStudyExportInfos(requestBody);
         validateNodeTree(studyExportInfos.nodeTree());
         StudyImportContext importContext = new StudyImportContext(studyExportInfos, requestInfos.studyName(), requestInfos.description(), requestInfos.parentDirectoryUuid());
-        importStudyWithCase(requestInfos.studyUuid(), requestInfos.caseUuid(), requestInfos.caseFormat(), importContext, importParameters, userId);
+        importStudyWithCase(requestInfos.studyUuid(), requestInfos.caseUuid(), importContext, importParameters, userId);
     }
 
     @SuppressWarnings("unchecked")

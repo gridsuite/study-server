@@ -8,6 +8,7 @@ package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
+import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.StudyExportInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.slf4j.Logger;
@@ -47,23 +48,28 @@ public class StudyExportArchiveService {
     private final StudyService studyService;
     private final RootNetworkService rootNetworkService;
     private final CaseService caseService;
+    private final DirectoryService directoryService;
     private final ObjectMapper objectMapper;
     private final StudyExportArchiveService self;
 
-    public StudyExportArchiveService(@Lazy StudyExportArchiveService self, StudyService studyService, RootNetworkService rootNetworkService, CaseService caseService, ObjectMapper objectMapper) {
+    public StudyExportArchiveService(@Lazy StudyExportArchiveService self, StudyService studyService, RootNetworkService rootNetworkService,
+            CaseService caseService, DirectoryService directoryService, ObjectMapper objectMapper) {
         this.self = self;
         this.studyService = studyService;
         this.rootNetworkService = rootNetworkService;
         this.caseService = caseService;
+        this.directoryService = directoryService;
         this.objectMapper = objectMapper;
     }
 
     /**
      * Export a study as a gzip archive
      * @param studyUuid the study UUID
+     * @param userId the requesting user, checked for read access to the study
      * @return InputStreamResource containing the zip archive
      */
-    public InputStreamResource exportStudyArchive(UUID studyUuid) {
+    public InputStreamResource exportStudyArchive(UUID studyUuid, String userId) {
+        directoryService.checkPermission(List.of(studyUuid), null, userId, PermissionType.READ, false);
         Path tempDir = createTempWorkDir(studyUuid);
         Path zipFile = null;
         try {

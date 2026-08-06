@@ -1610,11 +1610,12 @@ public class StudyController {
     @Operation(summary = "Export a study as a gzip archive containing tree.json and case files")
     @ApiResponse(responseCode = "200", description = "The study archive as gzip")
     @ApiResponse(responseCode = "404", description = "Study or root network not found")
-    public ResponseEntity<Resource> exportStudyArchive(@PathVariable("studyUuid") UUID studyUuid) {
+    public ResponseEntity<Resource> exportStudyArchive(@PathVariable("studyUuid") UUID studyUuid,
+                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + studyUuid + ".gz");
         headers.add(HttpHeaders.CONTENT_TYPE, "application/gzip");
-        return ResponseEntity.ok().headers(headers).body(studyExportArchiveService.exportStudyArchive(studyUuid));
+        return ResponseEntity.ok().headers(headers).body(studyExportArchiveService.exportStudyArchive(studyUuid, userId));
     }
 
     @PostMapping(value = "/studies/import-with-case-import-action/{caseUuid}")
@@ -1623,13 +1624,12 @@ public class StudyController {
     public ResponseEntity<Void> importStudyWithCaseImportAction(
             @Parameter(description = "Case UUID") @PathVariable("caseUuid") UUID caseUuid,
             @Parameter(description = "Study UUID") @RequestParam("studyUuid") UUID studyUuid,
-            @Parameter(description = "Case format") @RequestParam("caseFormat") String caseFormat,
             @Parameter(description = "Study name") @RequestParam("studyName") String studyName,
             @Parameter(description = "Study description") @RequestParam("description") String description,
             @Parameter(description = "Parent directory UUID") @RequestParam("parentDirectoryUuid") UUID parentDirectoryUuid,
             @Parameter(description = "Request body with importParameters and studyExportInfos") @RequestBody Map<String, Object> requestBody,
             @RequestHeader(HEADER_USER_ID) String userId) {
-        StudyImportRequestInfos requestInfos = new StudyImportRequestInfos(studyUuid, caseUuid, caseFormat, studyName, description, parentDirectoryUuid);
+        StudyImportRequestInfos requestInfos = new StudyImportRequestInfos(studyUuid, caseUuid, studyName, description, parentDirectoryUuid);
         studyService.importStudyWithCaseImportAction(requestInfos, requestBody, userId);
         return ResponseEntity.ok().build();
     }
