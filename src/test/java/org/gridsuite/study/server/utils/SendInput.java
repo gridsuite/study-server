@@ -49,7 +49,7 @@ public class SendInput extends PostServeAction {
         String destination = parameters.get("destination").toString();
         CountDownLatch countDownLatch = (CountDownLatch) (parameters.get("latch"));
         Boolean waitForLatch = (Boolean) parameters.get("waitForLatch");
-        List<String> paramsNotToPass = List.of("countDownLatch", "destination", "payload");
+        List<String> paramsNotToPass = List.of("latch", "waitForLatch", "destination", "payload");
 
         MessageBuilder<?> messageBuilder = MessageBuilder.withPayload(payload);
         QueryParameter receiverParam = serveEvent.getRequest().getQueryParams().get(QUERY_PARAM_RECEIVER);
