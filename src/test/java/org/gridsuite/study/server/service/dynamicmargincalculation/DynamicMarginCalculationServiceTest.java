@@ -14,6 +14,9 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
@@ -203,5 +206,21 @@ class DynamicMarginCalculationServiceTest {
         String provider = dynamicMarginCalculationRestService.getProvider(PARAMETERS_UUID);
 
         assertThat(provider).isEqualTo(DYNAWO_PROVIDER);
+    }
+
+    @Test
+    void testGetProviders() {
+        String providers = "[\"Dynawo\"]";
+        given(dynamicMarginCalculationClient.getProviders()).willReturn(providers);
+
+        assertThat(dynamicMarginCalculationRestService.getProviders()).isEqualTo(providers);
+    }
+
+    @Test
+    void testDownloadDebugFile() {
+        ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource(PARAMETERS_JSON.getBytes()));
+        given(dynamicMarginCalculationClient.downloadDebugFile(RESULT_UUID)).willReturn(response);
+
+        assertThat(dynamicMarginCalculationRestService.downloadDebugFile(RESULT_UUID)).isEqualTo(response);
     }
 }

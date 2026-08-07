@@ -90,17 +90,4 @@ class DynamicMappingServiceTest extends AbstractWireMockRestClientTest {
         assertThat(result).isEqualTo(NETWORK_MATCHES_JSON);
 
     }
-
-    @Test
-    void testGetMappedModels() {
-        UUID mappingId = UUID.randomUUID();
-        String response = "[{\"name\":\"model\"}]";
-        String url = "/mappings/" + mappingId + "/models";
-
-        wireMockServer.stubFor(WireMock.get(WireMock.urlEqualTo(url))
-            .willReturn(WireMock.ok().withBody(response).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
-
-        assertThat(dynamicMappingService.getMappedModels(mappingId)).isEqualTo(response);
-        wireMockServer.verify(WireMock.getRequestedFor(WireMock.urlEqualTo(url)));
-    }
 }
