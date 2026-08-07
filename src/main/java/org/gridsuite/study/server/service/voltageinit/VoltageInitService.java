@@ -21,7 +21,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.client.voltageinit.VoltageInitClient;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +45,6 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 @Service
 public class VoltageInitService extends AbstractComputationService {
     private final VoltageInitRestService voltageInitRestService;
-    private final VoltageInitClient voltageInitClient;
     private final NetworkModificationTreeService networkModificationTreeService;
     private final UserAdminService userAdminService;
     private final RootNetworkService rootNetworkService;
@@ -57,13 +56,11 @@ public class VoltageInitService extends AbstractComputationService {
                                  NotificationService notificationService,
                                  RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                  VoltageInitRestService voltageInitRestService,
-                                 VoltageInitClient voltageInitClient,
                                  NetworkModificationTreeService networkModificationTreeService,
                                  UserAdminService userAdminService,
                                  RootNetworkService rootNetworkService) {
         super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
         this.voltageInitRestService = voltageInitRestService;
-        this.voltageInitClient = voltageInitClient;
         this.networkModificationTreeService = networkModificationTreeService;
         this.userAdminService = userAdminService;
         this.rootNetworkService = rootNetworkService;
@@ -179,11 +176,11 @@ public class VoltageInitService extends AbstractComputationService {
     }
 
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
-        return voltageInitClient.downloadDebugFile(resultUuid);
+        return voltageInitRestService.downloadDebugFile(resultUuid);
     }
 
     public VoltageInitParametersInfos getVoltageInitParametersByUuid(UUID parameterUuid) {
-        return voltageInitClient.getParameters(parameterUuid);
+        return voltageInitRestService.getParameters(parameterUuid);
     }
 
 }

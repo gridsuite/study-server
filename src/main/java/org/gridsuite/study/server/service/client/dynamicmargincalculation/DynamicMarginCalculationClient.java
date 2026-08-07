@@ -260,5 +260,4 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
             .toUriString();
         return getRestTemplate().exchange(url, HttpMethod.GET, null, Resource.class);
     }
-
 }

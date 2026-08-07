@@ -15,7 +15,6 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
-import org.gridsuite.study.server.service.client.networkmodification.NetworkModificationClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.util.Pair;
@@ -55,19 +54,16 @@ public class NetworkModificationService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final RootNetworkService rootNetworkService;
-    private final NetworkModificationClient networkModificationClient;
     private String networkModificationServerBaseUri;
 
     @Autowired
     NetworkModificationService(RemoteServicesProperties remoteServicesProperties,
                                RestTemplate restTemplate,
-                               ObjectMapper objectMapper, RootNetworkService rootNetworkService,
-                               NetworkModificationClient networkModificationClient) {
+                               ObjectMapper objectMapper, RootNetworkService rootNetworkService) {
         this.networkModificationServerBaseUri = remoteServicesProperties.getServiceUri("network-modification-server");
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.rootNetworkService = rootNetworkService;
-        this.networkModificationClient = networkModificationClient;
     }
 
     public void setNetworkModificationServerBaseUri(String networkModificationServerBaseUri) {
@@ -85,35 +81,59 @@ public class NetworkModificationService {
     }
 
     public String getLineTypesCatalog() {
-        return networkModificationClient.getLineTypesCatalog();
+        return restTemplate.getForObject(getNetworkModificationServerURI(false) + DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/network-modifications/catalog/line_types", String.class);
     }
 
     public String getLineType(UUID lineTypeUuid) {
-        return networkModificationClient.getLineType(lineTypeUuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/network-modifications/catalog/line_types/{uuid}").buildAndExpand(lineTypeUuid).toUriString();
+        return restTemplate.getForObject(getNetworkModificationServerURI(false) + path, String.class);
     }
 
     public String getLineTypeWithLimits(UUID lineTypeUuid, String area, String temperature, String shapeFactor) {
-        return networkModificationClient.getLineTypeWithLimits(lineTypeUuid, area, temperature, shapeFactor);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/network-modifications/catalog/line_types/{uuid}/with-limits")
+            .queryParam("area", area)
+            .queryParamIfPresent("temperature", Optional.ofNullable(temperature))
+            .queryParamIfPresent("shapeFactor", Optional.ofNullable(shapeFactor))
+            .buildAndExpand(lineTypeUuid).toUriString();
+        return restTemplate.getForObject(getNetworkModificationServerURI(false) + path, String.class);
     }
 
     public String getNetworkModificationsFromComposite(List<UUID> compositeModificationUuids, boolean onlyMetadata) {
-        return networkModificationClient.getNetworkModificationsFromComposite(compositeModificationUuids, onlyMetadata);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/network-composite-modifications/network-modifications")
+            .queryParam(UUIDS, compositeModificationUuids)
+            .queryParam("onlyMetadata", onlyMetadata)
+            .build().toUriString();
+        return restTemplate.getForObject(getNetworkModificationServerURI(false) + path, String.class);
     }
 
     public String getNetworkModification(UUID networkModificationUuid) {
-        return networkModificationClient.getNetworkModification(networkModificationUuid);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/network-modifications/{uuid}").buildAndExpand(networkModificationUuid).toUriString();
+        return restTemplate.getForObject(getNetworkModificationServerURI(false) + path, String.class);
     }
 
     public String getBusBarSectionsForNewCoupler(String voltageLevelId, Integer busBarCount, Integer sectionCount, List<String> switchKindList) {
-        return networkModificationClient.getBusBarSectionsForNewCoupler(voltageLevelId, busBarCount, sectionCount, switchKindList);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/network-modifications/busbar-sections-for-new-coupler")
+            .queryParam("voltageLevelId", voltageLevelId)
+            .queryParam("busBarCount", busBarCount)
+            .queryParam("sectionCount", sectionCount)
+            .queryParamIfPresent("switchKindList", Optional.ofNullable(switchKindList))
+            .build().toUriString();
+        return restTemplate.getForObject(getNetworkModificationServerURI(false) + path, String.class);
     }
 
     public void updateNetworkModification(UUID networkModificationUuid, String modificationInfos) {
-        networkModificationClient.updateNetworkModification(networkModificationUuid, modificationInfos);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/network-modifications/{uuid}").buildAndExpand(networkModificationUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(modificationInfos, headers), Void.class);
     }
 
     public void updateNetworkModificationsMetadata(List<UUID> networkModificationUuids, String metadata) {
-        networkModificationClient.updateNetworkModificationsMetadata(networkModificationUuids, metadata);
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MODIFICATION_API_VERSION + "/network-modifications")
+            .queryParam(UUIDS, networkModificationUuids).build().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path, HttpMethod.PUT, new HttpEntity<>(metadata, headers), Void.class);
     }
 
     public String getModifications(UUID groupUUid, boolean stashedModifications, boolean onlyMetadata) {

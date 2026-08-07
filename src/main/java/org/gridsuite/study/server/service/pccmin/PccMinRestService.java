@@ -8,7 +8,6 @@ package org.gridsuite.study.server.service.pccmin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.*;
@@ -50,19 +49,14 @@ public class PccMinRestService extends AbstractComputationRestService implements
     private static final String PCC_MIN_URI = DELIMITER + PCC_MIN_API_VERSION;
     private static final String PARAMETERS_URI = PCC_MIN_URI + DELIMITER + PATH_PARAM_PARAMETERS;
     private static final String PARAMETER_URI = PARAMETERS_URI + DELIMITER + PARAMETER_UUID;
-    private final RestTemplate restTemplate;
 
     private final ObjectMapper objectMapper;
-
-    @Setter
-    private String pccMinServerBaseUri;
 
     @Autowired
     public PccMinRestService(RemoteServicesProperties remoteServicesProperties,
                              ObjectMapper objectMapper, RestTemplate restTemplate) {
-        this.pccMinServerBaseUri = remoteServicesProperties.getServiceUri("pcc-min-server");
+        super(remoteServicesProperties.getServiceUri("pcc-min-server"), restTemplate);
         this.objectMapper = objectMapper;
-        this.restTemplate = restTemplate;
     }
 
     public UUID runPccMin(UUID networkUuid, String variantId, RunPccMinParametersInfos parametersInfos, ReportInfos reportInfos, String receiver, String userId) {
@@ -92,7 +86,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
 
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
-        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public void stopPccMin(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid) {
@@ -114,7 +108,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
             .fromPath(PCC_MIN_URI + DELIMITER + "results/{resultUuid}/stop")
             .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
-        restTemplate.put(pccMinServerBaseUri + path, Void.class);
+        restTemplate.put(baseUri + path, Void.class);
     }
 
     public String getPccMinStatus(UUID resultUuid) {
@@ -124,11 +118,11 @@ public class PccMinRestService extends AbstractComputationRestService implements
         String path = UriComponentsBuilder
             .fromPath(PCC_MIN_URI + DELIMITER + "results/{resultUuid}/status")
             .buildAndExpand(resultUuid).toUriString();
-        return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
+        return restTemplate.getForObject(baseUri + path, String.class);
     }
 
     public void deletePccMinResults(List<UUID> resultsUuids) {
-        deleteCalculationResults(resultsUuids, DELIMITER + PCC_MIN_API_VERSION + "/results", restTemplate, pccMinServerBaseUri);
+        deleteCalculationResults(resultsUuids, DELIMITER + PCC_MIN_API_VERSION + "/results", restTemplate, baseUri);
     }
 
     public void deleteAllPccMinResults() {
@@ -138,7 +132,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
     public Integer getPccMinResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(PCC_MIN_URI + DELIMITER + "supervision/results-count").toUriString();
-        return restTemplate.getForObject(pccMinServerBaseUri + path, Integer.class);
+        return restTemplate.getForObject(baseUri + path, Integer.class);
     }
 
     public void assertPccMinNotRunning(UUID resultUuid) {
@@ -154,7 +148,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
                 .fromPath(PCC_MIN_URI + DELIMITER + "results/invalidate-status")
                 .queryParam(RESULT_UUID, uuids).build().toUriString();
 
-            restTemplate.put(pccMinServerBaseUri + path, Void.class);
+            restTemplate.put(baseUri + path, Void.class);
         }
     }
 
@@ -175,7 +169,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
         if (resultsPath == null) {
             return null;
         }
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(pccMinServerBaseUri + resultsPath);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUri + resultsPath);
         if (filters != null && !filters.isEmpty()) {
             builder.queryParam(QUERY_PARAM_FILTERS, filters);
         }
@@ -200,7 +194,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public void updatePccMinParameters(UUID parametersUuid, @Nullable String parameters) {
@@ -211,7 +205,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        restTemplate.put(pccMinServerBaseUri + path, httpEntity);
+        restTemplate.put(baseUri + path, httpEntity);
     }
 
     public UUID getPccMinParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
@@ -228,7 +222,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
             .buildAndExpand()
             .toUriString();
 
-        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 
     public String getPccMinParameters(UUID parametersUuid) {
@@ -237,7 +231,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
         String path = UriComponentsBuilder.fromPath(PARAMETER_URI)
             .buildAndExpand(parametersUuid).toUriString();
 
-        return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
+        return restTemplate.getForObject(baseUri + path, String.class);
     }
 
     @Override
@@ -249,7 +243,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
             .buildAndExpand(uuid)
             .toUriString();
 
-        restTemplate.delete(pccMinServerBaseUri + path);
+        restTemplate.delete(baseUri + path);
     }
 
     @Override
@@ -265,7 +259,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
-        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public byte[] exportPccMinResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
@@ -273,7 +267,7 @@ public class PccMinRestService extends AbstractComputationRestService implements
             throw new StudyException(NOT_FOUND, "Result of pcc min was not found");
         }
 
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(pccMinServerBaseUri)
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(baseUri)
             .pathSegment(PCC_MIN_API_VERSION, RESULTS, resultUuid.toString(), "csv");
 
         if (StringUtils.isNotBlank(filters)) {
@@ -295,5 +289,10 @@ public class PccMinRestService extends AbstractComputationRestService implements
 
         HttpEntity<String> httpEntity = new HttpEntity<>(csvHeaders, headers);
         return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
+    }
+
+    public String getParameters(UUID parameterUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
+        return restTemplate.getForObject(getBaseUri() + path, String.class);
     }
 }
