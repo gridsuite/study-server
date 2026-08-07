@@ -126,42 +126,11 @@ public class RootNetworkNodeInfoService {
         });
     }
 
-    public void createNodeLinksFromTags(@NonNull StudyEntity targetStudy,
-                                        @NonNull NetworkModificationNodeInfoEntity originNodeInfo, NetworkModificationNodeInfoEntity targetNodeInfo,
-                                        @NonNull Map<UUID, UUID> mappingModificationUuids) {
-        Map<UUID, RootNetworkNodeInfoEntity> mappingRootNetworksFromTag = new HashMap<>();
-        targetStudy.getRootNetworks().forEach(targetRootNetwork -> {
-            Optional<RootNetworkNodeInfoEntity> originRootNetworkNodeInfo = originNodeInfo.getRootNetworkNodeInfos().stream().filter(
-                    originRootNetworkNode -> originRootNetworkNode.getRootNetwork().getTag().equals(targetRootNetwork.getTag())).findFirst();
-            originRootNetworkNodeInfo.ifPresent(originRootNetworkNodeInfoEntity ->
-                mappingRootNetworksFromTag.put(targetRootNetwork.getId(), originRootNetworkNodeInfoEntity)
-            );
-        });
-
-        targetStudy.getRootNetworks().forEach(targetRootNetwork -> {
-            RootNetworkNodeInfoEntity newRootNetworkNodeInfoEntity;
-            if (mappingRootNetworksFromTag.containsKey(targetRootNetwork.getId())) {
-                newRootNetworkNodeInfoEntity = createDefaultEntity(
-                    targetNodeInfo.getId(),
-                    mappingRootNetworksFromTag.get(targetRootNetwork.getId()).getModificationsUuidsToExclude().stream().map(mappingModificationUuids::get).collect(Collectors.toSet())
-                );
-            } else {
-                newRootNetworkNodeInfoEntity = createDefaultEntity(targetNodeInfo.getId());
-            }
-            addLink(targetNodeInfo, targetRootNetwork, newRootNetworkNodeInfoEntity);
-        });
-    }
-
     private static RootNetworkNodeInfoEntity createDefaultEntity(UUID nodeUuid) {
-        return createDefaultEntity(nodeUuid, new HashSet<>());
-    }
-
-    private static RootNetworkNodeInfoEntity createDefaultEntity(UUID nodeUuid, Set<UUID> modificationsToExclude) {
         return RootNetworkNodeInfoEntity.builder()
             .nodeBuildStatus(NodeBuildStatusEmbeddable.from(BuildStatus.NOT_BUILT))
             .variantId(UUID.randomUUID().toString())
             .modificationReports(new HashMap<>(Map.of(nodeUuid, UUID.randomUUID())))
-            .modificationsUuidsToExclude(modificationsToExclude)
             .blockedNode(false)
             .build();
     }
@@ -525,48 +494,6 @@ public class RootNetworkNodeInfoService {
         rootNetworkNodeInfoRepository.save(rootNetworkNodeInfoEntity);
     }
 
-    public void updateModificationsToExclude(UUID nodeUuid, UUID rootNetworkUuid, Set<UUID> modificationUuids, boolean activated) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository
-            .findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid)
-            .orElseThrow(() -> new StudyException(NOT_FOUND, ROOT_NETWORK_NOT_FOUND));
-        if (activated) {
-            rootNetworkNodeInfoEntity.removeModificationsFromExclude(modificationUuids);
-        } else {
-            rootNetworkNodeInfoEntity.addModificationsToExclude(modificationUuids);
-        }
-    }
-
-    public void moveModificationsToExclude(UUID originNodeUuid, UUID targetNodeUuid, List<UUID> modificationsUuids) {
-        rootNetworkNodeInfoRepository.findAllByNodeInfoId(originNodeUuid)
-            .forEach(rootNetworkNodeInfoEntity -> getRootNetworkNodeInfo(targetNodeUuid, rootNetworkNodeInfoEntity.getRootNetwork().getId()).ifPresent(targetRootNetworkNodeInfoEntity -> {
-                Set<UUID> modificationsToMove = modificationsUuids.stream().filter(m -> rootNetworkNodeInfoEntity.getModificationsUuidsToExclude().contains(m)).collect(Collectors.toSet());
-                rootNetworkNodeInfoEntity.removeModificationsFromExclude(modificationsToMove);
-                targetRootNetworkNodeInfoEntity.addModificationsToExclude(modificationsToMove);
-            }));
-    }
-
-    public void copyModificationsToExcludeFromTags(UUID originNodeUuid, UUID targetNodeUuid, Map<UUID, UUID> mappingModificationsUuids) {
-        Map<UUID, RootNetworkNodeInfoEntity> mappingRootNetworksFromTag = new HashMap<>();
-        List<RootNetworkNodeInfoEntity> originRootNetworksNodeInfos = rootNetworkNodeInfoRepository.findAllWithRootNetworkByNodeInfoId(originNodeUuid);
-        List<RootNetworkNodeInfoEntity> targetRootNetworksNodeInfos = rootNetworkNodeInfoRepository.findAllWithRootNetworkByNodeInfoId(targetNodeUuid);
-
-        originRootNetworksNodeInfos.forEach(originRootNetworkNodeInfo -> {
-            Optional<RootNetworkNodeInfoEntity> targetRootNetworkNodeInfo = targetRootNetworksNodeInfos.stream().filter(
-                    targetRootNetworkNode -> targetRootNetworkNode.getRootNetwork().getTag().equals(originRootNetworkNodeInfo.getRootNetwork().getTag())).findFirst();
-            targetRootNetworkNodeInfo.ifPresent(targetRootNetworkNodeInfoEntity ->
-                mappingRootNetworksFromTag.put(originRootNetworkNodeInfo.getId(), targetRootNetworkNodeInfoEntity)
-            );
-        });
-
-        originRootNetworksNodeInfos.forEach(originRootNetworkNodeInfo -> {
-            if (mappingRootNetworksFromTag.containsKey(originRootNetworkNodeInfo.getId())) {
-                Set<UUID> modificationsToCopy = originRootNetworkNodeInfo.getModificationsUuidsToExclude().stream().map(mappingModificationsUuids::get).filter(Objects::nonNull).collect(
-                        Collectors.toSet());
-                mappingRootNetworksFromTag.get(originRootNetworkNodeInfo.getId()).addModificationsToExclude(modificationsToCopy);
-            }
-        });
-    }
-
     @Transactional
     public void updateRootNetworkNode(UUID nodeUuid, UUID rootNetworkUuid, RootNetworkNodeInfo rootNetworkNodeInfo) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND,
@@ -661,11 +588,11 @@ public class RootNetworkNodeInfoService {
 
     @Transactional
     public ModificationApplicationContext getNetworkModificationApplicationContext(UUID rootNetworkUuid, UUID nodeUuid, UUID networkUuid) {
-        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(nodeUuid,
+        RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findWithRootNetworkByNodeInfoIdAndRootNetworkId(nodeUuid,
                 rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, ROOT_NETWORK_NOT_FOUND));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
         UUID reportUuid = rootNetworkNodeInfoEntity.getModificationReports().get(nodeUuid);
-        return new ModificationApplicationContext(networkUuid, variantId, reportUuid, nodeUuid, rootNetworkNodeInfoEntity.getModificationsUuidsToExclude());
+        return new ModificationApplicationContext(networkUuid, variantId, reportUuid, nodeUuid, rootNetworkNodeInfoEntity.getRootNetwork().getTag());
     }
 
     private List<UUID> getReportUuids(RootNetworkNodeInfo rootNetworkNodeInfo) {

@@ -53,8 +53,8 @@ public interface RootNetworkNodeInfoRepository extends JpaRepository<RootNetwork
 
     Optional<RootNetworkNodeInfoEntity> findByNodeInfoIdAndRootNetworkId(UUID nodeInfoId, UUID rootNetworkUuid);
 
-    @EntityGraph(attributePaths = {"modificationsUuidsToExclude"}, type = EntityGraph.EntityGraphType.LOAD)
-    Optional<RootNetworkNodeInfoEntity> findWithModificationsToExcludeByNodeInfoIdAndRootNetworkId(UUID nodeInfoId, UUID rootNetworkUuid);
+    @EntityGraph(attributePaths = {"rootNetwork"}, type = EntityGraph.EntityGraphType.LOAD)
+    Optional<RootNetworkNodeInfoEntity> findWithRootNetworkByNodeInfoIdAndRootNetworkId(UUID nodeInfoId, UUID rootNetworkUuid);
 
     List<RootNetworkNodeInfoEntity> findAllByRootNetworkStudyId(UUID studyUuid);
 

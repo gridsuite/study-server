@@ -49,6 +49,7 @@ public class NetworkModificationService {
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String QUERY_PARAM_ACTION = "action";
+    private static final String QUERY_PARAM_ROOT_NETWORK_TAG = "rootNetworkTag";
     private static final String PARAM_USER_INPUT = "userInput";
 
     private final RestTemplate restTemplate;
@@ -267,6 +268,42 @@ public class NetworkModificationService {
                 HttpMethod.GET,
                 httpEntity,
                 new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+        ).getBody();
+    }
+
+    public void updateRootNetworkApplicability(List<UUID> modificationsUuids, String rootNetworkTag, boolean activated) {
+        Objects.requireNonNull(modificationsUuids);
+        Objects.requireNonNull(rootNetworkTag);
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + "root-network-applicability")
+                .queryParam(UUIDS, modificationsUuids)
+                .queryParam(QUERY_PARAM_ROOT_NETWORK_TAG, rootNetworkTag)
+                .queryParam(QUERY_PARAM_ACTIVATED, activated)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+    }
+
+    /**
+     * @return for each modification of the group, sub modifications included, its applicability per root network tag
+     * (a tag without an entry is applicable)
+     */
+    public Map<UUID, Map<String, Boolean>> getRootNetworkApplicabilities(UUID groupUuid) {
+        Objects.requireNonNull(groupUuid);
+        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "root-network-applicability");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                new ParameterizedTypeReference<Map<UUID, Map<String, Boolean>>>() { }
         ).getBody();
     }
 
