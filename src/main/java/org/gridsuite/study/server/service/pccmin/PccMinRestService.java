@@ -4,17 +4,17 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.pccmin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.StudyUtils;
@@ -41,7 +41,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
  * @author Maissa SOUISSI <maissa.souissi at rte-france.com>
  */
 @Service
-public class PccMinService extends AbstractComputationService implements ComputationParameters {
+public class PccMinRestService extends AbstractComputationRestService implements ComputationParameters {
     static final String RESULT_UUID = "resultUuid";
     static final String RESULTS = "results";
     static final String BUS_ID = "busId";
@@ -49,19 +49,14 @@ public class PccMinService extends AbstractComputationService implements Computa
     private static final String PCC_MIN_URI = DELIMITER + PCC_MIN_API_VERSION;
     private static final String PARAMETERS_URI = PCC_MIN_URI + DELIMITER + PATH_PARAM_PARAMETERS;
     private static final String PARAMETER_URI = PARAMETERS_URI + DELIMITER + PARAMETER_UUID;
-    private final RestTemplate restTemplate;
 
     private final ObjectMapper objectMapper;
 
-    @Setter
-    private String pccMinServerBaseUri;
-
     @Autowired
-    public PccMinService(RemoteServicesProperties remoteServicesProperties,
-                         ObjectMapper objectMapper, RestTemplate restTemplate) {
-        this.pccMinServerBaseUri = remoteServicesProperties.getServiceUri("pcc-min-server");
+    public PccMinRestService(RemoteServicesProperties remoteServicesProperties,
+                             ObjectMapper objectMapper, RestTemplate restTemplate) {
+        super(remoteServicesProperties.getServiceUri("pcc-min-server"), restTemplate);
         this.objectMapper = objectMapper;
-        this.restTemplate = restTemplate;
     }
 
     public UUID runPccMin(UUID networkUuid, String variantId, RunPccMinParametersInfos parametersInfos, ReportInfos reportInfos, String receiver, String userId) {
@@ -91,7 +86,7 @@ public class PccMinService extends AbstractComputationService implements Computa
 
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
-        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public void stopPccMin(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid) {
@@ -113,7 +108,7 @@ public class PccMinService extends AbstractComputationService implements Computa
             .fromPath(PCC_MIN_URI + DELIMITER + "results/{resultUuid}/stop")
             .queryParam(QUERY_PARAM_RECEIVER, receiver).buildAndExpand(resultUuid).toUriString();
 
-        restTemplate.put(pccMinServerBaseUri + path, Void.class);
+        restTemplate.put(baseUri + path, Void.class);
     }
 
     public String getPccMinStatus(UUID resultUuid) {
@@ -123,11 +118,11 @@ public class PccMinService extends AbstractComputationService implements Computa
         String path = UriComponentsBuilder
             .fromPath(PCC_MIN_URI + DELIMITER + "results/{resultUuid}/status")
             .buildAndExpand(resultUuid).toUriString();
-        return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
+        return restTemplate.getForObject(baseUri + path, String.class);
     }
 
     public void deletePccMinResults(List<UUID> resultsUuids) {
-        deleteCalculationResults(resultsUuids, DELIMITER + PCC_MIN_API_VERSION + "/results", restTemplate, pccMinServerBaseUri);
+        deleteCalculationResults(resultsUuids, DELIMITER + PCC_MIN_API_VERSION + "/results", restTemplate, baseUri);
     }
 
     public void deleteAllPccMinResults() {
@@ -137,7 +132,7 @@ public class PccMinService extends AbstractComputationService implements Computa
     public Integer getPccMinResultsCount() {
         String path = UriComponentsBuilder
             .fromPath(PCC_MIN_URI + DELIMITER + "supervision/results-count").toUriString();
-        return restTemplate.getForObject(pccMinServerBaseUri + path, Integer.class);
+        return restTemplate.getForObject(baseUri + path, Integer.class);
     }
 
     public void assertPccMinNotRunning(UUID resultUuid) {
@@ -153,7 +148,7 @@ public class PccMinService extends AbstractComputationService implements Computa
                 .fromPath(PCC_MIN_URI + DELIMITER + "results/invalidate-status")
                 .queryParam(RESULT_UUID, uuids).build().toUriString();
 
-            restTemplate.put(pccMinServerBaseUri + path, Void.class);
+            restTemplate.put(baseUri + path, Void.class);
         }
     }
 
@@ -174,7 +169,7 @@ public class PccMinService extends AbstractComputationService implements Computa
         if (resultsPath == null) {
             return null;
         }
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(pccMinServerBaseUri + resultsPath);
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUri + resultsPath);
         if (filters != null && !filters.isEmpty()) {
             builder.queryParam(QUERY_PARAM_FILTERS, filters);
         }
@@ -199,7 +194,7 @@ public class PccMinService extends AbstractComputationService implements Computa
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public void updatePccMinParameters(UUID parametersUuid, @Nullable String parameters) {
@@ -210,7 +205,7 @@ public class PccMinService extends AbstractComputationService implements Computa
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        restTemplate.put(pccMinServerBaseUri + path, httpEntity);
+        restTemplate.put(baseUri + path, httpEntity);
     }
 
     public UUID getPccMinParametersUuidOrElseCreateDefaults(StudyEntity studyEntity) {
@@ -227,7 +222,7 @@ public class PccMinService extends AbstractComputationService implements Computa
             .buildAndExpand()
             .toUriString();
 
-        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, null, UUID.class).getBody();
     }
 
     public String getPccMinParameters(UUID parametersUuid) {
@@ -236,7 +231,7 @@ public class PccMinService extends AbstractComputationService implements Computa
         String path = UriComponentsBuilder.fromPath(PARAMETER_URI)
             .buildAndExpand(parametersUuid).toUriString();
 
-        return restTemplate.getForObject(pccMinServerBaseUri + path, String.class);
+        return restTemplate.getForObject(baseUri + path, String.class);
     }
 
     @Override
@@ -248,7 +243,7 @@ public class PccMinService extends AbstractComputationService implements Computa
             .buildAndExpand(uuid)
             .toUriString();
 
-        restTemplate.delete(pccMinServerBaseUri + path);
+        restTemplate.delete(baseUri + path);
     }
 
     @Override
@@ -264,7 +259,7 @@ public class PccMinService extends AbstractComputationService implements Computa
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 
-        return restTemplate.exchange(pccMinServerBaseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
     public byte[] exportPccMinResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
@@ -272,7 +267,7 @@ public class PccMinService extends AbstractComputationService implements Computa
             throw new StudyException(NOT_FOUND, "Result of pcc min was not found");
         }
 
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(pccMinServerBaseUri)
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(baseUri)
             .pathSegment(PCC_MIN_API_VERSION, RESULTS, resultUuid.toString(), "csv");
 
         if (StringUtils.isNotBlank(filters)) {

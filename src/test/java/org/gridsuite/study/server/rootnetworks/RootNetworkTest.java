@@ -30,10 +30,16 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
+import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtils;
@@ -163,27 +169,27 @@ class RootNetworkTest {
     @MockitoBean
     private CaseService caseService;
     @MockitoBean
-    private DynamicSimulationService dynamicSimulationService;
+    private DynamicSimulationRestService dynamicSimulationRestService;
     @MockitoBean
-    private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
     @MockitoBean
-    private DynamicMarginCalculationService dynamicMarginCalculationService;
+    private DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
     @MockitoBean
-    private SecurityAnalysisService securityAnalysisService;
+    private SecurityAnalysisRestService securityAnalysisService;
     @MockitoBean
-    private LoadFlowService loadFlowService;
+    private LoadFlowRestService loadFlowRestService;
     @MockitoBean
-    private ShortCircuitService shortCircuitService;
+    private ShortCircuitRestService shortCircuitService;
     @MockitoBean
-    private SensitivityAnalysisService sensitivityAnalysisService;
+    private SensitivityAnalysisRestService sensitivityAnalysisService;
     @MockitoBean
-    private StateEstimationService stateEstimationService;
+    private StateEstimationRestService stateEstimationService;
     @MockitoBean
-    private VoltageInitService voltageInitService;
+    private VoltageInitRestService voltageInitService;
     @MockitoBean
     private NetworkService networkService;
     @MockitoBean
-    private PccMinService pccMinService;
+    private PccMinRestService pccMinService;
 
     @BeforeEach
     void setUp() {
@@ -570,11 +576,11 @@ class RootNetworkTest {
         verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
         verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID2);
         verify(caseService, times(1)).deleteCase(CASE_UUID2);
-        verify(dynamicSimulationService, times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
-        verify(dynamicSecurityAnalysisService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
-        verify(dynamicMarginCalculationService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
+        verify(dynamicSimulationRestService, times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
+        verify(dynamicSecurityAnalysisRestService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
+        verify(dynamicMarginCalculationRestService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
         // check LOADFLOW_RESULT_UUID2 is also deleted
-        verify(loadFlowService, times(1)).deleteLoadFlowResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
+        verify(loadFlowRestService, times(1)).deleteLoadFlowResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
         verify(securityAnalysisService, times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
         verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));
         verify(shortCircuitService, times(1)).deleteShortCircuitAnalysisResults(List.of(ONE_BUS_SHORT_CIRCUIT_ANALYSIS_RESULT_UUID));

@@ -24,6 +24,9 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -31,7 +34,6 @@ import org.gridsuite.study.server.utils.wiremock.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -59,6 +61,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.notification.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -188,13 +191,13 @@ class SensitivityAnalysisTest {
     private NetworkModificationTreeService networkModificationTreeService;
 
     @Autowired
-    private SensitivityAnalysisService sensitivityAnalysisService;
+    private SensitivityAnalysisRestService sensitivityAnalysisService;
 
     @Autowired
     private ActionsService actionsService;
 
     @Autowired
-    private LoadFlowService loadFlowService;
+    private LoadFlowRestService loadFlowRestService;
 
     @Autowired
     private UserAdminService userAdminService;
@@ -232,12 +235,12 @@ class SensitivityAnalysisTest {
 
         objectWriter = objectMapper.writer().withDefaultPrettyPrinter();
 
-        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(wireMockServer.baseUrl());
+        sensitivityAnalysisService.setBaseUri(wireMockServer.baseUrl());
         actionsService.setActionsServerBaseUri(wireMockServer.baseUrl());
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         directoryService.setDirectoryServerServerBaseUri(wireMockServer.baseUrl());
 
-        loadFlowService.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
+        loadFlowRestService.setBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
     }
 
@@ -565,13 +568,13 @@ class SensitivityAnalysisTest {
         assertNotNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
         assertEquals(resultUuid, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));
 
-        StudyService studyServiceMock = Mockito.mock(StudyService.class);
+        SensitivityAnalysisService sensitivityAnalysisServiceMock = mock(SensitivityAnalysisService.class);
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), SENSITIVITY_ANALYSIS_FAILED_DESTINATION);
             return resultUuid;
-        }).when(studyServiceMock).runSensitivityAnalysis(any(), any(), any(), any());
+        }).when(sensitivityAnalysisServiceMock).runSensitivityAnalysis(any(), any(), any(), any());
         assertNotNull(studyEntity.getId());
-        studyServiceMock.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), firstRootNetworkUuid, "testUserId");
+        sensitivityAnalysisServiceMock.runSensitivityAnalysis(studyEntity.getId(), modificationNode.getId(), firstRootNetworkUuid, "testUserId");
 
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), firstRootNetworkUuid, SENSITIVITY_ANALYSIS));

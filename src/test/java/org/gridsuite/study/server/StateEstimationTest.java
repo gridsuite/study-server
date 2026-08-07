@@ -31,6 +31,7 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.jetbrains.annotations.NotNull;
@@ -127,7 +128,7 @@ class StateEstimationTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
     @Autowired
-    private StateEstimationService stateEstimationService;
+    private StateEstimationRestService stateEstimationService;
     @Autowired
     private StudyRepository studyRepository;
     @Autowired
@@ -161,7 +162,7 @@ class StateEstimationTest {
         // Ask the server for its URL. You'll need this to make HTTP requests.
         HttpUrl baseHttpUrl = server.url("");
         String baseUrl = baseHttpUrl.toString().substring(0, baseHttpUrl.toString().length() - 1);
-        stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
+        stateEstimationService.setBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 

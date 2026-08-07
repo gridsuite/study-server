@@ -18,10 +18,16 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
+import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -55,29 +61,29 @@ public class SupervisionService {
 
     private final ReportService reportService;
 
-    private final LoadFlowService loadFlowService;
+    private final LoadFlowRestService loadFlowRestService;
 
-    private final DynamicSimulationService dynamicSimulationService;
+    private final DynamicSimulationRestService dynamicSimulationRestService;
 
-    private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private final DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
 
-    private final DynamicMarginCalculationService dynamicMarginCalculationService;
+    private final DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
 
-    private final SecurityAnalysisService securityAnalysisService;
+    private final SecurityAnalysisRestService securityAnalysisService;
 
-    private final SensitivityAnalysisService sensitivityAnalysisService;
+    private final SensitivityAnalysisRestService sensitivityAnalysisService;
 
-    private final ShortCircuitService shortCircuitService;
+    private final ShortCircuitRestService shortCircuitService;
 
-    private final VoltageInitService voltageInitService;
+    private final VoltageInitRestService voltageInitService;
 
     private final EquipmentInfosService equipmentInfosService;
 
     private final RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository;
 
-    private final StateEstimationService stateEstimationService;
+    private final StateEstimationRestService stateEstimationService;
 
-    private final PccMinService pccMinService;
+    private final PccMinRestService pccMinService;
 
     private final ElasticsearchOperations elasticsearchOperations;
 
@@ -93,17 +99,17 @@ public class SupervisionService {
                               NetworkModificationTreeService networkModificationTreeService,
                               RootNetworkNodeInfoRepository rootNetworkNodeInfoRepository,
                               ReportService reportService,
-                              LoadFlowService loadFlowService,
-                              DynamicSimulationService dynamicSimulationService,
-                              DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                              DynamicMarginCalculationService dynamicMarginCalculationService,
-                              SecurityAnalysisService securityAnalysisService,
-                              SensitivityAnalysisService sensitivityAnalysisService,
-                              ShortCircuitService shortCircuitService,
-                              VoltageInitService voltageInitService,
+                              LoadFlowRestService loadFlowRestService,
+                              DynamicSimulationRestService dynamicSimulationRestService,
+                              DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService,
+                              DynamicMarginCalculationRestService dynamicMarginCalculationRestService,
+                              SecurityAnalysisRestService securityAnalysisService,
+                              SensitivityAnalysisRestService sensitivityAnalysisService,
+                              ShortCircuitRestService shortCircuitService,
+                              VoltageInitRestService voltageInitService,
                               EquipmentInfosService equipmentInfosService,
-                              StateEstimationService stateEstimationService,
-                              PccMinService pccMinService,
+                              StateEstimationRestService stateEstimationService,
+                              PccMinRestService pccMinService,
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
@@ -113,10 +119,10 @@ public class SupervisionService {
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
         this.reportService = reportService;
-        this.loadFlowService = loadFlowService;
-        this.dynamicSimulationService = dynamicSimulationService;
-        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
-        this.dynamicMarginCalculationService = dynamicMarginCalculationService;
+        this.loadFlowRestService = loadFlowRestService;
+        this.dynamicSimulationRestService = dynamicSimulationRestService;
+        this.dynamicSecurityAnalysisRestService = dynamicSecurityAnalysisRestService;
+        this.dynamicMarginCalculationRestService = dynamicMarginCalculationRestService;
         this.securityAnalysisService = securityAnalysisService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.shortCircuitService = shortCircuitService;
@@ -134,13 +140,13 @@ public class SupervisionService {
     @Transactional
     public Integer deleteComputationResults(ComputationType computationType, boolean dryRun) {
         return switch (computationType) {
-            case LOAD_FLOW -> dryRun ? loadFlowService.getLoadFlowResultsCount() : deleteLoadflowResults();
+            case LOAD_FLOW -> dryRun ? loadFlowRestService.getLoadFlowResultsCount() : deleteLoadflowResults();
             case DYNAMIC_SIMULATION ->
-                dryRun ? dynamicSimulationService.getResultsCount() : deleteDynamicSimulationResults();
+                dryRun ? dynamicSimulationRestService.getResultsCount() : deleteDynamicSimulationResults();
             case DYNAMIC_SECURITY_ANALYSIS ->
-                dryRun ? dynamicSecurityAnalysisService.getResultsCount() : deleteDynamicSecurityAnalysisResults();
+                dryRun ? dynamicSecurityAnalysisRestService.getResultsCount() : deleteDynamicSecurityAnalysisResults();
             case DYNAMIC_MARGIN_CALCULATION ->
-                dryRun ? dynamicMarginCalculationService.getResultsCount() : deleteDynamicMarginCalculationResults();
+                dryRun ? dynamicMarginCalculationRestService.getResultsCount() : deleteDynamicMarginCalculationResults();
             case SECURITY_ANALYSIS ->
                 dryRun ? securityAnalysisService.getSecurityAnalysisResultsCount() : deleteSecurityAnalysisResults();
             case SENSITIVITY_ANALYSIS ->
@@ -217,7 +223,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicSimulationResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSimulationResultUuid(null));
-        dynamicSimulationService.deleteAllResults();
+        dynamicSimulationRestService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SIMULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
@@ -227,7 +233,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicSecurityAnalysisResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicSecurityAnalysisResultUuid(null));
-        dynamicSecurityAnalysisService.deleteAllResults();
+        dynamicSecurityAnalysisRestService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_SECURITY_ANALYSIS, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }
@@ -237,7 +243,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         List<RootNetworkNodeInfoEntity> rootNetworkNodeStatusEntities = rootNetworkNodeInfoRepository.findAllByDynamicMarginCalculationResultUuidNotNull();
         rootNetworkNodeStatusEntities.forEach(rootNetworkNodeStatus -> rootNetworkNodeStatus.setDynamicMarginCalculationResultUuid(null));
-        dynamicMarginCalculationService.deleteAllResults();
+        dynamicMarginCalculationRestService.deleteAllResults();
         LOGGER.trace(DELETION_LOG_MESSAGE, ComputationType.DYNAMIC_MARGIN_CALCULATION, TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime.get()));
         return rootNetworkNodeStatusEntities.size();
     }

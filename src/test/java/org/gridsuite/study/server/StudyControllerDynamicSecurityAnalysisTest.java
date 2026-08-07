@@ -21,14 +21,14 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
@@ -115,16 +115,16 @@ class StudyControllerDynamicSecurityAnalysisTest {
     StudyService spyStudyService;
 
     @MockitoBean
-    private LoadFlowService mockLoadFlowService;
+    private LoadFlowRestService mockLoadFlowRestService;
 
     @MockitoBean
     private UserAdminService userAdminService;
 
     @MockitoBean
-    private DynamicSimulationService mockDynamicSimulationService;
+    private DynamicSimulationRestService mockDynamicSimulationRestService;
 
     @MockitoSpyBean
-    private DynamicSecurityAnalysisService spyDynamicSecurityAnalysisService;
+    private DynamicSecurityAnalysisRestService spyDynamicSecurityAnalysisRestService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -234,12 +234,12 @@ class StudyControllerDynamicSecurityAnalysisTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
-        when(mockDynamicSimulationService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
+        when(mockLoadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(mockDynamicSimulationRestService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
 
         // setup DynamicSecurityAnalysisService spy
         doAnswer(invocation -> RESULT_UUID)
-            .when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(
+            .when(spyDynamicSecurityAnalysisRestService).runDynamicSecurityAnalysis(
                 eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
                 any(), any(), any(), any(), eq(true));
 
@@ -321,7 +321,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         // create a construction node
         NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
-        doAnswer(invocation -> DYNAWO_PROVIDER).when(spyDynamicSecurityAnalysisService).getProvider(any());
+        doAnswer(invocation -> DYNAWO_PROVIDER).when(spyDynamicSecurityAnalysisRestService).getProvider(any());
 
         // --- call endpoint to be tested --- //
         // run on root node => forbidden
@@ -341,11 +341,11 @@ class StudyControllerDynamicSecurityAnalysisTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
-        when(mockDynamicSimulationService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
+        when(mockLoadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(mockDynamicSimulationRestService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
 
         // setup DynamicSecurityAnalysisService mock
-        doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(
+        doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisRestService).runDynamicSecurityAnalysis(
             eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), eq(false));
 
         MvcResult result;
@@ -390,7 +390,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_RESULT);
 
         //Test result count
-        doAnswer(invocation -> 1).when(spyDynamicSecurityAnalysisService).getResultsCount();
+        doAnswer(invocation -> 1).when(spyDynamicSecurityAnalysisRestService).getResultsCount();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_SECURITY_ANALYSIS.toString())
                         .queryParam("dryRun", "true"))
@@ -399,7 +399,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        Mockito.doNothing().when(spyDynamicSecurityAnalysisService).deleteAllResults();
+        Mockito.doNothing().when(spyDynamicSecurityAnalysisRestService).deleteAllResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_SECURITY_ANALYSIS.toString())
                         .queryParam("dryRun", "false"))
@@ -418,11 +418,11 @@ class StudyControllerDynamicSecurityAnalysisTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(mockLoadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
-        when(mockDynamicSimulationService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
+        when(mockLoadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(mockDynamicSimulationRestService.getStatus(any())).thenReturn(DynamicSimulationStatus.CONVERGED);
 
         // setup DynamicSecurityAnalysisService mock
-        doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisService).runDynamicSecurityAnalysis(
+        doAnswer(invocation -> RESULT_UUID).when(spyDynamicSecurityAnalysisRestService).runDynamicSecurityAnalysis(
             eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
@@ -463,7 +463,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
     @Test
     void testGetDynamicSecurityAnalysisStatusResultGivenNodeNotRun() throws Exception {
         // setup DynamicSecurityAnalysisService mock
-        doAnswer(invocation -> null).when(spyDynamicSecurityAnalysisService).getStatus(RESULT_UUID);
+        doAnswer(invocation -> null).when(spyDynamicSecurityAnalysisRestService).getStatus(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet run
@@ -478,7 +478,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
         // setup DynamicSecurityAnalysisService mock
         Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSecurityAnalysisResultUuid(RESULT_UUID).build()))
             .when(spyRootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOT_NETWORK_UUID);
-        doAnswer(invocation -> DynamicSecurityAnalysisStatus.FAILED).when(spyDynamicSecurityAnalysisService).getStatus(RESULT_UUID);
+        doAnswer(invocation -> DynamicSecurityAnalysisStatus.FAILED).when(spyDynamicSecurityAnalysisRestService).getStatus(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get status from a node done
@@ -507,9 +507,9 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // setup DynamicSecurityAnalysisService mock
         doAnswer(invocation -> PARAMETERS_UUID)
-                .when(spyDynamicSecurityAnalysisService).createParameters(any());
+                .when(spyDynamicSecurityAnalysisRestService).createParameters(any());
         doAnswer(invocation -> jsonParameters)
-                .when(spyDynamicSecurityAnalysisService).getParameters(PARAMETERS_UUID);
+                .when(spyDynamicSecurityAnalysisRestService).getParameters(PARAMETERS_UUID);
 
         MvcResult result;
 

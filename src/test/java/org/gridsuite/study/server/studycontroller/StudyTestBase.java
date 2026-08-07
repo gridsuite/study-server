@@ -40,7 +40,13 @@ import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.shortcircuit.ShortCircuitService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
+import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
+import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
+import org.gridsuite.study.server.service.shortcircuit.ShortCircuitRestService;
+import org.gridsuite.study.server.service.stateestimation.StateEstimationRestService;
+import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -242,19 +248,19 @@ class StudyTestBase {
     protected UserAdminService userAdminService;
 
     @Autowired
-    protected SensitivityAnalysisService sensitivityAnalysisService;
+    protected SensitivityAnalysisRestService sensitivityAnalysisService;
 
     @Autowired
-    protected SecurityAnalysisService securityAnalysisService;
+    protected SecurityAnalysisRestService securityAnalysisService;
 
     @Autowired
-    protected VoltageInitService voltageInitService;
+    protected VoltageInitRestService voltageInitService;
 
     @Autowired
-    protected LoadFlowService loadflowService;
+    protected LoadFlowRestService loadflowRestService;
 
     @Autowired
-    protected ShortCircuitService shortCircuitService;
+    protected ShortCircuitRestService shortCircuitService;
 
     @Autowired
     protected DynamicSimulationClient dynamicSimulationClient;
@@ -266,10 +272,10 @@ class StudyTestBase {
     protected DynamicMarginCalculationClient dynamicMarginCalculationClient;
 
     @Autowired
-    protected StateEstimationService stateEstimationService;
+    protected StateEstimationRestService stateEstimationService;
 
     @Autowired
-    protected PccMinService pccMinService;
+    protected PccMinRestService pccMinService;
 
     @Autowired
     protected StudyConfigService studyConfigService;
@@ -373,18 +379,18 @@ class StudyTestBase {
         String baseUrl = wireMockServer.baseUrl();
         caseService.setCaseServerBaseUri(baseUrl);
         networkConversionService.setNetworkConversionServerBaseUri(baseUrl);
-        securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
+        securityAnalysisService.setBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
-        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
-        voltageInitService.setVoltageInitServerBaseUri(baseUrl);
-        loadflowService.setLoadFlowServerBaseUri(baseUrl);
-        shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
+        sensitivityAnalysisService.setBaseUri(baseUrl);
+        voltageInitService.setBaseUri(baseUrl);
+        loadflowRestService.setBaseUri(baseUrl);
+        shortCircuitService.setBaseUri(baseUrl);
         dynamicSimulationClient.setBaseUri(baseUrl);
         dynamicSecurityAnalysisClient.setBaseUri(baseUrl);
         dynamicMarginCalculationClient.setBaseUri(baseUrl);
-        stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
-        pccMinService.setPccMinServerBaseUri(baseUrl);
+        stateEstimationService.setBaseUri(baseUrl);
+        pccMinService.setBaseUri(baseUrl);
         studyConfigService.setStudyConfigServerBaseUri(baseUrl);
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
         directoryService.setDirectoryServerServerBaseUri(baseUrl);

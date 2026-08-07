@@ -32,6 +32,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.utils.SendInput;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -64,6 +65,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -168,7 +170,7 @@ class LoadFlowTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
     @Autowired
-    private LoadFlowService loadFlowService;
+    private LoadFlowRestService loadFlowRestService;
     @Autowired
     private StudyRepository studyRepository;
     @MockitoSpyBean
@@ -208,7 +210,7 @@ class LoadFlowTest {
         wireMockStubs = new WireMockStubs(wireMockServer);
         reportService.setReportServerBaseUri(wireMockServer.baseUrl());
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
-        loadFlowService.setLoadFlowServerBaseUri(wireMockServer.baseUrl());
+        loadFlowRestService.setBaseUri(wireMockServer.baseUrl());
         networkModificationService.setNetworkModificationServerBaseUri(wireMockServer.baseUrl());
 
         List<LimitViolationInfos> limitViolations = List.of(LimitViolationInfos.builder()
@@ -387,12 +389,16 @@ class LoadFlowTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID networkUuid = studyTestUtils.getNetworkUuid(studyNameUserIdUuid);
         wireMockStubs.loadflowServer.stubGetLoadflowProvider(LOADFLOW_PARAMETERS_UUID.toString(), DEFAULT_PROVIDER);
-        wireMockStubs.loadflowServer.stubRunLoadflowFailed(networkUuid, modificationNodeUuid, objectMapper.writeValueAsString(LOADFLOW_ERROR_RESULT_UUID));
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        wireMockStubs.loadflowServer.stubRunLoadflowFailed(networkUuid, modificationNodeUuid, objectMapper.writeValueAsString(LOADFLOW_ERROR_RESULT_UUID), countDownLatch);
 
         // loadflow failed
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
+
+        // send the loadflow failed message to the consumer
+        countDownLatch.countDown();
 
         wireMockStubs.loadflowServer.verifyGetLoadflowProvider(LOADFLOW_PARAMETERS_UUID.toString());
         wireMockStubs.loadflowServer.verifyRunLoadflow(networkUuid);
@@ -840,7 +846,7 @@ class LoadFlowTest {
     void testGetStatusNotFound() {
         UUID notExistingNetworkUuid = UUID.fromString(LOADFLOW_ERROR_RESULT_UUID);
         wireMockStubs.loadflowServer.stubGetLoadflowStatus(UUID.fromString(LOADFLOW_ERROR_RESULT_UUID), null, true);
-        assertThrows(HttpClientErrorException.NotFound.class, () -> loadFlowService.getLoadFlowStatus(notExistingNetworkUuid), NOT_FOUND.name());
+        assertThrows(HttpClientErrorException.NotFound.class, () -> loadFlowRestService.getLoadFlowStatus(notExistingNetworkUuid), NOT_FOUND.name());
         wireMockStubs.loadflowServer.verifyGetLoadflowStatus(UUID.fromString(LOADFLOW_ERROR_RESULT_UUID));
     }
 

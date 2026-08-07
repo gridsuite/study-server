@@ -27,6 +27,7 @@ import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -121,7 +122,7 @@ class PccMinTest {
     @Autowired
     private NetworkModificationTreeService networkModificationTreeService;
     @MockitoSpyBean
-    private PccMinService pccMinService;
+    private PccMinRestService pccMinService;
     @Autowired
     private StudyRepository studyRepository;
     @Autowired
@@ -154,7 +155,7 @@ class PccMinTest {
         configureFor("localhost", wireMockServer.port());
         String baseUrl = wireMockServer.baseUrl();
 
-        pccMinService.setPccMinServerBaseUri(baseUrl);
+        pccMinService.setBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
         userAdminService.setUserAdminServerBaseUri(baseUrl);
 

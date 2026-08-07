@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.gridsuite.study.server.service;
+package org.gridsuite.study.server.service.loadflow;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,7 +14,8 @@ import org.gridsuite.study.server.RemoteServicesProperties;
 import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Sort;
@@ -37,14 +38,12 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.COMPUTATIO
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
 @Service
-public class LoadFlowService extends AbstractComputationService implements ComputationParameters {
+public class LoadFlowRestService extends AbstractComputationRestService implements ComputationParameters {
     private static final String QUERY_PARAM_APPLY_SOLVED_VALUES = "applySolvedValues";
     private static final String RESULT_UUID = "resultUuid";
 
     private static final String PARAMETERS_URI = "/parameters/{parametersUuid}";
     private final ObjectMapper objectMapper;
-    private final RestTemplate restTemplate;
-    private String loadFlowServerBaseUri;
 
     public record ParametersInfos(
         UUID parametersUuid,
@@ -53,12 +52,11 @@ public class LoadFlowService extends AbstractComputationService implements Compu
     ) {
     }
 
-    public LoadFlowService(RemoteServicesProperties remoteServicesProperties,
-                           ObjectMapper objectMapper,
-                           RestTemplate restTemplate) {
-        this.loadFlowServerBaseUri = remoteServicesProperties.getServiceUri("loadflow-server");
+    public LoadFlowRestService(RemoteServicesProperties remoteServicesProperties,
+                               ObjectMapper objectMapper,
+                               RestTemplate restTemplate) {
+        super(remoteServicesProperties.getServiceUri("loadflow-server"), restTemplate);
         this.objectMapper = objectMapper;
-        this.restTemplate = restTemplate;
     }
 
     public UUID runLoadFlow(NodeReceiver nodeReceiver, UUID loadflowResultUuid,
@@ -94,17 +92,17 @@ public class LoadFlowService extends AbstractComputationService implements Compu
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        return restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
+        return restTemplate.exchange(baseUri + path, HttpMethod.POST, new HttpEntity<>(headers), UUID.class).getBody();
     }
 
     public void deleteLoadFlowResults(List<UUID> resultsUuids) {
-        deleteCalculationResults(resultsUuids, DELIMITER + LOADFLOW_API_VERSION + "/results", restTemplate, loadFlowServerBaseUri);
+        deleteCalculationResults(resultsUuids, DELIMITER + LOADFLOW_API_VERSION + "/results", restTemplate, baseUri);
     }
 
     public Integer getLoadFlowResultsCount() {
         String path = UriComponentsBuilder
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/supervision/results-count").toUriString();
-        return restTemplate.getForObject(loadFlowServerBaseUri + path, Integer.class);
+        return restTemplate.getForObject(baseUri + path, Integer.class);
     }
 
     public String getLoadFlowResult(UUID resultUuid, String filters, Sort sort) {
@@ -121,14 +119,14 @@ public class LoadFlowService extends AbstractComputationService implements Compu
         }
         String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
 
-        return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
+        return restTemplate.getForObject(baseUri + path, String.class);
     }
 
     public String getLoadFlowModifications(UUID resultUuid) {
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/modifications");
         String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
 
-        return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
+        return restTemplate.getForObject(baseUri + path, String.class);
     }
 
     public LoadFlowStatus getLoadFlowStatus(UUID resultUuid) {
@@ -139,7 +137,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/status");
         String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
 
-        return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowStatus.class);
+        return restTemplate.getForObject(baseUri + path, LoadFlowStatus.class);
     }
 
     public void stopLoadFlow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID resultUuid, String userId) {
@@ -165,7 +163,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
         headers.set(HEADER_USER_ID, userId);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
+        restTemplate.exchange(baseUri + path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
     public void invalidateLoadFlowStatus(List<UUID> uuids) {
@@ -174,7 +172,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
                     .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/invalidate-status")
                     .queryParam(RESULT_UUID, uuids).build().toUriString();
 
-            restTemplate.put(loadFlowServerBaseUri + path, Void.class);
+            restTemplate.put(baseUri + path, Void.class);
         }
     }
 
@@ -183,11 +181,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
             .fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/running-status")
             .toUriString();
 
-        return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
-    }
-
-    public void setLoadFlowServerBaseUri(String loadFlowServerBaseUri) {
-        this.loadFlowServerBaseUri = loadFlowServerBaseUri;
+        return restTemplate.postForObject(baseUri + path, null, UUID.class);
     }
 
     public void assertLoadFlowNotRunning(UUID resultUuid) {
@@ -216,7 +210,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
                 sort.forEach(order -> uriComponentsBuilder.queryParam("sort", order.getProperty() + "," + order.getDirection()));
             }
             String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
-            return restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() {
+            return restTemplate.exchange(baseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() {
                 }).getBody();
         }
         return result;
@@ -225,7 +219,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
     public List<LimitViolationInfos> getCurrentLimitViolations(UUID resultUuid) {
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + "/results/{resultUuid}/current-limit-violations");
         String path = uriComponentsBuilder.buildAndExpand(resultUuid).toUriString();
-        return restTemplate.exchange(loadFlowServerBaseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() {
+        return restTemplate.exchange(baseUri + path, HttpMethod.GET, null, new ParameterizedTypeReference<List<LimitViolationInfos>>() {
             }).getBody();
     }
 
@@ -233,7 +227,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
 
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI)
                 .buildAndExpand(parametersUuid).toUriString();
-        return restTemplate.getForObject(loadFlowServerBaseUri + path, LoadFlowParametersInfos.class);
+        return restTemplate.getForObject(baseUri + path, LoadFlowParametersInfos.class);
     }
 
     public UUID createLoadFlowParameters(String parameters) {
@@ -250,7 +244,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        return restTemplate.postForObject(loadFlowServerBaseUri + path, httpEntity, UUID.class);
+        return restTemplate.postForObject(baseUri + path, httpEntity, UUID.class);
     }
 
     @Override
@@ -261,7 +255,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
                 .fromPath(DELIMITER + LOADFLOW_API_VERSION + DELIMITER + PATH_PARAM_PARAMETERS + DELIMITER + "{uuid}" + DELIMITER + "duplicate")
                 .buildAndExpand(sourceParametersUuid).toUriString();
 
-        return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
+        return restTemplate.postForObject(baseUri + path, null, UUID.class);
     }
 
     public void updateLoadFlowParameters(UUID parametersUuid, @Nullable String parameters) {
@@ -275,7 +269,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
 
         HttpEntity<String> httpEntity = new HttpEntity<>(parameters, headers);
 
-        restTemplate.put(loadFlowServerBaseUri + path, httpEntity);
+        restTemplate.put(baseUri + path, httpEntity);
     }
 
     @Override
@@ -285,7 +279,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
                 .buildAndExpand(parametersUuid)
                 .toUriString();
 
-        restTemplate.delete(loadFlowServerBaseUri + path);
+        restTemplate.delete(baseUri + path);
     }
 
     @Override
@@ -296,7 +290,7 @@ public class LoadFlowService extends AbstractComputationService implements Compu
                 .buildAndExpand()
                 .toUriString();
 
-        return restTemplate.postForObject(loadFlowServerBaseUri + path, null, UUID.class);
+        return restTemplate.postForObject(baseUri + path, null, UUID.class);
     }
 
     public UUID getLoadFlowParametersOrDefaultsUuid(StudyEntity studyEntity) {
@@ -311,11 +305,11 @@ public class LoadFlowService extends AbstractComputationService implements Compu
         String path = UriComponentsBuilder.fromPath(DELIMITER + LOADFLOW_API_VERSION + PARAMETERS_URI + "/provider")
                 .buildAndExpand(parametersUuid).toUriString();
 
-        return restTemplate.getForObject(loadFlowServerBaseUri + path, String.class);
+        return restTemplate.getForObject(baseUri + path, String.class);
     }
 
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuid) {
-        return getEnumValues(enumName, resultUuid, LOADFLOW_API_VERSION, loadFlowServerBaseUri, restTemplate);
+        return getEnumValues(enumName, resultUuid, LOADFLOW_API_VERSION, restTemplate);
     }
 }

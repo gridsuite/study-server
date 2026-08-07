@@ -28,13 +28,14 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
-import org.gridsuite.study.server.service.LoadFlowService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.client.util.UrlUtil;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.utils.PropertyType;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
@@ -143,14 +144,17 @@ class StudyControllerDynamicSimulationTest {
     @MockitoSpyBean
     StudyService spyStudyService;
 
+    @MockitoSpyBean
+    DynamicSimulationService spyDynamicSimulationService;
+
     @MockitoBean
-    private LoadFlowService loadFlowService;
+    private LoadFlowRestService loadFlowRestService;
 
     @MockitoBean
     private UserAdminService userAdminService;
 
     @MockitoSpyBean
-    private DynamicSimulationService spyDynamicSimulationService;
+    private DynamicSimulationRestService spyDynamicSimulationRestService;
 
     @Autowired
     private StudyRepository studyRepository;
@@ -258,10 +262,10 @@ class StudyControllerDynamicSimulationTest {
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
-        when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(loadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         // setup DynamicSimulationService mock
         Mockito.doAnswer(invocation -> RESULT_UUID)
-            .when(spyDynamicSimulationService).runDynamicSimulation(
+            .when(spyDynamicSimulationRestService).runDynamicSimulation(
                 eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID),
                 any(), any(), any(), any(), eq(true));
 
@@ -346,7 +350,7 @@ class StudyControllerDynamicSimulationTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationConstructionNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        Mockito.doAnswer(invocation -> DYNAWO_PROVIDER).when(spyStudyService).getDynamicSimulationProvider(studyUuid);
+        Mockito.doAnswer(invocation -> DYNAWO_PROVIDER).when(spyDynamicSimulationService).getDynamicSimulationProvider(studyUuid);
 
         // --- call endpoint to be tested --- //
         // run on construction node with Dynawo provider => forbidden
@@ -365,9 +369,9 @@ class StudyControllerDynamicSimulationTest {
         UUID rootNodeUuid = getRootNode(studyUuid).getId();
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
-        when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(loadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(spyDynamicSimulationService).runDynamicSimulation(
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(spyDynamicSimulationRestService).runDynamicSimulation(
                 eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), eq(false));
 
         MvcResult result;
@@ -414,7 +418,7 @@ class StudyControllerDynamicSimulationTest {
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT);
 
         //Test result count
-        Mockito.doAnswer(invocation -> 1).when(spyDynamicSimulationService).getResultsCount();
+        Mockito.doAnswer(invocation -> 1).when(spyDynamicSimulationRestService).getResultsCount();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_SIMULATION.toString())
                         .queryParam("dryRun", "true"))
@@ -423,7 +427,7 @@ class StudyControllerDynamicSimulationTest {
         assertThat(result.getResponse().getContentAsString()).isEqualTo("1");
 
         //Delete Dynamic result init results
-        Mockito.doNothing().when(spyDynamicSimulationService).deleteAllResults();
+        Mockito.doNothing().when(spyDynamicSimulationRestService).deleteAllResults();
         result = studyClient.perform(delete("/v1/supervision/computation/results")
                         .queryParam("type", ComputationType.DYNAMIC_SIMULATION.toString())
                         .queryParam("dryRun", "false"))
@@ -442,9 +446,9 @@ class StudyControllerDynamicSimulationTest {
         NetworkModificationNode modificationNode1 = createNetworkModificationSecurityNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1");
         UUID modificationNode1Uuid = modificationNode1.getId();
 
-        when(loadFlowService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
+        when(loadFlowRestService.getLoadFlowStatus(any())).thenReturn(LoadFlowStatus.CONVERGED);
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> RESULT_UUID).when(spyDynamicSimulationService).runDynamicSimulation(
+        Mockito.doAnswer(invocation -> RESULT_UUID).when(spyDynamicSimulationRestService).runDynamicSimulation(
                 eq(modificationNode1Uuid), eq(firstRootNetworkUuid), eq(NETWORK_UUID), eq(VARIANT_ID), any(), any(), any(), any(), eq(false));
 
         // --- call endpoint to be tested --- //
@@ -487,7 +491,7 @@ class StudyControllerDynamicSimulationTest {
     @Test
     void testGetDynamicSimulationTimeSeriesResultGivenNodeNotDone() throws Exception {
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> null).when(spyDynamicSimulationService).getTimeSeriesResult(RESULT_UUID, null);
+        Mockito.doAnswer(invocation -> null).when(spyDynamicSimulationRestService).getTimeSeriesResult(RESULT_UUID, null);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet done
@@ -509,7 +513,7 @@ class StudyControllerDynamicSimulationTest {
         // setup DynamicSimulationService mock
         Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSimulationResultUuid(RESULT_UUID).build()))
             .when(spyRootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOT_NETWORK_UUID);
-        Mockito.doAnswer(invocation -> timeSeries).when(spyDynamicSimulationService).getTimeSeriesResult(RESULT_UUID, null);
+        Mockito.doAnswer(invocation -> timeSeries).when(spyDynamicSimulationRestService).getTimeSeriesResult(RESULT_UUID, null);
 
         // --- call endpoint to be tested --- //
         // get result from a node done
@@ -531,7 +535,7 @@ class StudyControllerDynamicSimulationTest {
     @Test
     void testGetDynamicSimulationTimelineResultGivenNodeNotDone() throws Exception {
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> null).when(spyDynamicSimulationService).getTimelineResult(RESULT_UUID);
+        Mockito.doAnswer(invocation -> null).when(spyDynamicSimulationRestService).getTimelineResult(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet done
@@ -553,7 +557,7 @@ class StudyControllerDynamicSimulationTest {
         // setup DynamicSimulationService mock
         Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSimulationResultUuid(RESULT_UUID).build()))
             .when(spyRootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOT_NETWORK_UUID);
-        Mockito.doAnswer(invocation -> timelineEventInfosList).when(spyDynamicSimulationService).getTimelineResult(RESULT_UUID);
+        Mockito.doAnswer(invocation -> timelineEventInfosList).when(spyDynamicSimulationRestService).getTimelineResult(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node done
@@ -572,7 +576,7 @@ class StudyControllerDynamicSimulationTest {
     @Test
     void testGetDynamicSimulationStatusResultGivenNodeNotRun() throws Exception {
         // setup DynamicSimulationService mock
-        Mockito.doAnswer(invocation -> null).when(spyDynamicSimulationService).getStatus(RESULT_UUID);
+        Mockito.doAnswer(invocation -> null).when(spyDynamicSimulationRestService).getStatus(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get result from a node not yet run
@@ -590,7 +594,7 @@ class StudyControllerDynamicSimulationTest {
             .when(spyRootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOT_NETWORK_UUID);
         List<TimeSeriesMetadataInfos> timeSeriesMetadataInfosList = List.of(new TimeSeriesMetadataInfos(TIME_SERIES_NAME_1), new TimeSeriesMetadataInfos(TIME_SERIES_NAME_2));
 
-        Mockito.doAnswer(invocation -> timeSeriesMetadataInfosList).when(spyDynamicSimulationService).getTimeSeriesMetadataList(RESULT_UUID);
+        Mockito.doAnswer(invocation -> timeSeriesMetadataInfosList).when(spyDynamicSimulationRestService).getTimeSeriesMetadataList(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get timeseries metadata from a node done
@@ -613,7 +617,7 @@ class StudyControllerDynamicSimulationTest {
         // setup DynamicSimulationService mock
         Mockito.doReturn(Optional.of(RootNetworkNodeInfoEntity.builder().id(UUID.randomUUID()).dynamicSimulationResultUuid(RESULT_UUID).build()))
             .when(spyRootNetworkNodeInfoRepository).findByNodeInfoIdAndRootNetworkId(NODE_UUID, ROOT_NETWORK_UUID);
-        Mockito.doAnswer(invocation -> DynamicSimulationStatus.DIVERGED).when(spyDynamicSimulationService).getStatus(RESULT_UUID);
+        Mockito.doAnswer(invocation -> DynamicSimulationStatus.DIVERGED).when(spyDynamicSimulationRestService).getStatus(RESULT_UUID);
 
         // --- call endpoint to be tested --- //
         // get status from a node done
@@ -641,9 +645,9 @@ class StudyControllerDynamicSimulationTest {
 
         // setup DynamicMarginCalculationService mock
         doAnswer(invocation -> PARAMETERS_UUID)
-                .when(spyDynamicSimulationService).createParameters(any());
+                .when(spyDynamicSimulationRestService).createParameters(any());
         doAnswer(invocation -> jsonParameters)
-                .when(spyDynamicSimulationService).getParameters(PARAMETERS_UUID);
+                .when(spyDynamicSimulationRestService).getParameters(PARAMETERS_UUID);
 
         MvcResult result;
 
