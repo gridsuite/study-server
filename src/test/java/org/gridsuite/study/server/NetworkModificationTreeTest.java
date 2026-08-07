@@ -45,8 +45,8 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepo
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
-import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
@@ -184,7 +184,7 @@ class NetworkModificationTreeTest {
     private ActionsService actionsService;
 
     @MockitoSpyBean
-    private DynamicSimulationClient dynamicSimulationClient;
+    private DynamicSimulationRestService dynamicSimulationRestService;
 
     @MockitoSpyBean
     DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
@@ -281,7 +281,7 @@ class NetworkModificationTreeTest {
         pccMinService.setBaseUri(baseUrl);
         dynamicMarginCalculationRestService.setBaseUri(baseUrl);
 
-        doReturn(baseUrl).when(dynamicSimulationClient).getBaseUri();
+        doReturn(baseUrl).when(dynamicSimulationRestService).getBaseUri();
         doReturn(baseUrl).when(dynamicSecurityAnalysisClient).getBaseUri();
 
         final Dispatcher dispatcher = new Dispatcher() {

@@ -42,8 +42,8 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkNodeInfoRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
-import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
@@ -238,7 +238,7 @@ class NetworkModificationTest {
     private StudyRepository studyRepository;
 
     @MockitoSpyBean
-    private DynamicSimulationClient dynamicSimulationClient;
+    private DynamicSimulationRestService dynamicSimulationRestService;
 
     @MockitoSpyBean
     DynamicSecurityAnalysisClient dynamicSecurityAnalysisClient;
@@ -309,7 +309,7 @@ class NetworkModificationTest {
         pccMinService.setBaseUri(baseUrl);
         dynamicMarginCalculationRestService.setBaseUri(baseUrl);
 
-        doReturn(baseUrl).when(dynamicSimulationClient).getBaseUri();
+        doReturn(baseUrl).when(dynamicSimulationRestService).getBaseUri();
         doReturn(baseUrl).when(dynamicSecurityAnalysisClient).getBaseUri();
 
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
