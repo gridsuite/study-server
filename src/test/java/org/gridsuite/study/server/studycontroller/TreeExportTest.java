@@ -42,13 +42,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-public class TreeExportArchiveTest extends StudyTestBase {
+public class TreeExportTest extends StudyTestBase {
 
     @Autowired
     private ObjectMapper objectMapper;
 
     @Test
-    void testExportStudyArchive() throws Exception {
+    void testExportStudy() throws Exception {
         // Create a study
         UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
         ReflectionTestUtils.setField(caseService, "caseServerBaseUri", wireMockServer.baseUrl());
@@ -59,11 +59,10 @@ public class TreeExportArchiveTest extends StudyTestBase {
                 .willReturn(WireMock.aResponse().withStatus(200)
                         .withHeader("Content-Type", "application/octet-stream")
                         .withBody("dummy case content".getBytes())));
-        // Export as archive
-        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export", studyUuid).header(HEADER_USER_ID, "testUser"))
+        // Export as zip
+        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "attachment; filename=" + studyUuid + ".gz"))
-                .andExpect(header().string("Content-Type", "application/gzip"))
+                .andExpect(header().string("Content-Type", "application/zip"))
                 .andReturn();
         // Verify the response contains data
         byte[] archiveContent = result.getResponse().getContentAsByteArray();
@@ -95,18 +94,18 @@ public class TreeExportArchiveTest extends StudyTestBase {
     }
 
     @Test
-    void testExportStudyArchiveFailNoPermission() throws Exception {
+    void testExportStudyFailNoPermission() throws Exception {
         UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
         wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.FORBIDDEN.value());
 
-        mockMvc.perform(get("/v1/studies/{studyUuid}/export", studyUuid).header(HEADER_USER_ID, "testUser"))
+        mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
                 .andExpect(status().isForbidden())
                 .andExpect(header().string("Content-Disposition", nullValue()));
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
     }
 
     @Test
-    void testExportStudyArchiveFailToDeleteTempZipFile() throws Exception {
+    void testExportStudyFailToDeleteTempZipFile() throws Exception {
         // Create a study
         UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
         ReflectionTestUtils.setField(caseService, "caseServerBaseUri", wireMockServer.baseUrl());
@@ -132,7 +131,7 @@ public class TreeExportArchiveTest extends StudyTestBase {
                 mockedFiles.when(() -> Files.deleteIfExists(argThat(isStudyZipFile)))
                         .thenThrow(new IOException("Simulated failure deleting temp zip file"));
 
-                mockMvc.perform(get("/v1/studies/{studyUuid}/export", studyUuid).header(HEADER_USER_ID, "testUser"))
+                mockMvc.perform(get("/v1/studies/{studyUuid}/export/{studyName}", studyUuid, "studyName").header(HEADER_USER_ID, "testUser"))
                         .andExpect(status().isInternalServerError())
                         .andExpect(header().string("Content-Disposition", nullValue()));
                 assertNotNull(capturedZipFile.get(), "the mocked zip file path was never matched");
