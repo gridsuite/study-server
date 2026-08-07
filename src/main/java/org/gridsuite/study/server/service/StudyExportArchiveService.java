@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
+import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.slf4j.Logger;
@@ -73,11 +74,13 @@ public class StudyExportArchiveService {
         Path tempDir = createTempWorkDir(studyUuid);
         Path zipFile = null;
         try {
-            List<RootNetworkInfos> rootNetworkInfosList = self.loadRootNetworkInfosAndWriteTree(studyUuid, tempDir);
+            TreeExportInfos treeExportInfos = studyService.exportStudy(studyUuid);
+            Path studyJsonPath = tempDir.resolve("tree.json");
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
             Path casesDir = Files.createDirectories(tempDir.resolve("cases"));
-            for (RootNetworkInfos rootNetworkInfos : rootNetworkInfosList) {
-                UUID caseUuid = rootNetworkInfos.getCaseInfos().getCaseUuid();
-                String caseName = rootNetworkInfos.getCaseInfos().getCaseName();
+            for (RootNetworkExportInfos rootNetworkInfos : treeExportInfos.rootNetworks()) {
+                UUID caseUuid = rootNetworkInfos.caseInfos().uuid();
+                String caseName = rootNetworkInfos.caseInfos().name();
                 exportCaseFile(caseUuid, caseName, casesDir);
             }
             zipFile = createTempExportFile(studyUuid);
@@ -104,15 +107,6 @@ public class StudyExportArchiveService {
                 }
             }
         }
-    }
-
-    @Transactional(readOnly = true)
-    protected List<RootNetworkInfos> loadRootNetworkInfosAndWriteTree(UUID studyUuid, Path tempDir) throws IOException {
-        TreeExportInfos treeExportInfos = studyService.exportStudy(studyUuid);
-        List<RootNetworkInfos> rootNetworkInfosList = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
-        Path studyJsonPath = tempDir.resolve("tree.json");
-        objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
-        return rootNetworkInfosList;
     }
 
     private Path createTempWorkDir(UUID studyUuid) {
