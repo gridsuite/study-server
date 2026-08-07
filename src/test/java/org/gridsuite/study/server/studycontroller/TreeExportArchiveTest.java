@@ -12,21 +12,32 @@ import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatcher;
+import org.mockito.MockedStatic;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mockStatic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -91,6 +102,48 @@ public class TreeExportArchiveTest extends StudyTestBase {
         mockMvc.perform(get("/v1/studies/{studyUuid}/export", studyUuid).header(HEADER_USER_ID, "testUser"))
                 .andExpect(status().isForbidden())
                 .andExpect(header().string("Content-Disposition", nullValue()));
+        wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
+    }
+
+    @Test
+    void testExportStudyArchiveFailToDeleteTempZipFile() throws Exception {
+        // Create a study
+        UUID studyUuid = createStudyWithStubs("testUser", CASE_UUID);
+        ReflectionTestUtils.setField(caseService, "caseServerBaseUri", wireMockServer.baseUrl());
+        wireMockStubs.directoryServer.stubCheckPermission(List.of(studyUuid), null, "testUser", PermissionType.READ, false, HttpStatus.OK.value());
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/cases/" + CASE_UUID))
+                .willReturn(WireMock.aResponse().withStatus(200).withHeader("Content-Type", "application/octet-stream")
+                        .withBody("dummy case content".getBytes())));
+        // Capture the real zip file path as it is matched, so the test can clean it up itself:
+        // the service's own Files.deleteIfExists call on this path is mocked to fail below.
+        AtomicReference<Path> capturedZipFile = new AtomicReference<>();
+        ArgumentMatcher<Path> isStudyZipFile = path -> {
+            boolean matches = path.getFileName().toString().startsWith("study-export-" + studyUuid)
+                    && path.getFileName().toString().endsWith(".zip");
+            if (matches) {
+                capturedZipFile.set(path);
+            }
+            return matches;
+        };
+        try {
+            try (MockedStatic<Files> mockedFiles = mockStatic(Files.class, CALLS_REAL_METHODS)) {
+                mockedFiles.when(() -> Files.newInputStream(argThat(isStudyZipFile), eq(StandardOpenOption.DELETE_ON_CLOSE)))
+                        .thenThrow(new IOException("Simulated failure opening exported zip stream"));
+                mockedFiles.when(() -> Files.deleteIfExists(argThat(isStudyZipFile)))
+                        .thenThrow(new IOException("Simulated failure deleting temp zip file"));
+
+                mockMvc.perform(get("/v1/studies/{studyUuid}/export", studyUuid).header(HEADER_USER_ID, "testUser"))
+                        .andExpect(status().isInternalServerError())
+                        .andExpect(header().string("Content-Disposition", nullValue()));
+                assertNotNull(capturedZipFile.get(), "the mocked zip file path was never matched");
+            }
+        } finally {
+            Path zipFile = capturedZipFile.get();
+            if (zipFile != null) {
+                Files.deleteIfExists(zipFile);
+            }
+        }
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
     }
 }
