@@ -32,6 +32,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -63,6 +64,7 @@ public class StudyController {
     private final RemoteServicesInspector remoteServicesInspector;
     private final RootNetworkService rootNetworkService;
     private final RebuildNodeService rebuildNodeService;
+    private final StudyExportArchiveService studyExportArchiveService;
 
     public StudyController(StudyService studyService,
                            NetworkService networkStoreService,
@@ -72,7 +74,8 @@ public class StudyController {
                            CaseService caseService,
                            RemoteServicesInspector remoteServicesInspector,
                            RootNetworkService rootNetworkService,
-                           RebuildNodeService rebuildNodeService) {
+                           RebuildNodeService rebuildNodeService,
+                           StudyExportArchiveService studyExportArchiveService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -82,6 +85,7 @@ public class StudyController {
         this.remoteServicesInspector = remoteServicesInspector;
         this.rootNetworkService = rootNetworkService;
         this.rebuildNodeService = rebuildNodeService;
+        this.studyExportArchiveService = studyExportArchiveService;
     }
 
     @InitBinder
@@ -1599,5 +1603,17 @@ public class StudyController {
                                                                                  @Parameter(description = "Root network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                                  @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllComputationsStatus(studyUuid, rootNetworkUuid, nodeUuid));
+    }
+
+    @GetMapping(value = "/studies/{studyUuid}/export", produces = "application/gzip")
+    @Operation(summary = "Export a study as a gzip archive")
+    @ApiResponse(responseCode = "200", description = "The study archive as gzip")
+    @ApiResponse(responseCode = "404", description = "Study or root network not found")
+    public ResponseEntity<Resource> exportStudyArchive(@PathVariable("studyUuid") UUID studyUuid,
+                                                       @RequestHeader(HEADER_USER_ID) String userId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + studyUuid + ".gz");
+        headers.add(HttpHeaders.CONTENT_TYPE, "application/gzip");
+        return ResponseEntity.ok().headers(headers).body(studyExportArchiveService.exportStudyArchive(studyUuid, userId));
     }
 }
