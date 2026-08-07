@@ -32,16 +32,14 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.lang.NonNull;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
 import java.beans.PropertyEditorSupport;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -64,7 +62,7 @@ public class StudyController {
     private final RemoteServicesInspector remoteServicesInspector;
     private final RootNetworkService rootNetworkService;
     private final RebuildNodeService rebuildNodeService;
-    private final StudyExportArchiveService studyExportArchiveService;
+    private final StudyExportService studyExportService;
 
     public StudyController(StudyService studyService,
                            NetworkService networkStoreService,
@@ -75,7 +73,7 @@ public class StudyController {
                            RemoteServicesInspector remoteServicesInspector,
                            RootNetworkService rootNetworkService,
                            RebuildNodeService rebuildNodeService,
-                           StudyExportArchiveService studyExportArchiveService) {
+                           StudyExportService studyExportService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -85,7 +83,7 @@ public class StudyController {
         this.remoteServicesInspector = remoteServicesInspector;
         this.rootNetworkService = rootNetworkService;
         this.rebuildNodeService = rebuildNodeService;
-        this.studyExportArchiveService = studyExportArchiveService;
+        this.studyExportService = studyExportService;
     }
 
     @InitBinder
@@ -1605,15 +1603,19 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllComputationsStatus(studyUuid, rootNetworkUuid, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/export", produces = "application/gzip")
+    @GetMapping(value = "/studies/{studyUuid}/export/{studyName}", produces = "application/gzip")
     @Operation(summary = "Export a study as a gzip archive")
     @ApiResponse(responseCode = "200", description = "The study archive as gzip")
     @ApiResponse(responseCode = "404", description = "Study or root network not found")
-    public ResponseEntity<Resource> exportStudyArchive(@PathVariable("studyUuid") UUID studyUuid,
-                                                       @RequestHeader(HEADER_USER_ID) String userId) {
+    public ResponseEntity<Resource> exportStudy(@PathVariable("studyUuid") UUID studyUuid,
+                                                @PathVariable("studyName") String studyName,
+                                                @RequestHeader(HEADER_USER_ID) String userId) {
+        ContentDisposition contentDisposition = ContentDisposition.attachment()
+                .filename(studyName + ".zip", StandardCharsets.UTF_8)
+                .build();
         HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + studyUuid + ".gz");
-        headers.add(HttpHeaders.CONTENT_TYPE, "application/gzip");
-        return ResponseEntity.ok().headers(headers).body(studyExportArchiveService.exportStudyArchive(studyUuid, userId));
+        headers.setContentDisposition(contentDisposition);
+        headers.setContentType(MediaType.parseMediaType("application/zip"));
+        return ResponseEntity.ok().headers(headers).body(studyExportService.exportStudy(studyUuid, userId));
     }
 }

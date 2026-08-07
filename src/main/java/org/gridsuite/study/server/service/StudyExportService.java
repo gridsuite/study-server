@@ -7,19 +7,16 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.gridsuite.study.server.dto.RootNetworkInfos;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -43,33 +40,28 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STU
  * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
  */
 @Service
-public class StudyExportArchiveService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportArchiveService.class);
+public class StudyExportService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportService.class);
 
     private final StudyService studyService;
-    private final RootNetworkService rootNetworkService;
     private final CaseService caseService;
     private final DirectoryService directoryService;
     private final ObjectMapper objectMapper;
-    private final StudyExportArchiveService self;
 
-    public StudyExportArchiveService(@Lazy StudyExportArchiveService self, StudyService studyService, RootNetworkService rootNetworkService,
-                                     CaseService caseService, DirectoryService directoryService, ObjectMapper objectMapper) {
-        this.self = self;
+    public StudyExportService(StudyService studyService, CaseService caseService, DirectoryService directoryService, ObjectMapper objectMapper) {
         this.studyService = studyService;
-        this.rootNetworkService = rootNetworkService;
         this.caseService = caseService;
         this.directoryService = directoryService;
         this.objectMapper = objectMapper;
     }
 
     /**
-     * Export a study as a gzip archive
+     * Export a study as a zip
      * @param studyUuid the study UUID
      * @param userId the requesting user, checked for read access to the study
      * @return InputStreamResource containing the zip archive
      */
-    public InputStreamResource exportStudyArchive(UUID studyUuid, String userId) {
+    public InputStreamResource exportStudy(UUID studyUuid, String userId) {
         directoryService.checkPermission(List.of(studyUuid), null, userId, PermissionType.READ, false);
         Path tempDir = createTempWorkDir(studyUuid);
         Path zipFile = null;
@@ -79,8 +71,8 @@ public class StudyExportArchiveService {
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
             Path casesDir = Files.createDirectories(tempDir.resolve("cases"));
             for (RootNetworkExportInfos rootNetworkInfos : treeExportInfos.rootNetworks()) {
-                UUID caseUuid = rootNetworkInfos.caseInfos().uuid();
-                String caseName = rootNetworkInfos.caseInfos().name();
+                UUID caseUuid = rootNetworkInfos.caseInfos().getCaseUuid();
+                String caseName = rootNetworkInfos.caseInfos().getCaseName();
                 exportCaseFile(caseUuid, caseName, casesDir);
             }
             zipFile = createTempExportFile(studyUuid);
@@ -139,6 +131,7 @@ public class StudyExportArchiveService {
             Path caseDir = casesDir.resolve(caseUuid.toString());
             Files.createDirectories(caseDir);
             String contentEncoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
+            // plain file cases are gzip by the case-server and need to be decompressed
             if ("gzip".equalsIgnoreCase(contentEncoding)) {
                 body = decompressGzip(body);
             }

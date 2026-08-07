@@ -28,7 +28,6 @@ import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
-import org.gridsuite.study.server.dto.studyexport.CaseExportInfos;
 import org.gridsuite.study.server.dto.studyexport.NodeTreeExportInfos;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
@@ -3038,8 +3037,8 @@ public class StudyService {
         return new RootNetworkExportInfos(
                 rootNetworkInfos.getName(),
                 rootNetworkInfos.getTag(),
-                rootNetworkInfos.getCaseInfos().getCaseFormat(),
-                new CaseExportInfos(rootNetworkInfos.getCaseInfos().getCaseUuid(), rootNetworkInfos.getCaseInfos().getCaseName()),
+                new CaseInfos(rootNetworkInfos.getCaseInfos().getCaseUuid(), rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(),
+                        rootNetworkInfos.getCaseInfos().getCaseName(), rootNetworkInfos.getCaseInfos().getCaseFormat()),
                 rootNetworkInfos.getImportParameters()
         );
     }

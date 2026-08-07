@@ -6,6 +6,8 @@
  */
 package org.gridsuite.study.server.dto.studyexport;
 
+import org.gridsuite.study.server.dto.CaseInfos;
+
 import java.util.Map;
 
 /**
@@ -14,8 +16,7 @@ import java.util.Map;
 public record RootNetworkExportInfos(
         String name,
         String tag,
-        String caseFormat,
-        CaseExportInfos caseInfos,
+        CaseInfos caseInfos,
         Map<String, Object> importParameters
 ) {
 }
