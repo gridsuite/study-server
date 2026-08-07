@@ -9,6 +9,7 @@ package org.gridsuite.study.server.repository.networkmodificationtree;
 
 import org.gridsuite.study.server.networkmodificationtree.entities.AbstractNodeInfoEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
@@ -28,4 +29,8 @@ public interface NetworkModificationNodeInfoRepository extends NodeInfoRepositor
 
     @Query(value = "SELECT n FROM NetworkModificationNodeInfoEntity n WHERE n.idNode IN (?1) ORDER BY n.columnPosition")
     List<NetworkModificationNodeInfoEntity> findAllByIdIn(List<UUID> uuids);
+
+    @EntityGraph(attributePaths = {"node"})
+    @Query(value = "SELECT n FROM NetworkModificationNodeInfoEntity n WHERE n.idNode IN (?1) ORDER BY n.columnPosition")
+    List<NetworkModificationNodeInfoEntity> findAllByIdInWithNode(List<UUID> uuids);
 }

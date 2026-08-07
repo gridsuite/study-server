@@ -30,9 +30,9 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
@@ -169,11 +169,11 @@ class RootNetworkTest {
     @MockitoBean
     private CaseService caseService;
     @MockitoBean
-    private DynamicSimulationService dynamicSimulationService;
+    private DynamicSimulationRestService dynamicSimulationRestService;
     @MockitoBean
-    private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
     @MockitoBean
-    private DynamicMarginCalculationService dynamicMarginCalculationService;
+    private DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
     @MockitoBean
     private SecurityAnalysisRestService securityAnalysisService;
     @MockitoBean
@@ -193,6 +193,8 @@ class RootNetworkTest {
 
     @BeforeEach
     void setUp() {
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
+
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
 
         // start server
@@ -482,10 +484,6 @@ class RootNetworkTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
 
-        // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
-        // completes before the test verifies it, removes the race condition.
-        synchronizeStudyServerExecutionService(studyServerExecutionService);
-
         // DO NOT insert creation request - it means root network won't be created and remote resources will be deleted
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(UUID.randomUUID()).name("newRootNetworkName").tag("newT")
             .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2)).networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
@@ -556,10 +554,6 @@ class RootNetworkTest {
         // before deletion, check we have 2 root networks for study
         assertEquals(2, studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
 
-        // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
-        // completes before the test verifies it, removes the race condition.
-        synchronizeStudyServerExecutionService(studyServerExecutionService);
-
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
                 .contentType(APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(List.of(rootNetworkEntityToDeleteUuid)))
@@ -576,9 +570,9 @@ class RootNetworkTest {
         verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
         verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID2);
         verify(caseService, times(1)).deleteCase(CASE_UUID2);
-        verify(dynamicSimulationService, times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
-        verify(dynamicSecurityAnalysisService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
-        verify(dynamicMarginCalculationService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
+        verify(dynamicSimulationRestService, times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
+        verify(dynamicSecurityAnalysisRestService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
+        verify(dynamicMarginCalculationRestService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
         // check LOADFLOW_RESULT_UUID2 is also deleted
         verify(loadFlowRestService, times(1)).deleteLoadFlowResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
         verify(securityAnalysisService, times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
