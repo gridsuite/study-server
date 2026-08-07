@@ -24,27 +24,27 @@ public class LoadFlowParametersController {
         this.loadFlowService = loadFlowService;
     }
 
-    @GetMapping(value = "/providers", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/providers")
     public ResponseEntity<String> getProviders() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getProviders());
     }
 
-    @GetMapping(value = "/specific-parameters", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/specific-parameters")
     public ResponseEntity<String> getSpecificParameters() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getSpecificParameters());
     }
 
-    @GetMapping(value = "/parameters/default-limit-reductions", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/parameters/default-limit-reductions")
     public ResponseEntity<String> getDefaultLimitReductions() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getDefaultLimitReductions());
     }
 
-    @GetMapping(value = "/parameters/{parameterUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/parameters/{parameterUuid}")
     public ResponseEntity<LoadFlowParametersInfos> getLoadFlowParameters(@PathVariable UUID parameterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(loadFlowService.getLoadFlowParameters(parameterUuid));
     }
 
-    @PutMapping(value = "/parameters/{parameterUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/parameters/{parameterUuid}")
     public ResponseEntity<Void> updateLoadFlowParameters(@PathVariable UUID parameterUuid, @RequestBody(required = false) String parameters) {
         loadFlowService.updateLoadFlowParameters(parameterUuid, parameters);
         return ResponseEntity.ok().build();

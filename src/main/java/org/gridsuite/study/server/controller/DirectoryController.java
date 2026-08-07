@@ -24,7 +24,7 @@ public class DirectoryController {
         this.directoryService = directoryService;
     }
 
-    @GetMapping(value = "/elements", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/elements")
     public ResponseEntity<String> getElements(@RequestParam("ids") List<UUID> ids,
                                               @RequestParam(name = "elementTypes", required = false, defaultValue = "") List<String> elementTypes,
                                               @RequestParam(name = "strictMode", defaultValue = "true") boolean strictMode,

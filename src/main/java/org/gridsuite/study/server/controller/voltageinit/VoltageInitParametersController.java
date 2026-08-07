@@ -28,12 +28,12 @@ public class VoltageInitParametersController {
         this.voltageInitService = voltageInitService;
     }
 
-    @GetMapping(value = "/results/{resultUuid}/download-debug-file", produces = "application/json")
+    @GetMapping(value = "/results/{resultUuid}/download-debug-file")
     public ResponseEntity<Resource> downloadDebugFile(@PathVariable UUID resultUuid) {
         return voltageInitService.downloadDebugFile(resultUuid);
     }
 
-    @GetMapping(value = "/parameters/{parameterUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/parameters/{parameterUuid}")
     public ResponseEntity<VoltageInitParametersInfos> getParameters(@PathVariable UUID parameterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(voltageInitService.getVoltageInitParametersByUuid(parameterUuid));
     }

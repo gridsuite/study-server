@@ -25,7 +25,7 @@ public class NetworkMapController {
         this.networkMapService = networkMapService;
     }
 
-    @GetMapping(value = "/schemas/{elementType}/{infoType}", produces = APPLICATION_JSON_SCHEMA_VALUE)
+    @GetMapping(value = "/schemas/{elementType}/{infoType}")
     public ResponseEntity<String> getElementSchema(@PathVariable String elementType, @PathVariable String infoType) {
         return ResponseEntity.ok().header("Content-Type", APPLICATION_JSON_SCHEMA_VALUE).body(networkMapService.getElementSchema(elementType, infoType));
     }

@@ -26,7 +26,7 @@ public class PccMinParametersController {
         this.pccMinService = pccMinService;
     }
 
-    @GetMapping(value = "/parameters/{parameterUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/parameters/{parameterUuid}")
     public ResponseEntity<String> getPccMinParameters(@PathVariable UUID parameterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(pccMinService.getPccMinParametersByUuid(parameterUuid));
     }

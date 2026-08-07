@@ -26,7 +26,7 @@ public class NetworkConversionController {
         this.networkConversionService = networkConversionService;
     }
 
-    @GetMapping(value = "/cases/{caseUuid}/import-parameters", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/cases/{caseUuid}/import-parameters")
     public ResponseEntity<String> getCaseImportParameters(@PathVariable UUID caseUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkConversionService.getCaseImportParameters(caseUuid));
     }

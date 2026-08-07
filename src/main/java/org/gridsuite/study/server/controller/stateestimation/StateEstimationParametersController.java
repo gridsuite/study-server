@@ -26,7 +26,7 @@ public class StateEstimationParametersController {
         this.stateEstimationService = stateEstimationService;
     }
 
-    @GetMapping(value = "/results/{resultUuid}/download-debug-file", produces = "application/json")
+    @GetMapping(value = "/results/{resultUuid}/download-debug-file")
     public ResponseEntity<Resource> downloadDebugFile(@PathVariable UUID resultUuid) {
         return stateEstimationService.downloadDebugFile(resultUuid);
     }

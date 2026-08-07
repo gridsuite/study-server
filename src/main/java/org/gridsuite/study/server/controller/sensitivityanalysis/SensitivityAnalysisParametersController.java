@@ -23,17 +23,17 @@ public class SensitivityAnalysisParametersController {
         this.sensitivityAnalysisService = sensitivityAnalysisService;
     }
 
-    @GetMapping(value = "/providers", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/providers")
     public ResponseEntity<String> getProviders() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sensitivityAnalysisService.getProviders());
     }
 
-    @GetMapping(value = "/parameters/{parameterUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/parameters/{parameterUuid}")
     public ResponseEntity<String> getSensitivityAnalysisParameters(@PathVariable UUID parameterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sensitivityAnalysisService.getSensitivityAnalysisParametersByUuid(parameterUuid));
     }
 
-    @PutMapping(value = "/parameters/{parameterUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/parameters/{parameterUuid}")
     public ResponseEntity<Void> updateSensitivityAnalysisParameters(@PathVariable UUID parameterUuid, @RequestBody(required = false) String parameters) {
         sensitivityAnalysisService.updateSensitivityAnalysisParameters(parameterUuid, parameters);
         return ResponseEntity.ok().build();

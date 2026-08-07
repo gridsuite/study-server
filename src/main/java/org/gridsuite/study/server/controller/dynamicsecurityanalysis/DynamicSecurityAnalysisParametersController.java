@@ -24,23 +24,23 @@ public class DynamicSecurityAnalysisParametersController {
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
     }
 
-    @GetMapping(value = "/providers", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/providers")
     public ResponseEntity<String> getProviders() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicSecurityAnalysisService.getProviders());
     }
 
-    @GetMapping(value = "/parameters/{parameterUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/parameters/{parameterUuid}")
     public ResponseEntity<String> getParameters(@PathVariable UUID parameterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(dynamicSecurityAnalysisService.getParameters(parameterUuid));
     }
 
-    @PutMapping(value = "/parameters/{parameterUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/parameters/{parameterUuid}")
     public ResponseEntity<Void> updateParameters(@PathVariable UUID parameterUuid, @RequestBody String parameters) {
         dynamicSecurityAnalysisService.updateParameters(parameterUuid, parameters);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping(value = "/results/{resultUuid}/download-debug-file", produces = "application/json")
+    @GetMapping(value = "/results/{resultUuid}/download-debug-file")
     public ResponseEntity<Resource> downloadDebugFile(@PathVariable UUID resultUuid) {
         return dynamicSecurityAnalysisService.downloadDebugFile(resultUuid);
     }

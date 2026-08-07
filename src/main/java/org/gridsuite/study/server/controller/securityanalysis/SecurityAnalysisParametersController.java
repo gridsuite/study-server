@@ -23,22 +23,22 @@ public class SecurityAnalysisParametersController {
         this.securityAnalysisService = securityAnalysisService;
     }
 
-    @GetMapping(value = "/providers", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/providers")
     public ResponseEntity<String> getProviders() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(securityAnalysisService.getProviders());
     }
 
-    @GetMapping(value = "/parameters/{parameterUuid}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/parameters/{parameterUuid}")
     public ResponseEntity<String> getSecurityAnalysisParameters(@PathVariable UUID parameterUuid) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(securityAnalysisService.getSecurityAnalysisParameters(parameterUuid));
     }
 
-    @GetMapping(value = "/parameters/default-limit-reductions", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/parameters/default-limit-reductions")
     public ResponseEntity<String> getDefaultLimitReductions() {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(securityAnalysisService.getDefaultLimitReductions());
     }
 
-    @PutMapping(value = "/parameters/{parameterUuid}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/parameters/{parameterUuid}")
     public ResponseEntity<Void> updateSecurityAnalysisParameters(@PathVariable UUID parameterUuid, @RequestBody(required = false) String parameters) {
         securityAnalysisService.updateSecurityAnalysisParameters(parameterUuid, parameters);
         return ResponseEntity.ok().build();
