@@ -11,9 +11,11 @@ import org.gridsuite.study.server.controller.StudyController;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RebuildNodeService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +47,9 @@ class StudyControllerRebuildNodeTest {
     @MockitoBean
     NetworkModificationTreeService networkModificationTreeService;
 
+    @MockitoBean
+    private NodeActivityService nodeActivityService;
+
     @Autowired
     private StudyController studyController;
 
@@ -61,6 +66,7 @@ class StudyControllerRebuildNodeTest {
 
         doAnswer(invocation -> List.of(nodeUuid)).when(networkModificationTreeService).getHighestNodeUuids(any(), any());
         doAnswer(invocation -> false).when(networkModificationTreeService).isRootOrConstructionNode(any());
+        TestUtils.bypassNodeActivities(nodeActivityService);
     }
 
     @Test

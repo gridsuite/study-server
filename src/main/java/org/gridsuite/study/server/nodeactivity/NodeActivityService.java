@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NODE_ACTIVITY_CONFLICT;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
  * @author Ayoub Labidi <ayoub.labidi_externe at rte-france.com>
@@ -80,15 +81,17 @@ public class NodeActivityService {
 
     @Transactional
     public void setNodeActivity(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
-        if (nodeUuids.isEmpty()) {
+        List<UUID> nodes = nodeUuids.stream().distinct().toList();
+        if (nodes.isEmpty()) {
             return;
         }
-        List<NodeActivityEntity> requested = nodeUuids.stream()
+        assertNodesExistInStudy(studyUuid, nodes);
+        List<NodeActivityEntity> requested = nodes.stream()
             .map(nodeUuid -> NodeActivityEntity.from(type, studyUuid, rootNetworkUuid, nodeUuid))
             .toList();
         List<NodeActivityEntity> running = nodeActivityRepository.findAllByStudyId(studyUuid);
         if (!running.isEmpty()) {
-            Map<UUID, Set<UUID>> ancestorsByNode = getAncestorsByNode(type, running, nodeUuids);
+            Map<UUID, Set<UUID>> ancestorsByNode = getAncestorsByNode(type, running, nodes);
             requested.forEach(activity -> NodeActivityRules.assertNoConflict(running, activity, ancestorsByNode));
         }
         try {
@@ -96,9 +99,15 @@ public class NodeActivityService {
         } catch (DataIntegrityViolationException e) {
             // someone wrote the same node between the read above and this insert
             throw new StudyException(NODE_ACTIVITY_CONFLICT,
-                "%s refused: another activity started on one of the nodes %s".formatted(type, nodeUuids));
+                "%s refused: another activity started on one of the nodes %s".formatted(type, nodes));
         }
         notificationService.emitNodeActivityUpdated(studyUuid);
+    }
+
+    private void assertNodesExistInStudy(UUID studyUuid, List<UUID> nodes) {
+        if (nodeRepository.countByIdNodeInAndStudyId(nodes, studyUuid) != nodes.size()) {
+            throw new StudyException(NOT_FOUND, "Nodes %s not all found in study %s".formatted(nodes, studyUuid));
+        }
     }
 
     @Transactional

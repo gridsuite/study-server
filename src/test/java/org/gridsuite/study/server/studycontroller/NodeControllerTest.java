@@ -19,6 +19,7 @@ import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.utils.MatcherReportLog;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpHeaders;
@@ -420,7 +421,7 @@ class NodeControllerTest extends StudyTestBase {
             EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
         boolean wasBuilt = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeToCopy.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid)).get().getNodeBuildStatus().toDto().isBuilt();
         UUID deleteModificationIndexStub = wireMockStubs.stubNetworkModificationDeleteIndex();
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         mockMvc.perform(post(STUDIES_URL +
                     "/{studyUuid}/tree/nodes?nodeToCutUuid={nodeUuid}&referenceNodeUuid={referenceNodeUuid}&insertMode={insertMode}",
                 studyUuid, nodeToCopy.getId(), referenceNodeUuid, insertMode)
@@ -437,7 +438,7 @@ class NodeControllerTest extends StudyTestBase {
          * moving node
          */
         //nodeMoved
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.NODE_MOVED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(nodeToCopy.getId(), message.getHeaders().get(NotificationService.HEADER_MOVED_NODE));
@@ -448,7 +449,7 @@ class NodeControllerTest extends StudyTestBase {
          */
         //nodeUpdated
         if (wasBuilt) {
-            assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+            assertNotNull(TestUtils.receiveStudyUpdate(output, studyUpdateDestination));
         }
         checkComputationStatusMessageReceived();
 
@@ -462,7 +463,7 @@ class NodeControllerTest extends StudyTestBase {
         IntStream.rangeClosed(1, childCount).forEach(i -> {
             //nodeUpdated
             if (wasBuilt) {
-                assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+                assertNotNull(TestUtils.receiveStudyUpdate(output, studyUpdateDestination));
             }
             checkComputationStatusMessageReceived();
         });
@@ -919,7 +920,7 @@ class NodeControllerTest extends StudyTestBase {
         nodesAfterDuplication.removeAll(allNodesBeforeDuplication);
         assertEquals(1, nodesAfterDuplication.size());
 
-        output.receive(TIMEOUT, studyUpdateDestination); // nodeCreated
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination); // nodeCreated
 
         if (checkMessagesForStatusModels) {
             checkUpdateModelsStatusMessagesReceived(targetStudyUuid, nodesAfterDuplication.get(0));
@@ -1054,11 +1055,11 @@ class NodeControllerTest extends StudyTestBase {
 
     protected void checkComputationStatusMessageReceived() {
         // all_computation_status
-        assertNotNull(output.receive(StudyTest.TIMEOUT, studyUpdateDestination));
+        assertNotNull(TestUtils.receiveStudyUpdate(output, studyUpdateDestination, StudyTest.TIMEOUT));
     }
 
     private void checkNodeBuildStatusUpdatedMessageReceived(UUID studyUuid, List<UUID> nodesUuids) {
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -1067,7 +1068,7 @@ class NodeControllerTest extends StudyTestBase {
     }
 
     private void checkSubtreeMovedMessageSent(UUID studyUuid, UUID movedNodeUuid, UUID referenceNodeUuid) {
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(NotificationService.SUBTREE_MOVED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(movedNodeUuid, message.getHeaders().get(NotificationService.HEADER_MOVED_NODE));
@@ -1076,7 +1077,7 @@ class NodeControllerTest extends StudyTestBase {
     }
 
     private void checkSubtreeCreatedMessageSent(UUID studyUuid, UUID newNodeUuid, UUID referenceNodeUuid) {
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(NotificationService.SUBTREE_CREATED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(newNodeUuid, message.getHeaders().get(NotificationService.HEADER_NEW_NODE));

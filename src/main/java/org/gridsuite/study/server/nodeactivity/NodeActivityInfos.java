@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.nodeactivity;
 
-import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -17,15 +16,13 @@ public record NodeActivityInfos(
     // null when the activity affects every root network of the study
     UUID rootNetworkId,
     NodeActivityLabel label,
-    boolean invalidatesChildren,
-    Instant startedAt) {
+    boolean invalidatesChildren) {
 
     static NodeActivityInfos from(NodeActivityEntity activity) {
         return new NodeActivityInfos(
             activity.getNodeId(),
             activity.getRootNetworkId(),
             activity.getType().getLabel(),
-            activity.getType().invalidatesChildren(),
-            activity.getStartedAt());
+            activity.getType().invalidatesChildren());
     }
 }

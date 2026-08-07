@@ -199,7 +199,7 @@ class RootNetworkControllerTest {
         countDownLatch.await();
 
         // study network recreation done notification
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         MessageHeaders headers = message.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(userId, headers.get(USER_ID_HEADER));
@@ -249,7 +249,7 @@ class RootNetworkControllerTest {
         countDownLatch.await();
 
         // study network recreation done notification
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         MessageHeaders headers = message.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_NETWORK_RECREATION_DONE, headers.get(NotificationService.HEADER_UPDATE_TYPE));
         assertEquals(userId, headers.get(USER_ID_HEADER));
@@ -318,7 +318,7 @@ class RootNetworkControllerTest {
 
     private void assertStudyCreation(UUID studyUuid, String userId, String... errorMessage) {
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
 
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
@@ -327,7 +327,7 @@ class RootNetworkControllerTest {
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent a study creation message for creation
-        message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(USER_ID_HEADER));

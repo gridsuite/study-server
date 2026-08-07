@@ -480,7 +480,7 @@ class StudyTestBase {
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
         checkElementUpdatedMessageSent(studyUuid, userId);
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -496,7 +496,7 @@ class StudyTestBase {
         Assertions.assertTrue(studyRepository.findById(studyUuid).isPresent());
 
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(StudyTest.TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination, StudyTest.TIMEOUT);
 
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
@@ -505,7 +505,7 @@ class StudyTestBase {
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(StudyTest.HEADER_UPDATE_TYPE));
 
         // assert that the broker message has been sent when the study is ready
-        message = output.receive(StudyTest.TIMEOUT, studyUpdateDestination);
+        message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination, StudyTest.TIMEOUT);
         assertEquals("", new String(message.getPayload()));
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -516,7 +516,7 @@ class StudyTestBase {
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID nodeUuid, String updateType) {
         // assert that the broker message has been sent for updating model status
-        Message<byte[]> messageStatus = output.receive(StudyTest.TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStatus = TestUtils.receiveStudyUpdate(output, studyUpdateDestination, StudyTest.TIMEOUT);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));
@@ -538,7 +538,7 @@ class StudyTestBase {
 
     protected void checkEquipmentCreatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -548,7 +548,7 @@ class StudyTestBase {
 
     protected void checkEquipmentUpdatingFinishedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));

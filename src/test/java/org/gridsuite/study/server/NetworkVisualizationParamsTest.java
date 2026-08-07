@@ -157,7 +157,7 @@ class NetworkVisualizationParamsTest {
                 .andExpect(status().is(HttpStatus.OK.value()));
 
         // check update notification on visu params
-        Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_NETWORK_VISUALIZATION_PARAMETERS, updateType);

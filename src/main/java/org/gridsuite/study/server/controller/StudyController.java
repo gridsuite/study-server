@@ -1199,7 +1199,9 @@ public class StudyController {
                                             @Parameter(description = "ids of nodes to restore") @RequestParam("ids") List<UUID> nodeIds,
                                             @Parameter(description = "id of node below which the node will be restored") @RequestParam("anchorNodeId") UUID anchorNodeId,
                                             @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.restoreNodes(studyUuid, nodeIds, anchorNodeId, userId);
+        // the restored nodes land under the anchor, so it is held exactly as an insertion under it would be
+        nodeActivityService.runWithNodeActivity(EDIT_TREE, studyUuid, List.of(anchorNodeId),
+            () -> studyService.restoreNodes(studyUuid, nodeIds, anchorNodeId, userId));
         return ResponseEntity.ok().build();
     }
 
@@ -1310,7 +1312,6 @@ public class StudyController {
         if (studyService.isNodeBuilt(nodeUuid, rootNetworkUuid)) {
             return ResponseEntity.ok().build();
         }
-        studyService.assertNoMaxBuilds(studyUuid, rootNetworkUuid, userId);
         nodeActivityService.runWithNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> studyService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();

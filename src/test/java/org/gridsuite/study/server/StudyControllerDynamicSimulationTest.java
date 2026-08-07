@@ -240,7 +240,7 @@ class StudyControllerDynamicSimulationTest {
                 .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(mess).isNotNull();
         UUID newNodeId = UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE)));
         modificationNode.setId(newNodeId);
@@ -281,7 +281,7 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check async messages emitted by runDynamicSimulation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSimulationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
@@ -301,7 +301,7 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check async messages emitted by consumeDsFailed of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED from channel : studyUpdateDestination
-        dynamicSimulationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicSimulationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_FAILED);
@@ -313,7 +313,7 @@ class StudyControllerDynamicSimulationTest {
                 .build(), DS_DEBUG_DESTINATION);
 
         // must have message COMPUTATION_DEBUG_FILE_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSimulationResultMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSimulationResultMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
@@ -386,7 +386,7 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check async messages emitted by runDynamicSimulation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSimulationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
@@ -406,13 +406,13 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check async messages emitted by consumeDsResult of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        dynamicSimulationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicSimulationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
 
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSimulationResultMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSimulationResultMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_RESULT);
@@ -462,7 +462,7 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check async messages emitted by runDynamicSimulation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSimulationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
@@ -482,7 +482,7 @@ class StudyControllerDynamicSimulationTest {
 
         // --- check async messages emitted by consumeDsStopped of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        dynamicSimulationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicSimulationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSimulationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
@@ -680,15 +680,15 @@ class StudyControllerDynamicSimulationTest {
 
     private void checkNotificationsAfterModifyingDynamicSimulationParameters(UUID studyUuid) {
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS, UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS and UPDATE_TYPE_COMPUTATION_PARAMETERS from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> studyUpdateMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(studyUpdateMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
-        studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        studyUpdateMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(studyUpdateMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-        studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        studyUpdateMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // must have message HEADER_USER_ID_VALUE from channel : elementUpdateDestination
@@ -702,19 +702,19 @@ class StudyControllerDynamicSimulationTest {
 
     private void checkNotificationsAfterInjectingDynamicSimulationEvent(UUID studyUuid, String crudType) {
         // must have message crudType from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessageBegin = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> studyUpdateMessageBegin = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(studyUpdateMessageBegin.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, crudType);
 
         // must have message EVENTS_CRUD_FINISHED from channel : studyUpdateDestination
-        Message<byte[]> elementUpdateMessageFinished = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> elementUpdateMessageFinished = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(elementUpdateMessageFinished.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.EVENTS_CRUD_FINISHED);
 
         // must have message UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessageStatus = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> studyUpdateMessageStatus = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(studyUpdateMessageStatus.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);

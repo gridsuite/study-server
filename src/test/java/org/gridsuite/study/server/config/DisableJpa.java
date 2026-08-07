@@ -13,6 +13,7 @@ import org.gridsuite.study.server.repository.dynamicsimulation.EventRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
+import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.mockito.Mockito;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -65,6 +66,11 @@ public @interface DisableJpa {
         @Bean
         public RootNetworkRepository rootNetworkRepository() {
             return Mockito.mock(RootNetworkRepository.class);
+        }
+
+        @Bean
+        public NodeActivityRepository nodeActivityRepository() {
+            return Mockito.mock(NodeActivityRepository.class);
         }
 
         @Bean

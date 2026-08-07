@@ -211,7 +211,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(mess).isNotNull();
         UUID newNodeId = UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE)));
         modificationNode.setId(newNodeId);
@@ -253,7 +253,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // --- check async messages emitted by runDynamicSecurityAnalysis of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSecurityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSecurityAnalysisStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
@@ -273,7 +273,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // --- check async messages emitted by consumeDsFailed of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_FAILED from channel : studyUpdateDestination
-        dynamicSecurityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicSecurityAnalysisStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_FAILED);
@@ -285,7 +285,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
                 .build(), DSA_DEBUG_DESTINATION);
 
         // must have message COMPUTATION_DEBUG_FILE_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSimulationResultMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSimulationResultMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
@@ -358,7 +358,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // --- check async messages emitted by runDynamicSecurityAnalysis of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSecurityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSecurityAnalysisStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
@@ -378,13 +378,13 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // --- check async messages emitted by consumeDsResult of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS from channel : studyUpdateDestination
-        dynamicSecurityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicSecurityAnalysisStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
 
         // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_RESULT from channel : studyUpdateDestination
-        Message<byte[]> dynamicSecurityAnalysisResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSecurityAnalysisResultMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSecurityAnalysisResultMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_RESULT);
@@ -434,7 +434,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // --- check async messages emitted by runDynamicSecurityAnalysis of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSecurityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSecurityAnalysisStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
@@ -454,7 +454,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         // --- check async messages emitted by consumeDsStopped of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS from channel : studyUpdateDestination
-        dynamicSecurityAnalysisStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicSecurityAnalysisStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSecurityAnalysisStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
@@ -542,11 +542,11 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
     private void checkNotificationsAfterModifyingDynamicSecurityAnalysisParameters(UUID studyUuid) {
         // must have message UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS and UPDATE_TYPE_COMPUTATION_PARAMETERS from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> studyUpdateMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(studyUpdateMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS);
-        studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        studyUpdateMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // must have message HEADER_USER_ID_VALUE from channel : elementUpdateDestination

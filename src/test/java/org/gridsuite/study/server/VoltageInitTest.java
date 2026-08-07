@@ -446,11 +446,11 @@ class VoltageInitTest {
                             : objectMapper.writeValueAsString(createStudyVoltageInitParameters(false))))
             .andExpect(status().is(status.value()));
 
-        Message<byte[]> voltageInitStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> voltageInitStatusMessage = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyNameUserIdUuid, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         Message<byte[]> elementUpdateMessage = output.receive(TIMEOUT, elementUpdateDestination);
@@ -516,8 +516,8 @@ class VoltageInitTest {
         TestUtils.assertRequestMatches("GET", "/v1/parameters/.*", server);
 
         // STUDY_CHANGED event
-        output.receive(1000, studyUpdateDestination);
-        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, output.receive(TIMEOUT, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination, 1000);
+        assertEquals(UPDATE_TYPE_COMPUTATION_PARAMETERS, TestUtils.receiveStudyUpdate(output, studyUpdateDestination).getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
     }
 
@@ -552,7 +552,7 @@ class VoltageInitTest {
         TestUtils.assertRequestMatches("PUT", "/v1/results/.*/modifications-group-uuid", server);
 
         // Applying modifications also invalidate all results of the node, so it creates a lot of study update notifications
-        IntStream.range(0, 22).forEach(i -> output.receive(1000, studyUpdateDestination));
+        IntStream.range(0, 22).forEach(i -> TestUtils.receiveStudyUpdate(output, studyUpdateDestination, 1000));
         // It deletes the voltage-init modification and creates a new one on the node
         IntStream.range(0, 2).forEach(i -> output.receive(1000, elementUpdateDestination));
     }
@@ -748,9 +748,8 @@ class VoltageInitTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid,
                 modificationNode3Uuid)
             .header("userId", "userId")).andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
+        assertTrue(TestUtils.getRequestsDone(3, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
-                r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
                 r.matches("/v1/containers/.*\\?action=COPY&sourceContainerId=.*")
         ));
 
@@ -763,9 +762,8 @@ class VoltageInitTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid,
                 modificationNode3Uuid)
             .header("userId", "userId")).andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(7, server).stream().allMatch(r ->
+        assertTrue(TestUtils.getRequestsDone(6, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
-                r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
                 r.matches("/v1/results\\?resultsUuids=" + VOLTAGE_INIT_RESULT_UUID) ||
                 r.matches("/v1/containers/.*\\?action=COPY.*") ||
                 r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*") ||
@@ -782,9 +780,8 @@ class VoltageInitTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid,
                 modificationNode2Uuid)
             .header("userId", "userId")).andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(5, server).stream().allMatch(r ->
+        assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
-                r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
                 r.matches("/v1/containers/.*\\?action=COPY&sourceContainerId=.*") ||
                 r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*")
         ));
@@ -797,9 +794,8 @@ class VoltageInitTest {
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyNameUserIdUuid, firstRootNetworkUuid,
                 modificationNode2Uuid)
             .header("userId", "userId")).andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(5, server).stream().allMatch(r ->
+        assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
             r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
-                r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
                 r.matches("/v1/containers/.*\\?action=COPY.*") ||
                 r.matches("/v1/network-modifications/index\\?networkUuid=.*&groupUuids=.*")
         ));
@@ -886,9 +882,8 @@ class VoltageInitTest {
         // clone and insert voltage-init modification
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyUuid, firstRootNetworkUuid, nodeUuid)
                 .header("userId", "userId")).andExpect(status().isOk());
-        assertTrue(TestUtils.getRequestsDone(4, server).stream().allMatch(r ->
+        assertTrue(TestUtils.getRequestsDone(3, server).stream().allMatch(r ->
                 r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/modifications-group-uuid") ||
-                        r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status") ||
                         r.matches("/v1/containers/.*\\?action=COPY&sourceContainerId=.*")
         ));
         checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid);
@@ -907,7 +902,6 @@ class VoltageInitTest {
         // Error case: try to generate the voltageInit modification on the second root network (where no computation has been made)
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications/voltage-init", studyUuid, secondRootNetworkUuid, nodeUuid)
                 .header("userId", "userId")).andExpect(status().isNotFound());
-        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + VOLTAGE_INIT_RESULT_UUID + "/status")));
     }
 
     NodeEntity insertRootNode(StudyEntity study, UUID nodeId) {
@@ -963,7 +957,7 @@ class VoltageInitTest {
 
     private void checkEquipmentMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid, NetworkImpactsInfos expectedPayload) throws Exception {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         NetworkImpactsInfos actualPayload = objectMapper.readValue(new String(messageStudyUpdate.getPayload()), new TypeReference<>() { });
         assertThat(expectedPayload, new MatcherJson<>(objectMapper, actualPayload));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
@@ -980,7 +974,7 @@ class VoltageInitTest {
 
     private void checkEquipmentUpdatingFinishedMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -990,7 +984,7 @@ class VoltageInitTest {
 
     private void checkEquipmentUpdatingMessagesReceived(UUID studyNameUserIdUuid, UUID nodeUuid) {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyNameUserIdUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -1026,7 +1020,7 @@ class VoltageInitTest {
         // Test doesn't reset uuid result in the database
         assertEquals(VOLTAGE_INIT_ERROR_RESULT_UUID, rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, VOLTAGE_INITIALIZATION).toString());
 
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyEntity.getId(), message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         String updateType = (String) message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE);
         assertEquals(NotificationService.UPDATE_TYPE_VOLTAGE_INIT_FAILED, updateType);
@@ -1037,7 +1031,7 @@ class VoltageInitTest {
     }
 
     private void checkUpdateModelStatusMessagesReceived(UUID studyUuid, UUID rootNetworkUuid, String updateTypeToCheck, String otherUpdateTypeToCheck) {
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(rootNetworkUuid, message.getHeaders().get(HEADER_ROOT_NETWORK_UUID));
         String updateType = (String) message.getHeaders().get(HEADER_UPDATE_TYPE);
@@ -1049,7 +1043,7 @@ class VoltageInitTest {
     }
 
     private void checkCancelFailedMessagesReceived(UUID studyUuid, UUID nodeUuid, String userId) {
-        Message<byte[]> voltageInitStatusMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> voltageInitStatusMessage = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyUuid, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(nodeUuid, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_NODE));
         assertEquals(UPDATE_TYPE_VOLTAGE_INIT_CANCEL_FAILED, voltageInitStatusMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
@@ -1216,7 +1210,7 @@ class VoltageInitTest {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertNotNull(mess);
         modificationNode.setId(UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE))));
         assertEquals(InsertMode.CHILD.name(), mess.getHeaders().get(NotificationService.HEADER_INSERT_MODE));
@@ -1262,7 +1256,7 @@ class VoltageInitTest {
     }
 
     private void checkReactiveSlacksAlertMessagesReceived(UUID studyUuid, Double thresholdValue) throws Exception {
-        Message<byte[]> voltageInitMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> voltageInitMessage = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyUuid, voltageInitMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(STUDY_ALERT, voltageInitMessage.getHeaders().get(HEADER_UPDATE_TYPE));
         assertNotNull(voltageInitMessage.getPayload());
@@ -1273,7 +1267,7 @@ class VoltageInitTest {
     }
 
     private void checkVoltageLevelLimitsOutOfRangeAlertMessagesReceived(UUID studyUuid) throws Exception {
-        Message<byte[]> voltageInitMessage = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> voltageInitMessage = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(studyUuid, voltageInitMessage.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(STUDY_ALERT, voltageInitMessage.getHeaders().get(HEADER_UPDATE_TYPE));
         assertNotNull(voltageInitMessage.getPayload());

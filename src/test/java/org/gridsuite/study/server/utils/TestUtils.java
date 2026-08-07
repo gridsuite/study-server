@@ -19,6 +19,7 @@ import org.gridsuite.study.server.dto.Report;
 import org.gridsuite.study.server.error.StudyBusinessErrorCode;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.NetworkModificationNode;
+import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -40,6 +41,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -47,6 +49,7 @@ import static org.gridsuite.study.server.notification.NotificationService.UPDATE
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doAnswer;
 
 /**
@@ -216,10 +219,43 @@ public final class TestUtils {
             .children(Collections.emptyList()).build();
     }
 
+    /**
+     * Runs guarded actions straight through, for tests whose node uuids have no activity rows: the
+     * activity insert would otherwise fail on its foreign keys. The rules themselves are covered by
+     * NodeActivityRulesTest.
+     */
+    public static void bypassNodeActivities(NodeActivityService nodeActivityService) {
+        Answer<Object> runIt = invocation -> {
+            invocation.getArgument(invocation.getArguments().length - 1, Runnable.class).run();
+            return null;
+        };
+        Answer<Object> supplyIt = invocation ->
+            invocation.getArgument(invocation.getArguments().length - 1, Supplier.class).get();
+
+        doAnswer(runIt).when(nodeActivityService).runWithNodeActivity(any(), any(), any(), anyList(), any(Runnable.class));
+        doAnswer(runIt).when(nodeActivityService).runWithNodeActivity(any(), any(), anyList(), any(Runnable.class));
+        doAnswer(supplyIt).when(nodeActivityService).runWithNodeActivity(any(), any(), any(), anyList(), any(Supplier.class));
+        doAnswer(supplyIt).when(nodeActivityService).runWithNodeActivity(any(), any(), anyList(), any(Supplier.class));
+    }
+
+    /** Node activity notifications interleave with every other study update, so reads for anything else skip them. */
+    public static Message<byte[]> receiveStudyUpdate(OutputDestination output, String destination) {
+        return receiveStudyUpdate(output, destination, TIMEOUT);
+    }
+
+    public static Message<byte[]> receiveStudyUpdate(OutputDestination output, String destination, long timeout) {
+        Message<byte[]> message = output.receive(timeout, destination);
+        while (message != null && NotificationService.UPDATE_NODE_ACTIVITIES
+                .equals(message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE))) {
+            message = output.receive(timeout, destination);
+        }
+        return message;
+    }
+
     @SuppressWarnings("checkstyle:IllegalCatch")
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {
         try {
-            destinations.forEach(destination -> assertNull(output.receive(TIMEOUT, destination), "Should not be any messages in queue " + destination + " : "));
+            destinations.forEach(destination -> assertNull(receiveStudyUpdate(output, destination), "Should not be any messages in queue " + destination + " : "));
         } catch (NullPointerException e) {
             // Ignoring
         } finally {
@@ -298,7 +334,7 @@ public final class TestUtils {
 
     public static void checkUpdateTypeMessageReceived(UUID studyUuid, UUID nodeUuid, String updateType, OutputDestination output, String destination) {
         // assert that the broker message has been sent for updating updateType
-        Message<byte[]> messageStatus = output.receive(TIMEOUT, destination);
+        Message<byte[]> messageStatus = receiveStudyUpdate(output, destination);
         assertEquals("", new String(messageStatus.getPayload()));
         MessageHeaders headersStatus = messageStatus.getHeaders();
         assertEquals(studyUuid, headersStatus.get(NotificationService.HEADER_STUDY_UUID));

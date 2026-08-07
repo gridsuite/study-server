@@ -206,7 +206,7 @@ class StudyControllerDynamicMarginCalculationTest {
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
 
-        var mess = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        var mess = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(mess).isNotNull();
         UUID newNodeId = UUID.fromString(String.valueOf(mess.getHeaders().get(NotificationService.HEADER_NEW_NODE)));
         modificationNode.setId(newNodeId);
@@ -247,7 +247,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // --- check async messages emitted by runDynamicMarginCalculation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicMarginCalculationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
@@ -267,7 +267,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // --- check async messages emitted by consumeDsFailed of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_FAILED from channel : studyUpdateDestination
-        dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicMarginCalculationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_FAILED);
@@ -279,7 +279,7 @@ class StudyControllerDynamicMarginCalculationTest {
                 .build(), DMC_DEBUG_DESTINATION);
 
         // must have message COMPUTATION_DEBUG_FILE_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicSimulationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicSimulationResultMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicSimulationResultMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.COMPUTATION_DEBUG_FILE_STATUS);
@@ -351,7 +351,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // --- check async messages emitted by runDynamicMarginCalculation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicMarginCalculationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
@@ -371,13 +371,13 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // --- check async messages emitted by consumeDsResult of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
-        dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicMarginCalculationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
 
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_RESULT from channel : studyUpdateDestination
-        Message<byte[]> dynamicMarginCalculationResultMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicMarginCalculationResultMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationResultMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_RESULT);
@@ -426,7 +426,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // --- check async messages emitted by runDynamicMarginCalculation of StudyService --- //
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
-        Message<byte[]> dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> dynamicMarginCalculationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
@@ -446,7 +446,7 @@ class StudyControllerDynamicMarginCalculationTest {
 
         // --- check async messages emitted by consumeDsStopped of ConsumerService --- //
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS from channel : studyUpdateDestination
-        dynamicMarginCalculationStatusMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        dynamicMarginCalculationStatusMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(dynamicMarginCalculationStatusMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
@@ -533,11 +533,11 @@ class StudyControllerDynamicMarginCalculationTest {
 
     private void checkNotificationsAfterModifyingDynamicMarginCalculationParameters(UUID studyUuid) {
         // must have message UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS and UPDATE_TYPE_COMPUTATION_PARAMETERS from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> studyUpdateMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(studyUpdateMessage.getHeaders())
                 .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
                 .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_TYPE_DYNAMIC_MARGIN_CALCULATION_STATUS);
-        studyUpdateMessage = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        studyUpdateMessage = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertEquals(NotificationService.UPDATE_TYPE_COMPUTATION_PARAMETERS, studyUpdateMessage.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
 
         // must have message HEADER_USER_ID_VALUE from channel : elementUpdateDestination

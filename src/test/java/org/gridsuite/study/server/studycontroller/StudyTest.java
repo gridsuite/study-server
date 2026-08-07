@@ -26,6 +26,7 @@ import org.gridsuite.study.server.service.DirectoryService;
 import org.gridsuite.study.server.service.StudyServerExecutionService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.utils.MatcherReport;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -222,7 +223,7 @@ class StudyTest extends StudyTestBase {
         headers.put(HEADER_ERROR, errorMessage);
         Message<String> message = new GenericMessage<>("", headers);
         consumeService.consumeNetworkExportFinished(message);
-        var mess = output.receive(TIMEOUT, studyUpdateDestination);
+        var mess = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertNotNull(mess);
         assertEquals(EXPORT_UUID, mess.getHeaders().get(HEADER_EXPORT_UUID));
     }
@@ -492,13 +493,13 @@ class StudyTest extends StudyTestBase {
         countDownLatch.await();
 
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, "study.update");
 
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(HEADER_UPDATE_TYPE));
 
-        message = output.receive(TIMEOUT, "study.update");
+        message = TestUtils.receiveStudyUpdate(output, "study.update");
 
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
@@ -533,13 +534,13 @@ class StudyTest extends StudyTestBase {
         countDownLatch.await();
 
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, "study.update");
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(HEADER_UPDATE_TYPE));
 
         // checks that the error message has a default value set
-        message = output.receive(TIMEOUT, "study.update");
+        message = TestUtils.receiveStudyUpdate(output, "study.update");
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, headers.get(HEADER_UPDATE_TYPE));
@@ -565,13 +566,13 @@ class StudyTest extends StudyTestBase {
         countDownLatch.await();
 
         // assert that the broker message has been sent a study creation request message
-        Message<byte[]> message = output.receive(TIMEOUT, "study.update");
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, "study.update");
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_STARTED, headers.get(HEADER_UPDATE_TYPE));
 
         // study error message
-        message = output.receive(TIMEOUT, "study.update");
+        message = TestUtils.receiveStudyUpdate(output, "study.update");
         headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_CREATION_FINISHED, headers.get(HEADER_UPDATE_TYPE));
@@ -606,13 +607,13 @@ class StudyTest extends StudyTestBase {
         countDownLatch.countDown();
 
         // drop the broker message for study creation request (creation)
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         // drop the broker message for study creation
-        output.receive(TIMEOUT * 3, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination, TIMEOUT * 3);
         // drop the broker message for node creation
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         // drop the broker message for study creation request (deletion)
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests").header(USER_ID_HEADER, "userId")).andExpectAll(
                 status().isOk(),
@@ -654,13 +655,13 @@ class StudyTest extends StudyTestBase {
         countDownLatch.countDown();
 
         // drop the broker message for study creation request (creation)
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         // drop the broker message for study creation
         output.receive(TIMEOUT * 3);
         // drop the broker message for node creation
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         // drop the broker message for study creation request (deletion)
-        output.receive(TIMEOUT, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         mvcResult = mockMvc.perform(get("/v1/study_creation_requests")
                 .header(USER_ID_HEADER, "userId")).andExpectAll(
@@ -685,7 +686,7 @@ class StudyTest extends StudyTestBase {
     }
 
     private void checkNodeAliasUpdateMessageReceived(UUID studyUuid) {
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
@@ -694,7 +695,7 @@ class StudyTest extends StudyTestBase {
 
     private void checkStudyMetadataUpdatedMessagesReceived() {
         // assert that the broker message has been sent for updating study type
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(messageStudyUpdate.getPayload()));
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(NotificationService.UPDATE_TYPE_STUDY_METADATA_UPDATED, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));
@@ -1100,7 +1101,7 @@ class StudyTest extends StudyTestBase {
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
         String duplicatedStudyUuid = mapper.readValue(response, String.class);
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
+        assertNotNull(TestUtils.receiveStudyUpdate(output, studyUpdateDestination));
 
         assertTrue(studyRepository.findById(UUID.fromString(duplicatedStudyUuid)).isEmpty());
 
@@ -1134,13 +1135,13 @@ class StudyTest extends StudyTestBase {
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         String newUuid = mapper.readValue(response, String.class);
         StudyEntity sourceStudy = studyRepository.findById(studyUuid).orElseThrow();
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
-        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
+        assertNotNull(TestUtils.receiveStudyUpdate(output, studyUpdateDestination));
+        assertNotNull(TestUtils.receiveStudyUpdate(output, studyUpdateDestination));
+        Message<byte[]> indexationStatusMessageOnGoing = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(newUuid, indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageOnGoing.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(RootNetworkIndexationStatus.INDEXING_ONGOING.name(), indexationStatusMessageOnGoing.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
-        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageDone = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(newUuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID).toString());
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
         assertEquals(RootNetworkIndexationStatus.INDEXED.name(), indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_INDEXATION_STATUS));
@@ -1317,8 +1318,8 @@ class StudyTest extends StudyTestBase {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", notExistingNetworkStudyUuid, notExistingNetworkRootNetworkUuid))
             .andExpect(status().isNotFound());
-        Message<byte[]> indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
-        Message<byte[]> indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageOnGoing = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageNotIndexed = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         wireMockStubs.verifyReindexAll(stubReindexAllNotFoundId, NOT_EXISTING_NETWORK_UUID.toString());
 
@@ -1333,15 +1334,15 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", study1Uuid, study1RootNetworkUuid))
             .andExpectAll(status().isOk(),
                 content().string("NOT_INDEXED"));
-        indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+        indexationStatusMessageNotIndexed = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         wireMockStubs.verifyIndexedEquipments(stubIndexedEquipmentsNoContentId, NETWORK_UUID_STRING);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", study1Uuid, study1RootNetworkUuid))
             .andExpect(status().isOk());
 
-        indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
-        Message<byte[]> indexationStatusMessageDone = output.receive(TIMEOUT, studyUpdateDestination);
+        indexationStatusMessageOnGoing = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        Message<byte[]> indexationStatusMessageDone = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(study1Uuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
         wireMockStubs.verifyReindexAll(stubReindexAllId, NETWORK_UUID_STRING);
@@ -1354,8 +1355,8 @@ class StudyTest extends StudyTestBase {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", study1Uuid, study1RootNetworkUuid))
             .andExpect(status().is5xxServerError());
-        indexationStatusMessageOnGoing = output.receive(TIMEOUT, studyUpdateDestination);
-        indexationStatusMessageNotIndexed = output.receive(TIMEOUT, studyUpdateDestination);
+        indexationStatusMessageOnGoing = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        indexationStatusMessageNotIndexed = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         wireMockStubs.verifyReindexAll(stubReindexAllErrorId, NETWORK_UUID_STRING);
     }

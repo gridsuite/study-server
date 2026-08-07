@@ -319,7 +319,7 @@ class StudyControllerCreationTest {
     }
 
     private void assertStudyCreationMessageReceived(UUID studyUuid, String userId, String expectedUpdateType) {
-        Message<byte[]> message = output.receive(TIMEOUT, studyUpdateDestination);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals("", new String(message.getPayload()));
         MessageHeaders headers = message.getHeaders();
         assertEquals(userId, headers.get(HEADER_USER_ID));

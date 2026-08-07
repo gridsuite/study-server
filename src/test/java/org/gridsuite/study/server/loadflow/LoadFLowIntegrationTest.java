@@ -218,9 +218,8 @@ class LoadFLowIntegrationTest {
         }
         verify(networkModificationService, times(isSecurityNode ? 1 : 0)).deleteIndexedModifications(any(), any(UUID.class));
 
-        // verify that the node is blocked
-        // build is forbidden, for example
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid).header(HEADER_USER_ID, userId))
+        // the loadflow holds the node until its result arrives, so unbuilding the whole tree is refused
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/unbuild-all", studyUuid).header(HEADER_USER_ID, userId))
             .andExpect(status().isForbidden());
 
         // consume loadflow result
@@ -259,9 +258,8 @@ class LoadFLowIntegrationTest {
             wireMockStubs.verifyRunLoadflow(runLoadflowStubUuid, networkUuid, withRatioTapChangers, null);
         }
 
-        // verify that the node is blocked
-        // build is forbidden, for example
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyUuid, rootNetworkUuid, nodeUuid).header(HEADER_USER_ID, userId))
+        // the loadflow holds the node until its result arrives, so unbuilding the whole tree is refused
+        mockMvc.perform(post("/v1/studies/{studyUuid}/nodes/unbuild-all", studyUuid).header(HEADER_USER_ID, userId))
             .andExpect(status().isForbidden());
 
         // consume loadflow result

@@ -495,7 +495,7 @@ class SpreadsheetConfigCollectionTest {
     }
 
     private void checkSpreadsheetCollectionUpdateMessageReceived(UUID studyUuid) {
-        Message<byte[]> messageStudyUpdate = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> messageStudyUpdate = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         MessageHeaders headersStudyUpdate = messageStudyUpdate.getHeaders();
         assertEquals(studyUuid, headersStudyUpdate.get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_SPREADSHEET_COLLECTION, headersStudyUpdate.get(NotificationService.HEADER_UPDATE_TYPE));

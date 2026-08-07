@@ -14,12 +14,14 @@ import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,6 +64,8 @@ class LoadFLowUnitTest {
     UUID loadflowResultUuid = UUID.randomUUID();
 
     @MockitoBean
+    private NodeActivityService nodeActivityService;
+    @MockitoBean
     RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @MockitoBean
     private NetworkModificationTreeService networkModificationTreeService;
@@ -88,6 +92,7 @@ class LoadFLowUnitTest {
     @BeforeEach
     void setup() {
         synchronizeStudyServerExecutionService(studyServerExecutionService);
+        TestUtils.bypassNodeActivities(nodeActivityService);
     }
 
     @Test

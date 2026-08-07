@@ -263,25 +263,25 @@ class WorkspaceConfigTest {
     }
 
     private void checkWorkspaceUpdateMessageReceived(UUID studyUuid) {
-        Message<byte[]> message = output.receive(1000, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION, 1000);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_WORKSPACE_RENAMED, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkWorkspaceNadConfigUpdateMessageReceived(UUID studyUuid) {
-        Message<byte[]> message = output.receive(1000, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION, 1000);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_WORKSPACE_NAD_CONFIG, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkWorkspacePanelsUpdateMessageReceived(UUID studyUuid) {
-        Message<byte[]> message = output.receive(1000, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION, 1000);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_WORKSPACE_PANELS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
 
     private void checkWorkspacePanelsDeletedMessageReceived(UUID studyUuid) {
-        Message<byte[]> message = output.receive(1000, STUDY_UPDATE_DESTINATION);
+        Message<byte[]> message = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION, 1000);
         assertEquals(studyUuid, message.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.DELETE_WORKSPACE_PANELS, message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE));
     }
