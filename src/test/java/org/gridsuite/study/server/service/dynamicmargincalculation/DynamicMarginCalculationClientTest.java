@@ -4,13 +4,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package org.gridsuite.study.server.service.client.dynamicmargincalculation;
+package org.gridsuite.study.server.service.dynamicmargincalculation;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import org.gridsuite.study.server.RemoteServicesProperties;
-import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractWireMockRestClientTest;
@@ -32,8 +31,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.notification.NotificationService.HEADER_USER_ID;
 import static org.gridsuite.study.server.service.client.RestClient.DELIMITER;
-import static org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient.*;
 import static org.gridsuite.study.server.service.client.util.UrlUtil.buildEndPointUrl;
+import static org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService.*;
 import static org.gridsuite.study.server.utils.assertions.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -44,6 +43,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
     private static final UUID NETWORK_UUID = UUID.randomUUID();
     private static final UUID REPORT_UUID = UUID.randomUUID();
     private static final UUID NODE_UUID = UUID.randomUUID();
+    private static final UUID ROOT_NETWORK_UUID = UUID.randomUUID();
     private static final UUID DYNAMIC_SIMULATION_PARAMETERS_UUID = UUID.randomUUID();
     private static final UUID DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID = UUID.randomUUID();
     private static final UUID PARAMETERS_UUID = UUID.randomUUID();
@@ -53,7 +53,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
     private static final String RUN_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RUN);
     private static final String RESULT_BASE_URL = buildEndPointUrl("", API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RESULT);
     private static final String PARAMETERS_JSON = "parametersJson";
-    private DynamicMarginCalculationClient dynamicMarginCalculationClient;
+    private DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
     @Autowired
     private RestTemplate restTemplate;
     @Autowired
@@ -65,7 +65,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
     void setup() {
         // config client
         remoteServicesProperties.setServiceUri("dynamic-margin-calculation-server", initMockWebServer());
-        dynamicMarginCalculationClient = new DynamicMarginCalculationClient(remoteServicesProperties, restTemplate);
+        dynamicMarginCalculationRestService = new DynamicMarginCalculationRestService(remoteServicesProperties, restTemplate, objectMapper);
     }
 
     @Test
@@ -82,7 +82,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE)
                 ));
         // call service to test
-        String provider = dynamicMarginCalculationClient.getProvider(PARAMETERS_UUID);
+        String provider = dynamicMarginCalculationRestService.getProvider(PARAMETERS_UUID);
 
         // check result
         assertThat(provider).isEqualTo(expectedProvider);
@@ -95,7 +95,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicMarginCalculationClient.getProvider(PARAMETERS_UUID)
+            () -> dynamicMarginCalculationRestService.getProvider(PARAMETERS_UUID)
         );
 
         // --- Error --- //
@@ -105,7 +105,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicMarginCalculationClient.getProvider(PARAMETERS_UUID)
+            () -> dynamicMarginCalculationRestService.getProvider(PARAMETERS_UUID)
         );
     }
 
@@ -123,7 +123,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        String resultParametersJson = dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID, "userId");
+        String resultParametersJson = dynamicMarginCalculationRestService.getParameters(PARAMETERS_UUID, "userId");
 
         // check result
         assertThat(resultParametersJson).isEqualTo(parametersJson);
@@ -136,7 +136,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID, "userId")
+            () -> dynamicMarginCalculationRestService.getParameters(PARAMETERS_UUID, "userId")
         );
 
         // --- Error --- //
@@ -146,7 +146,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID, "userId")
+            () -> dynamicMarginCalculationRestService.getParameters(PARAMETERS_UUID, "userId")
         );
     }
 
@@ -163,7 +163,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        UUID resultParametersUuid = dynamicMarginCalculationClient.createParameters(parameterJson);
+        UUID resultParametersUuid = dynamicMarginCalculationRestService.createParameters(parameterJson);
 
         // check result
         assertThat(resultParametersUuid).isEqualTo(PARAMETERS_UUID);
@@ -176,7 +176,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicMarginCalculationClient.createParameters(parameterJson)
+            () -> dynamicMarginCalculationRestService.createParameters(parameterJson)
         );
     }
 
@@ -192,7 +192,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                 .withRequestBody(equalTo(parameterJson))
                 .willReturn(WireMock.ok()));
         // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationClient.updateParameters(PARAMETERS_UUID, parameterJson));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.updateParameters(PARAMETERS_UUID, parameterJson));
 
         // --- Not Found --- //
         // configure mock server response
@@ -203,7 +203,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicMarginCalculationClient.updateParameters(PARAMETERS_UUID, parameterJson)
+            () -> dynamicMarginCalculationRestService.updateParameters(PARAMETERS_UUID, parameterJson)
         );
 
         // --- Error --- //
@@ -214,7 +214,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicMarginCalculationClient.updateParameters(PARAMETERS_UUID, parameterJson)
+            () -> dynamicMarginCalculationRestService.updateParameters(PARAMETERS_UUID, parameterJson)
         );
     }
 
@@ -230,7 +230,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                     ));
         // call service to test
-        UUID resultParametersUuid = dynamicMarginCalculationClient.duplicateParameters(PARAMETERS_UUID);
+        UUID resultParametersUuid = dynamicMarginCalculationRestService.duplicateParameters(PARAMETERS_UUID);
 
         // check result
         assertThat(resultParametersUuid).isEqualTo(newParameterUuid);
@@ -243,7 +243,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicMarginCalculationClient.duplicateParameters(PARAMETERS_UUID)
+            () -> dynamicMarginCalculationRestService.duplicateParameters(PARAMETERS_UUID)
         );
 
         // --- Error --- //
@@ -253,7 +253,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicMarginCalculationClient.duplicateParameters(PARAMETERS_UUID)
+            () -> dynamicMarginCalculationRestService.duplicateParameters(PARAMETERS_UUID)
         );
     }
 
@@ -264,7 +264,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(url))
                 .willReturn(WireMock.ok()));
         // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationClient.deleteParameters(PARAMETERS_UUID));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.deleteParameters(PARAMETERS_UUID));
     }
 
     @Test
@@ -279,7 +279,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        UUID resultParametersUuid = dynamicMarginCalculationClient.createDefaultParameters();
+        UUID resultParametersUuid = dynamicMarginCalculationRestService.createDefaultParameters();
 
         // check result
         assertThat(resultParametersUuid).isEqualTo(PARAMETERS_UUID);
@@ -291,7 +291,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicMarginCalculationClient.createDefaultParameters()
+            () -> dynamicMarginCalculationRestService.createDefaultParameters()
         );
     }
 
@@ -304,18 +304,17 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                 .withQueryParam(QUERY_PARAM_VARIANT_ID, equalTo("variantId"))
                 .withQueryParam("dynamicSecurityAnalysisParametersUuid", equalTo(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID.toString()))
                 .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
-                .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_MARGIN_CALCULATION.reportKey))
                 .withHeader(HEADER_USER_ID, equalTo("userId"))
                 .willReturn(WireMock.ok()
-                        .withBody(objectMapper.writeValueAsString(expectedResultUuid))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(objectMapper.writeValueAsString(expectedResultUuid))
                 ));
         // call service to test
-        UUID resultUuid = dynamicMarginCalculationClient.run("receiver", NETWORK_UUID,
-               "variantId", new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_PARAMETERS_UUID, DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID, PARAMETERS_UUID, "userId", false);
+        UUID resultUuid = dynamicMarginCalculationRestService.runDynamicMarginCalculation(NODE_UUID, ROOT_NETWORK_UUID, NETWORK_UUID,
+               "variantId", REPORT_UUID, DYNAMIC_SIMULATION_PARAMETERS_UUID, DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID, PARAMETERS_UUID, "userId", false);
 
         // check result
         assertThat(resultUuid).isEqualTo(expectedResultUuid);
@@ -326,7 +325,6 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                 .withQueryParam("provider", absent())
                 .withQueryParam("dynamicSecurityAnalysisParametersUuid", equalTo(DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID.toString()))
                 .withQueryParam("parametersUuid", equalTo(PARAMETERS_UUID.toString()))
-                .withQueryParam(QUERY_PARAM_RECEIVER, equalTo("receiver"))
                 .withQueryParam(QUERY_PARAM_REPORT_UUID, equalTo(REPORT_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORTER_ID, equalTo(NODE_UUID.toString()))
                 .withQueryParam(QUERY_PARAM_REPORT_TYPE, equalTo(StudyService.ReportType.DYNAMIC_MARGIN_CALCULATION.reportKey))
@@ -337,8 +335,8 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicMarginCalculationClient.run("receiver", NETWORK_UUID, null,
-                new ReportInfos(REPORT_UUID, NODE_UUID), DYNAMIC_SIMULATION_PARAMETERS_UUID, DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID, PARAMETERS_UUID, "userId", true)
+            () -> dynamicMarginCalculationRestService.runDynamicMarginCalculation(NODE_UUID, ROOT_NETWORK_UUID, NETWORK_UUID, null,
+                REPORT_UUID, DYNAMIC_SIMULATION_PARAMETERS_UUID, DYNAMIC_SECURITY_ANALYSIS_PARAMETERS_UUID, PARAMETERS_UUID, "userId", true)
         );
     }
 
@@ -352,7 +350,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        DynamicMarginCalculationStatus status = dynamicMarginCalculationClient.getStatus(RESULT_UUID);
+        DynamicMarginCalculationStatus status = dynamicMarginCalculationRestService.getStatus(RESULT_UUID);
 
         // check result
         assertThat(status).isEqualTo(DynamicMarginCalculationStatus.SUCCEED);
@@ -368,7 +366,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                 .withQueryParam("resultUuid", equalTo(RESULT_UUID.toString()))
                 .willReturn(WireMock.ok()));
         // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationClient.invalidateStatus(List.of(RESULT_UUID)));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.invalidateStatus(List.of(RESULT_UUID)));
 
         // --- Not Found --- //
         // configure mock server response
@@ -379,7 +377,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpClientErrorException.NotFound.class,
-            () -> dynamicMarginCalculationClient.invalidateStatus(List.of(RESULT_UUID))
+            () -> dynamicMarginCalculationRestService.invalidateStatus(List.of(RESULT_UUID))
         );
 
         // --- Error --- //
@@ -390,7 +388,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         // check result
         assertThrows(
             HttpServerErrorException.class,
-            () -> dynamicMarginCalculationClient.invalidateStatus(List.of(RESULT_UUID))
+            () -> dynamicMarginCalculationRestService.invalidateStatus(List.of(RESULT_UUID))
         );
     }
 
@@ -400,7 +398,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(RESULT_BASE_URL + "?resultsUuids=" + RESULT_UUID))
                 .willReturn(WireMock.ok()));
         // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationClient.deleteResults(List.of(RESULT_UUID)));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.deleteResults(List.of(RESULT_UUID)));
     }
 
     @Test
@@ -409,7 +407,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
         wireMockServer.stubFor(WireMock.delete(WireMock.urlEqualTo(RESULT_BASE_URL + "?resultsUuids"))
                 .willReturn(WireMock.ok()));
         // call service to test
-        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationClient.deleteResults(null));
+        Assertions.assertThatNoException().isThrownBy(() -> dynamicMarginCalculationRestService.deleteResults(null));
     }
 
     @Test
@@ -422,7 +420,7 @@ class DynamicMarginCalculationClientTest extends AbstractWireMockRestClientTest 
                     .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 ));
         // call service to test
-        Integer resultCount = dynamicMarginCalculationClient.getResultsCount();
+        Integer resultCount = dynamicMarginCalculationRestService.getResultsCount();
         assertThat(resultCount).isEqualTo(expectedResultCount);
     }
 }
