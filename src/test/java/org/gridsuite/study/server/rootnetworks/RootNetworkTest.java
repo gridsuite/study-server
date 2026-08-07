@@ -193,6 +193,8 @@ class RootNetworkTest {
 
     @BeforeEach
     void setUp() {
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
+
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
 
         // start server
@@ -482,10 +484,6 @@ class RootNetworkTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
 
-        // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
-        // completes before the test verifies it, removes the race condition.
-        synchronizeStudyServerExecutionService(studyServerExecutionService);
-
         // DO NOT insert creation request - it means root network won't be created and remote resources will be deleted
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(UUID.randomUUID()).name("newRootNetworkName").tag("newT")
             .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2)).networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
@@ -555,10 +553,6 @@ class RootNetworkTest {
 
         // before deletion, check we have 2 root networks for study
         assertEquals(2, studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
-
-        // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
-        // completes before the test verifies it, removes the race condition.
-        synchronizeStudyServerExecutionService(studyServerExecutionService);
 
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
                 .contentType(APPLICATION_JSON)
