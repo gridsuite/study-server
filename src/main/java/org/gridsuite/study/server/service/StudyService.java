@@ -3046,20 +3046,15 @@ public class StudyService {
     private NodeTreeExportInfos toNodeTreeExportInfos(AbstractNode node) {
         List<NodeTreeExportInfos> children = CollectionUtils.emptyIfNull(node.getChildren()).stream().map(this::toNodeTreeExportInfos).toList();
         UUID modificationGroupUuid = null;
-        BuildStatus buildStatus = BuildStatus.NOT_BUILT;
-        NetworkModificationNodeType nodeType = NetworkModificationNodeType.CONSTRUCTION;
+        String nodeType = null;
         if (node instanceof NetworkModificationNode modificationNode) {
             modificationGroupUuid = modificationNode.getModificationGroupUuid();
-            nodeType = modificationNode.getNodeType();
-            if (modificationNode.getNodeBuildStatus() != null) {
-                buildStatus = modificationNode.getNodeBuildStatus().getGlobalBuildStatus();
-            }
+            nodeType = modificationNode.getNodeType().name();
         }
         return new NodeTreeExportInfos(
                 node.getName(),
                 node.getType().name(),
                 modificationGroupUuid,
-                buildStatus,
                 nodeType,
                 children
         );
