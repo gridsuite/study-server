@@ -365,25 +365,29 @@ public class ConsumerService {
                         CaseImportReceiver.class);
                     UUID studyUuid = receiver.getStudyUuid();
                     String userId = receiver.getUserId();
-                    UUID rootNetworkUuid = receiver.getRootNetworkUuid();
 
                     if (receiver.getCaseImportAction() == CaseImportAction.STUDY_CREATION) {
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
                         notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
                     } else {
-                        if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_CREATION) {
-                            studyService.deleteRootNetworkRequest(rootNetworkUuid);
-                        }
-                        if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
-                            endReimportCaseActivity(studyUuid, rootNetworkUuid);
-                        }
-                        notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
+                        handleRootNetworkImportFailed(receiver, errorMessage);
                     }
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
                 }
             }
         };
+    }
+
+    /** A case import that was not a study creation: whatever it was doing to the root network is undone. */
+    private void handleRootNetworkImportFailed(CaseImportReceiver receiver, String errorMessage) {
+        if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_CREATION) {
+            studyService.deleteRootNetworkRequest(receiver.getRootNetworkUuid());
+        }
+        if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_MODIFICATION) {
+            endReimportCaseActivity(receiver.getStudyUuid(), receiver.getRootNetworkUuid());
+        }
+        notificationService.emitRootNetworksUpdateFailed(receiver.getStudyUuid(), errorMessage);
     }
 
     private void endReimportCaseActivity(UUID studyUuid, UUID rootNetworkUuid) {

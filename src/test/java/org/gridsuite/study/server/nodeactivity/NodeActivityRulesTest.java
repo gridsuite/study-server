@@ -225,8 +225,8 @@ class NodeActivityRulesTest {
     void theRefusalSaysWhatIsHoldingTheNode() {
         List<NodeActivityEntity> running =
             List.of(NodeActivityEntity.from(UNBUILD_CHILDREN, STUDY, ROOT_NETWORK, NODE));
-        assertThatThrownBy(() ->
-            assertNoConflict(running, NodeActivityEntity.from(BUILD, STUDY, ROOT_NETWORK, GRANDCHILD), ANCESTORS))
+        NodeActivityEntity requested = NodeActivityEntity.from(BUILD, STUDY, ROOT_NETWORK, GRANDCHILD);
+        assertThatThrownBy(() -> assertNoConflict(running, requested, ANCESTORS))
             .isInstanceOf(StudyException.class)
             .hasMessageContaining("BUILD on node " + GRANDCHILD)
             .hasMessageContaining("UNBUILD_CHILDREN is running on node " + NODE);

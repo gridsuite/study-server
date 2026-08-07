@@ -66,8 +66,6 @@ class DynamicSimulationRestServiceTest {
     private static final UUID TIMELINE_UUID = UUID.randomUUID();
 
     // running node
-    private static final UUID NODE_UUID_RUNNING = UUID.randomUUID();
-    private static final UUID RESULT_UUID_RUNNING = UUID.randomUUID();
 
     private static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
     private static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";

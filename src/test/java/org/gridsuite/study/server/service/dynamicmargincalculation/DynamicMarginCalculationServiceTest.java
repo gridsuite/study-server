@@ -48,7 +48,6 @@ class DynamicMarginCalculationServiceTest {
     private static final UUID REPORT_UUID = UUID.randomUUID();
 
     // running node
-    private static final UUID RESULT_UUID_RUNNING = UUID.randomUUID();
 
     @MockitoBean
     DynamicMarginCalculationClient dynamicMarginCalculationClient;

@@ -107,8 +107,6 @@ class StateEstimationTest {
     private static final String VARIANT_ID = "variant_1";
     private static final String VARIANT_ID_2 = "variant_2";
 
-    private static final long TIMEOUT = 1000;
-
     //output destinations
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
     private static final String ESTIM_RESULT_JSON_DESTINATION = "stateestimation.result";

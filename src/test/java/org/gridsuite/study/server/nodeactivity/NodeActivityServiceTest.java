@@ -155,7 +155,8 @@ class NodeActivityServiceTest {
     void anActivityOnTheRootNodeReachesEveryNodeBelowIt() {
         nodeActivityService.setNodeActivity(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
 
-        assertThatThrownBy(() -> nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(grandChildUuid)))
+        List<UUID> requested = List.of(grandChildUuid);
+        assertThatThrownBy(() -> nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, requested))
             .isInstanceOf(StudyException.class)
             .hasMessageContaining("REIMPORT_CASE is running on node " + rootNodeUuid);
     }
@@ -170,7 +171,9 @@ class NodeActivityServiceTest {
 
     @Test
     void aRequestNamingANodeOfAnotherStudyIsNotFound() {
-        assertThatThrownBy(() -> nodeActivityService.setNodeActivity(BUILD, UUID.randomUUID(), rootNetworkUuid, List.of(nodeUuid)))
+        UUID otherStudyUuid = UUID.randomUUID();
+        List<UUID> requested = List.of(nodeUuid);
+        assertThatThrownBy(() -> nodeActivityService.setNodeActivity(BUILD, otherStudyUuid, rootNetworkUuid, requested))
             .isInstanceOf(StudyException.class)
             .hasMessageContaining("not all found in study");
     }
@@ -254,9 +257,9 @@ class NodeActivityServiceTest {
     private void assertNodeActivitiesNotified() {
         Message<byte[]> message = output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION);
         assertThat(message).isNotNull();
-        assertThat(message.getHeaders().get(NotificationService.HEADER_UPDATE_TYPE))
-            .isEqualTo(NotificationService.UPDATE_NODE_ACTIVITIES);
-        assertThat(message.getHeaders().get(NotificationService.HEADER_STUDY_UUID)).isEqualTo(studyUuid);
+        assertThat(message.getHeaders())
+            .containsEntry(NotificationService.HEADER_UPDATE_TYPE, NotificationService.UPDATE_NODE_ACTIVITIES)
+            .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid);
     }
 
     private NodeEntity insertRootNode(StudyEntity study) {

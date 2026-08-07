@@ -73,7 +73,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ContextConfigurationWithTestChannel
 class StudyControllerCreationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyControllerCreationTest.class);
-    private static final long TIMEOUT = 1000;
 
     @Autowired
     private StudyRepository studyRepository;

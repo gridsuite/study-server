@@ -1318,8 +1318,8 @@ class StudyTest extends StudyTestBase {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", notExistingNetworkStudyUuid, notExistingNetworkRootNetworkUuid))
             .andExpect(status().isNotFound());
-        Message<byte[]> indexationStatusMessageOnGoing = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
-        Message<byte[]> indexationStatusMessageNotIndexed = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         wireMockStubs.verifyReindexAll(stubReindexAllNotFoundId, NOT_EXISTING_NETWORK_UUID.toString());
 
@@ -1334,14 +1334,14 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(get("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/indexation/status", study1Uuid, study1RootNetworkUuid))
             .andExpectAll(status().isOk(),
                 content().string("NOT_INDEXED"));
-        indexationStatusMessageNotIndexed = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         wireMockStubs.verifyIndexedEquipments(stubIndexedEquipmentsNoContentId, NETWORK_UUID_STRING);
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", study1Uuid, study1RootNetworkUuid))
             .andExpect(status().isOk());
 
-        indexationStatusMessageOnGoing = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         Message<byte[]> indexationStatusMessageDone = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         assertEquals(study1Uuid, indexationStatusMessageDone.getHeaders().get(NotificationService.HEADER_STUDY_UUID));
         assertEquals(NotificationService.UPDATE_TYPE_INDEXATION_STATUS, indexationStatusMessageDone.getHeaders().get(HEADER_UPDATE_TYPE));
@@ -1355,8 +1355,8 @@ class StudyTest extends StudyTestBase {
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/reindex-all", study1Uuid, study1RootNetworkUuid))
             .andExpect(status().is5xxServerError());
-        indexationStatusMessageOnGoing = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
-        indexationStatusMessageNotIndexed = TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
 
         wireMockStubs.verifyReindexAll(stubReindexAllErrorId, NETWORK_UUID_STRING);
     }

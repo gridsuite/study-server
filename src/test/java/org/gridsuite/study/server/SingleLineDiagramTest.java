@@ -80,8 +80,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SingleLineDiagramTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(SingleLineDiagramTest.class);
 
-    private static final long TIMEOUT = 1000;
-
     private static final String NETWORK_UUID_STRING = "38400000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final String VARIANT_ID = "variant_1";
     private static final String NETWORK_UUID_VARIANT_ERROR_STRING = "88400000-8cf0-11bd-b23e-10b96e4ef00d";

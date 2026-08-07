@@ -1064,7 +1064,7 @@ public class NetworkModificationTreeService {
         }
 
         // Children
-        invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid, invalidateTreeParameters));
+        invalidateNodeInfos.add(invalidateChildrenNodes(nodeUuid, rootNetworkUuid));
 
         if (!invalidateNodeInfos.getNodeUuids().isEmpty()) {
             notificationService.emitNodeBuildStatusUpdated(nodeEntity.getStudy().getId(), invalidateNodeInfos.getNodeUuids().stream().toList(), rootNetworkUuid);
@@ -1073,7 +1073,8 @@ public class NetworkModificationTreeService {
         return invalidateNodeInfos;
     }
 
-    private InvalidateNodeInfos invalidateChildrenNodes(UUID nodeUuid, UUID rootNetworkUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
+    /** Children are always invalidated in full, whatever was asked of the node itself. */
+    private InvalidateNodeInfos invalidateChildrenNodes(UUID nodeUuid, UUID rootNetworkUuid) {
         InvalidateNodeInfos invalidateNodeInfos = new InvalidateNodeInfos();
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoService.getRootNetworkNodes(rootNetworkUuid, getAllChildrenUuids(nodeUuid));
 

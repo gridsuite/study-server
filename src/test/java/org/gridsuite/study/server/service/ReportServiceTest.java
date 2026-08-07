@@ -97,7 +97,6 @@ class ReportServiceTest {
 
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
 
-    private static final long TIMEOUT = 1000;
     @Autowired
     private RootNetworkRepository rootNetworkRepository;
     @Autowired

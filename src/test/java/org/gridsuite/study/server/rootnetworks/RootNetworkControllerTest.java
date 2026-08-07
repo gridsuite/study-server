@@ -65,7 +65,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RootNetworkControllerTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(RootNetworkControllerTest.class);
 
-    private static final long TIMEOUT = 1000;
     private static final String STUDY_UPDATE_DESTINATION = "study.update";
     private static final String CASE_UUID_STRING = "00000000-8cf0-11bd-b23e-10b96e4ef00d";
     private static final UUID CASE_UUID = UUID.fromString(CASE_UUID_STRING);

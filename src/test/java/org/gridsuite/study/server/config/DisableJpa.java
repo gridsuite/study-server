@@ -15,13 +15,14 @@ import org.gridsuite.study.server.repository.networkmodificationtree.NodeReposit
 import org.gridsuite.study.server.repository.networkmodificationtree.RootNodeInfoRepository;
 import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
-import org.mockito.Mockito;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.TestPropertySource;
 
 import java.lang.annotation.*;
+
+import static org.mockito.Mockito.mock;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
@@ -35,47 +36,47 @@ public @interface DisableJpa {
     class MockConfig {
         @Bean
         public StudyRepository studyRepository() {
-            return Mockito.mock(StudyRepository.class);
+            return mock(StudyRepository.class);
         }
 
         @Bean
         public StudyCreationRequestRepository studyCreationRequestRepository() {
-            return Mockito.mock(StudyCreationRequestRepository.class);
+            return mock(StudyCreationRequestRepository.class);
         }
 
         @Bean
         public EventRepository eventRepository() {
-            return Mockito.mock(EventRepository.class);
+            return mock(EventRepository.class);
         }
 
         @Bean
         public NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository() {
-            return Mockito.mock(NetworkModificationNodeInfoRepository.class);
+            return mock(NetworkModificationNodeInfoRepository.class);
         }
 
         @Bean
         public NodeRepository nodeRepository() {
-            return Mockito.mock(NodeRepository.class);
+            return mock(NodeRepository.class);
         }
 
         @Bean
         public RootNodeInfoRepository rootNodeInfoRepository() {
-            return Mockito.mock(RootNodeInfoRepository.class);
+            return mock(RootNodeInfoRepository.class);
         }
 
         @Bean
         public RootNetworkRepository rootNetworkRepository() {
-            return Mockito.mock(RootNetworkRepository.class);
+            return mock(RootNetworkRepository.class);
         }
 
         @Bean
         public NodeActivityRepository nodeActivityRepository() {
-            return Mockito.mock(NodeActivityRepository.class);
+            return mock(NodeActivityRepository.class);
         }
 
         @Bean
         public EntityManagerFactory entityManagerFactory() {
-            return Mockito.mock(EntityManagerFactory.class);
+            return mock(EntityManagerFactory.class);
         }
 
         @Bean(name = "jpaSharedEM_entityManagerFactory")

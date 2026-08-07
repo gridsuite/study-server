@@ -96,7 +96,7 @@ public class NodeActivityService {
         }
         try {
             nodeActivityRepository.saveAllAndFlush(requested);
-        } catch (DataIntegrityViolationException e) {
+        } catch (DataIntegrityViolationException _) {
             // someone wrote the same node between the read above and this insert
             throw new StudyException(NODE_ACTIVITY_CONFLICT,
                 "%s refused: another activity started on one of the nodes %s".formatted(type, nodes));
