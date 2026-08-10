@@ -15,12 +15,7 @@ import org.gridsuite.study.server.dto.ReferenceAttributes;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -89,6 +84,18 @@ public class DirectoryService {
         } catch (RestClientException e) {
             return Map.of();
         }
+    }
+
+    public String getElements(List<UUID> elementUuids, List<String> elementTypes, boolean strictMode, String userId) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + "/elements")
+            .queryParam("ids", elementUuids)
+            .queryParam("elementTypes", elementTypes)
+            .queryParam("strictMode", strictMode)
+            .build().toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.GET, new HttpEntity<>(headers), String.class).getBody();
     }
 
     public boolean elementExists(UUID directoryUuid, String elementName, String type) {

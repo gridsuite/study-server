@@ -21,6 +21,7 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
@@ -252,6 +253,17 @@ public class VoltageInitRestService extends AbstractComputationRestService imple
             .buildAndExpand(resultUuid).toUriString();
 
         restTemplate.put(baseUri + path, Void.class);
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/results/{resultUuid}/download-debug-file")
+            .buildAndExpand(resultUuid).toUriString();
+        return restTemplate.exchange(getBaseUri() + path, HttpMethod.GET, null, Resource.class);
+    }
+
+    public VoltageInitParametersInfos getParameters(UUID parameterUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + VOLTAGE_INIT_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
+        return restTemplate.getForObject(getBaseUri() + path, VoltageInitParametersInfos.class);
     }
 
     @Override

@@ -84,4 +84,25 @@ public class LoadFlowService extends AbstractComputationService {
         notificationService.emitStudyChanged(studyUuid, nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         return loadflowResultUuid;
     }
+
+    public String getProviders() {
+        return loadflowRestService.getProviders();
+    }
+
+    public String getSpecificParameters() {
+        return loadflowRestService.getSpecificParameters();
+    }
+
+    public String getDefaultLimitReductions() {
+        return loadflowRestService.getDefaultLimitReductions();
+    }
+
+    public LoadFlowParametersInfos getLoadFlowParameters(UUID parameterUuid) {
+        return loadflowRestService.getParameters(parameterUuid);
+    }
+
+    public void updateLoadFlowParameters(UUID parameterUuid, String parameters) {
+        loadflowRestService.updateParameters(parameterUuid, parameters);
+    }
+
 }

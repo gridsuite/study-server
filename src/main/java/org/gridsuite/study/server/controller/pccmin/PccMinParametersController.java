@@ -6,50 +6,28 @@
  */
 package org.gridsuite.study.server.controller.pccmin;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.service.pccmin.PccMinService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
-
-/**
- * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
- */
-
 @RestController
-@RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/pcc-min")
-@Tag(name = "Study server - Pcc min")
+@RequestMapping(value = "/" + StudyApi.API_VERSION + "/pcc-min")
 public class PccMinParametersController {
-
     private final PccMinService pccMinService;
 
     public PccMinParametersController(PccMinService pccMinService) {
         this.pccMinService = pccMinService;
     }
 
-    @GetMapping(value = "/parameters")
-    @Operation(summary = "Get pcc min parameters on study")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters")})
-    public ResponseEntity<String> getPccMinParameters(
-            @PathVariable("studyUuid") UUID studyUuid) {
-        return ResponseEntity.ok().body(pccMinService.getPccMinParameters(studyUuid));
-    }
-
-    @PostMapping(value = "/parameters")
-    @Operation(summary = "set pcc min parameters on study, reset to default ones if empty body")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The pcc min parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
-    public ResponseEntity<Void> setPccMinParameters(
-            @PathVariable("studyUuid") UUID studyUuid,
-            @RequestBody(required = false) String pccMinParametersInfos,
-            @RequestHeader(HEADER_USER_ID) String userId) {
-        return pccMinService.setPccMinParameters(studyUuid, pccMinParametersInfos, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+    @GetMapping(value = "/parameters/{parameterUuid}")
+    public ResponseEntity<String> getPccMinParameters(@PathVariable UUID parameterUuid) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(pccMinService.getPccMinParametersByUuid(parameterUuid));
     }
 }
