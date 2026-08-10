@@ -664,6 +664,9 @@ class NetworkMapTest {
     "loadOperationalLimitGroups": "true",
     "dcPowerFactor": "1.0"
   },
+  "BATTERY": {
+    "loadRegulatingTerminals": "false"
+  },
   "GENERATOR": {
     "loadRegulatingTerminals": "true"
   },
