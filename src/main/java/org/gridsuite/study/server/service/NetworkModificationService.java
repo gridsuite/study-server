@@ -271,14 +271,14 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public void updateRootNetworkApplicability(List<UUID> modificationsUuids, String rootNetworkTag, boolean activated) {
+    public void updateRootNetworkApplicability(List<UUID> modificationsUuids, String rootNetworkTag, boolean applicable) {
         Objects.requireNonNull(modificationsUuids);
         Objects.requireNonNull(rootNetworkTag);
         var path = UriComponentsBuilder
                 .fromUriString(getNetworkModificationServerURI(false) + NETWORK_MODIFICATIONS_PATH + DELIMITER + "root-network-applicability")
                 .queryParam(UUIDS, modificationsUuids)
                 .queryParam(QUERY_PARAM_ROOT_NETWORK_TAG, rootNetworkTag)
-                .queryParam(QUERY_PARAM_ACTIVATED, activated)
+                .queryParam(QUERY_PARAM_APPLICABLE, applicable)
                 .buildAndExpand()
                 .toUriString();
 

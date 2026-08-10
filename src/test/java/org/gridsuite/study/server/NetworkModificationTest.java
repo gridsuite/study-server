@@ -3467,7 +3467,7 @@ class NetworkModificationTest {
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, "/v1/network-modifications/root-network-applicability", false, Map.of(
                 "uuids", WireMock.equalTo(compositeUuid.toString()),
                 "rootNetworkTag", WireMock.equalTo(rootNetworkTag),
-                "activated", WireMock.equalTo("false")), null);
+                "applicable", WireMock.equalTo("false")), null);
     }
 
     @AfterEach
