@@ -3022,21 +3022,26 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public TreeExportInfos exportStudy(UUID studyUuid) {
-        assertIsStudyExist(studyUuid);
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
         List<RootNetworkInfos> rootNetworkInfosList = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
         if (rootNetworkInfosList.isEmpty()) {
             throw new StudyException(NOT_FOUND, "No root network found for study " + studyUuid);
         }
-        List<RootNetworkExportInfos> rootNetworks = rootNetworkInfosList.stream().map(this::toRootNetworkExportInfos).toList();
+        // studyEntity.getRootNetworks() is ordered by the "index" column (@OrderColumn) in the root_network table
+        List<UUID> orderedRootNetworkIds = studyEntity.getRootNetworks().stream().map(RootNetworkEntity::getId).toList();
+        List<RootNetworkExportInfos> rootNetworks = rootNetworkInfosList.stream()
+                .map(rootNetworkInfos -> toRootNetworkExportInfos(rootNetworkInfos, orderedRootNetworkIds.indexOf(rootNetworkInfos.getId())))
+                .toList();
         AbstractNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, null);
         NodeTreeExportInfos nodeTree = rootNode != null ? toNodeTreeExportInfos(rootNode) : null;
         return new TreeExportInfos(studyUuid, rootNetworks, nodeTree);
     }
 
-    private RootNetworkExportInfos toRootNetworkExportInfos(RootNetworkInfos rootNetworkInfos) {
+    private RootNetworkExportInfos toRootNetworkExportInfos(RootNetworkInfos rootNetworkInfos, int index) {
         return new RootNetworkExportInfos(
                 rootNetworkInfos.getName(),
                 rootNetworkInfos.getTag(),
+                index,
                 new CaseInfos(rootNetworkInfos.getCaseInfos().getCaseUuid(), rootNetworkInfos.getCaseInfos().getOriginalCaseUuid(),
                         rootNetworkInfos.getCaseInfos().getCaseName(), rootNetworkInfos.getCaseInfos().getCaseFormat()),
                 rootNetworkInfos.getImportParameters()

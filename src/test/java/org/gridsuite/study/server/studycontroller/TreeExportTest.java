@@ -84,6 +84,7 @@ public class TreeExportTest extends StudyTestBase {
         assertNotNull(exportInfos.rootNetworks());
         assertEquals(1, exportInfos.rootNetworks().size());
         assertNotNull(exportInfos.rootNetworks().getFirst().importParameters());
+        assertEquals(0, exportInfos.rootNetworks().getFirst().index());
         assertNotNull(exportInfos.nodeTree());
         assertEquals("ROOT", exportInfos.nodeTree().type());
         assertNotNull(exportInfos.nodeTree().children());

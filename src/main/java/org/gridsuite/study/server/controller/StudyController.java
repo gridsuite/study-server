@@ -39,7 +39,6 @@ import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
 import java.beans.PropertyEditorSupport;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
@@ -1603,16 +1602,14 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getAllComputationsStatus(studyUuid, rootNetworkUuid, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/export/{studyName}", produces = "application/gzip")
+    @GetMapping(value = "/studies/{studyUuid}/export/{studyName}", produces = "application/zip")
     @Operation(summary = "Export a study as a gzip archive")
-    @ApiResponse(responseCode = "200", description = "The study archive as gzip")
+    @ApiResponse(responseCode = "200", description = "The study archive as zip")
     @ApiResponse(responseCode = "404", description = "Study or root network not found")
     public ResponseEntity<Resource> exportStudy(@PathVariable("studyUuid") UUID studyUuid,
                                                 @PathVariable("studyName") String studyName,
                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        ContentDisposition contentDisposition = ContentDisposition.attachment()
-                .filename(studyName + ".zip", StandardCharsets.UTF_8)
-                .build();
+        ContentDisposition contentDisposition = ContentDisposition.attachment().filename(studyName + ".zip").build();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentDisposition(contentDisposition);
         headers.setContentType(MediaType.parseMediaType("application/zip"));

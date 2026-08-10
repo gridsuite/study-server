@@ -16,6 +16,7 @@ import java.util.Map;
 public record RootNetworkExportInfos(
         String name,
         String tag,
+        Integer index,
         CaseInfos caseInfos,
         Map<String, Object> importParameters
 ) {
