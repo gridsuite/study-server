@@ -111,6 +111,26 @@ public class LoadFlowService extends AbstractComputationService {
         return loadflowResultUuid;
     }
 
+    public String getProviders() {
+        return loadflowRestService.getProviders();
+    }
+
+    public String getSpecificParameters() {
+        return loadflowRestService.getSpecificParameters();
+    }
+
+    public String getDefaultLimitReductions() {
+        return loadflowRestService.getDefaultLimitReductions();
+    }
+
+    public LoadFlowParametersInfos getLoadFlowParameters(UUID parameterUuid) {
+        return loadflowRestService.getParameters(parameterUuid);
+    }
+
+    public void updateLoadFlowParameters(UUID parameterUuid, String parameters) {
+        loadflowRestService.updateParameters(parameterUuid, parameters);
+    }
+
     @Transactional
     public boolean setLoadFlowParameters(UUID studyUuid, String parameters, String userId) {
         return setComputationParameters(

@@ -216,6 +216,8 @@ class LoadFlowTest {
         loadFlowRestService.setBaseUri(wireMockServer.baseUrl());
         networkModificationService.setNetworkModificationServerBaseUri(wireMockServer.baseUrl());
 
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
+
         List<LimitViolationInfos> limitViolations = List.of(LimitViolationInfos.builder()
                         .subjectId("lineId2")
                         .limit(100.)
@@ -596,10 +598,6 @@ class LoadFlowTest {
     private void testDeleteResults(UUID studyUuid, int expectedInitialResultCount) throws Exception {
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoEntities.getFirst();
-
-        // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
-        // completes before the test verifies it, removes the race condition.
-        synchronizeStudyServerExecutionService(studyServerExecutionService);
 
         assertEquals(expectedInitialResultCount, rootNetworkNodeInfoEntities.size());
         wireMockStubs.loadflowServer.stubDeleteLoadflowResults(LOADFLOW_RESULT_UUID);

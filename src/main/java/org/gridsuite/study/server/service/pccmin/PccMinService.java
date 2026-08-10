@@ -134,4 +134,8 @@ public class PccMinService extends AbstractComputationService {
         }
         return userProfileIssue;
     }
+
+    public String getPccMinParametersByUuid(UUID parameterUuid) {
+        return pccMinRestService.getParameters(parameterUuid);
+    }
 }

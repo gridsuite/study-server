@@ -113,4 +113,21 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS
         );
     }
+
+    public String getProviders() {
+        return securityAnalysisRestService.getProviders();
+    }
+
+    public String getSecurityAnalysisParameters(UUID parameterUuid) {
+        return securityAnalysisRestService.getParameters(parameterUuid);
+    }
+
+    public String getDefaultLimitReductions() {
+        return securityAnalysisRestService.getDefaultLimitReductions();
+    }
+
+    public void updateSecurityAnalysisParameters(UUID parameterUuid, String parameters) {
+        securityAnalysisRestService.updateParameters(parameterUuid, parameters);
+    }
+
 }

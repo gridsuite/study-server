@@ -25,6 +25,8 @@ import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -167,4 +169,13 @@ public class VoltageInitService extends AbstractComputationService {
 
         return userProfileIssue;
     }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return voltageInitRestService.downloadDebugFile(resultUuid);
+    }
+
+    public VoltageInitParametersInfos getVoltageInitParametersByUuid(UUID parameterUuid) {
+        return voltageInitRestService.getParameters(parameterUuid);
+    }
+
 }

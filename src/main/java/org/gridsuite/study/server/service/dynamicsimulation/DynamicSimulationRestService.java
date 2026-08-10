@@ -15,6 +15,8 @@ import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +27,7 @@ import java.util.UUID;
 public interface DynamicSimulationRestService extends ComputationParameters {
 
     // --- Parameters related methods --- //
+    String getProviders();
 
     String getProvider(UUID parametersUuid);
 
@@ -118,4 +121,6 @@ public interface DynamicSimulationRestService extends ComputationParameters {
      * @return a list of time-series metadata
      */
     List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID resultUuid);
+
+    ResponseEntity<Resource> downloadDebugFile(UUID resultUuid);
 }

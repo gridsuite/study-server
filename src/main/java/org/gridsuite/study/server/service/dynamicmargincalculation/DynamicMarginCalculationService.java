@@ -17,6 +17,8 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -126,4 +128,21 @@ public class DynamicMarginCalculationService extends AbstractComputationService 
 
         return dynamicMarginCalculationResultUuid;
     }
+
+    public String getProviders() {
+        return dynamicMarginCalculationRestService.getProviders();
+    }
+
+    public String getParameters(UUID parametersUuid, String userId) {
+        return dynamicMarginCalculationRestService.getParameters(parametersUuid, userId);
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return dynamicMarginCalculationRestService.downloadDebugFile(resultUuid);
+    }
+
+    public void updateParameters(UUID parametersUuid, String parametersInfos) {
+        dynamicMarginCalculationRestService.updateParameters(parametersUuid, parametersInfos);
+    }
+
 }
