@@ -21,6 +21,8 @@ import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -142,4 +144,21 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
 
         return dynamicSecurityAnalysisResultUuid;
     }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return dynamicSecurityAnalysisRestService.downloadDebugFile(resultUuid);
+    }
+
+    public String getProviders() {
+        return dynamicSecurityAnalysisRestService.getProviders();
+    }
+
+    public String getParameters(UUID parametersUuid) {
+        return dynamicSecurityAnalysisRestService.getParameters(parametersUuid);
+    }
+
+    public void updateParameters(UUID parametersUuid, String parametersInfos) {
+        dynamicSecurityAnalysisRestService.updateParameters(parametersUuid, parametersInfos);
+    }
+
 }
