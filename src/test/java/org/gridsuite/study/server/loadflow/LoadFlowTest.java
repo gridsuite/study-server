@@ -65,6 +65,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -211,6 +212,8 @@ class LoadFlowTest {
         userAdminService.setUserAdminServerBaseUri(wireMockServer.baseUrl());
         loadFlowRestService.setBaseUri(wireMockServer.baseUrl());
         networkModificationService.setNetworkModificationServerBaseUri(wireMockServer.baseUrl());
+
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
 
         List<LimitViolationInfos> limitViolations = List.of(LimitViolationInfos.builder()
                         .subjectId("lineId2")
@@ -388,12 +391,16 @@ class LoadFlowTest {
         UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyNameUserIdUuid);
         UUID networkUuid = studyTestUtils.getNetworkUuid(studyNameUserIdUuid);
         wireMockStubs.loadflowServer.stubGetLoadflowProvider(LOADFLOW_PARAMETERS_UUID.toString(), DEFAULT_PROVIDER);
-        wireMockStubs.loadflowServer.stubRunLoadflowFailed(networkUuid, modificationNodeUuid, objectMapper.writeValueAsString(LOADFLOW_ERROR_RESULT_UUID));
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        wireMockStubs.loadflowServer.stubRunLoadflowFailed(networkUuid, modificationNodeUuid, objectMapper.writeValueAsString(LOADFLOW_ERROR_RESULT_UUID), countDownLatch);
 
         // loadflow failed
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyNameUserIdUuid, firstRootNetworkUuid, modificationNodeUuid)
                         .header("userId", "userId"))
                 .andExpect(status().isOk());
+
+        // send the loadflow failed message to the consumer
+        countDownLatch.countDown();
 
         wireMockStubs.loadflowServer.verifyGetLoadflowProvider(LOADFLOW_PARAMETERS_UUID.toString());
         wireMockStubs.loadflowServer.verifyRunLoadflow(networkUuid);
@@ -588,10 +595,6 @@ class LoadFlowTest {
     private void testDeleteResults(UUID studyUuid, int expectedInitialResultCount) throws Exception {
         List<RootNetworkNodeInfoEntity> rootNetworkNodeInfoEntities = rootNetworkNodeInfoRepository.findAllByLoadFlowResultUuidNotNull();
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoEntities.getFirst();
-
-        // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
-        // completes before the test verifies it, removes the race condition.
-        synchronizeStudyServerExecutionService(studyServerExecutionService);
 
         assertEquals(expectedInitialResultCount, rootNetworkNodeInfoEntities.size());
         wireMockStubs.loadflowServer.stubDeleteLoadflowResults(LOADFLOW_RESULT_UUID);
