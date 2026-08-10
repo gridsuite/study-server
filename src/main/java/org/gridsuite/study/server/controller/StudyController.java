@@ -1603,7 +1603,7 @@ public class StudyController {
     }
 
     @GetMapping(value = "/studies/{studyUuid}/export/{studyName}", produces = "application/zip")
-    @Operation(summary = "Export a study as a gzip archive")
+    @Operation(summary = "Export a study as a zip archive")
     @ApiResponse(responseCode = "200", description = "The study archive as zip")
     @ApiResponse(responseCode = "404", description = "Study or root network not found")
     public ResponseEntity<Resource> exportStudy(@PathVariable("studyUuid") UUID studyUuid,
