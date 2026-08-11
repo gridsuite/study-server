@@ -117,6 +117,7 @@ public class NetworkModificationTreeService {
         return newNodeInfo;
     }
 
+    @Transactional
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId, AbstractWorkflowInfos workflowInfos) {
         if (getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()) {
             return;
@@ -930,8 +931,7 @@ public class NetworkModificationTreeService {
         return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found")).getComputationReports();
     }
 
-    @Transactional
-    public void setModificationReports(UUID nodeUuid, UUID rootNetworkUuid, Map<UUID, UUID> modificationReports) {
+    private void setModificationReports(UUID nodeUuid, UUID rootNetworkUuid, Map<UUID, UUID> modificationReports) {
         rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).ifPresent(tpNodeInfo -> tpNodeInfo.setModificationReports(modificationReports));
     }
 
@@ -1066,7 +1066,7 @@ public class NetworkModificationTreeService {
         }
     }
 
-    @Transactional
+    // TODO Make private and change tests
     public BuildInfos getBuildInfos(UUID nodeUuid, UUID rootNetworkUuid) {
         BuildInfos buildInfos = new BuildInfos();
 
