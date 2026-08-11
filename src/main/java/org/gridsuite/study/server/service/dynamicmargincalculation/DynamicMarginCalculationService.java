@@ -8,7 +8,6 @@
 package org.gridsuite.study.server.service.dynamicmargincalculation;
 
 import lombok.NonNull;
-import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -88,7 +87,7 @@ public class DynamicMarginCalculationService extends AbstractComputationService 
 
         UUID result = handleDynamicMarginCalculationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_MARGIN_CALCULATION), result);
+        handleQuotaStart(userId, result, DYNAMIC_MARGIN_CALCULATION);
         return result;
     }
 

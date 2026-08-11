@@ -8,6 +8,7 @@
 package org.gridsuite.study.server.service.common;
 
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -120,5 +121,11 @@ public abstract class AbstractComputationService {
 
     protected void updateComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID computationResultUuid, ComputationType computationType) {
         rootNetworkNodeInfoService.updateComputationResultUuid(nodeUuid, rootNetworkUuid, computationResultUuid, computationType);
+    }
+
+    protected void handleQuotaStart(String userId, UUID result, ComputationType computationType) {
+        QuotaType quotaType = QuotaType.mapFromComputationType(computationType);
+        userAdminService.startOperationWithQuota(userId, quotaType, result);
+        notificationService.emitQuotaChange(userId, quotaType);
     }
 }

@@ -22,6 +22,8 @@ spring:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}study.update
         publishElementUpdate-out-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}element.update
+        publishQuotaUpdate-out-0:
+          destination: ${powsybl-ws.rabbitmq.destination.prefix:}quota.update
         consumeSaResult-in-0:
           destination: ${powsybl-ws.rabbitmq.destination.prefix:}sa.result
           group: studySaResultGroup

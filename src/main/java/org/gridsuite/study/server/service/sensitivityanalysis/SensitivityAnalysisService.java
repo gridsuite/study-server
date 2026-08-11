@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.service.sensitivityanalysis;
 
 import lombok.NonNull;
-import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
@@ -81,7 +80,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
 
         UUID result = handleSensitivityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SENSITIVITY_ANALYSIS), result);
+        handleQuotaStart(userId, result, SENSITIVITY_ANALYSIS);
         return result;
     }
 
