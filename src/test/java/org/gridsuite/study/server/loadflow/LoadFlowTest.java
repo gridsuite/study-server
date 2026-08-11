@@ -194,11 +194,11 @@ class LoadFlowTest {
     private ConsumerService consumerService;
     @MockitoSpyBean
     private StudyServerExecutionService studyServerExecutionService;
+    @MockitoSpyBean
+    private LoadFlowService loadFlowService;
 
     private static WireMockServer wireMockServer;
     private WireMockStubs wireMockStubs;
-    @Autowired
-    private LoadFlowService loadFlowService;
 
     @BeforeAll
     static void initWireMock(@Autowired InputDestination input) {
@@ -558,8 +558,8 @@ class LoadFlowTest {
         doAnswer(invocation -> {
             input.send(MessageBuilder.withPayload("").setHeader(HEADER_RECEIVER, resultUuidJson).build(), LOADFLOW_FAILED_DESTINATION);
             return resultUuid;
-        }).when(studyService).rerunLoadflow(any(), any(), any(), any(), any(), any());
-        studyService.rerunLoadflow(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, resultUuid, true, "");
+        }).when(loadFlowService).rerunLoadflow(any(), any(), any(), any(), any(), any());
+        loadFlowService.rerunLoadflow(studyEntity.getId(), modificationNode.getId(), rootNetworkUuid, resultUuid, true, "");
 
         // Test reset uuid result in the database
         assertNull(rootNetworkNodeInfoService.getComputationResultUuid(modificationNode.getId(), rootNetworkUuid, LOAD_FLOW));

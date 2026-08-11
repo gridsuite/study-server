@@ -28,8 +28,6 @@ import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
-import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
-import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.error.StudyException;
@@ -945,67 +943,6 @@ public class StudyService {
             optionalParameters);
     }
 
-    @Transactional
-    public void rerunLoadflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, Boolean withRatioTapChangers, String userId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        if (networkModificationTreeService.isSecurityNode(nodeUuid)) {
-            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
-                .invalidationMode(InvalidationMode.ALL)
-                .withBlockedNode(true)
-                .computationsInvalidationMode(ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
-                .build());
-
-            buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, RerunLoadFlowInfos.builder()
-                .loadflowResultUuid(loadflowResultUuid)
-                .withRatioTapChangers(withRatioTapChangers)
-                .userId(userId)
-                .build());
-        } else {
-            networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-            handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
-        }
-        notificationService.emitElementUpdated(studyEntity.getId(), userId);
-    }
-
-    @Transactional
-    public void sendLoadflowRequestWorflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
-    }
-
-    @Transactional
-    public void sendLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
-        StudyEntity studyEntity = getStudy(studyUuid);
-        if (networkModificationTreeService.isSecurityNode(nodeUuid)) {
-            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
-                .invalidationMode(InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
-                .withBlockedNode(true)
-                .computationsInvalidationMode(ComputationsInvalidationMode.ALL)
-                .build());
-        } else {
-            networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
-        }
-
-        handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
-    }
-
-    private void handleLoadflowRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
-        UUID lfParametersUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
-        UUID lfReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(LOAD_FLOW.name(), UUID.randomUUID());
-        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
-        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
-
-        boolean isSecurityNode = networkModificationTreeService.isSecurityNode(nodeUuid);
-        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
-        UUID result = loadflowRestService.runLoadFlow(new NodeReceiver(nodeUuid, rootNetworkUuid), loadflowResultUuid, new VariantInfos(networkUuid, variantId),
-                new LoadFlowRestService.ParametersInfos(lfParametersUuid, withRatioTapChangers, isSecurityNode), lfReportUuid, userId);
-        rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
-
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(LOAD_FLOW), result);
-        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
-        notificationService.emitElementUpdated(studyEntity.getId(), userId);
-    }
-
     public UUID exportNetwork(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, NodeExportInfos exportInfos, String format, CompressionType compression, String userId, String parametersJson) {
         // Checks if we can write on target directory in gridexplore
         if (exportInfos.exportToGridExplore()) {
@@ -1250,10 +1187,6 @@ public class StudyService {
         return study;
     }
 
-    void updateComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID computationResultUuid, ComputationType computationType) {
-        rootNetworkNodeInfoService.updateComputationResultUuid(nodeUuid, rootNetworkUuid, computationResultUuid, computationType);
-    }
-
     public List<String> getResultEnumValues(UUID nodeUuid, UUID rootNetworkUuid, ComputationType computationType, String enumName) {
         Objects.requireNonNull(nodeUuid);
         Objects.requireNonNull(enumName);
@@ -1358,30 +1291,11 @@ public class StudyService {
 
     @Transactional
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
-        buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, null);
+        networkModificationTreeService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, null);
     }
 
     private void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull String userId) {
-        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rn -> buildNode(studyUuid, nodeUuid, rn.getId(), userId, null));
-    }
-
-    private void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId, AbstractWorkflowInfos workflowInfos) {
-        if (networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()) {
-            return;
-        }
-        assertNoMaxBuilds(studyUuid, rootNetworkUuid, userId);
-        BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(nodeUuid, rootNetworkUuid);
-
-        // Store all reports (inherited + new) for this node
-        networkModificationTreeService.setModificationReports(nodeUuid, rootNetworkUuid, buildInfos.getAllReportsAsMap());
-        networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
-        try {
-            networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, workflowInfos);
-        } catch (Exception e) {
-            networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
-            throw e;
-        }
-        notificationService.emitElementUpdated(studyUuid, userId);
+        rootNetworkService.getStudyRootNetworks(studyUuid).forEach(rn -> networkModificationTreeService.buildNode(studyUuid, nodeUuid, rn.getId(), userId, null));
     }
 
     @Transactional
@@ -1393,7 +1307,7 @@ public class StudyService {
                 return;
             }
 
-            buildNode(
+            networkModificationTreeService.buildNode(
                 studyUuid,
                 child.getIdNode(),
                 rootNetworkUuid,
@@ -1420,19 +1334,6 @@ public class StudyService {
             long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
             return maxBuilds - nbBuiltNodes;
         }).orElse(Long.MAX_VALUE);
-    }
-
-    public void assertNoMaxBuilds(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
-        Map<QuotaType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
-
-        // check restrictions on node builds number
-        Integer maxBuilds = userMaxQuotas.get(QuotaType.BUILD);
-        if (maxBuilds != null) {
-            long nbBuiltNodes = networkModificationTreeService.countBuiltNodes(studyUuid, rootNetworkUuid);
-            if (nbBuiltNodes >= maxBuilds) {
-                throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes reached", Map.of("limit", maxBuilds));
-            }
-        }
     }
 
     @Transactional

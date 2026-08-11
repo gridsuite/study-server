@@ -14,6 +14,7 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.dto.modification.ModificationsSearchResultByNode;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.*;
@@ -65,6 +66,7 @@ public class NetworkModificationTreeService {
     private final RootNetworkService rootNetworkService;
     private final NetworkService networkStoreService;
     private final ReportService reportService;
+    private final UserAdminService userAdminService;
 
     private final StudyServerExecutionService studyServerExecutionService;
 
@@ -78,6 +80,7 @@ public class NetworkModificationTreeService {
                                           RootNetworkService rootNetworkService,
                                           NetworkService networkStoreService,
                                           ReportService reportService,
+                                          UserAdminService userAdminService,
                                           StudyServerExecutionService studyServerExecutionService) {
         this.nodesRepository = nodesRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
@@ -89,6 +92,7 @@ public class NetworkModificationTreeService {
         this.rootNetworkService = rootNetworkService;
         this.networkStoreService = networkStoreService;
         this.reportService = reportService;
+        this.userAdminService = userAdminService;
         this.studyServerExecutionService = studyServerExecutionService;
     }
 
@@ -111,6 +115,38 @@ public class NetworkModificationTreeService {
         );
         newNodeInfo.setNode(newNode);
         return newNodeInfo;
+    }
+
+    public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId, AbstractWorkflowInfos workflowInfos) {
+        if (getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()) {
+            return;
+        }
+        assertNoMaxBuilds(studyUuid, rootNetworkUuid, userId);
+        BuildInfos buildInfos = getBuildInfos(nodeUuid, rootNetworkUuid);
+
+        // Store all reports (inherited + new) for this node
+        setModificationReports(nodeUuid, rootNetworkUuid, buildInfos.getAllReportsAsMap());
+        updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
+        try {
+            networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, workflowInfos);
+        } catch (Exception e) {
+            updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+            throw e;
+        }
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    private void assertNoMaxBuilds(@NonNull UUID studyUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId) {
+        Map<QuotaType, Integer> userMaxQuotas = userAdminService.getUserMaxQuota(userId);
+
+        // check restrictions on node builds number
+        Integer maxBuilds = userMaxQuotas.get(QuotaType.BUILD);
+        if (maxBuilds != null) {
+            long nbBuiltNodes = countBuiltNodes(studyUuid, rootNetworkUuid);
+            if (nbBuiltNodes >= maxBuilds) {
+                throw new StudyException(MAX_NODE_BUILDS_EXCEEDED, "max allowed built nodes reached", Map.of("limit", maxBuilds));
+            }
+        }
     }
 
     public List<ModificationsSearchResultByNode> getNetworkModificationsByNodeInfos(

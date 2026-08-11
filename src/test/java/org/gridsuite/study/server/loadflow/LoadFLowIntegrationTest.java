@@ -30,6 +30,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
+import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.gridsuite.study.server.utils.wiremock.WireMockStubs;
@@ -128,6 +129,8 @@ class LoadFLowIntegrationTest {
     @MockitoSpyBean
     NetworkModificationTreeService networkModificationTreeService;
     @MockitoSpyBean
+    private LoadFlowService loadFlowService;
+    @MockitoSpyBean
     LoadFlowRestService loadFlowRestService;
 
     private WireMockServer wireMockServer;
@@ -191,7 +194,7 @@ class LoadFLowIntegrationTest {
     @Test
     void testDynaFlowNotAllowed() throws Exception {
         UUID loadFlowProviderStubUuid = wireMockStubs.stubLoadFlowProvider(parametersUuid, DYNA_FLOW_PROVIDER);
-        doNothing().when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
+        doNothing().when(loadFlowService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
 
         // Construction node : forbidden
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/loadflow/run", studyUuid, rootNetworkUuid, constructionNodeUuid, userId)

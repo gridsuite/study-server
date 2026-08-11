@@ -103,12 +103,12 @@ class LoadFLowUnitTest {
     void testRunLoadFlow() {
         doReturn(Boolean.FALSE).when(networkModificationTreeService).isReadOnly(nodeUuid);
         when(rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW)).thenReturn(null);
-        doNothing().when(studyService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
+        doNothing().when(loadFlowService).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
         doNothing().when(studyService).assertCanRunOnConstructionNode(any(), any(), any(), any());
 
         controller.runLoadFlow(studyUuid, rootNetworkUuid, nodeUuid, false, userId);
 
-        verify(studyService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
+        verify(loadFlowService, times(1)).sendLoadflowRequest(any(), any(), any(), any(), anyBoolean(), anyString());
         verify(studyService, times(1)).assertCanRunOnConstructionNode(any(), any(), any(), any());
     }
 
@@ -120,7 +120,7 @@ class LoadFLowUnitTest {
 
         doNothing().when(loadFlowService).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
         doReturn(loadflowResultUuid).when(loadFlowService).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
-        doNothing().when(studyService).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
+        doNothing().when(loadFlowService).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
 
         doReturn(Boolean.FALSE).when(networkModificationTreeService).isReadOnly(nodeUuid);
 
@@ -128,7 +128,7 @@ class LoadFLowUnitTest {
 
         verify(loadFlowService, times(1)).deleteLoadflowResult(studyUuid, nodeUuid, rootNetworkUuid, previousResultUuid);
         verify(loadFlowService, times(1)).createLoadflowRunningStatus(studyUuid, nodeUuid, rootNetworkUuid, false);
-        verify(studyService, times(1)).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
+        verify(loadFlowService, times(1)).rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, false, userId);
         verify(studyService, times(1)).assertCanRunOnConstructionNode(eq(studyUuid), eq(nodeUuid), any(), any());
     }
 
@@ -158,7 +158,7 @@ class LoadFLowUnitTest {
     private void testRerunLoadFlowConstructionNode(boolean withRatioTapChangers) {
         doReturn(Map.of(LOAD_FLOW.name(), UUID.randomUUID())).when(networkModificationTreeService).getComputationReports(nodeUuid, rootNetworkUuid);
         doReturn(variantId).when(networkModificationTreeService).getVariantId(nodeUuid, rootNetworkUuid);
-        studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+        loadFlowService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
 
         verify(loadFlowRestService, times(1)).runLoadFlow(any(), any(), any(), any(), any(), anyString());
         verify(notificationService, times(1)).emitStudyChanged(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), anyString());
@@ -194,7 +194,7 @@ class LoadFLowUnitTest {
         when(rootNetworkNodeInfoService.invalidateRootNetworkNodes(any(UUID.class), anyList(), any(InvalidateNodeTreeParameters.class))).thenReturn(invalidateNodeInfos);
 
         // execute loadflow rerun
-        studyService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+        loadFlowService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
 
         // node invalidation
         verify(networkModificationTreeService, times(1))

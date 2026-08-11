@@ -8,9 +8,8 @@
 package org.gridsuite.study.server.service.loadflow;
 
 import com.powsybl.loadflow.LoadFlowParameters;
-import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
-import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
-import org.gridsuite.study.server.dto.UserProfileInfos;
+import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
@@ -64,6 +63,53 @@ public class LoadFlowService extends AbstractComputationService {
         this.dynamicSimulationRestService = dynamicSimulationRestService;
         this.dynamicSecurityAnalysisRestService = dynamicSecurityAnalysisRestService;
         this.dynamicMarginCalculationRestService = dynamicMarginCalculationRestService;
+    }
+
+    @Transactional
+    public void rerunLoadflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, Boolean withRatioTapChangers, String userId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        if (networkModificationTreeService.isSecurityNode(nodeUuid)) {
+            networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid,
+                InvalidateNodeTreeParameters.builder()
+                    .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ALL)
+                    .withBlockedNode(true)
+                    .computationsInvalidationMode(InvalidateNodeTreeParameters.ComputationsInvalidationMode.PRESERVE_LOAD_FLOW_RESULTS)
+                    .build(),
+                false);
+
+            networkModificationTreeService.buildNode(studyUuid, nodeUuid, rootNetworkUuid, userId, RerunLoadFlowInfos.builder()
+                .loadflowResultUuid(loadflowResultUuid)
+                .withRatioTapChangers(withRatioTapChangers)
+                .userId(userId)
+                .build());
+        } else {
+            networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
+            handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+        }
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
+    }
+
+    @Transactional
+    public void sendLoadflowRequestWorflow(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
+    }
+
+    @Transactional
+    public void sendLoadflowRequest(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        if (networkModificationTreeService.isSecurityNode(nodeUuid)) {
+            networkModificationTreeService.invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.builder()
+                .invalidationMode(InvalidateNodeTreeParameters.InvalidationMode.ONLY_CHILDREN_BUILD_STATUS)
+                .withBlockedNode(true)
+                .computationsInvalidationMode(InvalidateNodeTreeParameters.ComputationsInvalidationMode.ALL)
+                .build(),
+                false);
+        } else {
+            networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
+        }
+
+        handleLoadflowRequest(studyEntity, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
     }
 
     @Transactional
@@ -192,5 +238,22 @@ public class LoadFlowService extends AbstractComputationService {
 
     private void invalidateLoadFlowStatusOnAllNodes(UUID studyUuid) {
         loadflowRestService.invalidateLoadFlowStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, LOAD_FLOW));
+    }
+
+    private void handleLoadflowRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, UUID loadflowResultUuid, boolean withRatioTapChangers, String userId) {
+        UUID lfParametersUuid = loadflowRestService.getLoadFlowParametersOrDefaultsUuid(studyEntity);
+        UUID lfReportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(LOAD_FLOW.name(), UUID.randomUUID());
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+
+        boolean isSecurityNode = networkModificationTreeService.isSecurityNode(nodeUuid);
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, LOAD_FLOW, lfReportUuid);
+        UUID result = loadflowRestService.runLoadFlow(new NodeReceiver(nodeUuid, rootNetworkUuid), loadflowResultUuid, new VariantInfos(networkUuid, variantId),
+            new LoadFlowRestService.ParametersInfos(lfParametersUuid, withRatioTapChangers, isSecurityNode), lfReportUuid, userId);
+        rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
+
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(LOAD_FLOW), result);
+        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
     }
 }
