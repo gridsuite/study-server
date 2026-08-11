@@ -83,7 +83,7 @@ public class StudyExportService {
             InputStream stream = Files.newInputStream(zipFile, StandardOpenOption.DELETE_ON_CLOSE);
             zipFile = null;
             return new InputStreamResource(stream);
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new StudyException(EXPORT_STUDY_ERROR, "Failed to export study: " + studyUuid);
         } finally {
             try {
@@ -106,7 +106,7 @@ public class StudyExportService {
             FileAttribute<Set<PosixFilePermission>> attr =
                     PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"));
             return Files.createTempDirectory("study-export-" + studyUuid, attr);
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new StudyException(EXPORT_STUDY_ERROR, "Failed to create temp directory for study: " + studyUuid);
         }
     }
@@ -116,7 +116,7 @@ public class StudyExportService {
             FileAttribute<Set<PosixFilePermission>> attr =
                     PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
             return Files.createTempFile("study-export-" + studyUuid, ".zip", attr);
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new StudyException(EXPORT_STUDY_ERROR, "Failed to create temp file for study: " + studyUuid);
         }
     }

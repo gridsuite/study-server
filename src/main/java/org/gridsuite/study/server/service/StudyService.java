@@ -103,6 +103,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.*;
 public class StudyService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyService.class);
+    public static final String STUDY_NOT_FOUND = "Study not found";
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
 
     NotificationService notificationService;
@@ -2042,7 +2043,7 @@ public class StudyService {
     }
 
     private StudyEntity getStudy(UUID studyUuid) {
-        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
+        return studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, STUDY_NOT_FOUND));
     }
 
     @Transactional
@@ -2565,7 +2566,7 @@ public class StudyService {
     public UUID getFirstNetworkUuid(UUID studyUuid) {
         return studyRepository.findWithRootNetworksById(studyUuid)
                 .map(study -> study.getFirstRootNetwork().getNetworkUuid())
-                .orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
+                .orElseThrow(() -> new StudyException(NOT_FOUND, STUDY_NOT_FOUND));
     }
 
     // --- Dynamic Mapping service methods BEGIN --- //
@@ -3022,7 +3023,7 @@ public class StudyService {
 
     @Transactional(readOnly = true)
     public TreeExportInfos exportStudy(UUID studyUuid) {
-        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Study not found"));
+        StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, STUDY_NOT_FOUND));
         List<RootNetworkInfos> rootNetworkInfosList = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
         if (rootNetworkInfosList.isEmpty()) {
             throw new StudyException(NOT_FOUND, "No root network found for study " + studyUuid);

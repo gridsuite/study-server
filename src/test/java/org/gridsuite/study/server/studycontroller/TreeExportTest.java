@@ -42,7 +42,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-public class TreeExportTest extends StudyTestBase {
+class TreeExportTest extends StudyTestBase {
 
     @Autowired
     private ObjectMapper objectMapper;
