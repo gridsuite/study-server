@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -42,6 +43,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * @author Ghazwa Rehili <ghazwa.rehili at rte-france.com>
+ */
 class TreeExportTest extends StudyTestBase {
 
     @Autowired
@@ -69,12 +73,13 @@ class TreeExportTest extends StudyTestBase {
         assertNotNull(archiveContent);
         assertTrue(archiveContent.length > 0);
         TreeExportInfos exportInfos = null;
+        List<String> zipEntryNames = new ArrayList<>();
         try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(archiveContent))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
+                zipEntryNames.add(entry.getName());
                 if ("tree.json".equals(entry.getName())) {
                     exportInfos = objectMapper.readValue(zis.readAllBytes(), TreeExportInfos.class);
-                    break;
                 }
             }
         }
@@ -89,6 +94,12 @@ class TreeExportTest extends StudyTestBase {
         assertEquals("ROOT", exportInfos.nodeTree().type());
         assertNotNull(exportInfos.nodeTree().children());
         assertEquals(1, exportInfos.nodeTree().children().size());
+        // Verify the cases/ directory: one subfolder per root network case, named after its UUID,
+        // containing the case content file under its exported case name
+        UUID rootNetworkCaseUuid = exportInfos.rootNetworks().getFirst().caseInfos().getCaseUuid();
+        String rootNetworkCaseName = exportInfos.rootNetworks().getFirst().caseInfos().getCaseName();
+        String expectedCaseEntry = "cases/" + rootNetworkCaseUuid + "/" + rootNetworkCaseName;
+        assertEquals(List.of(expectedCaseEntry), zipEntryNames.stream().filter(name -> name.startsWith("cases/")).toList());
         // Verify the case content download call
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/cases/" + CASE_UUID, false, Map.of(), 1);
         wireMockStubs.directoryServer.verifyCheckPermission(List.of(studyUuid), null, PermissionType.READ, false);
