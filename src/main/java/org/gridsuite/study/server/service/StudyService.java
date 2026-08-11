@@ -3022,7 +3022,7 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public TreeExportInfos exportStudy(UUID studyUuid) {
+    public TreeExportInfos buildTreeExport(UUID studyUuid) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, STUDY_NOT_FOUND));
         List<RootNetworkInfos> rootNetworkInfosList = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
         if (rootNetworkInfosList.isEmpty()) {

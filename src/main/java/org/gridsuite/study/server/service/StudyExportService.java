@@ -42,6 +42,8 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STU
 @Service
 public class StudyExportService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportService.class);
+    public static final String TREE_JSON = "tree.json";
+    public static final String CASES = "cases";
 
     private final StudyService studyService;
     private final CaseService caseService;
@@ -66,20 +68,7 @@ public class StudyExportService {
         Path tempDir = createTempWorkDir(studyUuid);
         Path zipFile = null;
         try {
-            TreeExportInfos treeExportInfos = studyService.exportStudy(studyUuid);
-            Path studyJsonPath = tempDir.resolve("tree.json");
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
-            Path casesDir = Files.createDirectories(tempDir.resolve("cases"));
-            for (RootNetworkExportInfos rootNetworkInfos : treeExportInfos.rootNetworks()) {
-                UUID caseUuid = rootNetworkInfos.caseInfos().getCaseUuid();
-                String caseName = rootNetworkInfos.caseInfos().getCaseName();
-                exportCaseFile(caseUuid, caseName, casesDir);
-            }
-            zipFile = createTempExportFile(studyUuid);
-            try (OutputStream fos = Files.newOutputStream(zipFile);
-                 ZipOutputStream zipOut = new ZipOutputStream(fos)) {
-                writeZipEntries(tempDir, zipOut);
-            }
+            zipFile = compressStudyToZip(studyUuid, tempDir);
             InputStream stream = Files.newInputStream(zipFile, StandardOpenOption.DELETE_ON_CLOSE);
             zipFile = null;
             return new InputStreamResource(stream);
@@ -101,24 +90,50 @@ public class StudyExportService {
         }
     }
 
-    private Path createTempWorkDir(UUID studyUuid) {
-        try {
-            FileAttribute<Set<PosixFilePermission>> attr =
-                    PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"));
-            return Files.createTempDirectory("study-export-" + studyUuid, attr);
-        } catch (IOException _) {
-            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to create temp directory for study: " + studyUuid);
+    /**
+     * Build tree.json and the case files under tempDir, then compress them into a temp zip file
+     */
+    private Path compressStudyToZip(UUID studyUuid, Path tempDir) throws IOException {
+        TreeExportInfos treeExportInfos = studyService.buildTreeExport(studyUuid);
+        Path studyJsonPath = tempDir.resolve(TREE_JSON);
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
+        Path casesDir = Files.createDirectories(tempDir.resolve(CASES));
+        for (RootNetworkExportInfos rootNetworkInfos : treeExportInfos.rootNetworks()) {
+            UUID caseUuid = rootNetworkInfos.caseInfos().getCaseUuid();
+            String caseName = rootNetworkInfos.caseInfos().getCaseName();
+            exportCaseFile(caseUuid, caseName, casesDir);
         }
+        Path zipFile = createTempExportFile(studyUuid);
+        try (OutputStream fos = Files.newOutputStream(zipFile);
+             ZipOutputStream zipOut = new ZipOutputStream(fos)) {
+            writeZipEntries(tempDir, zipOut);
+        }
+        return zipFile;
+    }
+
+    private Path createTempWorkDir(UUID studyUuid) {
+        FileAttribute<Set<PosixFilePermission>> attr =
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"));
+        return createTempPath(studyUuid, "temp directory", () -> Files.createTempDirectory("study-export-" + studyUuid, attr));
     }
 
     private Path createTempExportFile(UUID studyUuid) {
+        FileAttribute<Set<PosixFilePermission>> attr =
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
+        return createTempPath(studyUuid, "temp file", () -> Files.createTempFile("study-export-" + studyUuid, ".zip", attr));
+    }
+
+    private Path createTempPath(UUID studyUuid, String errorContext, IOSupplier<Path> creator) {
         try {
-            FileAttribute<Set<PosixFilePermission>> attr =
-                    PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
-            return Files.createTempFile("study-export-" + studyUuid, ".zip", attr);
+            return creator.get();
         } catch (IOException _) {
-            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to create temp file for study: " + studyUuid);
+            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to create " + errorContext + " for study: " + studyUuid);
         }
+    }
+
+    @FunctionalInterface
+    private interface IOSupplier<T> {
+        T get() throws IOException;
     }
 
     /**
@@ -152,23 +167,19 @@ public class StudyExportService {
      * Write directory contents to zip archive
      */
     private void writeZipEntries(Path directory, ZipOutputStream zipOut) throws IOException {
-        try (Stream<Path> paths = Files.walk(directory)) {
-            paths.filter(Files::isRegularFile).forEach(file -> {
-                try {
-                    Path relativePath = directory.relativize(file);
-                    String entryName = relativePath.toString().replace('\\', '/');
-                    ZipEntry entry = new ZipEntry(entryName);
-                    entry.setSize(Files.size(file));
-                    zipOut.putNextEntry(entry);
-                    try (InputStream in = Files.newInputStream(file)) {
-                        in.transferTo(zipOut);
-                    }
-                    zipOut.closeEntry();
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
+        walkAndConsume(directory, null, file -> {
+            if (Files.isRegularFile(file)) {
+                Path relativePath = directory.relativize(file);
+                String entryName = relativePath.toString().replace('\\', '/');
+                ZipEntry entry = new ZipEntry(entryName);
+                entry.setSize(Files.size(file));
+                zipOut.putNextEntry(entry);
+                try (InputStream in = Files.newInputStream(file)) {
+                    in.transferTo(zipOut);
                 }
-            });
-        }
+                zipOut.closeEntry();
+            }
+        });
     }
 
     /**
@@ -176,17 +187,30 @@ public class StudyExportService {
      */
     private void deleteDirectory(Path directory) throws IOException {
         if (Files.exists(directory)) {
-            try (Stream<Path> paths = Files.walk(directory)) {
-                paths.sorted(Comparator.reverseOrder()).forEach(path -> {
-                    try {
-                        Files.delete(path);
-                    } catch (IOException e) {
-                        throw new UncheckedIOException(e);
-                    }
-                });
-            } catch (UncheckedIOException e) {
-                throw e.getCause();
-            }
+            walkAndConsume(directory, Comparator.reverseOrder(), Files::delete);
         }
+    }
+
+    /**
+     * Walk a directory tree and apply action to every path, translating any IOException thrown by action
+     * back into a checked IOException (Stream#forEach can't propagate checked exceptions on its own)
+     */
+    private void walkAndConsume(Path directory, Comparator<Path> order, IOConsumer<Path> action) throws IOException {
+        try (Stream<Path> paths = Files.walk(directory)) {
+            (order == null ? paths : paths.sorted(order)).forEach(path -> {
+                try {
+                    action.accept(path);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        } catch (UncheckedIOException e) {
+            throw e.getCause();
+        }
+    }
+
+    @FunctionalInterface
+    private interface IOConsumer<T> {
+        void accept(T t) throws IOException;
     }
 }
