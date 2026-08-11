@@ -1030,7 +1030,9 @@ public class StudyService {
                 new LoadFlowRestService.ParametersInfos(lfParametersUuid, withRatioTapChangers, isSecurityNode), lfReportUuid, userId);
         rootNetworkNodeInfoService.updateLoadflowResultUuid(nodeUuid, rootNetworkUuid, result, withRatioTapChangers);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(LOAD_FLOW), result);
+        QuotaType quotaType = QuotaType.mapFromComputationType(LOAD_FLOW);
+        userAdminService.startOperationWithQuota(userId, quotaType, result);
+        notificationService.emitQuotaChange(userId, quotaType);
         notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, LOAD_FLOW.getUpdateStatusType());
         notificationService.emitElementUpdated(studyEntity.getId(), userId);
     }

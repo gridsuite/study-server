@@ -81,7 +81,9 @@ public class VoltageInitService extends AbstractComputationService {
 
         UUID result = handleVoltageInitRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(VOLTAGE_INITIALIZATION), result);
+        QuotaType quotaType = QuotaType.mapFromComputationType(VOLTAGE_INITIALIZATION);
+        userAdminService.startOperationWithQuota(userId, quotaType, result);
+        notificationService.emitQuotaChange(userId, quotaType);
         return result;
     }
 

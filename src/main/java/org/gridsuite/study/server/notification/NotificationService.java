@@ -9,6 +9,7 @@ package org.gridsuite.study.server.notification;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.ComputationType;
+import org.gridsuite.study.server.dto.QuotaType;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
@@ -41,6 +42,7 @@ public class NotificationService {
     public static final String HEADER_ROOT_NETWORKS_UUIDS = "rootNetworksUuids";
     public static final String HEADER_STUDY_UUID = "studyUuid";
     public static final String HEADER_UPDATE_TYPE = "updateType";
+    public static final String HEADER_QUOTA_TYPE = "quotaType";
     public static final String HEADER_COMPUTATION_TYPE = "computationType";
     public static final String HEADER_COMPUTATION_SUBTYPE = "computationSubtype";
     public static final String HEADER_RESULT_UUID = "resultUuid";
@@ -105,6 +107,7 @@ public class NotificationService {
     public static final String UPDATE_TYPE_COMPUTATION_PARAMETERS = "computationParametersUpdated";
     public static final String UPDATE_COMPUTATION_RESULT_COLUMN_FILTER = "computationResultColumnFilterUpdated";
     public static final String UPDATE_COMPUTATION_RESULT_GLOBAL_FILTER = "computationResultGlobalFilterUpdated";
+    public static final String UPDATE_QUOTA_USAGE = "updateUserQuotaUsage";
 
     public static final String UPDATE_NETWORK_VISUALIZATION_PARAMETERS = "networkVisualizationParametersUpdated";
     public static final String UPDATE_SPREADSHEET_NODE_ALIASES = "nodeAliasesUpdated";
@@ -572,5 +575,15 @@ public class NotificationService {
                 .setHeader(HEADER_FILE_NAME, fileName)
                 .setHeader(HEADER_ERROR, error)
         );
+    }
+
+    public void emitQuotaChange(String userId, QuotaType quotaType) {
+        Message<String> message = MessageBuilder.withPayload("")
+                .setHeader(HEADER_USER_ID, userId)
+                .setHeader(HEADER_QUOTA_TYPE, quotaType)
+                .build();
+
+        MESSAGE_OUTPUT_LOGGER.debug(MESSAGE_LOG, message);
+        updatePublisher.send("publishQuotaUpdate-out-0", message);
     }
 }
