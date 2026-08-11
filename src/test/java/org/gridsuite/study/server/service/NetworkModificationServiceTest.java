@@ -50,7 +50,7 @@ class NetworkModificationServiceTest {
 
     @Test
     void testGetLineTypesCatalog() {
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1//v1/network-modifications/catalog/line_types";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/catalog/line_types";
         when(restTemplate.getForObject(expectedUrl, String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getLineTypesCatalog()).isEqualTo(RESPONSE);
@@ -59,7 +59,7 @@ class NetworkModificationServiceTest {
     @Test
     void testGetLineType() {
         UUID lineTypeUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1//v1/network-modifications/catalog/line_types/" + lineTypeUuid;
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/catalog/line_types/" + lineTypeUuid;
         when(restTemplate.getForObject(expectedUrl, String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getLineType(lineTypeUuid)).isEqualTo(RESPONSE);
@@ -68,7 +68,7 @@ class NetworkModificationServiceTest {
     @Test
     void testGetLineTypeWithLimits() {
         UUID lineTypeUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1//v1/network-modifications/catalog/line_types/" + lineTypeUuid + "/with-limits?area=FR&temperature=25&shapeFactor=1.0";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/catalog/line_types/" + lineTypeUuid + "/with-limits?area=FR&temperature=25&shapeFactor=1.0";
         when(restTemplate.getForObject(expectedUrl, String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getLineTypeWithLimits(lineTypeUuid, "FR", "25", "1.0")).isEqualTo(RESPONSE);
@@ -78,7 +78,7 @@ class NetworkModificationServiceTest {
     void testGetNetworkModificationsFromComposite() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1//v1/network-composite-modifications/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid + "&onlyMetadata=false";
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-composite-modifications/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid + "&onlyMetadata=false";
         when(restTemplate.getForObject(expectedUrl, String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getNetworkModificationsFromComposite(List.of(firstUuid, secondUuid), false)).isEqualTo(RESPONSE);
@@ -87,7 +87,7 @@ class NetworkModificationServiceTest {
     @Test
     void testGetNetworkModification() {
         UUID modificationUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1//v1/network-modifications/" + modificationUuid;
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid;
         when(restTemplate.getForObject(expectedUrl, String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getNetworkModification(modificationUuid)).isEqualTo(RESPONSE);
@@ -96,7 +96,7 @@ class NetworkModificationServiceTest {
     @Test
     void testGetBusBarSectionsForNewCoupler() {
         String expectedUrl = NETWORK_MODIFICATION_SERVER_URI
-            + "/v1//v1/network-modifications/busbar-sections-for-new-coupler?voltageLevelId=VL1&busBarCount=2&sectionCount=4&switchKindList=BREAKER&switchKindList=DISCONNECTOR";
+            + "/v1/network-modifications/busbar-sections-for-new-coupler?voltageLevelId=VL1&busBarCount=2&sectionCount=4&switchKindList=BREAKER&switchKindList=DISCONNECTOR";
         when(restTemplate.getForObject(expectedUrl, String.class)).thenReturn(RESPONSE);
 
         assertThat(networkModificationService.getBusBarSectionsForNewCoupler("VL1", 2, 4, List.of("BREAKER", "DISCONNECTOR"))).isEqualTo(RESPONSE);
@@ -105,7 +105,7 @@ class NetworkModificationServiceTest {
     @Test
     void testUpdateNetworkModification() {
         UUID modificationUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1//v1/network-modifications/" + modificationUuid;
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications/" + modificationUuid;
 
         networkModificationService.updateNetworkModification(modificationUuid, RESPONSE);
 
@@ -116,7 +116,7 @@ class NetworkModificationServiceTest {
     void testUpdateNetworkModificationsMetadata() {
         UUID firstUuid = UUID.randomUUID();
         UUID secondUuid = UUID.randomUUID();
-        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1//v1/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid;
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/network-modifications?uuids=" + firstUuid + "&uuids=" + secondUuid;
 
         networkModificationService.updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), RESPONSE);
 
