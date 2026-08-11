@@ -77,8 +77,8 @@ public class DynamicSimulationService extends AbstractComputationService {
                 dynamicSimulationRestService::createParameters,
                 dynamicSimulationRestService::updateParameters,
                 DYNAMIC_SIMULATION,
-                List.of(this::invalidateDynamicSimulationStatusOnAllNodes,
-                        this::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
+                List.of(rootNetworkNodeInfoService::invalidateDynamicSimulationStatusOnAllNodes,
+                        rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
                 NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS
         );
@@ -161,7 +161,7 @@ public class DynamicSimulationService extends AbstractComputationService {
 
     private void postProcessEventCrud(UUID studyUuid, UUID nodeUuid) {
         // for delete old result and refresh dynamic simulation run button in UI
-        invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+        rootNetworkNodeInfoService.invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
         notificationService.emitStudyChanged(studyUuid, nodeUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
     }
 

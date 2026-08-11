@@ -975,4 +975,34 @@ public class RootNetworkNodeInfoService {
         UUID resultUuid = getComputationResultUuid(nodeUuid, rootNetworkUuid, PCC_MIN);
         pccMinService.stopPccMin(studyUuid, nodeUuid, rootNetworkUuid, resultUuid);
     }
+
+    public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
+        Objects.requireNonNull(securityAnalysisService);
+        securityAnalysisService.invalidateSaStatus(getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
+    }
+
+    public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
+        Objects.requireNonNull(sensitivityAnalysisService);
+        sensitivityAnalysisService.invalidateSensitivityAnalysisStatus(getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
+    }
+
+    public void invalidateDynamicSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
+        Objects.requireNonNull(dynamicSecurityAnalysisRestService);
+        dynamicSecurityAnalysisRestService.invalidateStatus(getComputationResultUuids(studyUuid, DYNAMIC_SECURITY_ANALYSIS));
+    }
+
+    public void invalidatePccMinStatusOnAllNodes(UUID studyUuid) {
+        Objects.requireNonNull(pccMinService);
+        pccMinService.invalidatePccMinStatus(getComputationResultUuids(studyUuid, PCC_MIN));
+    }
+
+    public void invalidateDynamicSimulationStatusOnAllNodes(UUID studyUuid) {
+        Objects.requireNonNull(dynamicSimulationRestService);
+        dynamicSimulationRestService.invalidateStatus(getComputationResultUuids(studyUuid, DYNAMIC_SIMULATION));
+    }
+
+    public void invalidateDynamicMarginCalculationStatusOnAllNodes(UUID studyUuid) {
+        Objects.requireNonNull(dynamicMarginCalculationRestService);
+        dynamicMarginCalculationRestService.invalidateStatus(getComputationResultUuids(studyUuid, DYNAMIC_MARGIN_CALCULATION));
+    }
 }

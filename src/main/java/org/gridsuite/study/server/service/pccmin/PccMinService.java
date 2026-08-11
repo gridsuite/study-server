@@ -100,7 +100,7 @@ public class PccMinService extends AbstractComputationService {
         StudyEntity studyEntity = getStudy(studyUuid);
         boolean userProfileIssue = createOrUpdatePccMinParameters(studyEntity, parameters, userId);
 
-        invalidatePccMinStatusOnAllNodes(studyEntity.getId());
+        rootNetworkNodeInfoService.invalidatePccMinStatusOnAllNodes(studyEntity.getId());
         notificationService.emitStudyChanged(studyUuid, null, null, NotificationService.UPDATE_TYPE_PCC_MIN_STATUS);
         notificationService.emitElementUpdated(studyUuid, userId);
         notificationService.emitComputationParamsChanged(studyUuid, PCC_MIN);

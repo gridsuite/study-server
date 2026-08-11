@@ -192,11 +192,11 @@ public class LoadFlowService extends AbstractComputationService {
             LOAD_FLOW,
             List.of(
                 this::invalidateAllStudyLoadFlowStatus,
-                this::invalidateSecurityAnalysisStatusOnAllNodes,
-                this::invalidateSensitivityAnalysisStatusOnAllNodes,
-                this::invalidateDynamicSimulationStatusOnAllNodes,
-                this::invalidateDynamicSecurityAnalysisStatusOnAllNodes,
-                this::invalidateDynamicMarginCalculationStatusOnAllNodes
+                rootNetworkNodeInfoService::invalidateSecurityAnalysisStatusOnAllNodes,
+                rootNetworkNodeInfoService::invalidateSensitivityAnalysisStatusOnAllNodes,
+                rootNetworkNodeInfoService::invalidateDynamicSimulationStatusOnAllNodes,
+                rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes,
+                rootNetworkNodeInfoService::invalidateDynamicMarginCalculationStatusOnAllNodes
             ),
             NotificationService.UPDATE_TYPE_LOADFLOW_STATUS,
             NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS,
