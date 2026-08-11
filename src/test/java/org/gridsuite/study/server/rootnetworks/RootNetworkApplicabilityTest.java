@@ -60,8 +60,8 @@ class RootNetworkApplicabilityTest {
     private static final String NODE_2_NAME = "node2";
 
     // tag of the root network created by TestUtils.createDummyStudy
-    private static final String FIRST_ROOT_NETWORK_TAG = "dum";
-    private static final String SECOND_ROOT_NETWORK_TAG = "PH1";
+    private static final String ROOT_NETWORK_TAG_1 = "dum";
+    private static final String ROOT_NETWORK_TAG_2 = "dum2";
 
     private static final UUID MODIFICATION_1 = UUID.randomUUID();
     private static final UUID MODIFICATION_2 = UUID.randomUUID();
@@ -106,7 +106,7 @@ class RootNetworkApplicabilityTest {
         Mockito.doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND)).when(networkModificationService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(invalidModificationUuid));
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
                 .param("uuids", invalidModificationUuid.toString())
-                .param("activated", Boolean.FALSE.toString())
+                .param("applicable", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isNotFound());
         Mockito.verify(networkModificationService, Mockito.never()).updateRootNetworkApplicability(Mockito.anyList(), Mockito.anyString(), Mockito.anyBoolean());
@@ -116,18 +116,18 @@ class RootNetworkApplicabilityTest {
         // deactivating the modification on that root network is forwarded with its tag
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
                 .param("uuids", MODIFICATION_1.toString())
-                .param("activated", Boolean.FALSE.toString())
+                .param("applicable", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
-        Mockito.verify(networkModificationService, Mockito.times(1)).updateRootNetworkApplicability(List.of(MODIFICATION_1), FIRST_ROOT_NETWORK_TAG, false);
+        Mockito.verify(networkModificationService, Mockito.times(1)).updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, false);
 
         // and so is activating it back
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
                 .param("uuids", MODIFICATION_1.toString())
-                .param("activated", Boolean.TRUE.toString())
+                .param("applicable", Boolean.TRUE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
-        Mockito.verify(networkModificationService, Mockito.times(1)).updateRootNetworkApplicability(List.of(MODIFICATION_1), FIRST_ROOT_NETWORK_TAG, true);
+        Mockito.verify(networkModificationService, Mockito.times(1)).updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, true);
     }
 
     @Test
@@ -145,7 +145,7 @@ class RootNetworkApplicabilityTest {
         Mockito.doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
             .when(directoryService).checkPermission(List.of(sharedModificationUuid), null, USER_ID, PermissionType.WRITE, false);
 
-        assertThrows(HttpClientErrorException.class, () -> studyService.updateNetworkModificationsActivationInRootNetwork(
+        assertThrows(HttpClientErrorException.class, () -> studyService.updateNetworkModificationsApplicabilityInRootNetwork(
             studyEntity.getId(), firstNode.getId(), rootNetworkUuid, Set.of(MODIFICATION_1), USER_ID, false));
 
         // the applicability of the shared modification is left untouched
@@ -155,18 +155,15 @@ class RootNetworkApplicabilityTest {
     @Test
     void testApplicabilitiesAreRelayedToTheFrontEnd() throws Exception {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
-        createDummyRootNetwork(studyEntity, "secondRootNetwork", SECOND_ROOT_NETWORK_TAG);
+        createDummyRootNetwork(studyEntity, "secondRootNetwork", ROOT_NETWORK_TAG_2);
         studyRepository.save(studyEntity);
 
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
-        // MODIFICATION_1 is not applicable on any root network of the study, MODIFICATION_2 only on the second one,
-        // MODIFICATION_3 has an applicability for a tag which is not in the study: it is relayed as is, the front-end
-        // only displays the tags of the root networks it knows
         Map<UUID, Map<String, Boolean>> applicabilities = Map.of(
-                MODIFICATION_1, Map.of(FIRST_ROOT_NETWORK_TAG, false, SECOND_ROOT_NETWORK_TAG, false),
-                MODIFICATION_2, Map.of(FIRST_ROOT_NETWORK_TAG, true, SECOND_ROOT_NETWORK_TAG, false),
+                MODIFICATION_1, Map.of(ROOT_NETWORK_TAG_1, false, ROOT_NETWORK_TAG_2, false),
+                MODIFICATION_2, Map.of(ROOT_NETWORK_TAG_1, true, ROOT_NETWORK_TAG_2, false),
                 MODIFICATION_3, Map.of("ABS", false));
         Mockito.doReturn(applicabilities).when(networkModificationService).getRootNetworkApplicabilities(firstNode.getModificationGroupUuid());
 
@@ -190,7 +187,7 @@ class RootNetworkApplicabilityTest {
 
         // the network modification server resolves the applicability of each modification from that tag
         BuildInfos buildInfos = networkModificationTreeService.getBuildInfos(secondNode.getId(), rootNetworkUuid);
-        assertEquals(FIRST_ROOT_NETWORK_TAG, buildInfos.getRootNetworkTag());
+        assertEquals(ROOT_NETWORK_TAG_1, buildInfos.getRootNetworkTag());
     }
 
     @Test
@@ -202,12 +199,11 @@ class RootNetworkApplicabilityTest {
         NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
         NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
 
-        assertEquals(FIRST_ROOT_NETWORK_TAG, rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), firstNode.getId(), NETWORK_UUID).rootNetworkTag());
+        assertEquals(ROOT_NETWORK_TAG_1, rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rootNetworkEntity.getId(), firstNode.getId(), NETWORK_UUID).rootNetworkTag());
     }
 
     @AfterEach
     void tearDown() {
-        // these tests emit notifications on purpose: do not leave them behind for the next test class
         output.clear();
     }
 

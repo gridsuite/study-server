@@ -2353,8 +2353,6 @@ class NetworkModificationTest {
         String url = "/v1/containers/" + node1.getModificationGroupUuid();
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, url, Map.of("action", WireMock.equalTo("COPY")), expectedBody);
 
-        // the applicabilities are carried by the copied modifications themselves: nothing is copied on the study side
-
         // now we do the same but on a built node
         RootNetworkNodeInfoEntity rootNetworkNodeInfo1Entity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid1,
                 studyTestUtils.getOneRootNetworkUuid(studyUuid)).orElseThrow(() -> new StudyException(NOT_FOUND, "Root network not found"));
@@ -2431,8 +2429,6 @@ class NetworkModificationTest {
         String expectedBody = mapper.writeValueAsString(modificationBody);
         String url = "/v1/containers/" + node1.getModificationGroupUuid();
         WireMockUtilsCriteria.verifyPutRequest(wireMockServer, url, Map.of("action", WireMock.equalTo("COPY")), expectedBody);
-
-        // the applicabilities are carried by the copied modifications themselves: nothing is copied on the study side
 
         // Move modification between studies is forbidden
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
@@ -3443,7 +3439,7 @@ class NetworkModificationTest {
 
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications",
                         studyUuid, rootNetworkUuid, nodeUuid)
-                        .queryParam("activated", "false")
+                        .queryParam("applicable", "false")
                         .queryParam("uuids", compositeUuid.toString())
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
