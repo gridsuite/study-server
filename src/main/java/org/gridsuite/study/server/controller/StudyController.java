@@ -23,6 +23,7 @@ import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
@@ -1614,5 +1615,14 @@ public class StudyController {
         headers.setContentDisposition(contentDisposition);
         headers.setContentType(MediaType.parseMediaType("application/zip"));
         return ResponseEntity.ok().headers(headers).body(studyExportService.exportStudy(studyUuid, userId));
+    }
+
+    @PostMapping(value = "/studies/import-with-case-import-action")
+    @Operation(summary = "Create a study and its root networks from a previously exported study archive")
+    @ApiResponse(responseCode = "200", description = "Study import initiated successfully")
+    public ResponseEntity<Void> importStudyWithCaseImportAction(@RequestBody TreeExportInfos treeExportInfos,
+                                                                 @RequestHeader(HEADER_USER_ID) String userId) {
+        studyService.importStudyWithCaseImportAction(treeExportInfos, userId);
+        return ResponseEntity.ok().build();
     }
 }

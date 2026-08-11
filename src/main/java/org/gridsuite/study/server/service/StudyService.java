@@ -7,6 +7,7 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -37,7 +38,10 @@ import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
-import org.gridsuite.study.server.networkmodificationtree.entities.*;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.repository.*;
@@ -3064,5 +3068,60 @@ public class StudyService {
                 nodeType,
                 children
         );
+    }
+
+    @Transactional
+    public void importStudyWithCaseImportAction(TreeExportInfos treeExportInfos, String userId) {
+        List<RootNetworkExportInfos> orderedRootNetworks = treeExportInfos.rootNetworks().stream()
+                .sorted(Comparator.comparing(RootNetworkExportInfos::index))
+                .toList();
+        if (orderedRootNetworks.isEmpty()) {
+            throw new StudyException(NOT_FOUND, "No root network found in import archive");
+        }
+
+        RootNetworkExportInfos firstRootNetwork = orderedRootNetworks.getFirst();
+        caseService.assertCaseExists(firstRootNetwork.caseInfos().getCaseUuid());
+        createStudy(firstRootNetwork.caseInfos().getCaseUuid(), userId, treeExportInfos.studyUuid(),
+                firstRootNetwork.importParameters(), true, firstRootNetwork.caseInfos().getCaseFormat(), firstRootNetwork.name());
+
+        List<RootNetworkExportInfos> pendingRootNetworks = orderedRootNetworks.stream().skip(1).toList();
+        if (!pendingRootNetworks.isEmpty()) {
+            studyCreationRequestRepository.findById(treeExportInfos.studyUuid())
+                    .ifPresent(entity -> entity.setPendingRootNetworksJson(writeRootNetworksJson(pendingRootNetworks)));
+        }
+    }
+
+    @Transactional
+    public void createPendingImportedRootNetworks(UUID studyUuid, String userId) {
+        studyCreationRequestRepository.findById(studyUuid)
+                .map(StudyCreationRequestEntity::getPendingRootNetworksJson)
+                .ifPresent(json -> readRootNetworksJson(json).forEach(
+                        rootNetwork -> createRootNetworkRequest(studyUuid, toRootNetworkInfos(rootNetwork), userId)));
+    }
+
+    private String writeRootNetworksJson(List<RootNetworkExportInfos> rootNetworks) {
+        try {
+            return objectMapper.writeValueAsString(rootNetworks);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private List<RootNetworkExportInfos> readRootNetworksJson(String json) {
+        try {
+            return objectMapper.readValue(json, new TypeReference<>() { });
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private RootNetworkInfos toRootNetworkInfos(RootNetworkExportInfos rootNetworkExportInfos) {
+        CaseInfos caseInfos = rootNetworkExportInfos.caseInfos();
+        return RootNetworkInfos.builder()
+                .name(rootNetworkExportInfos.name())
+                .tag(rootNetworkExportInfos.tag())
+                .caseInfos(new CaseInfos(null, caseInfos.getCaseUuid(), caseInfos.getCaseName(), caseInfos.getCaseFormat()))
+                .importParameters(rootNetworkExportInfos.importParameters())
+                .build();
     }
 }
