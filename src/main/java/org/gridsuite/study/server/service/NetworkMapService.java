@@ -43,6 +43,12 @@ public class NetworkMapService {
         this.restTemplate = restTemplate;
     }
 
+    public String getElementSchema(String elementType, String infoType) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + NETWORK_MAP_API_VERSION + "/schemas/{elementType}/{infoType}")
+            .buildAndExpand(elementType, infoType).toUriString();
+        return restTemplate.getForObject(networkMapServerBaseUri + path, String.class);
+    }
+
     public String getElementsInfos(UUID networkUuid,
                                    String variantId,
                                    List<String> substationsIds,
