@@ -937,6 +937,10 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public Map<UUID, UUID> getModificationReports(UUID nodeUuid, UUID rootNetworkUuid) {
+        return doGetModificationReports(nodeUuid, rootNetworkUuid);
+    }
+
+    private Map<UUID, UUID> doGetModificationReports(UUID nodeUuid, UUID rootNetworkUuid) {
         return rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND, "Node not found")).getModificationReports();
     }
 
@@ -977,7 +981,7 @@ public class NetworkModificationTreeService {
      * @return the report UUID to use (existing or new)
      */
     private UUID getModificationReportUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID nodeToBuildUuid) {
-        Map<UUID, UUID> targetNodeReports = self.getModificationReports(nodeToBuildUuid, rootNetworkUuid);
+        Map<UUID, UUID> targetNodeReports = doGetModificationReports(nodeToBuildUuid, rootNetworkUuid);
         if (targetNodeReports.containsKey(nodeUuid)) {
             return targetNodeReports.get(nodeUuid);
         }
@@ -1018,7 +1022,7 @@ public class NetworkModificationTreeService {
      * @param buildInfos Build information to populate with inherited reports
      */
     private void inheritModificationReportsFromBuiltParent(UUID builtParentNodeUuid, UUID rootNetworkUuid, BuildInfos buildInfos) {
-        Map<UUID, UUID> parentReports = self.getModificationReports(
+        Map<UUID, UUID> parentReports = doGetModificationReports(
                 builtParentNodeUuid,
                 rootNetworkUuid
         );
@@ -1066,8 +1070,7 @@ public class NetworkModificationTreeService {
         }
     }
 
-    // TODO Make private and change tests
-    public BuildInfos getBuildInfos(UUID nodeUuid, UUID rootNetworkUuid) {
+    private BuildInfos getBuildInfos(UUID nodeUuid, UUID rootNetworkUuid) {
         BuildInfos buildInfos = new BuildInfos();
 
         nodesRepository.findById(nodeUuid).ifPresentOrElse(entity -> {

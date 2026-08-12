@@ -8,7 +8,6 @@ package org.gridsuite.study.server.loadflow;
 
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.controller.loadflow.LoadFlowController;
-import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
@@ -175,8 +174,6 @@ class LoadFLowUnitTest {
         UUID groupUuidToInvalidate = UUID.randomUUID();
         invalidateNodeInfos.addGroupUuids(List.of(groupUuidToInvalidate));
 
-        BuildInfos buildInfos = new BuildInfos();
-
         RerunLoadFlowInfos expectedWorkflowInfo = RerunLoadFlowInfos.builder()
             .userId(userId)
             .withRatioTapChangers(withRatioTapChangers)
@@ -184,7 +181,7 @@ class LoadFLowUnitTest {
             .build();
 
         // mock call returning values
-        doReturn(buildInfos).when(networkModificationTreeService).getBuildInfos(nodeUuid, rootNetworkUuid);
+        doNothing().when(networkModificationTreeService).buildNode(any(UUID.class), any(UUID.class), any(UUID.class), eq(userId), any(RerunLoadFlowInfos.class));
         doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationTreeService).getNodeBuildStatus(nodeUuid, rootNetworkUuid);
         doNothing().when(networkModificationTreeService).updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
@@ -205,7 +202,7 @@ class LoadFLowUnitTest {
 
         // node build
         ArgumentCaptor<RerunLoadFlowInfos> rerunLoadFlowWorkflowInfosArgumentCaptor = ArgumentCaptor.forClass(RerunLoadFlowInfos.class);
-        verify(networkModificationService, times(1)).buildNode(eq(nodeUuid), eq(rootNetworkUuid), eq(buildInfos), rerunLoadFlowWorkflowInfosArgumentCaptor.capture());
+        verify(networkModificationTreeService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), eq(rootNetworkUuid), eq(userId), rerunLoadFlowWorkflowInfosArgumentCaptor.capture());
 
         // check workflow infos
         assertThat(rerunLoadFlowWorkflowInfosArgumentCaptor.getValue()).usingRecursiveComparison().isEqualTo(expectedWorkflowInfo);
