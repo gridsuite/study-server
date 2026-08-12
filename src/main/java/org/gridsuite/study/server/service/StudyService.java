@@ -648,8 +648,8 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = saveStudyThenCreateBasicTree(studyUuid, networkInfos,
-                caseInfos, computationParameterUUIDs, networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid,
-                workspacesConfigUuid, importParameters, importReportUuid);
+                caseInfos, computationParameterUUIDs, networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid, importParameters, importReportUuid);
+
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
@@ -3069,29 +3069,51 @@ public class StudyService {
         );
     }
 
-    // The node tree doesn't depend on any imported network (nodes only reference a modificationGroupUuid), so it
-    // is built synchronously right away. Each root network's case import, on the other hand, genuinely takes time,
-    // so it stays asynchronous: every root network (including the first) is attached later via the existing
-    // ROOT_NETWORK_CREATION flow, exactly like adding an extra root network to an already-existing study.
-    @Transactional
+    private NetworkModificationNodeType toNetworkModificationNodeType(String nodeType) {
+        if (nodeType == null) {
+            throw new StudyException(BAD_NODE_TYPE, "Missing node type in imported tree");
+        }
+        try {
+            return NetworkModificationNodeType.valueOf(nodeType);
+        } catch (IllegalArgumentException e) {
+            throw new StudyException(BAD_NODE_TYPE, "Invalid node type in imported tree: '" + nodeType + "'");
+        }
+    }
+
+    private RootNetworkInfos toRootNetworkInfos(RootNetworkExportInfos rootNetworkExportInfos) {
+        CaseInfos caseInfos = rootNetworkExportInfos.caseInfos();
+        return RootNetworkInfos.builder()
+                .name(rootNetworkExportInfos.name())
+                .tag(rootNetworkExportInfos.tag())
+                .caseInfos(new CaseInfos(null, caseInfos.getCaseUuid(), caseInfos.getCaseName(), caseInfos.getCaseFormat()))
+                .importParameters(rootNetworkExportInfos.importParameters())
+                .build();
+    }
+
     public void importStudyWithCaseImportAction(TreeExportInfos treeExportInfos, String userId) {
+        if (treeExportInfos.rootNetworks().isEmpty()) {
+            throw new StudyException(NOT_FOUND, "No root network found in import archive");
+        }
         List<RootNetworkExportInfos> orderedRootNetworks = treeExportInfos.rootNetworks().stream()
                 .sorted(Comparator.comparing(RootNetworkExportInfos::index))
                 .toList();
-        if (orderedRootNetworks.isEmpty()) {
-            throw new StudyException(NOT_FOUND, "No root network found in import archive");
-        }
-        orderedRootNetworks.forEach(rootNetwork -> caseService.assertCaseExists(rootNetwork.caseInfos().getCaseUuid()));
 
-        StudyEntity studyEntity = createStudyEntityWithTree(treeExportInfos.studyUuid(), userId, treeExportInfos.nodeTree());
+        StudyEntity studyEntity = self.createStudyEntityWithTree(treeExportInfos.studyUuid(), userId, treeExportInfos.nodeTree());
 
-        orderedRootNetworks.forEach(rootNetwork ->
-                createRootNetworkRequest(studyEntity.getId(), toRootNetworkInfos(rootNetwork), userId));
+        orderedRootNetworks.forEach(rootNetwork -> {
+            try {
+                caseService.assertCaseExists(rootNetwork.caseInfos().getCaseUuid());
+                self.createRootNetworkRequest(studyEntity.getId(), toRootNetworkInfos(rootNetwork), userId);
+            } catch (Exception e) {
+                LOGGER.error(String.format("Could not request root network '%s' for imported study '%s'", rootNetwork.name(), studyEntity.getId()), e);
+            }
+        });
 
         notificationService.emitStudyCreationFinished(studyEntity.getId(), userId);
     }
 
-    private StudyEntity createStudyEntityWithTree(UUID studyUuid, String userId, NodeTreeExportInfos nodeTree) {
+    @Transactional
+    StudyEntity createStudyEntityWithTree(UUID studyUuid, String userId, NodeTreeExportInfos nodeTree) {
         UserProfileInfos userProfileInfos = getUserProfile(userId);
         ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
         UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
@@ -3118,7 +3140,7 @@ public class StudyService {
                 .build());
 
         UUID rootNodeUuid = networkModificationTreeService.createRoot(studyEntity).getIdNode();
-        if (nodeTree != null) {
+        if (nodeTree != null && !nodeTree.children().isEmpty()) {
             nodeTree.children().forEach(child -> createNodeRecursively(studyEntity, rootNodeUuid, child, userId));
         }
 
@@ -3127,7 +3149,29 @@ public class StudyService {
         return studyEntity;
     }
 
-    private UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
+    private void createNodeRecursively(StudyEntity studyEntity, UUID parentNodeUuid, NodeTreeExportInfos exportNode, String userId) {
+        NetworkModificationNodeType nodeType = toNetworkModificationNodeType(exportNode.nodeType());
+        UUID newGroupUuid = null;
+        if (exportNode.modificationGroupUuid() != null) {
+            newGroupUuid = UUID.randomUUID();
+            networkModificationService.duplicateModificationsGroup(exportNode.modificationGroupUuid(), newGroupUuid);
+        }
+        NetworkModificationNode newNode = networkModificationTreeService.createNode(
+                studyEntity,
+                parentNodeUuid,
+                NetworkModificationNode.builder()
+                        .name(exportNode.name())
+                        .nodeType(nodeType)
+                        // buildStatus intentionally left by default (NOT_BUILT):
+                        .modificationGroupUuid(newGroupUuid)
+                        .build(),
+                InsertMode.CHILD,
+                userId
+        );
+        CollectionUtils.emptyIfNull(exportNode.children()).forEach(child -> createNodeRecursively(studyEntity, newNode.getId(), child, userId));
+    }
+
+    UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
         if (userProfileInfos != null && userProfileInfos.getNetworkVisualizationParameterId() != null) {
             try {
                 return studyConfigService.duplicateNetworkVisualizationParameters(userProfileInfos.getNetworkVisualizationParameterId());
@@ -3144,7 +3188,7 @@ public class StudyService {
         }
     }
 
-    private UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
+    UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
         if (userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
             try {
                 return studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
@@ -3161,7 +3205,7 @@ public class StudyService {
         }
     }
 
-    private UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
+    UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
         try {
             List<UUID> workspaceIds = new ArrayList<>();
             if (userProfileInfos != null && userProfileInfos.getWorkspaceId() != null) {
@@ -3174,36 +3218,5 @@ public class StudyService {
             LOGGER.error("Error while creating workspace collection", e);
             return null;
         }
-    }
-
-    private void createNodeRecursively(StudyEntity studyEntity, UUID parentNodeUuid, NodeTreeExportInfos exportNode, String userId) {
-        UUID newGroupUuid = null;
-        if (exportNode.modificationGroupUuid() != null) {
-            newGroupUuid = UUID.randomUUID();
-            networkModificationService.duplicateModificationsGroup(exportNode.modificationGroupUuid(), newGroupUuid);
-        }
-        NetworkModificationNode newNode = networkModificationTreeService.createNode(
-                studyEntity,
-                parentNodeUuid,
-                NetworkModificationNode.builder()
-                        .name(exportNode.name())
-                        .nodeType(NetworkModificationNodeType.valueOf(exportNode.nodeType()))
-                        // buildStatus intentionally left at default (NOT_BUILT):
-                        .modificationGroupUuid(newGroupUuid)
-                        .build(),
-                InsertMode.CHILD,
-                userId
-        );
-        exportNode.children().forEach(child -> createNodeRecursively(studyEntity, newNode.getId(), child, userId));
-    }
-
-    private RootNetworkInfos toRootNetworkInfos(RootNetworkExportInfos rootNetworkExportInfos) {
-        CaseInfos caseInfos = rootNetworkExportInfos.caseInfos();
-        return RootNetworkInfos.builder()
-                .name(rootNetworkExportInfos.name())
-                .tag(rootNetworkExportInfos.tag())
-                .caseInfos(new CaseInfos(null, caseInfos.getCaseUuid(), caseInfos.getCaseName(), caseInfos.getCaseFormat()))
-                .importParameters(rootNetworkExportInfos.importParameters())
-                .build();
     }
 }

@@ -15,6 +15,7 @@ import java.util.UUID;
  * @author Chamseddine Benhamed <chamseddine.benhamed at rte-france.com>
  */
 @NoArgsConstructor
+@AllArgsConstructor
 @Getter
 @Setter
 @Entity
@@ -27,9 +28,4 @@ public class StudyCreationRequestEntity implements BasicStudyEntity {
 
     @Column(name = "firstRootNetworkName")
     private String firstRootNetworkName;
-
-    public StudyCreationRequestEntity(UUID id, String firstRootNetworkName) {
-        this.id = id;
-        this.firstRootNetworkName = firstRootNetworkName;
-    }
 }
