@@ -54,9 +54,6 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.REIMPORT_
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_CHILDREN;
 
 /**
- * What NodeActivityRulesTest cannot cover: the tree walk the rules are fed with, and what the
- * service does to the database around them.
- *
  * @author Ayoub Labidi <ayoub.labidi_externe at rte-france.com>
  */
 @SpringBootTest

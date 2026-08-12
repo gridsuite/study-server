@@ -657,7 +657,7 @@ class StudyTest extends StudyTestBase {
         // drop the broker message for study creation request (creation)
         TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         // drop the broker message for study creation
-        output.receive(TIMEOUT * 3);
+        TestUtils.receiveStudyUpdate(output, studyUpdateDestination, TIMEOUT * 3);
         // drop the broker message for node creation
         TestUtils.receiveStudyUpdate(output, studyUpdateDestination);
         // drop the broker message for study creation request (deletion)

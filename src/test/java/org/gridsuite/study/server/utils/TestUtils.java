@@ -63,6 +63,7 @@ public final class TestUtils {
     public static final String ELEMENT_UPDATE_DESTINATION = "element.update";
 
     private static final long TIMEOUT = 100;
+    private static final long MESSAGE_TIMEOUT = 1000;
     public static final String USER_DEFAULT_PROFILE_JSON = """
         {
             "id":null,
@@ -240,7 +241,7 @@ public final class TestUtils {
 
     /** Node activity notifications interleave with every other study update, so reads for anything else skip them. */
     public static Message<byte[]> receiveStudyUpdate(OutputDestination output, String destination) {
-        return receiveStudyUpdate(output, destination, TIMEOUT);
+        return receiveStudyUpdate(output, destination, MESSAGE_TIMEOUT);
     }
 
     public static Message<byte[]> receiveStudyUpdate(OutputDestination output, String destination, long timeout) {
@@ -255,7 +256,7 @@ public final class TestUtils {
     @SuppressWarnings("checkstyle:IllegalCatch")
     public static void assertQueuesEmptyThenClear(List<String> destinations, OutputDestination output) {
         try {
-            destinations.forEach(destination -> assertNull(receiveStudyUpdate(output, destination), "Should not be any messages in queue " + destination + " : "));
+            destinations.forEach(destination -> assertNull(receiveStudyUpdate(output, destination, TIMEOUT), "Should not be any messages in queue " + destination + " : "));
         } catch (NullPointerException e) {
             // Ignoring
         } finally {
