@@ -2481,6 +2481,7 @@ class NetworkModificationTest {
                         copyUuid1.equals(mapping.get(modification1))
                                 && copyChild.equals(mapping.get(originalChild))));
     }
+
     @Test
     void testDuplicateModificationBetweenStudies() throws Exception {
         String userId = "userId";
