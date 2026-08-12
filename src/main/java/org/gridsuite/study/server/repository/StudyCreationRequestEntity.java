@@ -28,11 +28,6 @@ public class StudyCreationRequestEntity implements BasicStudyEntity {
     @Column(name = "firstRootNetworkName")
     private String firstRootNetworkName;
 
-    // JSON-serialized List<RootNetworkExportInfos> still to create once this study creation succeeds
-    // (see StudyService#importStudyWithCaseImportAction / #createPendingImportedRootNetworks)
-    @Column(name = "pendingRootNetworksJson", columnDefinition = "CLOB")
-    private String pendingRootNetworksJson;
-
     public StudyCreationRequestEntity(UUID id, String firstRootNetworkName) {
         this.id = id;
         this.firstRootNetworkName = firstRootNetworkName;

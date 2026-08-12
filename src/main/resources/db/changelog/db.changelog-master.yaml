@@ -383,6 +383,3 @@ databaseChangeLog:
   - include:
       file: changesets/changelog_20260612T125031Z.xml
       relativeToChangelogFile: true
-  - include:
-      file: changesets/changelog_20260811T120000Z.xml
-      relativeToChangelogFile: true

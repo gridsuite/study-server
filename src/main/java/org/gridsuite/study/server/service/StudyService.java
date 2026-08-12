@@ -7,7 +7,6 @@
 package org.gridsuite.study.server.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.ThreeSides;
 import com.powsybl.loadflow.LoadFlowParameters;
@@ -39,6 +38,7 @@ import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.*;
 import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
@@ -648,12 +648,11 @@ public class StudyService {
         Objects.requireNonNull(importParameters);
 
         StudyEntity studyEntity = saveStudyThenCreateBasicTree(studyUuid, networkInfos,
-                caseInfos, computationParameterUUIDs, networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid, importParameters, importReportUuid);
-
+                caseInfos, computationParameterUUIDs, networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid,
+                workspacesConfigUuid, importParameters, importReportUuid);
         // Need to deal with the study creation (with a default root network ?)
         CreatedStudyBasicInfos createdStudyBasicInfos = toCreatedStudyBasicInfos(studyEntity);
         studyInfosService.add(createdStudyBasicInfos);
-
         notificationService.emitStudyCreationFinished(studyUuid, userId);
 
         return createdStudyBasicInfos;
@@ -3070,6 +3069,10 @@ public class StudyService {
         );
     }
 
+    // The node tree doesn't depend on any imported network (nodes only reference a modificationGroupUuid), so it
+    // is built synchronously right away. Each root network's case import, on the other hand, genuinely takes time,
+    // so it stays asynchronous: every root network (including the first) is attached later via the existing
+    // ROOT_NETWORK_CREATION flow, exactly like adding an extra root network to an already-existing study.
     @Transactional
     public void importStudyWithCaseImportAction(TreeExportInfos treeExportInfos, String userId) {
         List<RootNetworkExportInfos> orderedRootNetworks = treeExportInfos.rootNetworks().stream()
@@ -3078,41 +3081,120 @@ public class StudyService {
         if (orderedRootNetworks.isEmpty()) {
             throw new StudyException(NOT_FOUND, "No root network found in import archive");
         }
+        orderedRootNetworks.forEach(rootNetwork -> caseService.assertCaseExists(rootNetwork.caseInfos().getCaseUuid()));
 
-        RootNetworkExportInfos firstRootNetwork = orderedRootNetworks.getFirst();
-        caseService.assertCaseExists(firstRootNetwork.caseInfos().getCaseUuid());
-        createStudy(firstRootNetwork.caseInfos().getCaseUuid(), userId, treeExportInfos.studyUuid(),
-                firstRootNetwork.importParameters(), true, firstRootNetwork.caseInfos().getCaseFormat(), firstRootNetwork.name());
+        StudyEntity studyEntity = createStudyEntityWithTree(treeExportInfos.studyUuid(), userId, treeExportInfos.nodeTree());
 
-        List<RootNetworkExportInfos> pendingRootNetworks = orderedRootNetworks.stream().skip(1).toList();
-        if (!pendingRootNetworks.isEmpty()) {
-            studyCreationRequestRepository.findById(treeExportInfos.studyUuid())
-                    .ifPresent(entity -> entity.setPendingRootNetworksJson(writeRootNetworksJson(pendingRootNetworks)));
+        orderedRootNetworks.forEach(rootNetwork ->
+                createRootNetworkRequest(studyEntity.getId(), toRootNetworkInfos(rootNetwork), userId));
+
+        notificationService.emitStudyCreationFinished(studyEntity.getId(), userId);
+    }
+
+    private StudyEntity createStudyEntityWithTree(UUID studyUuid, String userId, NodeTreeExportInfos nodeTree) {
+        UserProfileInfos userProfileInfos = getUserProfile(userId);
+        ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
+        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
+        UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
+        UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
+
+        StudyEntity studyEntity = studyRepository.save(StudyEntity.builder()
+                .id(studyUuid)
+                .loadFlowParametersUuid(computationParameterUUIDs.loadFlowParametersUuid())
+                .shortCircuitParametersUuid(computationParameterUUIDs.shortCircuitParametersUuid())
+                .voltageInitParametersUuid(computationParameterUUIDs.voltageInitParametersUuid())
+                .securityAnalysisParametersUuid(computationParameterUUIDs.securityAnalysisParametersUuid())
+                .sensitivityAnalysisParametersUuid(computationParameterUUIDs.sensitivityAnalysisParametersUuid())
+                .voltageInitParameters(new StudyVoltageInitParametersEntity())
+                .networkVisualizationParametersUuid(networkVisualizationParametersUuid)
+                .dynamicSimulationParametersUuid(computationParameterUUIDs.dynamicSimulationParametersUuid())
+                .dynamicSecurityAnalysisParametersUuid(computationParameterUUIDs.dynamicSecurityAnalysisParametersUuid())
+                .dynamicMarginCalculationParametersUuid(computationParameterUUIDs.dynamicMarginCalculationParametersUuid())
+                .stateEstimationParametersUuid(computationParameterUUIDs.stateEstimationParametersUuid())
+                .pccMinParametersUuid(computationParameterUUIDs.pccMinParametersUuid())
+                .spreadsheetConfigCollectionUuid(spreadsheetConfigCollectionUuid)
+                .workspacesConfigUuid(workspacesConfigUuid)
+                .monoRoot(true)
+                .build());
+
+        UUID rootNodeUuid = networkModificationTreeService.createRoot(studyEntity).getIdNode();
+        if (nodeTree != null) {
+            nodeTree.children().forEach(child -> createNodeRecursively(studyEntity, rootNodeUuid, child, userId));
         }
+
+        studyInfosService.add(toCreatedStudyBasicInfos(studyEntity));
+
+        return studyEntity;
     }
 
-    @Transactional
-    public void createPendingImportedRootNetworks(UUID studyUuid, String userId) {
-        studyCreationRequestRepository.findById(studyUuid)
-                .map(StudyCreationRequestEntity::getPendingRootNetworksJson)
-                .ifPresent(json -> readRootNetworksJson(json).forEach(
-                        rootNetwork -> createRootNetworkRequest(studyUuid, toRootNetworkInfos(rootNetwork), userId)));
-    }
-
-    private String writeRootNetworksJson(List<RootNetworkExportInfos> rootNetworks) {
+    private UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getNetworkVisualizationParameterId() != null) {
+            try {
+                return studyConfigService.duplicateNetworkVisualizationParameters(userProfileInfos.getNetworkVisualizationParameterId());
+            } catch (Exception e) {
+                LOGGER.error(String.format("Could not duplicate network visualization parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
+                    userProfileInfos.getNetworkVisualizationParameterId(), userId, userProfileInfos.getName()), e);
+            }
+        }
         try {
-            return objectMapper.writeValueAsString(rootNetworks);
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
+            return studyConfigService.createDefaultNetworkVisualizationParameters();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating network visualization default parameters", e);
+            return null;
         }
     }
 
-    private List<RootNetworkExportInfos> readRootNetworksJson(String json) {
-        try {
-            return objectMapper.readValue(json, new TypeReference<>() { });
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
+    private UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
+        if (userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
+            try {
+                return studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
+            } catch (Exception e) {
+                LOGGER.error(String.format("Could not duplicate spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default spreadsheet config collection",
+                    userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
+            }
         }
+        try {
+            return studyConfigService.createDefaultSpreadsheetConfigCollection();
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating default spreadsheet config collection", e);
+            return null;
+        }
+    }
+
+    private UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
+        try {
+            List<UUID> workspaceIds = new ArrayList<>();
+            if (userProfileInfos != null && userProfileInfos.getWorkspaceId() != null) {
+                workspaceIds.add(userProfileInfos.getWorkspaceId());
+                workspaceIds.add(null);
+                workspaceIds.add(null);
+            }
+            return studyConfigService.createWorkspacesConfigFromWorkspaces(workspaceIds);
+        } catch (final Exception e) {
+            LOGGER.error("Error while creating workspace collection", e);
+            return null;
+        }
+    }
+
+    private void createNodeRecursively(StudyEntity studyEntity, UUID parentNodeUuid, NodeTreeExportInfos exportNode, String userId) {
+        UUID newGroupUuid = null;
+        if (exportNode.modificationGroupUuid() != null) {
+            newGroupUuid = UUID.randomUUID();
+            networkModificationService.duplicateModificationsGroup(exportNode.modificationGroupUuid(), newGroupUuid);
+        }
+        NetworkModificationNode newNode = networkModificationTreeService.createNode(
+                studyEntity,
+                parentNodeUuid,
+                NetworkModificationNode.builder()
+                        .name(exportNode.name())
+                        .nodeType(NetworkModificationNodeType.valueOf(exportNode.nodeType()))
+                        // buildStatus intentionally left at default (NOT_BUILT):
+                        .modificationGroupUuid(newGroupUuid)
+                        .build(),
+                InsertMode.CHILD,
+                userId
+        );
+        exportNode.children().forEach(child -> createNodeRecursively(studyEntity, newNode.getId(), child, userId));
     }
 
     private RootNetworkInfos toRootNetworkInfos(RootNetworkExportInfos rootNetworkExportInfos) {

@@ -241,12 +241,7 @@ public class ConsumerService {
         NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
         try {
             switch (caseImportAction) {
-                case STUDY_CREATION -> {
-                    insertStudy(studyUuid, userId, networkInfos, caseInfos, importParameters, importReportUuid);
-                    // the study now really exists: create any root network that was pending on this import
-                    // (see StudyService#importStudyWithCaseImportAction)
-                    studyService.createPendingImportedRootNetworks(studyUuid, userId);
-                }
+                case STUDY_CREATION -> insertStudy(studyUuid, userId, networkInfos, caseInfos, importParameters, importReportUuid);
                 case ROOT_NETWORK_CREATION -> studyService.createRootNetwork(studyUuid, RootNetworkInfos.builder()
                     .id(rootNetworkUuid)
                     .caseInfos(caseInfos)
