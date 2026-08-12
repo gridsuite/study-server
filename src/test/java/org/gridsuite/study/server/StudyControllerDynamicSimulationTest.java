@@ -700,13 +700,7 @@ class StudyControllerDynamicSimulationTest {
 
     // --- BEGIN Test event CRUD methods--- //
 
-    private void checkNotificationsAfterInjectingDynamicSimulationEvent(UUID studyUuid, String crudType) {
-        // must have message crudType from channel : studyUpdateDestination
-        Message<byte[]> studyUpdateMessageBegin = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
-        assertThat(studyUpdateMessageBegin.getHeaders())
-                .containsEntry(NotificationService.HEADER_STUDY_UUID, studyUuid)
-                .containsEntry(NotificationService.HEADER_UPDATE_TYPE, crudType);
-
+    private void checkNotificationsAfterInjectingDynamicSimulationEvent(UUID studyUuid) {
         // must have message EVENTS_CRUD_FINISHED from channel : studyUpdateDestination
         Message<byte[]> elementUpdateMessageFinished = TestUtils.receiveStudyUpdate(output, STUDY_UPDATE_DESTINATION);
         assertThat(elementUpdateMessageFinished.getHeaders())
@@ -739,7 +733,7 @@ class StudyControllerDynamicSimulationTest {
                         .content(objectMapper.writeValueAsString(EVENT)))
                 .andExpect(status().isOk()).andReturn();
 
-        checkNotificationsAfterInjectingDynamicSimulationEvent(studyUuid, NotificationService.EVENTS_CRUD_CREATING_IN_PROGRESS);
+        checkNotificationsAfterInjectingDynamicSimulationEvent(studyUuid);
 
         // --- Get the event --- //
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
@@ -775,7 +769,7 @@ class StudyControllerDynamicSimulationTest {
                         .content(objectMapper.writeValueAsString(eventInfosResult)))
                 .andExpect(status().isOk()).andReturn();
 
-        checkNotificationsAfterInjectingDynamicSimulationEvent(studyUuid, NotificationService.EVENTS_CRUD_UPDATING_IN_PROGRESS);
+        checkNotificationsAfterInjectingDynamicSimulationEvent(studyUuid);
 
         // check updated event
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)
@@ -794,7 +788,7 @@ class StudyControllerDynamicSimulationTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk()).andReturn();
 
-        checkNotificationsAfterInjectingDynamicSimulationEvent(studyUuid, NotificationService.EVENTS_CRUD_DELETING_IN_PROGRESS);
+        checkNotificationsAfterInjectingDynamicSimulationEvent(studyUuid);
 
         // check result => must empty
         result = studyClient.perform(get(STUDY_BASE_URL + DELIMITER + STUDY_DYNAMIC_SIMULATION_END_POINT_EVENTS, studyUuid, modificationNode1Uuid)

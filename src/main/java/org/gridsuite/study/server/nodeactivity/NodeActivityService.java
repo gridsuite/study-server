@@ -109,7 +109,7 @@ public class NodeActivityService {
             throw new StudyException(NODE_ACTIVITY_CONFLICT,
                 "%s refused: another activity started on one of the nodes %s".formatted(type, nodes));
         }
-        notificationService.emitNodeActivityUpdated(studyUuid);
+        notifyNodeActivities(studyUuid);
     }
 
     private StudyException conflict(NodeActivityEntity requested, NodeActivityEntity running) {
@@ -148,7 +148,11 @@ public class NodeActivityService {
         } else {
             nodeActivityRepository.deleteByNodeIdInAndRootNetworkId(nodeUuids, rootNetworkUuid);
         }
-        notificationService.emitNodeActivityUpdated(studyUuid);
+        notifyNodeActivities(studyUuid);
+    }
+
+    private void notifyNodeActivities(UUID studyUuid) {
+        notificationService.emitNodeActivityUpdated(studyUuid, () -> self.getNodeActivities(studyUuid));
     }
 
     @Transactional(readOnly = true)
@@ -181,7 +185,7 @@ public class NodeActivityService {
         abandonedActivities.stream()
             .map(NodeActivityEntity::getStudyId)
             .distinct()
-            .forEach(notificationService::emitNodeActivityUpdated);
+            .forEach(this::notifyNodeActivities);
         return abandonedActivities;
     }
 

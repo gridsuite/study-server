@@ -43,6 +43,6 @@ public final class NodeActivityRules {
     private static boolean invalidates(NodeActivityEntity activity, NodeActivityEntity other,
                                        Map<UUID, Set<UUID>> ancestorsByNode) {
         return activity.getType().invalidatesChildren()
-            && ancestorsByNode.get(other.getNodeId()).contains(activity.getNodeId());
+            && ancestorsByNode.getOrDefault(other.getNodeId(), Set.of()).contains(activity.getNodeId());
     }
 }

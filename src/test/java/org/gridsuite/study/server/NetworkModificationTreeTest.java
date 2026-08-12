@@ -1578,8 +1578,7 @@ class NetworkModificationTreeTest {
                 .andReturn().getResponse().getContentAsString();
     }
 
-    private void checkMessagesReceivedWhenRestoreOrStash(RootNode root, NetworkModificationNode node, String restoreOrStashUpdateType) {
-        checkUpdateTypeMessageReceived(root.getStudyId(), null, restoreOrStashUpdateType, output, STUDY_UPDATE_DESTINATION);
+    private void checkMessagesReceivedWhenRestoreOrStash(RootNode root, NetworkModificationNode node) {
         checkUpdateTypeMessageReceived(root.getStudyId(), null, NODE_BUILD_STATUS_UPDATED, output, STUDY_UPDATE_DESTINATION);
         checkUpdateStatusMessagesReceived(root.getStudyId(), node.getId(), output);
         checkUpdateTypeMessageReceived(root.getStudyId(), null, MODIFICATIONS_UPDATING_FINISHED, output, STUDY_UPDATE_DESTINATION);
@@ -1608,7 +1607,7 @@ class NetworkModificationTreeTest {
             .header(USER_ID_HEADER, userId))
             .andExpect(status().isOk());
 
-        checkMessagesReceivedWhenRestoreOrStash(root, node, MODIFICATIONS_RESTORING_IN_PROGRESS);
+        checkMessagesReceivedWhenRestoreOrStash(root, node);
     }
 
     @Test
@@ -1635,7 +1634,7 @@ class NetworkModificationTreeTest {
                         .header(USER_ID_HEADER, userId))
                 .andExpect(status().isOk());
 
-        checkMessagesReceivedWhenRestoreOrStash(root, node, MODIFICATIONS_STASHING_IN_PROGRESS);
+        checkMessagesReceivedWhenRestoreOrStash(root, node);
     }
 
     @Test
