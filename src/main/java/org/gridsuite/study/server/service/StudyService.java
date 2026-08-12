@@ -2165,12 +2165,10 @@ public class StudyService {
     }
 
     private void createReferencesToSharedComposites(Map<UUID, UUID> referenceTargets, String userId, UUID targetNodeUuid) {
-        referenceTargets.forEach((refUuid, sharedCompositeUuids) ->
-                directoryService.createsReferencesToSharedComposites(
-                        List.of(refUuid),
-                        userId,
-                        targetNodeUuid
-                )
+        directoryService.createsReferencesToSharedComposites(
+                referenceTargets.keySet().stream().toList(),
+                userId,
+                targetNodeUuid
         );
     }
 
