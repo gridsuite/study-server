@@ -7,7 +7,9 @@
 package org.gridsuite.study.server.nodeactivity;
 
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository;
 import org.springframework.context.annotation.Lazy;
@@ -36,16 +38,19 @@ public class NodeActivityService {
 
     private final NodeActivityRepository nodeActivityRepository;
     private final NodeRepository nodeRepository;
+    private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
     private final NotificationService notificationService;
 
     private final NodeActivityService self;
 
     public NodeActivityService(NodeActivityRepository nodeActivityRepository,
                                NodeRepository nodeRepository,
+                               NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
                                NotificationService notificationService,
                                @Lazy NodeActivityService self) {
         this.nodeActivityRepository = nodeActivityRepository;
         this.nodeRepository = nodeRepository;
+        this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.notificationService = notificationService;
         this.self = self;
     }
@@ -92,7 +97,10 @@ public class NodeActivityService {
         List<NodeActivityEntity> running = nodeActivityRepository.findAllByStudyId(studyUuid);
         if (!running.isEmpty()) {
             Map<UUID, Set<UUID>> ancestorsByNode = getAncestorsByNode(type, running, nodes);
-            requested.forEach(activity -> NodeActivityRules.assertNoConflict(running, activity, ancestorsByNode));
+            requested.forEach(activity -> NodeActivityRules.findConflict(running, activity, ancestorsByNode)
+                .ifPresent(conflicting -> {
+                    throw conflict(activity, conflicting);
+                }));
         }
         try {
             nodeActivityRepository.saveAllAndFlush(requested);
@@ -102,6 +110,26 @@ public class NodeActivityService {
                 "%s refused: another activity started on one of the nodes %s".formatted(type, nodes));
         }
         notificationService.emitNodeActivityUpdated(studyUuid);
+    }
+
+    private StudyException conflict(NodeActivityEntity requested, NodeActivityEntity running) {
+        String requestedNodeName = nodeName(requested.getNodeId());
+        String runningNodeName = nodeName(running.getNodeId());
+        return new StudyException(NODE_ACTIVITY_CONFLICT,
+            "%s on node %s refused: %s is running on node %s"
+                .formatted(requested.getType(), requested.getNodeId(), running.getType(), running.getNodeId()),
+            Map.of("requestedLabel", requested.getType().getLabel().name(),
+                   "requestedNodeName", requestedNodeName,
+                   "requestedOnRootNode", String.valueOf(requestedNodeName.isEmpty()),
+                   "label", running.getType().getLabel().name(),
+                   "nodeName", runningNodeName,
+                   "onRootNode", String.valueOf(runningNodeName.isEmpty())));
+    }
+
+    private String nodeName(UUID nodeUuid) {
+        return networkModificationNodeInfoRepository.findById(nodeUuid)
+            .map(NetworkModificationNodeInfoEntity::getName)
+            .orElse("");
     }
 
     private void assertNodesExistInStudy(UUID studyUuid, List<UUID> nodes) {

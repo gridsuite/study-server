@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.nodeactivity;
 
-import org.gridsuite.study.server.error.StudyException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -20,10 +19,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NODE_ACTIVITY_CONFLICT;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityRules.assertNoConflict;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityRules.findConflict;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.BUILD;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE_AND_UNBUILD_CHILDREN;
@@ -86,14 +82,8 @@ class NodeActivityRulesTest {
                                    NodeActivityType requestedType, UUID requestedNode, UUID requestedRootNetwork) {
         List<NodeActivityEntity> running =
             List.of(NodeActivityEntity.from(runningType, STUDY, runningRootNetwork, runningNode));
-        try {
-            assertNoConflict(running,
-                NodeActivityEntity.from(requestedType, STUDY, requestedRootNetwork, requestedNode), ANCESTORS);
-            return false;
-        } catch (StudyException e) {
-            assertThat(e.getBusinessErrorCode()).isEqualTo(NODE_ACTIVITY_CONFLICT);
-            return true;
-        }
+        return findConflict(running,
+            NodeActivityEntity.from(requestedType, STUDY, requestedRootNetwork, requestedNode), ANCESTORS).isPresent();
     }
 
     @Test
@@ -216,19 +206,15 @@ class NodeActivityRulesTest {
     @Test
     void nothingIsRefusedWhenNoActivityIsRunning() {
         List<NodeActivityEntity> nothingRunning = List.of();
-        assertThatCode(() -> EVERY_NODE.forEach(nodeUuid ->
-            assertNoConflict(nothingRunning, NodeActivityEntity.from(EDIT_TREE, STUDY, null, nodeUuid), ANCESTORS)))
-            .doesNotThrowAnyException();
+        EVERY_NODE.forEach(nodeUuid ->
+            assertThat(findConflict(nothingRunning, NodeActivityEntity.from(EDIT_TREE, STUDY, null, nodeUuid), ANCESTORS))
+                .isEmpty());
     }
 
     @Test
-    void theRefusalSaysWhatIsHoldingTheNode() {
-        List<NodeActivityEntity> running =
-            List.of(NodeActivityEntity.from(UNBUILD_CHILDREN, STUDY, ROOT_NETWORK, NODE));
+    void theConflictNamesTheActivityHoldingTheNode() {
+        NodeActivityEntity unbuildingChildren = NodeActivityEntity.from(UNBUILD_CHILDREN, STUDY, ROOT_NETWORK, NODE);
         NodeActivityEntity requested = NodeActivityEntity.from(BUILD, STUDY, ROOT_NETWORK, GRANDCHILD);
-        assertThatThrownBy(() -> assertNoConflict(running, requested, ANCESTORS))
-            .isInstanceOf(StudyException.class)
-            .hasMessageContaining("BUILD on node " + GRANDCHILD)
-            .hasMessageContaining("UNBUILD_CHILDREN is running on node " + NODE);
+        assertThat(findConflict(List.of(unbuildingChildren), requested, ANCESTORS)).contains(unbuildingChildren);
     }
 }

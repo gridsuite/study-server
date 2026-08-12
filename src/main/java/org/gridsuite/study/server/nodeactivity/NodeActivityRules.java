@@ -6,14 +6,11 @@
  */
 package org.gridsuite.study.server.nodeactivity;
 
-import org.gridsuite.study.server.error.StudyException;
-
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NODE_ACTIVITY_CONFLICT;
 
 /**
  * @author Ayoub Labidi <ayoub.labidi_externe at rte-france.com>
@@ -23,16 +20,15 @@ public final class NodeActivityRules {
     private NodeActivityRules() {
     }
 
-    static void assertNoConflict(List<NodeActivityEntity> runningActivities, NodeActivityEntity requested,
-                                 Map<UUID, Set<UUID>> ancestorsByNode) {
-        for (NodeActivityEntity running : runningActivities) {
-            if (sharesARootNetwork(running, requested)
-                    && (isOnTheSameNode(running, requested)
-                        || invalidates(running, requested, ancestorsByNode)
-                        || invalidates(requested, running, ancestorsByNode))) {
-                throw conflict(requested, running);
-            }
-        }
+    static Optional<NodeActivityEntity> findConflict(List<NodeActivityEntity> runningActivities,
+                                                     NodeActivityEntity requested,
+                                                     Map<UUID, Set<UUID>> ancestorsByNode) {
+        return runningActivities.stream()
+            .filter(running -> sharesARootNetwork(running, requested)
+                && (isOnTheSameNode(running, requested)
+                    || invalidates(running, requested, ancestorsByNode)
+                    || invalidates(requested, running, ancestorsByNode)))
+            .findFirst();
     }
 
     private static boolean sharesARootNetwork(NodeActivityEntity one, NodeActivityEntity other) {
@@ -48,10 +44,5 @@ public final class NodeActivityRules {
                                        Map<UUID, Set<UUID>> ancestorsByNode) {
         return activity.getType().invalidatesChildren()
             && ancestorsByNode.get(other.getNodeId()).contains(activity.getNodeId());
-    }
-
-    private static StudyException conflict(NodeActivityEntity requested, NodeActivityEntity running) {
-        return new StudyException(NODE_ACTIVITY_CONFLICT, "%s on node %s refused: %s is running on node %s"
-            .formatted(requested.getType(), requested.getNodeId(), running.getType(), running.getNodeId()));
     }
 }

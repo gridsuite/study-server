@@ -51,6 +51,7 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.BUILD;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_TREE;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.REIMPORT_CASE;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_CHILDREN;
 
 /**
  * What NodeActivityRulesTest cannot cover: the tree walk the rules are fed with, and what the
@@ -130,9 +131,9 @@ class NodeActivityServiceTest {
         rootNetworkUuid = rootNetwork.getId();
 
         NodeEntity root = insertRootNode(study);
-        NodeEntity node = insertNode(study, root, rootNetwork);
-        NodeEntity child = insertNode(study, node, rootNetwork);
-        NodeEntity grandChild = insertNode(study, child, rootNetwork);
+        NodeEntity node = insertNode(study, root, rootNetwork, "node");
+        NodeEntity child = insertNode(study, node, rootNetwork, "child");
+        NodeEntity grandChild = insertNode(study, child, rootNetwork, "grandChild");
         rootNetworkRepository.save(rootNetwork);
 
         rootNodeUuid = root.getIdNode();
@@ -159,6 +160,32 @@ class NodeActivityServiceTest {
         assertThatThrownBy(() -> nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, requested))
             .isInstanceOf(StudyException.class)
             .hasMessageContaining("REIMPORT_CASE is running on node " + rootNodeUuid);
+    }
+
+    @Test
+    void theRefusalCarriesWhatTheClientShowsTheUser() {
+        nodeActivityService.setNodeActivity(UNBUILD_CHILDREN, studyUuid, rootNetworkUuid, List.of(nodeUuid));
+
+        List<UUID> requested = List.of(grandChildUuid);
+        assertThatThrownBy(() -> nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, requested))
+            .isInstanceOf(StudyException.class)
+            .extracting(thrown -> ((StudyException) thrown).getBusinessErrorValues())
+            .isEqualTo(Map.of("requestedLabel", "BUILDING", "requestedNodeName", "grandChild",
+                              "requestedOnRootNode", "false",
+                              "label", "UNBUILDING", "nodeName", "node", "onRootNode", "false"));
+    }
+
+    @Test
+    void theRefusalSaysWhenTheRootNodeIsHoldingTheStudy() {
+        nodeActivityService.setNodeActivity(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
+
+        List<UUID> requested = List.of(grandChildUuid);
+        assertThatThrownBy(() -> nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, requested))
+            .isInstanceOf(StudyException.class)
+            .extracting(thrown -> ((StudyException) thrown).getBusinessErrorValues())
+            .isEqualTo(Map.of("requestedLabel", "BUILDING", "requestedNodeName", "grandChild",
+                              "requestedOnRootNode", "false",
+                              "label", "UPDATING", "nodeName", "", "onRootNode", "true"));
     }
 
     @Test
@@ -270,12 +297,13 @@ class NodeActivityServiceTest {
         return node;
     }
 
-    private NodeEntity insertNode(StudyEntity study, NodeEntity parent, RootNetworkEntity rootNetwork) {
+    private NodeEntity insertNode(StudyEntity study, NodeEntity parent, RootNetworkEntity rootNetwork, String name) {
         NodeEntity node = nodeRepository.save(
             new NodeEntity(null, parent, NodeType.NETWORK_MODIFICATION, study, false, null, new ArrayList<>()));
         NetworkModificationNodeInfoEntity nodeInfo = networkModificationNodeInfoRepository.save(
             NetworkModificationNodeInfoEntity.builder()
                 .idNode(node.getIdNode())
+                .name(name)
                 .modificationGroupUuid(UUID.randomUUID())
                 .nodeType(NetworkModificationNodeType.CONSTRUCTION)
                 .build());
