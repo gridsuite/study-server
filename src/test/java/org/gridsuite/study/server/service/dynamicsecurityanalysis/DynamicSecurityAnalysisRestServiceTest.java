@@ -14,6 +14,9 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
@@ -178,5 +181,21 @@ class DynamicSecurityAnalysisRestServiceTest {
         String provider = dynamicSecurityAnalysisRestService.getProvider(PARAMETERS_UUID);
 
         assertThat(provider).isEqualTo(DYNAWO_PROVIDER);
+    }
+
+    @Test
+    void testGetProviders() {
+        String providers = "[\"Dynawo\"]";
+        given(dynamicSecurityAnalysisClient.getProviders()).willReturn(providers);
+
+        assertThat(dynamicSecurityAnalysisRestService.getProviders()).isEqualTo(providers);
+    }
+
+    @Test
+    void testDownloadDebugFile() {
+        ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource(PARAMETERS_JSON.getBytes()));
+        given(dynamicSecurityAnalysisClient.downloadDebugFile(RESULT_UUID)).willReturn(response);
+
+        assertThat(dynamicSecurityAnalysisRestService.downloadDebugFile(RESULT_UUID)).isEqualTo(response);
     }
 }

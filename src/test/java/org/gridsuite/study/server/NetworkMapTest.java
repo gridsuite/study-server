@@ -653,6 +653,7 @@ class NetworkMapTest {
         StudyEntity studyEntity = insertDummyStudy(server, UUID.fromString(NETWORK_UUID_STRING), CASE_UUID);
         studyEntity.getSpreadsheetParameters().setSpreadsheetLoadBranchOperationalLimitGroup(true);
         studyEntity.getSpreadsheetParameters().setSpreadsheetLoadGeneratorRegulatingTerminal(true);
+        studyEntity.getSpreadsheetParameters().setSpreadsheetLoadBatteryRegulatingTerminal(true);
         studyRepository.save(studyEntity);
 
         UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyEntity.getId());
@@ -663,6 +664,9 @@ class NetworkMapTest {
   "BRANCH": {
     "loadOperationalLimitGroups": "true",
     "dcPowerFactor": "1.0"
+  },
+  "BATTERY": {
+    "loadRegulatingTerminals": "true"
   },
   "GENERATOR": {
     "loadRegulatingTerminals": "true"

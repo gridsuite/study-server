@@ -143,4 +143,9 @@ public class PccMinService extends AbstractComputationService {
     public void invalidatePccMinStatusOnAllNodes(UUID studyUuid) {
         pccMinRestService.invalidatePccMinStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, PCC_MIN));
     }
+
+    public String getPccMinParametersByUuid(UUID parameterUuid) {
+        return pccMinRestService.getParameters(parameterUuid);
+    }
+
 }

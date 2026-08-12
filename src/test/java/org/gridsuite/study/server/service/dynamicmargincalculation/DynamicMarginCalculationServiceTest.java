@@ -14,6 +14,9 @@ import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
@@ -53,6 +56,8 @@ class DynamicMarginCalculationServiceTest {
     DynamicMarginCalculationClient dynamicMarginCalculationClient;
     @Autowired
     private DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
+    @Autowired
+    private DynamicMarginCalculationService dynamicMarginCalculationService;
 
     @Test
     void testGetParameters() {
@@ -179,5 +184,35 @@ class DynamicMarginCalculationServiceTest {
         String provider = dynamicMarginCalculationRestService.getProvider(PARAMETERS_UUID);
 
         assertThat(provider).isEqualTo(DYNAWO_PROVIDER);
+    }
+
+    @Test
+    void testGetProviders() {
+        String providers = "[\"Dynawo\"]";
+        given(dynamicMarginCalculationClient.getProviders()).willReturn(providers);
+
+        assertThat(dynamicMarginCalculationService.getProviders()).isEqualTo(providers);
+    }
+
+    @Test
+    void testGetParametersByUuidAndUser() {
+        given(dynamicMarginCalculationClient.getParameters(PARAMETERS_UUID, "userId")).willReturn(PARAMETERS_JSON);
+
+        assertThat(dynamicMarginCalculationService.getParameters(PARAMETERS_UUID, "userId")).isEqualTo(PARAMETERS_JSON);
+    }
+
+    @Test
+    void testUpdateParametersByUuid() {
+        dynamicMarginCalculationService.updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
+
+        verify(dynamicMarginCalculationClient).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
+    }
+
+    @Test
+    void testDownloadDebugFile() {
+        ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource(PARAMETERS_JSON.getBytes()));
+        given(dynamicMarginCalculationClient.downloadDebugFile(RESULT_UUID)).willReturn(response);
+
+        assertThat(dynamicMarginCalculationService.downloadDebugFile(RESULT_UUID)).isEqualTo(response);
     }
 }

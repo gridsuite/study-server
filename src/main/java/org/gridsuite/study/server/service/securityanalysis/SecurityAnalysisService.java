@@ -123,4 +123,20 @@ public class SecurityAnalysisService extends AbstractComputationService {
         securityAnalysisRestService.invalidateSaStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
     }
 
+    public String getProviders() {
+        return securityAnalysisRestService.getProviders();
+    }
+
+    public String getSecurityAnalysisParameters(UUID parameterUuid) {
+        return securityAnalysisRestService.getParameters(parameterUuid);
+    }
+
+    public String getDefaultLimitReductions() {
+        return securityAnalysisRestService.getDefaultLimitReductions();
+    }
+
+    public void updateSecurityAnalysisParameters(UUID parameterUuid, String parameters) {
+        securityAnalysisRestService.updateParameters(parameterUuid, parameters);
+    }
+
 }

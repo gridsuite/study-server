@@ -353,4 +353,20 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
             return List.of();
         }
     }
+
+    public String getProviders() {
+        return getRestTemplate().getForObject(getBaseUri() + DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/providers", String.class);
+    }
+
+    public String getParameters(UUID parameterUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
+        return getRestTemplate().getForObject(getBaseUri() + path, String.class);
+    }
+
+    public void updateParameters(UUID parameterUuid, @Nullable String parameters) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SENSITIVITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        getRestTemplate().put(getBaseUri() + path, new HttpEntity<>(parameters, headers));
+    }
 }

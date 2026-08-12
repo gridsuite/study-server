@@ -29,6 +29,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.*;
@@ -335,5 +338,21 @@ class DynamicSimulationRestServiceTest {
         dynamicSimulationRestService.deleteParameters(PARAMETERS_UUID);
 
         verify(dynamicSimulationClient, times(1)).deleteParameters(PARAMETERS_UUID);
+    }
+
+    @Test
+    void testGetProviders() {
+        String providers = "[\"Dynawo\"]";
+        given(dynamicSimulationClient.getProviders()).willReturn(providers);
+
+        assertThat(dynamicSimulationRestService.getProviders()).isEqualTo(providers);
+    }
+
+    @Test
+    void testDownloadDebugFile() {
+        ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource(PARAMETERS_JSON.getBytes()));
+        given(dynamicSimulationClient.downloadDebugFile(RESULT_UUID)).willReturn(response);
+
+        assertThat(dynamicSimulationRestService.downloadDebugFile(RESULT_UUID)).isEqualTo(response);
     }
 }

@@ -282,4 +282,9 @@ public class PccMinRestService extends AbstractComputationRestService implements
         HttpEntity<String> httpEntity = new HttpEntity<>(csvHeaders, headers);
         return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
     }
+
+    public String getParameters(UUID parameterUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + PCC_MIN_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
+        return restTemplate.getForObject(getBaseUri() + path, String.class);
+    }
 }

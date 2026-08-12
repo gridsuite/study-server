@@ -16,6 +16,8 @@ import org.gridsuite.study.server.dto.dynamicsecurityanalysis.DynamicSecurityAna
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicsecurityanalysis.DynamicSecurityAnalysisClient;
 import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.UncheckedIOException;
@@ -44,8 +46,16 @@ public class DynamicSecurityAnalysisRestService implements ComputationParameters
         return dynamicSecurityAnalysisClient.getParameters(parametersUuid);
     }
 
+    public String getProviders() {
+        return dynamicSecurityAnalysisClient.getProviders();
+    }
+
     public UUID createParameters(String parameters) {
         return dynamicSecurityAnalysisClient.createParameters(parameters);
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return dynamicSecurityAnalysisClient.downloadDebugFile(resultUuid);
     }
 
     @Override

@@ -14,10 +14,12 @@ import org.gridsuite.study.server.dto.ReportInfos;
 import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalculationStatus;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.client.AbstractRestClient;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -44,6 +46,11 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
     protected DynamicMarginCalculationClient(RemoteServicesProperties remoteServicesProperties,
                                              RestTemplate restTemplate) {
         super(remoteServicesProperties.getServiceUri("dynamic-margin-calculation-server"), restTemplate);
+    }
+
+    public String getProviders() {
+        String url = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, "providers");
+        return getRestTemplate().getForObject(url, String.class);
     }
 
     private String getParametersWithUuidUrl(UUID parametersUuid) {
@@ -244,5 +251,13 @@ public class DynamicMarginCalculationClient extends AbstractRestClient {
 
         // call dynamic-margin-calculation REST API
         return getRestTemplate().getForObject(url, Integer.class);
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        String resultBaseUrl = buildEndPointUrl(getBaseUri(), DYNAMIC_MARGIN_CALCULATION_API_VERSION, DYNAMIC_MARGIN_CALCULATION_END_POINT_RESULT);
+        String url = UriComponentsBuilder.fromUriString(resultBaseUrl + "/{resultUuid}/download-debug-file")
+            .buildAndExpand(resultUuid)
+            .toUriString();
+        return getRestTemplate().exchange(url, HttpMethod.GET, null, Resource.class);
     }
 }

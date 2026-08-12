@@ -16,6 +16,8 @@ import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -116,4 +118,9 @@ public class StateEstimationService extends AbstractComputationService {
     private void invalidateStateEstimationStatusOnAllNodes(UUID studyUuid) {
         stateEstimationRestService.invalidateStateEstimationStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, STATE_ESTIMATION));
     }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return stateEstimationRestService.downloadDebugFile(resultUuid);
+    }
+
 }

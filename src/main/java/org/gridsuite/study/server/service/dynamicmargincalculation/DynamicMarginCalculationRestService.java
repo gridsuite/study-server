@@ -16,6 +16,8 @@ import org.gridsuite.study.server.dto.dynamicmargincalculation.DynamicMarginCalc
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicmargincalculation.DynamicMarginCalculationClient;
 import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.UncheckedIOException;
@@ -116,5 +118,13 @@ public class DynamicMarginCalculationRestService implements ComputationParameter
 
     public String getProvider(UUID parametersUuid) {
         return dynamicMarginCalculationClient.getProvider(parametersUuid);
+    }
+
+    public String getProviders() {
+        return dynamicMarginCalculationClient.getProviders();
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return dynamicMarginCalculationClient.downloadDebugFile(resultUuid);
     }
 }

@@ -292,4 +292,24 @@ public class SecurityAnalysisRestService extends AbstractComputationRestService 
     public List<String> getEnumValues(String enumName, UUID resultUuid) {
         return getEnumValues(enumName, resultUuid, SECURITY_ANALYSIS_API_VERSION, restTemplate);
     }
+
+    public String getProviders() {
+        return restTemplate.getForObject(getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/providers", String.class);
+    }
+
+    public String getDefaultLimitReductions() {
+        return restTemplate.getForObject(getBaseUri() + DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/default-limit-reductions", String.class);
+    }
+
+    public String getParameters(UUID parameterUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
+        return restTemplate.getForObject(getBaseUri() + path, String.class);
+    }
+
+    public void updateParameters(UUID parameterUuid, @Nullable String parameters) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + SECURITY_ANALYSIS_API_VERSION + "/parameters/{parameterUuid}").buildAndExpand(parameterUuid).toUriString();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        restTemplate.put(getBaseUri() + path, new HttpEntity<>(parameters, headers));
+    }
 }

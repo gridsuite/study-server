@@ -891,6 +891,9 @@ public class StudyService {
             case "generator" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()));
+            case "battery" -> additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBatteryRegulatingTerminal()));
             case "bus" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_NETWORK_COMPONENTS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBusNetworkComponents()));
@@ -938,7 +941,8 @@ public class StudyService {
             String.valueOf(ElementType.BRANCH),
             String.valueOf(ElementType.LINE),
             String.valueOf(ElementType.TIE_LINE),
-            String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER)
+            String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER),
+            String.valueOf(ElementType.BATTERY)
             ).forEach(type -> optionalParameters.put(
                 type,
                 new HashMap<>(Map.of(InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR, String.valueOf(loadFlowParameters.getDcPowerFactor())))
@@ -956,6 +960,10 @@ public class StudyService {
             Map.of(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal())));
+        optionalParameters.put(String.valueOf(ElementType.BATTERY),
+                Map.of(
+                        InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
+                        String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBatteryRegulatingTerminal())));
         optionalParameters.put(String.valueOf(ElementType.BUS),
             Map.of(
                 InfoTypeParameters.QUERY_PARAM_LOAD_NETWORK_COMPONENTS,

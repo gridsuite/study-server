@@ -12,7 +12,7 @@ import lombok.*;
 import lombok.Builder.Default;
 import org.gridsuite.study.server.dto.SpreadsheetParameters;
 import org.gridsuite.study.server.dto.SpreadsheetParameters.BranchSpreadsheetParameters;
-import org.gridsuite.study.server.dto.SpreadsheetParameters.GeneratorSpreadsheetParameters;
+import org.gridsuite.study.server.dto.SpreadsheetParameters.RegulatingEquipmentSpreadsheetParameters;
 
 @Embeddable
 @NoArgsConstructor
@@ -36,6 +36,10 @@ public class SpreadsheetParametersEntity {
     @Default
     private boolean spreadsheetLoadGeneratorRegulatingTerminal = false;
 
+    @Column(name = "sp_load_battery_rt", nullable = false, columnDefinition = "boolean default false")
+    @Default
+    private boolean spreadsheetLoadBatteryRegulatingTerminal = false;
+
     @Column(name = "sp_load_bus_nc", nullable = false, columnDefinition = "boolean default false")
     @Default
     private boolean spreadsheetLoadBusNetworkComponents = false;
@@ -45,7 +49,8 @@ public class SpreadsheetParametersEntity {
             new BranchSpreadsheetParameters(this.spreadsheetLoadBranchOperationalLimitGroup),
             new BranchSpreadsheetParameters(this.spreadsheetLoadLineOperationalLimitGroup),
             new BranchSpreadsheetParameters(this.spreadsheetLoadTwtOperationalLimitGroup),
-            new GeneratorSpreadsheetParameters(this.spreadsheetLoadGeneratorRegulatingTerminal),
+            new RegulatingEquipmentSpreadsheetParameters(this.spreadsheetLoadGeneratorRegulatingTerminal),
+            new RegulatingEquipmentSpreadsheetParameters(this.spreadsheetLoadBatteryRegulatingTerminal),
             new SpreadsheetParameters.BusSpreadsheetParameters(this.spreadsheetLoadBusNetworkComponents)
         );
     }
@@ -76,11 +81,18 @@ public class SpreadsheetParametersEntity {
                 this.spreadsheetLoadTwtOperationalLimitGroup = twtParams.getOperationalLimitsGroups();
             }
         }
-        final GeneratorSpreadsheetParameters generatorParams = dto.getGenerator();
+        final RegulatingEquipmentSpreadsheetParameters generatorParams = dto.getGenerator();
         if (generatorParams != null) {
             if (generatorParams.getRegulatingTerminal() != null && this.spreadsheetLoadGeneratorRegulatingTerminal != generatorParams.getRegulatingTerminal()) {
                 modified = true;
                 this.spreadsheetLoadGeneratorRegulatingTerminal = generatorParams.getRegulatingTerminal();
+            }
+        }
+        final RegulatingEquipmentSpreadsheetParameters batteryParams = dto.getBattery();
+        if (batteryParams != null) {
+            if (batteryParams.getRegulatingTerminal() != null && this.spreadsheetLoadBatteryRegulatingTerminal != batteryParams.getRegulatingTerminal()) {
+                modified = true;
+                this.spreadsheetLoadBatteryRegulatingTerminal = batteryParams.getRegulatingTerminal();
             }
         }
         final SpreadsheetParameters.BusSpreadsheetParameters busParams = dto.getBus();
