@@ -6,7 +6,9 @@
  */
 package org.gridsuite.study.server.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.gridsuite.study.server.dto.networkexport.PermissionType;
 import org.gridsuite.study.server.dto.studyexport.RootNetworkExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
@@ -27,6 +29,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -43,6 +46,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STU
 public class StudyExportService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportService.class);
     public static final String TREE_JSON = "tree.json";
+    public static final String NETWORK_MODIFICATIONS_JSON = "network-modification.json";
     public static final String CASES = "cases";
 
     private final StudyService studyService;
@@ -97,6 +101,8 @@ public class StudyExportService {
         TreeExportInfos treeExportInfos = studyService.buildTreeExport(studyUuid);
         Path studyJsonPath = tempDir.resolve(TREE_JSON);
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
+        Map<String, String> modificationsByGroup = studyService.buildNetworkModificationsExport(treeExportInfos.nodeTree());
+        writeNetworkModificationsExport(modificationsByGroup, tempDir);
         Path casesDir = Files.createDirectories(tempDir.resolve(CASES));
         for (RootNetworkExportInfos rootNetworkInfos : treeExportInfos.rootNetworks()) {
             UUID caseUuid = rootNetworkInfos.caseInfos().getCaseUuid();
@@ -109,6 +115,20 @@ public class StudyExportService {
             writeZipEntries(tempDir, zipOut);
         }
         return zipFile;
+    }
+
+    /**
+     * Write network-modification.json: for each modification group uuid found in the tree, the list of
+     * corresponding modifications, as returned by the network-modification-server export endpoint
+     */
+    private void writeNetworkModificationsExport(Map<String, String> modificationsByGroup, Path tempDir) throws IOException {
+        ObjectNode root = objectMapper.createObjectNode();
+        for (Map.Entry<String, String> entry : modificationsByGroup.entrySet()) {
+            JsonNode modifications = entry.getValue() != null ? objectMapper.readTree(entry.getValue()) : objectMapper.createArrayNode();
+            root.set(entry.getKey(), modifications);
+        }
+        Path networkModificationsJsonPath = tempDir.resolve(NETWORK_MODIFICATIONS_JSON);
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(networkModificationsJsonPath.toFile(), root);
     }
 
     private Path createTempWorkDir(UUID studyUuid) {

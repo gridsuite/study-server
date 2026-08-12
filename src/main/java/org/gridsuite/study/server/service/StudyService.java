@@ -3041,6 +3041,27 @@ public class StudyService {
         return new TreeExportInfos(studyUuid, rootNetworks, nodeTree);
     }
 
+    @Transactional(readOnly = true)
+    public Map<String, String> buildNetworkModificationsExport(NodeTreeExportInfos nodeTree) {
+        Set<UUID> modificationGroupUuids = new LinkedHashSet<>();
+        collectModificationGroupUuids(nodeTree, modificationGroupUuids);
+        Map<String, String> modificationsByGroup = new LinkedHashMap<>();
+        for (UUID modificationGroupUuid : modificationGroupUuids) {
+            modificationsByGroup.put(modificationGroupUuid.toString(), networkModificationService.getModificationsToExport(modificationGroupUuid));
+        }
+        return modificationsByGroup;
+    }
+
+    private void collectModificationGroupUuids(NodeTreeExportInfos node, Set<UUID> modificationGroupUuids) {
+        if (node == null) {
+            return;
+        }
+        if (node.modificationGroupUuid() != null) {
+            modificationGroupUuids.add(node.modificationGroupUuid());
+        }
+        CollectionUtils.emptyIfNull(node.children()).forEach(child -> collectModificationGroupUuids(child, modificationGroupUuids));
+    }
+
     private RootNetworkExportInfos toRootNetworkExportInfos(RootNetworkInfos rootNetworkInfos, int index) {
         return new RootNetworkExportInfos(
                 rootNetworkInfos.getName(),
