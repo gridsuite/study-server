@@ -119,7 +119,7 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void buildNode(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull String userId, AbstractWorkflowInfos workflowInfos) {
-        if (getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()) {
+        if (doGetNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()) {
             return;
         }
         assertNoMaxBuilds(studyUuid, rootNetworkUuid, userId);
@@ -127,11 +127,11 @@ public class NetworkModificationTreeService {
 
         // Store all reports (inherited + new) for this node
         setModificationReports(nodeUuid, rootNetworkUuid, buildInfos.getAllReportsAsMap());
-        updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
+        doUpdateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         try {
             networkModificationService.buildNode(nodeUuid, rootNetworkUuid, buildInfos, workflowInfos);
         } catch (Exception e) {
-            updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
+            doUpdateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.NOT_BUILT));
             throw e;
         }
         notificationService.emitElementUpdated(studyUuid, userId);
@@ -1105,7 +1105,7 @@ public class NetworkModificationTreeService {
         // Node status before invalidation
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         boolean isModificationNode = nodeEntity.getType().equals(NodeType.NETWORK_MODIFICATION);
-        boolean isNodeBuilt = self.getNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
+        boolean isNodeBuilt = doGetNodeBuildStatus(nodeEntity.getIdNode(), rootNetworkUuid).isBuilt();
         boolean shouldInvalidateIndexedInfos = isNodeBuilt || hasAnyBuiltChildren(nodeEntity, rootNetworkUuid);
 
         // First node
@@ -1173,7 +1173,7 @@ public class NetworkModificationTreeService {
         while (currentNode.getParentNode() != null) {
             NodeEntity parentNode = currentNode.getParentNode();
             if (parentNode.getType().equals(NodeType.ROOT)
-                || self.getNodeBuildStatus(parentNode.getIdNode(), rootNetworkUuid).isBuilt()
+                || doGetNodeBuildStatus(parentNode.getIdNode(), rootNetworkUuid).isBuilt()
                 || hasAnyBuiltChildren(parentNode, rootNetworkUuid, descendantsChecked)) {
                 return currentNode;
             }
@@ -1190,7 +1190,7 @@ public class NetworkModificationTreeService {
     }
 
     private boolean hasAnyBuiltChildren(NodeEntity node, UUID rootNetworkUuid, Set<NodeEntity> checkedChildren) {
-        if (self.getNodeBuildStatus(node.getIdNode(), rootNetworkUuid).isBuilt()) {
+        if (doGetNodeBuildStatus(node.getIdNode(), rootNetworkUuid).isBuilt()) {
             return true;
         }
         checkedChildren.add(node);
@@ -1231,6 +1231,10 @@ public class NetworkModificationTreeService {
 
     @Transactional
     public void updateNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid, NodeBuildStatus nodeBuildStatus) {
+        doUpdateNodeBuildStatus(nodeUuid, rootNetworkUuid, nodeBuildStatus);
+    }
+
+    private void doUpdateNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid, NodeBuildStatus nodeBuildStatus) {
         UUID studyId = self.getStudyUuidForNodeId(nodeUuid);
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND,
                 "Root network not found"));
@@ -1242,7 +1246,7 @@ public class NetworkModificationTreeService {
         if (nodeBuildStatus.isBuilt()) {
             newLocalStatus = nodeBuildStatus.getLocalBuildStatus().max(currentNodeStatus.getLocalBuildStatus());
             NodeEntity previousBuiltNode = doGetLastParentNodeBuilt(nodeEntity, rootNetworkUuid);
-            BuildStatus previousGlobalBuildStatus = getNodeBuildStatus(previousBuiltNode.getIdNode(), rootNetworkUuid).getGlobalBuildStatus();
+            BuildStatus previousGlobalBuildStatus = doGetNodeBuildStatus(previousBuiltNode.getIdNode(), rootNetworkUuid).getGlobalBuildStatus();
             newGlobalStatus = nodeBuildStatus.getGlobalBuildStatus().max(previousGlobalBuildStatus);
         } else {
             newLocalStatus = nodeBuildStatus.getLocalBuildStatus();
@@ -1262,6 +1266,10 @@ public class NetworkModificationTreeService {
 
     @Transactional(readOnly = true)
     public NodeBuildStatus getNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid) {
+        return doGetNodeBuildStatus(nodeUuid, rootNetworkUuid);
+    }
+
+    private NodeBuildStatus doGetNodeBuildStatus(UUID nodeUuid, UUID rootNetworkUuid) {
         NodeEntity nodeEntity = getNodeEntity(nodeUuid);
         if (nodeEntity.getType().equals(NodeType.ROOT)) {
             return NodeBuildStatus.from(BuildStatus.NOT_BUILT);
@@ -1336,7 +1344,7 @@ public class NetworkModificationTreeService {
     public long countBuiltNodes(UUID studyUuid, UUID rootNetworkUuid) {
         List<NodeEntity> nodes = nodesRepository.findAllByStudyIdAndTypeAndStashed(studyUuid, NodeType.NETWORK_MODIFICATION, false);
         // perform N queries, but it's fast: 25 ms for 400 nodes
-        return nodes.stream().filter(n -> self.getNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
+        return nodes.stream().filter(n -> doGetNodeBuildStatus(n.getIdNode(), rootNetworkUuid).isBuilt()).count();
     }
 
     private void fillIndexedNodeInfosToInvalidate(UUID parentNodeUuid, boolean includeParentNode, InvalidateNodeInfos invalidateNodeInfos) {
