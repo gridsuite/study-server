@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -93,5 +94,13 @@ public class CaseService {
             .toUriString();
 
         return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.POST, null, UUID.class).getBody();
+    }
+
+    public ResponseEntity<byte[]> getCaseContent(UUID caseUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + CASE_API_VERSION + "/cases/{caseUuid}")
+                .buildAndExpand(caseUuid)
+                .toUriString();
+
+        return restTemplate.exchange(caseServerBaseUri + path, HttpMethod.GET, null, byte[].class);
     }
 }
