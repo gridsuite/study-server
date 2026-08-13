@@ -19,10 +19,8 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
+import org.springframework.core.io.Resource;
+import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -237,5 +235,11 @@ public class StateEstimationRestService extends AbstractComputationRestService i
     @Override
     public List<String> getEnumValues(String enumName, UUID resultUuidOpt) {
         return List.of();
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        String path = UriComponentsBuilder.fromPath(DELIMITER + STATE_ESTIMATION_API_VERSION + "/results/{resultUuid}/download-debug-file")
+            .buildAndExpand(resultUuid).toUriString();
+        return getRestTemplate().exchange(getBaseUri() + path, HttpMethod.GET, null, Resource.class);
     }
 }

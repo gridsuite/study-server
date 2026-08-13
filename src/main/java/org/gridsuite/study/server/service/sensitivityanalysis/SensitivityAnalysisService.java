@@ -119,4 +119,17 @@ public class SensitivityAnalysisService extends AbstractComputationService {
         notificationService.emitElementUpdated(study.getId(), userId);
         return result;
     }
+
+    public String getProviders() {
+        return sensitivityAnalysisRestService.getProviders();
+    }
+
+    public String getSensitivityAnalysisParametersByUuid(UUID parameterUuid) {
+        return sensitivityAnalysisRestService.getParameters(parameterUuid);
+    }
+
+    public void updateSensitivityAnalysisParameters(UUID parameterUuid, String parameters) {
+        sensitivityAnalysisRestService.updateParameters(parameterUuid, parameters);
+    }
+
 }
