@@ -238,7 +238,8 @@ public class ConsumerService {
         NetworkInfos networkInfos = new NetworkInfos(networkUuid, networkId);
         try {
             switch (caseImportAction) {
-                case STUDY_CREATION -> insertStudy(studyUuid, userId, networkInfos, caseInfos, importParameters, importReportUuid);
+                case STUDY_CREATION ->
+                        insertStudy(studyUuid, userId, networkInfos, caseInfos, importParameters, importReportUuid);
                 case ROOT_NETWORK_CREATION -> studyService.createRootNetwork(studyUuid, RootNetworkInfos.builder()
                     .id(rootNetworkUuid)
                     .caseInfos(caseInfos)
