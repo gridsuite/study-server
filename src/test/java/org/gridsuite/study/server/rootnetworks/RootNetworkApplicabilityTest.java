@@ -22,7 +22,6 @@ import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,6 +38,15 @@ import java.util.*;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -103,15 +111,15 @@ class RootNetworkApplicabilityTest {
 
         // an unknown modification returns 404 and does not update anything
         UUID invalidModificationUuid = UUID.randomUUID();
-        Mockito.doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND)).when(networkModificationService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(invalidModificationUuid));
+        doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND)).when(networkModificationService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(invalidModificationUuid));
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
                 .param("uuids", invalidModificationUuid.toString())
                 .param("applicable", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isNotFound());
-        Mockito.verify(networkModificationService, Mockito.never()).updateRootNetworkApplicability(Mockito.anyList(), Mockito.anyString(), Mockito.anyBoolean());
+        verify(networkModificationService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean());
 
-        Mockito.doNothing().when(networkModificationService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(MODIFICATION_1));
+        doNothing().when(networkModificationService).verifyModifications(firstNode.getModificationGroupUuid(), Set.of(MODIFICATION_1));
 
         // deactivating the modification on that root network is forwarded with its tag
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
@@ -119,7 +127,7 @@ class RootNetworkApplicabilityTest {
                 .param("applicable", Boolean.FALSE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
-        Mockito.verify(networkModificationService, Mockito.times(1)).updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, false);
+        verify(networkModificationService, times(1)).updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, false);
 
         // and so is activating it back
         mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", studyEntity.getId(), rootNetworkUuid, firstNode.getId())
@@ -127,7 +135,7 @@ class RootNetworkApplicabilityTest {
                 .param("applicable", Boolean.TRUE.toString())
                 .header(USER_ID, USER_ID))
             .andExpect(status().isOk());
-        Mockito.verify(networkModificationService, Mockito.times(1)).updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, true);
+        verify(networkModificationService, times(1)).updateRootNetworkApplicability(List.of(MODIFICATION_1), ROOT_NETWORK_TAG_1, true);
     }
 
     @Test
@@ -141,15 +149,18 @@ class RootNetworkApplicabilityTest {
 
         // the modification is a reference to a shared modification the user is not allowed to write on
         UUID sharedModificationUuid = UUID.randomUUID();
-        Mockito.doReturn(new HashMap<>(Collections.singletonMap(sharedModificationUuid, null))).when(networkModificationService).getReferences(List.of(MODIFICATION_1));
-        Mockito.doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
+        doReturn(new HashMap<>(Collections.singletonMap(sharedModificationUuid, null))).when(networkModificationService).getReferences(List.of(MODIFICATION_1));
+        doThrow(HttpClientErrorException.create(HttpStatus.FORBIDDEN, "Forbidden", null, null, null))
             .when(directoryService).checkPermission(List.of(sharedModificationUuid), null, USER_ID, PermissionType.WRITE, false);
 
+        UUID studyUuid = studyEntity.getId();
+        UUID nodeUuid = firstNode.getId();
+        Set<UUID> modificationUuids = Set.of(MODIFICATION_1);
         assertThrows(HttpClientErrorException.class, () -> studyService.updateNetworkModificationsApplicabilityInRootNetwork(
-            studyEntity.getId(), firstNode.getId(), rootNetworkUuid, Set.of(MODIFICATION_1), USER_ID, false));
+            studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, USER_ID, false));
 
         // the applicability of the shared modification is left untouched
-        Mockito.verify(networkModificationService, Mockito.never()).updateRootNetworkApplicability(Mockito.anyList(), Mockito.anyString(), Mockito.anyBoolean());
+        verify(networkModificationService, never()).updateRootNetworkApplicability(anyList(), anyString(), anyBoolean());
     }
 
     @Test
@@ -165,7 +176,7 @@ class RootNetworkApplicabilityTest {
                 MODIFICATION_1, Map.of(ROOT_NETWORK_TAG_1, false, ROOT_NETWORK_TAG_2, false),
                 MODIFICATION_2, Map.of(ROOT_NETWORK_TAG_1, true, ROOT_NETWORK_TAG_2, false),
                 MODIFICATION_3, Map.of("ABS", false));
-        Mockito.doReturn(applicabilities).when(networkModificationService).getRootNetworkApplicabilities(firstNode.getModificationGroupUuid());
+        doReturn(applicabilities).when(networkModificationService).getRootNetworkApplicabilities(firstNode.getModificationGroupUuid());
 
         MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/applicability", studyEntity.getId(), firstNode.getId())
                 .header(USER_ID, USER_ID))
