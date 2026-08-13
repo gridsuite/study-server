@@ -68,7 +68,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.util.Pair;
 import org.springframework.lang.Nullable;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriUtils;
@@ -556,30 +555,25 @@ public class StudyService {
         Optional<StudyCreationRequestEntity> studyCreationRequestEntity = studyCreationRequestRepository.findById(studyUuid);
         Optional<StudyEntity> studyEntity = studyRepository.findById(studyUuid);
         DeleteStudyInfos deleteStudyInfos = null;
-        try {
-            if (studyCreationRequestEntity.isEmpty() && studyEntity.isPresent()) {
-                List<RootNetworkInfos> rootNetworkInfos = getStudyRootNetworksInfos(studyUuid);
-                // get all modification groups and nodes related to the study
-                List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid);
-                List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = allStudyNetworkModificationNodeInfo.stream()
-                        .map(nodeInfoEntity -> Pair.of(nodeInfoEntity.getModificationGroupUuid(), nodeInfoEntity.getIdNode()))
-                        .toList();
-                StudyEntity s = studyEntity.get();
-                networkModificationTreeService.doDeleteTree(studyUuid);
-                studyRepository.deleteById(studyUuid);
-                studyInfosService.deleteByUuid(studyUuid);
-                computationParametersService.deleteComputationsParameters(s);
-                removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
-                removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
-                removeWorkspacesConfig(s.getWorkspacesConfigUuid());
-                removeNadConfigs(s.getNadConfigsUuids().stream().toList());
-                deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuidsNodeUuids);
-            } else {
-                studyCreationRequestEntity.ifPresent(creationRequestEntity -> studyCreationRequestRepository.deleteById(creationRequestEntity.getId()));
-            }
-        } catch (ObjectOptimisticLockingFailureException e) {
-            // This exception may be raised with a race condition when two threads try to delete the same study at the same time. Instead of redesigning the whole system, we accept this design
-            LOGGER.warn("Could not delete (maybe already deleted) study with uuid " + studyUuid, e);
+        if (studyCreationRequestEntity.isEmpty() && studyEntity.isPresent()) {
+            List<RootNetworkInfos> rootNetworkInfos = getStudyRootNetworksInfos(studyUuid);
+            // get all modification groups and nodes related to the study
+            List<NetworkModificationNodeInfoEntity> allStudyNetworkModificationNodeInfo = networkModificationTreeService.getAllStudyNetworkModificationNodeInfo(studyUuid);
+            List<Pair<UUID, UUID>> modificationGroupUuidsNodeUuids = allStudyNetworkModificationNodeInfo.stream()
+                    .map(nodeInfoEntity -> Pair.of(nodeInfoEntity.getModificationGroupUuid(), nodeInfoEntity.getIdNode()))
+                    .toList();
+            StudyEntity s = studyEntity.get();
+            networkModificationTreeService.doDeleteTree(studyUuid);
+            studyRepository.deleteById(studyUuid);
+            studyInfosService.deleteByUuid(studyUuid);
+            computationParametersService.deleteComputationsParameters(s);
+            removeNetworkVisualizationParameters(s.getNetworkVisualizationParametersUuid());
+            removeSpreadsheetConfigCollection(s.getSpreadsheetConfigCollectionUuid());
+            removeWorkspacesConfig(s.getWorkspacesConfigUuid());
+            removeNadConfigs(s.getNadConfigsUuids().stream().toList());
+            deleteStudyInfos = new DeleteStudyInfos(rootNetworkInfos, modificationGroupUuidsNodeUuids);
+        } else {
+            studyCreationRequestEntity.ifPresent(creationRequestEntity -> studyCreationRequestRepository.deleteById(creationRequestEntity.getId()));
         }
 
         if (deleteStudyInfos == null) {
@@ -893,6 +887,9 @@ public class StudyService {
             case "generator" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal()));
+            case "battery" -> additionalParameters.put(
+                    InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
+                    String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBatteryRegulatingTerminal()));
             case "bus" -> additionalParameters.put(
                 InfoTypeParameters.QUERY_PARAM_LOAD_NETWORK_COMPONENTS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBusNetworkComponents()));
@@ -940,7 +937,8 @@ public class StudyService {
             String.valueOf(ElementType.BRANCH),
             String.valueOf(ElementType.LINE),
             String.valueOf(ElementType.TIE_LINE),
-            String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER)
+            String.valueOf(ElementType.TWO_WINDINGS_TRANSFORMER),
+            String.valueOf(ElementType.BATTERY)
             ).forEach(type -> optionalParameters.put(
                 type,
                 new HashMap<>(Map.of(InfoTypeParameters.QUERY_PARAM_DC_POWERFACTOR, String.valueOf(loadFlowParameters.getDcPowerFactor())))
@@ -958,6 +956,10 @@ public class StudyService {
             Map.of(
                 InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
                 String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadGeneratorRegulatingTerminal())));
+        optionalParameters.put(String.valueOf(ElementType.BATTERY),
+                Map.of(
+                        InfoTypeParameters.QUERY_PARAM_LOAD_REGULATING_TERMINALS,
+                        String.valueOf(studyEntity.getSpreadsheetParameters().isSpreadsheetLoadBatteryRegulatingTerminal())));
         optionalParameters.put(String.valueOf(ElementType.BUS),
             Map.of(
                 InfoTypeParameters.QUERY_PARAM_LOAD_NETWORK_COMPONENTS,
