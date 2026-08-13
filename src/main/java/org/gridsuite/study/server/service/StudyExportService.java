@@ -42,8 +42,8 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.EXPORT_STU
 @Service
 public class StudyExportService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StudyExportService.class);
-    public static final String TREE_JSON = "tree.json";
-    public static final String CASES = "cases";
+    public static final String TREE_JSON_FILE_NAME = "tree.json";
+    public static final String CASES_FOLDER = "cases";
 
     private final StudyService studyService;
     private final CaseService caseService;
@@ -60,7 +60,7 @@ public class StudyExportService {
     /**
      * Export a study as a zip
      * @param studyUuid the study UUID
-     * @param userId the requesting user, checked for read access to the study
+     * @param userId the requesting user checked for read access to the study
      * @return InputStreamResource containing the zip archive
      */
     public InputStreamResource exportStudy(UUID studyUuid, String userId) {
@@ -95,9 +95,9 @@ public class StudyExportService {
      */
     private Path compressStudyToZip(UUID studyUuid, Path tempDir) throws IOException {
         TreeExportInfos treeExportInfos = studyService.buildTreeExport(studyUuid);
-        Path studyJsonPath = tempDir.resolve(TREE_JSON);
+        Path studyJsonPath = tempDir.resolve(TREE_JSON_FILE_NAME);
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
-        Path casesDir = Files.createDirectories(tempDir.resolve(CASES));
+        Path casesDir = Files.createDirectories(tempDir.resolve(CASES_FOLDER));
         for (RootNetworkExportInfos rootNetworkInfos : treeExportInfos.rootNetworks()) {
             UUID caseUuid = rootNetworkInfos.caseInfos().getCaseUuid();
             String caseName = rootNetworkInfos.caseInfos().getCaseName();
@@ -112,32 +112,33 @@ public class StudyExportService {
     }
 
     private Path createTempWorkDir(UUID studyUuid) {
-        FileAttribute<Set<PosixFilePermission>> attr =
-                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"));
-        return createTempPath(studyUuid, "temp directory", () -> Files.createTempDirectory("study-export-" + studyUuid, attr));
+        return createTempPath(studyUuid, "temp directory", "rwx------",
+                attr -> Files.createTempDirectory("study-export-" + studyUuid, attr));
     }
 
     private Path createTempExportFile(UUID studyUuid) {
-        FileAttribute<Set<PosixFilePermission>> attr =
-                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
-        return createTempPath(studyUuid, "temp file", () -> Files.createTempFile("study-export-" + studyUuid, ".zip", attr));
+        return createTempPath(studyUuid, "temp file", "rw-------",
+                attr -> Files.createTempFile("study-export-" + studyUuid, ".zip", attr));
     }
 
-    private Path createTempPath(UUID studyUuid, String errorContext, IOSupplier<Path> creator) {
+    private Path createTempPath(UUID studyUuid, String errorContext, String permissions,
+                                IOFunction<FileAttribute<Set<PosixFilePermission>>, Path> creator) {
+        FileAttribute<Set<PosixFilePermission>> attr =
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(permissions));
         try {
-            return creator.get();
+            return creator.apply(attr);
         } catch (IOException _) {
             throw new StudyException(EXPORT_STUDY_ERROR, "Failed to create " + errorContext + " for study: " + studyUuid);
         }
     }
 
     @FunctionalInterface
-    private interface IOSupplier<T> {
-        T get() throws IOException;
+    private interface IOFunction<T, R> {
+        R apply(T t) throws IOException;
     }
 
     /**
-     * Export a case file from case-server
+     * Export a case file from the case-server
      */
     private void exportCaseFile(UUID caseUuid, String caseName, Path casesDir) throws IOException {
         ResponseEntity<byte[]> response = caseService.getCaseContent(caseUuid);
@@ -163,9 +164,6 @@ public class StudyExportService {
         }
     }
 
-    /**
-     * Write directory contents to zip archive
-     */
     private void writeZipEntries(Path directory, ZipOutputStream zipOut) throws IOException {
         walkAndConsume(directory, null, file -> {
             if (Files.isRegularFile(file)) {
@@ -182,19 +180,12 @@ public class StudyExportService {
         });
     }
 
-    /**
-     * Recursively delete a directory
-     */
     private void deleteDirectory(Path directory) throws IOException {
         if (Files.exists(directory)) {
             walkAndConsume(directory, Comparator.reverseOrder(), Files::delete);
         }
     }
 
-    /**
-     * Walk a directory tree and apply action to every path, translating any IOException thrown by action
-     * back into a checked IOException (Stream#forEach can't propagate checked exceptions on its own)
-     */
     private void walkAndConsume(Path directory, Comparator<Path> order, IOConsumer<Path> action) throws IOException {
         try (Stream<Path> paths = Files.walk(directory)) {
             (order == null ? paths : paths.sorted(order)).forEach(path -> {
