@@ -8,13 +8,15 @@ package org.gridsuite.study.server.loadflow;
 
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.controller.loadflow.LoadFlowController;
+import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.InvalidateNodeInfos;
 import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.networkmodificationtree.entities.NodeBuildStatusEmbeddable;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
 import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
+import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -155,6 +157,7 @@ class LoadFLowUnitTest {
     }
 
     private void testRerunLoadFlowConstructionNode(boolean withRatioTapChangers) {
+        doNothing().when(networkModificationTreeService).updateComputationReportUuid(any(UUID.class), any(UUID.class), any(ComputationType.class), any(UUID.class));
         doReturn(Map.of(LOAD_FLOW.name(), UUID.randomUUID())).when(networkModificationTreeService).getComputationReports(nodeUuid, rootNetworkUuid);
         doReturn(variantId).when(networkModificationTreeService).getVariantId(nodeUuid, rootNetworkUuid);
         loadFlowService.rerunLoadflow(studyUuid, nodeUuid, rootNetworkUuid, loadflowResultUuid, withRatioTapChangers, userId);
@@ -182,11 +185,11 @@ class LoadFLowUnitTest {
 
         // mock call returning values
         doNothing().when(networkModificationTreeService).buildNode(any(UUID.class), any(UUID.class), any(UUID.class), eq(userId), any(RerunLoadFlowInfos.class));
-        doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationTreeService).getNodeBuildStatus(nodeUuid, rootNetworkUuid);
-        doNothing().when(networkModificationTreeService).updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILDING));
         when(rootNetworkService.getNetworkUuid(rootNetworkUuid)).thenReturn(networkUuid);
         doReturn(loadflowResultUuid).when(loadFlowRestService).createRunningStatus();
 
+        when(rootNetworkNodeInfoService.getRootNetworkNodeInfo(any(UUID.class), any(UUID.class)))
+            .thenReturn(Optional.of(RootNetworkNodeInfoEntity.builder().nodeBuildStatus(new NodeBuildStatusEmbeddable(BuildStatus.NOT_BUILT, BuildStatus.NOT_BUILT)).build()));
         when(rootNetworkNodeInfoService.invalidateRootNetworkNode(any(UUID.class), any(UUID.class), any(InvalidateNodeTreeParameters.class))).thenReturn(new InvalidateNodeInfos());
         when(rootNetworkNodeInfoService.invalidateRootNetworkNodes(any(UUID.class), anyList(), any(InvalidateNodeTreeParameters.class))).thenReturn(invalidateNodeInfos);
 
