@@ -1621,7 +1621,7 @@ public class StudyController {
     @Operation(summary = "Create a study and its root networks from a previously exported study archive")
     @ApiResponse(responseCode = "200", description = "Study import initiated successfully")
     public ResponseEntity<Void> importStudyWithCaseImportAction(@RequestBody TreeExportInfos treeExportInfos,
-                                                                 @RequestHeader(HEADER_USER_ID) String userId) {
+                                                                @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.importStudyWithCaseImportAction(treeExportInfos, userId);
         return ResponseEntity.ok().build();
     }
