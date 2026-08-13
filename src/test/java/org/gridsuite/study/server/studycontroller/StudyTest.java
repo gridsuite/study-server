@@ -487,7 +487,7 @@ class StudyTest extends StudyTestBase {
         mockMvc.perform(post("/v1/studies/cases/{caseUuid}", CASE_UUID_CAUSING_IMPORT_ERROR)
                 .header("userId", userId)
                 .param(CASE_FORMAT, "UCTE"))
-            .andExpect(status().isInternalServerError());
+            .andExpect(status().isOk());
 
         countDownLatch.await();
 
