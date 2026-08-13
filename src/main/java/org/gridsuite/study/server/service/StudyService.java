@@ -399,9 +399,13 @@ public class StudyService {
     public void updateRootNetworkRequest(UUID studyUuid, RootNetworkInfos rootNetworkInfos, String userId) {
         rootNetworkService.assertCanModifyRootNetwork(studyUuid, rootNetworkInfos.getId(), rootNetworkInfos.getName(), rootNetworkInfos.getTag());
         StudyEntity studyEntity = getStudy(studyUuid);
+        // first remove all previous remote infos
+        RootNetworkInfos rootNetworkWithAllInfo = rootNetworkService.getRootNetworkInfos(rootNetworkInfos.getId());
+        rootNetworkService.invalidateRootNetworkRemoteInfos(List.of(rootNetworkWithAllInfo), true, false);
 
         if (rootNetworkInfos.getCaseInfos() != null && rootNetworkInfos.getCaseInfos().getOriginalCaseUuid() != null) {
-            invalidateNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), rootNetworkInfos.getId(), ALL_WITH_BLOCK_NODES);
+            // skip deleteVariants is true because all the network data was deleted when invalidateRootNetworkRemoteInfos
+            invalidateNodeTree(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid), rootNetworkInfos.getId(), ALL_WITH_BLOCK_NODES, true);
             RootNetworkRequestEntity requestEntity = rootNetworkService.insertModificationRequest(studyEntity.getId(), rootNetworkInfos, userId);
             updateRootNetworkCaseInfos(studyEntity.getId(), rootNetworkInfos, userId, requestEntity);
         } else {
