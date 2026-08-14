@@ -2095,7 +2095,10 @@ public class StudyService {
             List<ModificationApplicationContext> applicationContexts = studyEntity.getRootNetworks().stream()
                     .map(rn -> rootNetworkNodeInfoService.getNetworkModificationApplicationContext(rn.getId(), targetNodeUuid, rn.getNetworkUuid()))
                     .toList();
-
+            // fetched BEFORE the move: afterwards the modifications belong to the target container
+            Map<UUID, UUID> referencesToMove = isTargetDifferentNode
+                    ? networkModificationService.getReferences(modificationUuidList)
+                    : Map.of();
             NetworkModificationsResult result = networkModificationService.moveModifications(
                     resolvedInfos,
                     Pair.of(modificationUuidList, applicationContexts),
@@ -2108,6 +2111,10 @@ public class StudyService {
             if (result != null && isTargetInDifferentNodeTree) {
                 emitNetworkModificationImpactsForAllRootNetworks(result.modificationResults(), studyEntity, targetNodeUuid);
             }
+            // shared composites: the moved occurrence's node reference is updated, not duplicated
+            if (result != null && isTargetDifferentNode && originNodeUuid != null && !referencesToMove.isEmpty()) {
+                updateReferencesToSharedComposites(referencesToMove, userId, originNodeUuid, targetNodeUuid);
+            }
         } finally {
             notificationService.emitEndModificationEquipmentNotification(studyUuid, targetNodeUuid, childrenUuids);
             if (isTargetDifferentNode && originNodeUuid != null) {
@@ -2115,6 +2122,19 @@ public class StudyService {
             }
         }
         notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    /**
+     * updates, for each moved shared composite, the existing node-reference in directory-server so that it points
+     * to the target node, instead of creating a new one (unlike the copy-paste flow).
+     */
+    private void updateReferencesToSharedComposites(Map<UUID, UUID> referenceTargets, String userId, UUID originNodeUuid, UUID targetNodeUuid) {
+        directoryService.updateReferencesToSharedComposites(
+                referenceTargets.keySet().stream().toList(),
+                userId,
+                originNodeUuid,
+                targetNodeUuid
+        );
     }
 
     private MoveModificationInfos resolveContainers(MoveModificationInfos infos, UUID nodeUuid) {

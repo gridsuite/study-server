@@ -36,7 +36,8 @@ public class DirectoryService {
     public static final String PARAM_ACCESS_TYPE = "accessType";
     public static final String PARAM_TARGET_DIRECTORY_UUID = "targetDirectoryUuid";
     public static final String PARAM_RECURSIVE_CHECK = "recursiveCheck";
-
+    public static final String PARAM_ORIGIN_REFERENCE_UUID = "originReferenceUuid";
+    public static final String PARAM_TARGET_REFERENCE_UUID = "targetReferenceUuid";
     private final RestTemplate restTemplate;
 
     @Setter
@@ -184,5 +185,35 @@ public class DirectoryService {
             .toUriString();
 
         restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.GET, new HttpEntity<>(headers), Void.class);
+    }
+
+    /**
+     * moves node references of shared composite modifications in directory server: the existing references
+     * pointing to the origin node are updated to point to the target node (cut-paste: references move, they aren't duplicated)
+     * @param elementsUuids element uuids of the shared composites in directory server
+     * @param userId id of the user who moves the references
+     * @param originReferenceUuid the node references to update
+     * @param targetReferenceUuid where the references will point after the move
+     */
+    public void updateReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, @NonNull UUID originReferenceUuid, UUID targetReferenceUuid) {
+        Objects.requireNonNull(originReferenceUuid);
+
+        if (elementsUuids.isEmpty()) {
+            return;
+        }
+
+        String path = UriComponentsBuilder.fromPath(DELIMITER + DIRECTORY_API_VERSION + DELIMITER + "elements/references")
+                .queryParam(PARAM_IDS, elementsUuids)
+                .queryParam(PARAM_ORIGIN_REFERENCE_UUID, originReferenceUuid)
+                .queryParam(PARAM_TARGET_REFERENCE_UUID, targetReferenceUuid)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HEADER_USER_ID, userId);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+        restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.PUT, requestEntity, Void.class);
     }
 }
