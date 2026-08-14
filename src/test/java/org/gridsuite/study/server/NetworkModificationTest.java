@@ -2605,6 +2605,13 @@ class NetworkModificationTest {
                         .withBody(mapper.writeValueAsString(new NetworkModificationsResult(Arrays.asList(modification1, modification2), List.of(Optional.empty()))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
 
+        // none of the moved modifications is a shared-composite reference
+        UUID referencesStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(Map.of()))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+        ).getId();
+
         // move 2 modifications within node 1
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
                         studyUuid, nodeUuid1, studyUuid, nodeUuid1)
@@ -2655,6 +2662,10 @@ class NetworkModificationTest {
                 "/v1/network-composite-modifications/children-uuids",
                 Map.of("uuids", WireMock.containing(modification1.toString())),
                 2);
+
+        // references are only looked up when the target node differs from the origin node
+        WireMockUtils.verifyGetRequest(wireMockServer, referencesStubId, "/v1/references",
+                Map.of("uuids", WireMock.matching(".*")));
 
         // move modification without defining originNodeUuid
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=MOVE",
@@ -3431,6 +3442,13 @@ class NetworkModificationTest {
         UUID targetContainerId = UUID.randomUUID();
         UUID beforeUuid = UUID.randomUUID();
 
+        // none of the moved modifications is a shared-composite reference
+        UUID referencesStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(Map.of()))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+        ).getId();
+
         // --- Case 1: move between two explicit containers, with a beforeUuid ---
         String moveUrlCase1 = "/v1/containers/" + targetContainerId;
         wireMockServer.stubFor(WireMock.put(WireMock.urlPathEqualTo(moveUrlCase1))
@@ -3527,6 +3545,8 @@ class NetworkModificationTest {
                 "targetContainerType", WireMock.equalTo(ModificationContainerType.GROUP.name())), expectedMoveBodyJson);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/network-composite-modifications/children-uuids", Map.of(
                 "uuids", WireMock.matching(".*")), 1);
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/references", Map.of(
+                "uuids", WireMock.matching(".*")), 2);
     }
 
     @Test
