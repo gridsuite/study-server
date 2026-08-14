@@ -18,6 +18,7 @@ import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
@@ -63,6 +64,7 @@ public class StudyController {
     private final RootNetworkService rootNetworkService;
     private final RebuildNodeService rebuildNodeService;
     private final StudyExportService studyExportService;
+    private final StudyImportService studyImportService;
 
     public StudyController(StudyService studyService,
                            NetworkService networkStoreService,
@@ -73,7 +75,8 @@ public class StudyController {
                            RemoteServicesInspector remoteServicesInspector,
                            RootNetworkService rootNetworkService,
                            RebuildNodeService rebuildNodeService,
-                           StudyExportService studyExportService) {
+                           StudyExportService studyExportService,
+                           StudyImportService studyImportService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -84,6 +87,7 @@ public class StudyController {
         this.rootNetworkService = rootNetworkService;
         this.rebuildNodeService = rebuildNodeService;
         this.studyExportService = studyExportService;
+        this.studyImportService = studyImportService;
     }
 
     @InitBinder
@@ -176,7 +180,7 @@ public class StudyController {
     public ResponseEntity<RootNetworkRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                                      @RequestBody RootNetworkInfos rootNetworkInfos,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
+        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, rootNetworkInfos, userId, CaseImportAction.ROOT_NETWORK_CREATION));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
@@ -1617,12 +1621,12 @@ public class StudyController {
         return ResponseEntity.ok().headers(headers).body(studyExportService.exportStudy(studyUuid, userId));
     }
 
-    @PostMapping(value = "/studies/import-with-case-import-action")
+    @PostMapping(value = "/studies/import")
     @Operation(summary = "Create a study and its root networks from a previously exported study archive")
     @ApiResponse(responseCode = "200", description = "Study import initiated successfully")
     public ResponseEntity<Void> importStudyWithCaseImportAction(@RequestBody TreeExportInfos treeExportInfos,
                                                                 @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.importStudyWithCaseImportAction(treeExportInfos, userId);
+        studyImportService.importStudyWithCaseImportAction(treeExportInfos, userId);
         return ResponseEntity.ok().build();
     }
 }

@@ -13,6 +13,7 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Abdelsalem Hedhili <abdelsalem.hedhili at rte-france.com>
@@ -35,6 +36,18 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     @OrderColumn(name = "index")
     @Builder.Default
     private List<RootNetworkEntity> rootNetworks = new ArrayList<>();
+
+    /**
+     * Desired order of root network ids for an in-progress batch import (they can complete out of order).
+     * Used by {@link #addRootNetwork(RootNetworkEntity)} to place each one correctly; cleared once done.
+     */
+    @ElementCollection
+    @CollectionTable(name = "StudyRootNetworkOrder", foreignKey = @ForeignKey(
+            name = "study_root_network_order_fk"
+        ))
+    @OrderColumn(name = "index")
+    @Column(name = "rootNetworkUuid")
+    private List<UUID> rootNetworkOrder;
 
     /**
      * @deprecated to remove when the data is migrated into the loadflow-server
@@ -140,7 +153,21 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     public void addRootNetwork(RootNetworkEntity rootNetworkEntity) {
         rootNetworkEntity.setStudy(this);
         rootNetworkEntity.setIndexationStatus(RootNetworkIndexationStatus.INDEXED);
-        rootNetworks.add(rootNetworkEntity);
+        rootNetworks.add(resolveInsertPosition(rootNetworkEntity.getId()), rootNetworkEntity);
+    }
+
+    /**
+     * Position among the root networks already present, for the given target id: the count of ids that
+     * should come before it in {@link #rootNetworkOrder} and are already in {@link #rootNetworks}. Falls back
+     * to appending at the end when there is no pending import batch, or the id isn't part of one.
+     */
+    private int resolveInsertPosition(UUID rootNetworkId) {
+        int targetPos = rootNetworkOrder == null ? -1 : rootNetworkOrder.indexOf(rootNetworkId);
+        if (targetPos < 0) {
+            return rootNetworks.size();
+        }
+        Set<UUID> alreadyPresent = rootNetworks.stream().map(RootNetworkEntity::getId).collect(Collectors.toSet());
+        return (int) rootNetworkOrder.subList(0, targetPos).stream().filter(alreadyPresent::contains).count();
     }
 
     public void deleteRootNetworks(Set<UUID> uuids) {

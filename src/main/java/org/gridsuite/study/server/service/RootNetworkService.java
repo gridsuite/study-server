@@ -280,6 +280,10 @@ public class RootNetworkService {
         return rootNetworkRequestRepository.findAllByStudyUuid(studyUuid);
     }
 
+    public int countRootNetworkRequests(UUID studyUuid) {
+        return rootNetworkRequestRepository.countAllByStudyUuid(studyUuid);
+    }
+
     public void deleteRootNetworkRequest(RootNetworkRequestEntity rootNetworkRequestEntity) {
         rootNetworkRequestRepository.delete(rootNetworkRequestEntity);
     }

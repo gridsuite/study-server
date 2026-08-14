@@ -14,8 +14,6 @@ import org.gridsuite.study.server.error.StudyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.InputStreamResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -138,30 +136,20 @@ public class StudyExportService {
     }
 
     /**
-     * Export a case file from the case-server
+     * Export a case file from the case-server, streaming it directly to disk
+     * so the whole case content is never buffered in the heap.
      */
     private void exportCaseFile(UUID caseUuid, String caseName, Path casesDir) throws IOException {
-        ResponseEntity<byte[]> response = caseService.getCaseContent(caseUuid);
-        byte[] body = response.getBody();
-        if (body != null) {
-            Path caseDir = casesDir.resolve(caseUuid.toString());
-            Files.createDirectories(caseDir);
-            String contentEncoding = response.getHeaders().getFirst(HttpHeaders.CONTENT_ENCODING);
-            // plain file cases are gzip by the case-server and need to be decompressed
-            if ("gzip".equalsIgnoreCase(contentEncoding)) {
-                body = decompressGzip(body);
+        Path caseDir = casesDir.resolve(caseUuid.toString());
+        Files.createDirectories(caseDir);
+        Path caseFile = caseDir.resolve(caseName);
+        caseService.streamCaseContent(caseUuid, (contentEncoding, body) -> {
+            // plain file cases are gzip'd by the case-server and need to be decompressed
+            try (InputStream in = "gzip".equalsIgnoreCase(contentEncoding) ? new GZIPInputStream(body) : body;
+                 OutputStream out = Files.newOutputStream(caseFile)) {
+                in.transferTo(out);
             }
-            Path caseFile = caseDir.resolve(caseName);
-            Files.write(caseFile, body);
-        }
-    }
-
-    private static byte[] decompressGzip(byte[] data) throws IOException {
-        try (GZIPInputStream gzipIn = new GZIPInputStream(new ByteArrayInputStream(data));
-             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            gzipIn.transferTo(out);
-            return out.toByteArray();
-        }
+        });
     }
 
     private void writeZipEntries(Path directory, ZipOutputStream zipOut) throws IOException {

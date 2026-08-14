@@ -20,6 +20,6 @@ import java.util.UUID;
 
 @Repository
 public interface StudyRepository extends JpaRepository<StudyEntity, UUID> {
-    @EntityGraph(attributePaths = {"rootNetworks"}, type = EntityGraph.EntityGraphType.LOAD)
+    @EntityGraph(attributePaths = {"rootNetworks", "rootNetworkOrder"}, type = EntityGraph.EntityGraphType.LOAD)
     Optional<StudyEntity> findWithRootNetworksById(UUID id);
 }
