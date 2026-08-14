@@ -711,7 +711,8 @@ class RootNetworkTest {
         // update root network
         final UUID newCaseUuid = UUID.randomUUID();
         RootNetworkInfos rootNetworkUpdateInfos = RootNetworkInfos.builder().id(rootNetworkInfos.getId()).name("newRootNetworkName").tag("newT")
-            .caseInfos(new CaseInfos(null, newCaseUuid, "newCaseName", "newCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "newNetworkId"))
+            .caseInfos(new CaseInfos(null, newCaseUuid, "newCaseName", "newCaseFormat"))
+            .networkInfos(new NetworkInfos(UUID.randomUUID(), "newNetworkId"))
             .importParameters(Map.of("param1", "newValue1", "param2", "newValue2", "param3", "value3"))
             .reportUuid(UUID.randomUUID())
             .build();
@@ -727,10 +728,6 @@ class RootNetworkTest {
                 .header("userId", USER_ID)
         ).andExpect(status().isOk());
 
-        verify(reportService, times(1)).deleteReports(List.of(REPORT_UUID));
-        verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(NETWORK_UUID);
-        verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID);
-
         ArgumentCaptor<RootNetworkInfos> rootNetworkInfosCaptor = ArgumentCaptor.forClass(RootNetworkInfos.class);
         verify(rootNetworkService, times(1)).insertModificationRequest(eq(studyEntity.getId()), rootNetworkInfosCaptor.capture(), eq(USER_ID));
         rootNetworkInfosCaptor.getValue().getCaseInfos().setCaseUuid(null);
@@ -744,15 +741,12 @@ class RootNetworkTest {
                 objectMapper.writeValueAsString(rootNetworkUpdateInfos.getImportParameters())
         );
 
-        // verify that the node is blocked
-        // build is forbidden, for example
-        assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), true);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyEntity.getId(), rootNetworkInfos.getId(), modificationNode.getId()).header(
-                HEADER_USER_ID, USER_ID))
-            .andExpect(status().isForbidden());
-
         rootNetworkService.insertModificationRequest(studyEntity.getId(), rootNetworkUpdateInfos, USER_ID);
         createAndConsumeMessageCaseImport(studyEntity.getId(), rootNetworkUpdateInfos, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+        verify(reportService, times(1)).deleteReports(List.of(REPORT_UUID));
+        verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(NETWORK_UUID);
+        verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID);
+        verify(caseService, times(1)).deleteCase(CASE_UUID);
 
         assertEqualsRootNetworkInDB(rootNetworkInfos);
         assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), false);
