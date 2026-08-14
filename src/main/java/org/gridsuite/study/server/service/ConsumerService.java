@@ -251,14 +251,18 @@ public class ConsumerService {
                     .importParameters(importParameters)
                     .build());
                 case ROOT_NETWORK_CREATION_FOR_STUDY_IMPORT -> {
-                    studyService.createRootNetwork(studyUuid, RootNetworkInfos.builder()
-                        .id(rootNetworkUuid)
-                        .caseInfos(caseInfos)
-                        .reportUuid(importReportUuid)
-                        .networkInfos(networkInfos)
-                        .importParameters(importParameters)
-                        .build());
-                    studyImportService.checkFinishedStudyImport(studyUuid, userId);
+                    try {
+                        studyService.createRootNetwork(studyUuid, RootNetworkInfos.builder()
+                            .id(rootNetworkUuid)
+                            .caseInfos(caseInfos)
+                            .reportUuid(importReportUuid)
+                            .networkInfos(networkInfos)
+                            .importParameters(importParameters)
+                            .build());
+                    } finally {
+                        studyService.deleteRootNetworkRequest(rootNetworkUuid);
+                        studyImportService.checkFinishedStudyImport(studyUuid, userId);
+                    }
                 }
                 case NETWORK_RECREATION -> studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                 case ROOT_NETWORK_MODIFICATION -> studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
@@ -326,8 +330,9 @@ public class ConsumerService {
                         } else if (caseImportAction == CaseImportAction.ROOT_NETWORK_CREATION_FOR_STUDY_IMPORT) {
                             studyService.deleteRootNetworkRequest(rootNetworkUuid);
                             studyImportService.checkFinishedStudyImport(studyUuid, userId);
+                        } else {
+                            notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
                         }
-                        notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
                     }
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);

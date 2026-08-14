@@ -280,8 +280,8 @@ public class RootNetworkService {
         return rootNetworkRequestRepository.findAllByStudyUuid(studyUuid);
     }
 
-    public int countRootNetworkRequests(UUID studyUuid) {
-        return rootNetworkRequestRepository.countAllByStudyUuid(studyUuid);
+    public int countRootNetworkCreationRequests(UUID studyUuid) {
+        return rootNetworkRequestRepository.countAllByStudyUuidAndActionRequest(studyUuid, RootNetworkAction.ROOT_NETWORK_CREATION);
     }
 
     public void deleteRootNetworkRequest(RootNetworkRequestEntity rootNetworkRequestEntity) {

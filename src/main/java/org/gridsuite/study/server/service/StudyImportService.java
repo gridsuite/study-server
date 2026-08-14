@@ -69,18 +69,24 @@ public class StudyImportService {
         studyRepository.save(studyEntity);
 
         notificationService.emitStudyCreationStarted(studyEntity.getId(), userId);
-        orderedRootNetworks.forEach(rootNetworkInfos -> {
+        int successfulRequests = 0;
+        for (RootNetworkInfos rootNetworkInfos : orderedRootNetworks) {
             try {
                 caseService.assertCaseExists(rootNetworkInfos.getCaseInfos().getOriginalCaseUuid());
                 studyService.createRootNetworkRequest(studyEntity.getId(), rootNetworkInfos, userId, CaseImportAction.ROOT_NETWORK_CREATION_FOR_STUDY_IMPORT);
+                successfulRequests++;
             } catch (Exception e) {
                 LOGGER.error(String.format("Could not request root network '%s' for imported study '%s'", rootNetworkInfos.getName(), studyEntity.getId()), e);
             }
-        });
+        }
+        if (successfulRequests == 0) {
+            studyService.deleteStudyIfNotCreationInProgress(studyEntity.getId(), userId);
+            notificationService.emitStudyCreationError(studyEntity.getId(), userId, "Could not request any root network for imported study");
+        }
     }
 
     public void checkFinishedStudyImport(UUID studyUuid, String userId) {
-        if (rootNetworkService.countRootNetworkRequests(studyUuid) == 0) {
+        if (rootNetworkService.countRootNetworkCreationRequests(studyUuid) == 0) {
             studyRepository.findById(studyUuid).ifPresent(studyEntity -> {
                 studyEntity.setRootNetworkOrder(null);
                 studyRepository.save(studyEntity);

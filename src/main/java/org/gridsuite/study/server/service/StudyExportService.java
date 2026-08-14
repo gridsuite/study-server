@@ -70,8 +70,8 @@ public class StudyExportService {
             InputStream stream = Files.newInputStream(zipFile, StandardOpenOption.DELETE_ON_CLOSE);
             zipFile = null;
             return new InputStreamResource(stream);
-        } catch (IOException _) {
-            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to export study: " + studyUuid);
+        } catch (IOException e) {
+            throw new StudyException(EXPORT_STUDY_ERROR, e.getMessage());
         } finally {
             try {
                 deleteDirectory(tempDir);
@@ -125,8 +125,8 @@ public class StudyExportService {
                 PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(permissions));
         try {
             return creator.apply(attr);
-        } catch (IOException _) {
-            throw new StudyException(EXPORT_STUDY_ERROR, "Failed to create " + errorContext + " for study: " + studyUuid);
+        } catch (IOException e) {
+            throw new StudyException(EXPORT_STUDY_ERROR, e.getMessage());
         }
     }
 
