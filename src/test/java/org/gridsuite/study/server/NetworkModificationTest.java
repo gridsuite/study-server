@@ -3443,7 +3443,7 @@ class NetworkModificationTest {
         UUID beforeUuid = UUID.randomUUID();
 
         // none of the moved modifications is a shared-composite reference
-        UUID referencesStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(Map.of()))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
