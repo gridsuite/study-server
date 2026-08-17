@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.studyexport.NetworkModificationExportInfos;
 import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.error.StudyException;
@@ -954,8 +955,8 @@ public class StudyController {
     @Operation(summary = "Get network modifications to export for a given node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications to export was returned"), @ApiResponse(responseCode = "404",
             description = "The study/node is not found")})
-    public ResponseEntity<String> getExportedNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                          @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+    public ResponseEntity<NetworkModificationExportInfos> getExportedNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                          @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getExportedNetworkModifications(studyUuid, nodeUuid));
     }
