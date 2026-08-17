@@ -137,7 +137,7 @@ class NetworkModificationServiceTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
         networkModificationService.deleteModificationsGroups(List.of(firstUuid, secondUuid));
         HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
-        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.DELETE), eq(httpEntity), eq(new ParameterizedTypeReference<Map<UUID, UUID>>() { }));
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
     @Test
@@ -150,6 +150,6 @@ class NetworkModificationServiceTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
         networkModificationService.deleteStashedModificationsGroups(List.of(firstUuid, secondUuid));
         HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
-        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.DELETE), eq(httpEntity), eq(new ParameterizedTypeReference<Map<UUID, UUID>>() { }));
+        verify(restTemplate).exchange(expectedUrl, HttpMethod.DELETE, httpEntity, new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 }
