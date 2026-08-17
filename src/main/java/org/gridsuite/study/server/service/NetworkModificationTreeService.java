@@ -446,6 +446,41 @@ public class NetworkModificationTreeService {
     }
 
     @Transactional
+    public void deleteAllStashedElements(UUID studyId) {
+        List<NodeEntity> nodes = nodesRepository.findAllByStudyId(studyId);
+        List<NodeEntity> stashedNodes = new ArrayList<>();
+        List<NodeEntity> notStashedNodes = new ArrayList<>();
+        for (NodeEntity nodeEntity : nodes) {
+            if (nodeEntity.isStashed()) {
+                stashedNodes.add(nodeEntity);
+            } else {
+                notStashedNodes.add(nodeEntity);
+            }
+        }
+
+        // remove stashed modification on not stashed nodes
+        List<NetworkModificationNode> networkModificationNodeInfos = networkModificationNodeInfoRepository
+                .findAllById(notStashedNodes.stream().map(NodeEntity::getIdNode).toList())
+                .stream().map(NetworkModificationNodeInfoEntity::toDto).toList();
+        List<UUID> stashedModificationGroupUuids = networkModificationNodeInfos.stream()
+                .map(NetworkModificationNode::getModificationGroupUuid)
+                .toList();
+        networkModificationService.deleteStashedModificationsGroups(stashedModificationGroupUuids);
+
+        // remove modification on stashed nodes
+        List<NetworkModificationNode> networkModificationNodeInfosToDelete = networkModificationNodeInfoRepository
+                .findAllById(stashedNodes.stream().map(NodeEntity::getIdNode).toList())
+                .stream().map(NetworkModificationNodeInfoEntity::toDto).toList();
+        List<UUID> modificationGroupUuidsToDelete = networkModificationNodeInfosToDelete.stream()
+                .map(NetworkModificationNode::getModificationGroupUuid)
+                .toList();
+        networkModificationService.deleteModificationsGroups(modificationGroupUuidsToDelete);
+        // remove stashed nodes
+        networkModificationNodeInfoRepository.deleteAllById(stashedNodes.stream().map(NodeEntity::getIdNode).toList());
+        nodesRepository.deleteAll(stashedNodes);
+    }
+
+    @Transactional
     public NodeEntity createRoot(StudyEntity study) {
         NodeEntity node = nodesRepository.save(new NodeEntity(null, null, NodeType.ROOT, study, false, null, new ArrayList<>()));
         rootNodeInfoRepository.save(
