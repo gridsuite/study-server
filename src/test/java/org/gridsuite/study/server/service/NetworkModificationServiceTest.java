@@ -13,11 +13,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -121,5 +125,31 @@ class NetworkModificationServiceTest {
         networkModificationService.updateNetworkModificationsMetadata(List.of(firstUuid, secondUuid), RESPONSE);
 
         verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.PUT), org.mockito.ArgumentMatchers.<HttpEntity<String>>any(), eq(Void.class));
+    }
+
+    @Test
+    void testDeleteModificationsGroups() {
+        UUID firstUuid = UUID.randomUUID();
+        UUID secondUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups?errorOnGroupNotFound=false";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        networkModificationService.deleteModificationsGroups(List.of(firstUuid, secondUuid));
+        HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.DELETE), eq(httpEntity), eq(new ParameterizedTypeReference<Map<UUID, UUID>>() { }));
+    }
+
+    @Test
+    void testDeleteStashedModificationsGroups() {
+        UUID firstUuid = UUID.randomUUID();
+        UUID secondUuid = UUID.randomUUID();
+        String expectedUrl = NETWORK_MODIFICATION_SERVER_URI + "/v1/groups/stashed-modifications?errorOnGroupNotFound=false";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        networkModificationService.deleteStashedModificationsGroups(List.of(firstUuid, secondUuid));
+        HttpEntity<String> httpEntity = new HttpEntity<>("[\"" + firstUuid + "\",\"" + secondUuid + "\"]", headers);
+        verify(restTemplate).exchange(eq(expectedUrl), eq(HttpMethod.DELETE), eq(httpEntity), eq(new ParameterizedTypeReference<Map<UUID, UUID>>() { }));
     }
 }
