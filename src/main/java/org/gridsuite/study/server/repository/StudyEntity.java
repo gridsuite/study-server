@@ -38,8 +38,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     private List<RootNetworkEntity> rootNetworks = new ArrayList<>();
 
     /**
-     * Desired order of root network ids for an in-progress batch import (they can complete out of order).
-     * Used by {@link #addRootNetwork(RootNetworkEntity)} to place each one correctly; cleared once done.
+     * Root network order to restore during an in-progress study import; null otherwise.
      */
     @ElementCollection
     @CollectionTable(name = "StudyRootNetworkOrder", foreignKey = @ForeignKey(
@@ -157,9 +156,7 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
     }
 
     /**
-     * Position among the root networks already present, for the given target id: the count of ids that
-     * should come before it in {@link #rootNetworkOrder} and are already in {@link #rootNetworks}. Falls back
-     * to appending at the end when there is no pending import batch, or the id isn't part of one.
+     * Insert index for rootNetworkId based on prior ordered networks, append outside pending import
      */
     private int resolveInsertPosition(UUID rootNetworkId) {
         int targetPos = rootNetworkOrder == null ? -1 : rootNetworkOrder.indexOf(rootNetworkId);

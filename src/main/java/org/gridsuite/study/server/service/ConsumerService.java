@@ -324,15 +324,13 @@ public class ConsumerService {
                     if (caseImportAction == CaseImportAction.STUDY_CREATION) {
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
                         notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
-                    } else {
-                        if (caseImportAction == CaseImportAction.ROOT_NETWORK_CREATION) {
-                            studyService.deleteRootNetworkRequest(rootNetworkUuid);
-                        } else if (caseImportAction == CaseImportAction.ROOT_NETWORK_CREATION_FOR_STUDY_IMPORT) {
-                            studyService.deleteRootNetworkRequest(rootNetworkUuid);
-                            studyImportService.checkFinishedStudyImport(studyUuid, userId);
-                        } else {
-                            notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
-                        }
+                    } else if (caseImportAction == CaseImportAction.ROOT_NETWORK_CREATION) {
+                        studyService.deleteRootNetworkRequest(rootNetworkUuid);
+                        notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
+                    } else if (caseImportAction == CaseImportAction.ROOT_NETWORK_CREATION_FOR_STUDY_IMPORT) {
+                        studyService.deleteRootNetworkRequest(rootNetworkUuid);
+                        studyImportService.checkFinishedStudyImport(studyUuid, userId);
+                        notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
                     }
                 } catch (Exception e) {
                     LOGGER.error(e.toString(), e);
