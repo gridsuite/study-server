@@ -63,7 +63,7 @@ class ImportStudyTest extends StudyTestBase {
     private ConsumerService consumerService;
 
     @Test
-    void testImportStudyWithCaseImportAction() throws Exception {
+    void testImportStudy() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         UUID caseUuid1 = UUID.randomUUID();
         UUID caseUuid2 = UUID.randomUUID();
@@ -126,7 +126,7 @@ class ImportStudyTest extends StudyTestBase {
     }
 
     @Test
-    void testImportStudyWithCaseImportActionAppliesExportedOrderRegardlessOfCompletionOrder() throws Exception {
+    void testImportStudyWithExportedOrder() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         UUID caseUuid1 = UUID.randomUUID();
         UUID caseUuid2 = UUID.randomUUID();
@@ -208,7 +208,7 @@ class ImportStudyTest extends StudyTestBase {
     }
 
     @Test
-    void testImportStudyWithCaseImportActionRootNetworkFailureIsResilient() throws Exception {
+    void testImportStudyWithRootNetworkFailure() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         UUID caseUuid1 = UUID.randomUUID();
         UUID caseUuid2 = UUID.randomUUID();
@@ -250,7 +250,7 @@ class ImportStudyTest extends StudyTestBase {
     }
 
     @Test
-    void testImportStudyWithCaseImportActionCleansUpOrphanedModificationGroupOnFailure() throws Exception {
+    void testImportStudyWithModificationGroupOnFailure() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         UUID caseUuid = UUID.randomUUID();
         UUID modificationGroupUuid1 = UUID.randomUUID();
@@ -283,7 +283,7 @@ class ImportStudyTest extends StudyTestBase {
     }
 
     @Test
-    void testImportStudyWithCaseImportActionInvalidNodeType() throws Exception {
+    void testImportStudyWithInvalidNodeType() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         UUID caseUuid = UUID.randomUUID();
         UUID modificationGroupUuid = UUID.randomUUID();
@@ -312,7 +312,7 @@ class ImportStudyTest extends StudyTestBase {
     }
 
     @Test
-    void testImportStudyWithCaseImportActionNoRootNetworks() throws Exception {
+    void testImportStudyWithNoRootNetworks() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         TreeExportInfos treeExportInfos = new TreeExportInfos(studyUuid, List.of(), new NodeTreeExportInfos("Root", "ROOT", null, null, List.of()));
 

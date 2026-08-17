@@ -53,7 +53,7 @@ public class StudyImportService {
         this.notificationService = notificationService;
     }
 
-    public void importStudyWithCaseImportAction(TreeExportInfos treeExportInfos, String userId) {
+    public void importStudy(TreeExportInfos treeExportInfos, String userId) {
         if (treeExportInfos.rootNetworks().isEmpty()) {
             throw new StudyException(NOT_FOUND, "No root network found in import archive");
         }
