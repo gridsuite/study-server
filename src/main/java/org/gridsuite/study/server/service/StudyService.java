@@ -3026,7 +3026,7 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public TreeExportInfos buildTreeExport(UUID studyUuid) {
+    public TreeExportInfos buildTreeExport(UUID studyUuid, String userId) {
         StudyEntity studyEntity = studyRepository.findById(studyUuid).orElseThrow(() -> new StudyException(NOT_FOUND, STUDY_NOT_FOUND));
         List<RootNetworkInfos> rootNetworkInfosList = rootNetworkService.getRootNetworkInfosWithLinksInfos(studyUuid);
         if (rootNetworkInfosList.isEmpty()) {
@@ -3039,7 +3039,8 @@ public class StudyService {
                 .toList();
         AbstractNode rootNode = networkModificationTreeService.getStudyTree(studyUuid, null);
         NodeTreeExportInfos nodeTree = rootNode != null ? toNodeTreeExportInfos(rootNode) : null;
-        return new TreeExportInfos(studyUuid, rootNetworks, nodeTree);
+        Map<String, String> computationParameters = computationParametersService.exportParameters(studyEntity, userId);
+        return new TreeExportInfos(studyUuid, rootNetworks, nodeTree, computationParameters);
     }
 
     private RootNetworkExportInfos toRootNetworkExportInfos(RootNetworkInfos rootNetworkInfos, int index) {
@@ -3082,9 +3083,10 @@ public class StudyService {
     }
 
     @Transactional
-    public StudyEntity createStudyEntityWithTree(UUID studyUuid, String userId, NodeTreeExportInfos nodeTree, Map<UUID, UUID> modificationGroupUuidMapping) {
+    public StudyEntity createStudyEntityWithTree(UUID studyUuid, String userId, NodeTreeExportInfos nodeTree, Map<UUID, UUID> modificationGroupUuidMapping,
+                                                 Map<String, String> computationParameters) {
         UserProfileInfos userProfileInfos = getUserProfile(userId);
-        ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
+        ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.importComputationParameters(computationParameters, userId, userProfileInfos);
         UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
         UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
         UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);

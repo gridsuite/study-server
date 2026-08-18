@@ -66,7 +66,7 @@ public class StudyExportService {
         Path tempDir = createTempWorkDir(studyUuid);
         Path zipFile = null;
         try {
-            zipFile = compressStudyToZip(studyUuid, tempDir);
+            zipFile = compressStudyToZip(studyUuid, userId, tempDir);
             InputStream stream = Files.newInputStream(zipFile, StandardOpenOption.DELETE_ON_CLOSE);
             zipFile = null;
             return new InputStreamResource(stream);
@@ -91,8 +91,8 @@ public class StudyExportService {
     /**
      * Build tree.json and the case files under tempDir, then compress them into a temp zip file
      */
-    private Path compressStudyToZip(UUID studyUuid, Path tempDir) throws IOException {
-        TreeExportInfos treeExportInfos = studyService.buildTreeExport(studyUuid);
+    private Path compressStudyToZip(UUID studyUuid, String userId, Path tempDir) throws IOException {
+        TreeExportInfos treeExportInfos = studyService.buildTreeExport(studyUuid, userId);
         Path studyJsonPath = tempDir.resolve(TREE_JSON_FILE_NAME);
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
         Path casesDir = Files.createDirectories(tempDir.resolve(CASES_FOLDER));
