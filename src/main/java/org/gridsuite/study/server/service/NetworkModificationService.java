@@ -15,6 +15,7 @@ import org.gridsuite.study.server.dto.BuildInfos;
 import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.studyexport.NetworkModificationExportInfos;
+import org.gridsuite.study.server.dto.studyexport.NetworkModificationImportInfos;
 import org.gridsuite.study.server.dto.workflow.AbstractWorkflowInfos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -466,6 +467,24 @@ public class NetworkModificationService {
             getNetworkModificationServerURI(false) + path,
             HttpMethod.POST,
             new HttpEntity<>(headers),
+            new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+        ).getBody();
+    }
+
+    public Map<UUID, UUID> importNetworkModifications(UUID groupUuid, NetworkModificationImportInfos networkModificationImportInfos) {
+        Objects.requireNonNull(groupUuid);
+        var path = UriComponentsBuilder.fromPath("groups/{groupUuid}/network-modifications/import")
+                .buildAndExpand(groupUuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<NetworkModificationImportInfos> httpEntity = new HttpEntity<>(networkModificationImportInfos, headers);
+
+        return restTemplate.exchange(
+            getNetworkModificationServerURI(false) + path,
+            HttpMethod.POST,
+            httpEntity,
             new ParameterizedTypeReference<Map<UUID, UUID>>() { }
         ).getBody();
     }

@@ -27,16 +27,23 @@ import org.gridsuite.study.server.service.ConsumerService;
 import org.gridsuite.study.server.utils.wiremock.WireMockUtilsCriteria;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.GenericMessage;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS;
 import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
@@ -44,7 +51,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.BAD_NODE_TYPE;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -78,7 +85,7 @@ class ImportStudyTest extends StudyTestBase {
         wireMockStubs.caseServer.stubDuplicateCaseWithBody(caseUuid1.toString(), objectMapper.writeValueAsString(duplicatedCaseUuid1));
         wireMockStubs.caseServer.stubDuplicateCaseWithBody(caseUuid2.toString(), objectMapper.writeValueAsString(duplicatedCaseUuid2));
         stubImportNetworkOnly();
-        UUID stubDuplicateModificationGroupId = wireMockStubs.stubDuplicateModificationGroup(objectMapper.writeValueAsString(Map.of()));
+        UUID stubImportNetworkModificationsId = wireMockStubs.stubImportNetworkModifications(objectMapper.writeValueAsString(Map.of()));
 
         NodeTreeExportInfos nodeTree = new NodeTreeExportInfos("Root", "ROOT", null, null, List.of(
                 new NodeTreeExportInfos("N1", "NETWORK_MODIFICATION", modificationGroupUuid1, "SECURITY", List.of(
@@ -90,9 +97,10 @@ class ImportStudyTest extends StudyTestBase {
                 rootNetworkExportInfos("rn2", "2", 1, caseUuid2)
         ), nodeTree);
 
-        mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
-                        .contentType("application/json")
-                        .content(objectMapper.writeValueAsString(treeExportInfos)))
+        mockMvc.perform(multipart(IMPORT_URL)
+                        .file(treeExportInfosPart(treeExportInfos))
+                        .file(emptyModificationsArchivePart())
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isOk());
 
         checkRootNetworkRequestNotifications(2, studyUuid);
@@ -112,7 +120,7 @@ class ImportStudyTest extends StudyTestBase {
         assertEquals("CONSTRUCTION", ((NetworkModificationNode) n2).getNodeType().name());
         assertNotEquals(modificationGroupUuid1, ((NetworkModificationNode) n1).getModificationGroupUuid());
         assertNotEquals(modificationGroupUuid2, ((NetworkModificationNode) n2).getModificationGroupUuid());
-        wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateModificationGroupId, 2);
+        wireMockStubs.verifyImportNetworkModifications(stubImportNetworkModificationsId, 2);
 
         assertEquals(2, rootNetworkRequestRepository.countAllByStudyUuid(studyUuid));
         wireMockStubs.caseServer.verifyCaseExists(stubCaseExists1Id, caseUuid1.toString());
@@ -148,9 +156,10 @@ class ImportStudyTest extends StudyTestBase {
                 rootNetworkExportInfos("rn2", "2", 1, caseUuid2)
         ), nodeTree);
 
-        mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
-                        .contentType("application/json")
-                        .content(objectMapper.writeValueAsString(treeExportInfos)))
+        mockMvc.perform(multipart(IMPORT_URL)
+                        .file(treeExportInfosPart(treeExportInfos))
+                        .file(emptyModificationsArchivePart())
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isOk());
 
         checkRootNetworkRequestNotifications(2, studyUuid);
@@ -229,9 +238,10 @@ class ImportStudyTest extends StudyTestBase {
                 rootNetworkExportInfos("rn2", "2", 1, caseUuid2)
         ), nodeTree);
 
-        mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
-                        .contentType("application/json")
-                        .content(objectMapper.writeValueAsString(treeExportInfos)))
+        mockMvc.perform(multipart(IMPORT_URL)
+                        .file(treeExportInfosPart(treeExportInfos))
+                        .file(emptyModificationsArchivePart())
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isOk());
 
         checkRootNetworkRequestNotifications(1, studyUuid);
@@ -256,7 +266,7 @@ class ImportStudyTest extends StudyTestBase {
         UUID modificationGroupUuid1 = UUID.randomUUID();
         UUID modificationGroupUuid2 = UUID.randomUUID();
 
-        UUID stubDuplicateModificationGroupId = wireMockStubs.stubDuplicateModificationGroup(objectMapper.writeValueAsString(Map.of()));
+        UUID stubImportNetworkModificationsId = wireMockStubs.stubImportNetworkModifications(objectMapper.writeValueAsString(Map.of()));
         UUID stubDeleteGroupId = wireMockStubs.stubNetworkModificationDeleteGroup();
 
         NodeTreeExportInfos nodeTree = new NodeTreeExportInfos("Root", "ROOT", null, null, List.of(
@@ -268,14 +278,15 @@ class ImportStudyTest extends StudyTestBase {
                 rootNetworkExportInfos("rn1", "1", 0, caseUuid)
         ), nodeTree);
 
-        MvcResult result = mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
-                        .contentType("application/json")
-                        .content(objectMapper.writeValueAsString(treeExportInfos)))
+        MvcResult result = mockMvc.perform(multipart(IMPORT_URL)
+                        .file(treeExportInfosPart(treeExportInfos))
+                        .file(emptyModificationsArchivePart())
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isForbidden())
                 .andReturn();
         PowsyblWsProblemDetail problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
         assertEquals(BAD_NODE_TYPE.value(), problemDetail.getBusinessErrorCode());
-        wireMockStubs.verifyDuplicateModificationGroup(stubDuplicateModificationGroupId, 1);
+        wireMockStubs.verifyImportNetworkModifications(stubImportNetworkModificationsId, 1);
         wireMockStubs.verifyNetworkModificationDeleteGroup(stubDeleteGroupId, false);
 
         assertTrue(studyRepository.findById(studyUuid).isEmpty());
@@ -295,9 +306,10 @@ class ImportStudyTest extends StudyTestBase {
                 rootNetworkExportInfos("rn1", "1", 0, caseUuid)
         ), nodeTree);
 
-        MvcResult result = mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
-                        .contentType("application/json")
-                        .content(objectMapper.writeValueAsString(treeExportInfos)))
+        MvcResult result = mockMvc.perform(multipart(IMPORT_URL)
+                        .file(treeExportInfosPart(treeExportInfos))
+                        .file(emptyModificationsArchivePart())
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isForbidden())
                 .andReturn();
         PowsyblWsProblemDetail problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
@@ -307,7 +319,7 @@ class ImportStudyTest extends StudyTestBase {
         assertEquals(0, rootNetworkRequestRepository.countAllByStudyUuid(studyUuid));
         wireMockServer.verify(0, WireMock.postRequestedFor(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/duplicate")));
         wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/cases/" + caseUuid + "/exists")));
-        wireMockServer.verify(0, WireMock.postRequestedFor(WireMock.urlPathMatching("/v1/groups/.*/duplicate")));
+        wireMockServer.verify(0, WireMock.postRequestedFor(WireMock.urlPathMatching("/v1/groups/.*/network-modifications/import")));
         wireMockServer.verify(0, WireMock.getRequestedFor(WireMock.urlPathEqualTo("/v1/users/" + USER_ID + "/profile")));
     }
 
@@ -316,9 +328,10 @@ class ImportStudyTest extends StudyTestBase {
         UUID studyUuid = UUID.randomUUID();
         TreeExportInfos treeExportInfos = new TreeExportInfos(studyUuid, List.of(), new NodeTreeExportInfos("Root", "ROOT", null, null, List.of()));
 
-        MvcResult result = mockMvc.perform(post(IMPORT_URL).header(HEADER_USER_ID, USER_ID)
-                        .contentType("application/json")
-                        .content(objectMapper.writeValueAsString(treeExportInfos)))
+        MvcResult result = mockMvc.perform(multipart(IMPORT_URL)
+                        .file(treeExportInfosPart(treeExportInfos))
+                        .file(emptyModificationsArchivePart())
+                        .header(HEADER_USER_ID, USER_ID))
                 .andExpect(status().isNotFound())
                 .andReturn();
         PowsyblWsProblemDetail problemDetail = objectMapper.readValue(result.getResponse().getContentAsString(), PowsyblWsProblemDetail.class);
@@ -329,6 +342,23 @@ class ImportStudyTest extends StudyTestBase {
 
     private RootNetworkExportInfos rootNetworkExportInfos(String name, String tag, int index, UUID caseUuid) {
         return new RootNetworkExportInfos(name, tag, index, new CaseInfos(caseUuid, null, "caseName", "UCTE"), Map.of());
+    }
+
+    private MockMultipartFile treeExportInfosPart(TreeExportInfos treeExportInfos) throws Exception {
+        return new MockMultipartFile("treeExportInfos", "treeExportInfos", MediaType.APPLICATION_JSON_VALUE,
+                objectMapper.writeValueAsBytes(treeExportInfos));
+    }
+
+    private MockMultipartFile emptyModificationsArchivePart() throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zipOut = new ZipOutputStream(baos)) {
+            for (String fileName : List.of("network-modification.json", "network-modification-filters.json", "network-modification-load-flow-parameters.json")) {
+                zipOut.putNextEntry(new ZipEntry(fileName));
+                zipOut.write("{}".getBytes(StandardCharsets.UTF_8));
+                zipOut.closeEntry();
+            }
+        }
+        return new MockMultipartFile("modificationsArchive", "modifications.zip", "application/zip", baos.toByteArray());
     }
 
     private void stubDefaultParametersCreation() throws Exception {

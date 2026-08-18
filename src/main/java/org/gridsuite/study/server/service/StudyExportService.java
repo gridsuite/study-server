@@ -107,7 +107,7 @@ public class StudyExportService {
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(studyJsonPath.toFile(), treeExportInfos);
         Map<UUID, NetworkModificationExportInfos> modificationsByGroup = studyService.buildNetworkModificationsExport(treeExportInfos.nodeTree());
         writeNetworkModificationsExport(modificationsByGroup, tempDir);
-        writeNetworkModificationFiltersExport(studyUuid, modificationsByGroup, tempDir);
+        writeNetworkModificationFiltersExport(modificationsByGroup, tempDir);
         writeLoadFlowParametersExport(modificationsByGroup, tempDir);
         Path casesDir = Files.createDirectories(tempDir.resolve(CASES_FOLDER));
         for (RootNetworkExportInfos rootNetworkInfos : treeExportInfos.rootNetworks()) {
@@ -132,25 +132,18 @@ public class StudyExportService {
         objectMapper.writerWithDefaultPrettyPrinter().writeValue(networkModificationsJsonPath.toFile(), root);
     }
 
-    private void writeNetworkModificationFiltersExport(UUID studyUuid, Map<UUID, NetworkModificationExportInfos> modificationsByGroup, Path tempDir) throws IOException {
-        Set<UUID> filterIds = new LinkedHashSet<>();
+    private void writeNetworkModificationFiltersExport(Map<UUID, NetworkModificationExportInfos> modificationsByGroup, Path tempDir) throws IOException {
+        Map<UUID, AbstractFilter> filtersById = new LinkedHashMap<>();
         for (NetworkModificationExportInfos groupExport : modificationsByGroup.values()) {
             Map<UUID, List<AbstractFilter>> filtersByModification = groupExport.exportedFilters();
             if (filtersByModification == null) {
                 continue;
             }
             filtersByModification.values().forEach(filtersForModification ->
-                    CollectionUtils.emptyIfNull(filtersForModification).forEach(filter -> filterIds.add(filter.getId())));
-        }
-        ObjectNode filtersRoot = objectMapper.createObjectNode();
-        for (UUID filterId : filterIds) {
-            String exportedFilter = studyService.exportFilterFromFirstRootNetwork(studyUuid, filterId);
-            if (exportedFilter != null) {
-                filtersRoot.set(filterId.toString(), objectMapper.readTree(exportedFilter));
-            }
+                    CollectionUtils.emptyIfNull(filtersForModification).forEach(filter -> filtersById.put(filter.getId(), filter)));
         }
         Path filtersJsonPath = tempDir.resolve(NETWORK_MODIFICATION_FILTERS_JSON);
-        objectMapper.writerWithDefaultPrettyPrinter().writeValue(filtersJsonPath.toFile(), filtersRoot);
+        objectMapper.writerWithDefaultPrettyPrinter().writeValue(filtersJsonPath.toFile(), filtersById);
     }
 
     private void writeLoadFlowParametersExport(Map<UUID, NetworkModificationExportInfos> modificationsByGroup, Path tempDir) throws IOException {
