@@ -459,20 +459,18 @@ public class NetworkModificationTreeService {
         }
 
         // remove stashed modification on not stashed nodes
-        List<NetworkModificationNode> networkModificationNodeInfos = networkModificationNodeInfoRepository
-                .findAllById(notStashedNodes.stream().map(NodeEntity::getIdNode).toList())
-                .stream().map(NetworkModificationNodeInfoEntity::toDto).toList();
+        List<NetworkModificationNodeInfoEntity> networkModificationNodeInfos = networkModificationNodeInfoRepository
+                .findAllById(notStashedNodes.stream().map(NodeEntity::getIdNode).toList());
         List<UUID> stashedModificationGroupUuids = networkModificationNodeInfos.stream()
-                .map(NetworkModificationNode::getModificationGroupUuid)
+                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
                 .toList();
         networkModificationService.deleteStashedModificationsGroups(stashedModificationGroupUuids);
 
         // remove modification on stashed nodes
-        List<NetworkModificationNode> networkModificationNodeInfosToDelete = networkModificationNodeInfoRepository
-                .findAllById(stashedNodes.stream().map(NodeEntity::getIdNode).toList())
-                .stream().map(NetworkModificationNodeInfoEntity::toDto).toList();
+        List<NetworkModificationNodeInfoEntity> networkModificationNodeInfosToDelete = networkModificationNodeInfoRepository
+                .findAllById(stashedNodes.stream().map(NodeEntity::getIdNode).toList());
         List<UUID> modificationGroupUuidsToDelete = networkModificationNodeInfosToDelete.stream()
-                .map(NetworkModificationNode::getModificationGroupUuid)
+                .map(NetworkModificationNodeInfoEntity::getModificationGroupUuid)
                 .toList();
         networkModificationService.deleteModificationsGroups(modificationGroupUuidsToDelete);
         // remove stashed nodes
