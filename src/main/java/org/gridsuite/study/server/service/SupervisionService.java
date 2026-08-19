@@ -13,7 +13,6 @@ import org.gridsuite.study.server.dto.supervision.SupervisionStudyInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.elasticsearch.StudyInfosService;
 import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
-import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
@@ -91,8 +90,6 @@ public class SupervisionService {
 
     private final RootNetworkService rootNetworkService;
 
-    private final NotificationService notificationService;
-
     private static final String SUPERVISION_USER = "Supervision";
 
     public SupervisionService(StudyService studyService,
@@ -113,8 +110,7 @@ public class SupervisionService {
                               ElasticsearchOperations elasticsearchOperations,
                               StudyInfosService studyInfosService,
                               RootNetworkService rootNetworkService,
-                              StudyRepository studyRepository,
-                              NotificationService notificationService) {
+                              StudyRepository studyRepository) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.rootNetworkNodeInfoRepository = rootNetworkNodeInfoRepository;
@@ -134,7 +130,6 @@ public class SupervisionService {
         this.studyInfosService = studyInfosService;
         this.rootNetworkService = rootNetworkService;
         this.studyRepository = studyRepository;
-        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -387,8 +382,16 @@ public class SupervisionService {
             var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
             studyService.unblockNodeTree(studyUuid, rootNodeUuid);
         }
-        notificationService.emitElementUpdated(studyUuid, SUPERVISION_USER);
+        // Note: we voluntarily don't call notificationService.emitElementUpdated here, so that invalidating
+        // a study doesn't bump its last modification date in directory-server
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> getLoadedStudyUuids(List<UUID> studyUuids) {
+        return studyRepository.findAllByIdInAndNetworkLoadStatus(studyUuids, NetworkLoadStatus.LOADED).stream()
+                .map(StudyEntity::getId)
+                .toList();
     }
 
     @Transactional
