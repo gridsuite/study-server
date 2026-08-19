@@ -17,7 +17,6 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
