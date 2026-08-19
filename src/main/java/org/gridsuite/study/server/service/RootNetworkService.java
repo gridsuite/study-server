@@ -187,11 +187,15 @@ public class RootNetworkService {
     public void duplicateStudyRootNetworks(StudyEntity newStudyEntity, StudyEntity sourceStudyEntity) {
         List<RootNetworkEntity> rootNetworkEntities = sourceStudyEntity.getRootNetworks();
         rootNetworkEntities.forEach(rootNetworkEntityToDuplicate -> {
-                List<VariantInfos> networkVariants = networkService.getNetworkVariants(rootNetworkEntityToDuplicate.getNetworkUuid());
-                // Clone only the initial variant
-                List<String> targetVariantIds = networkVariants.stream().findFirst().map(VariantInfos::getId).stream().toList();
-                Network clonedNetwork = networkService.cloneNetwork(rootNetworkEntityToDuplicate.getNetworkUuid(), targetVariantIds);
-                UUID clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
+                UUID sourceNetworkUuid = rootNetworkEntityToDuplicate.getNetworkUuid();
+                UUID clonedNetworkUuid = sourceNetworkUuid;
+                if (networkService.doesNetworkExist(sourceNetworkUuid)) {
+                    List<VariantInfos> networkVariants = networkService.getNetworkVariants(sourceNetworkUuid);
+                    // Clone only the initial variant
+                    List<String> targetVariantIds = networkVariants.stream().findFirst().map(VariantInfos::getId).stream().toList();
+                    Network clonedNetwork = networkService.cloneNetwork(sourceNetworkUuid, targetVariantIds);
+                    clonedNetworkUuid = networkService.getNetworkUuid(clonedNetwork);
+                }
 
                 UUID clonedCaseUuid = caseService.duplicateCase(rootNetworkEntityToDuplicate.getCaseUuid(), false);
                 Map<String, Object> newImportParameters = JsonUtils.deserializeImportParameters(rootNetworkEntityToDuplicate.getImportParameters(), objectMapper);

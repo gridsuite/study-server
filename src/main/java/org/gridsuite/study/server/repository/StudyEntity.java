@@ -8,6 +8,7 @@ package org.gridsuite.study.server.repository;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.gridsuite.study.server.dto.NetworkLoadStatus;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkEntity;
 import org.gridsuite.study.server.repository.voltageinit.StudyVoltageInitParametersEntity;
@@ -128,6 +129,11 @@ public class StudyEntity extends AbstractManuallyAssignedIdentifierEntity<UUID> 
 
     @Column(name = "mono_root", columnDefinition = "boolean default true")
     private boolean monoRoot;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "network_load_status")
+    @Builder.Default
+    private NetworkLoadStatus networkLoadStatus = NetworkLoadStatus.LOADED;
 
     @Embedded
     @Builder.Default
