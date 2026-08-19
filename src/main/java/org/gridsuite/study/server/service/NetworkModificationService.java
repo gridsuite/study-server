@@ -49,6 +49,8 @@ public class NetworkModificationService {
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
     private static final String QUERY_PARAM_ACTION = "action";
+    private static final String QUERY_PARAM_NAME = "name";
+    private static final String QUERY_PARAM_GROUP_UUID = "groupUuid";
     private static final String PARAM_USER_INPUT = "userInput";
 
     private final RestTemplate restTemplate;
@@ -407,6 +409,26 @@ public class NetworkModificationService {
                 HttpMethod.PUT,
                 httpEntity,
                 NetworkModificationsResult.class
+        ).getBody();
+    }
+
+    /**
+     * Asks the network modification server to take a composite modification out of its group, replacing it in the group
+     * by a reference to it, so that it can be stored as an element in the directory server.
+     * @return the uuid of the extracted composite modification
+     */
+    public UUID extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {
+        String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "{modificationUuid}" + DELIMITER + "share")
+                .queryParam(QUERY_PARAM_NAME, name)
+                .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
+                .buildAndExpand(modificationUuid)
+                .toUriString();
+
+        return restTemplate.exchange(
+                getNetworkModificationServerURI(false) + path,
+                HttpMethod.POST,
+                null,
+                UUID.class
         ).getBody();
     }
 
