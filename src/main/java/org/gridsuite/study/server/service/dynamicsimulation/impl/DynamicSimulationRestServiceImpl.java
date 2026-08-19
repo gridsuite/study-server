@@ -24,7 +24,9 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
 import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.UncheckedIOException;
@@ -43,7 +45,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.TIME_SERIE
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @Service
-public class DynamicSimulationServiceImpl implements DynamicSimulationService {
+public class DynamicSimulationRestServiceImpl implements DynamicSimulationRestService {
 
     private final ObjectMapper objectMapper;
 
@@ -51,12 +53,17 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
     private final DynamicSimulationClient dynamicSimulationClient;
 
-    public DynamicSimulationServiceImpl(ObjectMapper objectMapper,
-                                        TimeSeriesClient timeSeriesClient,
-                                        DynamicSimulationClient dynamicSimulationClient) {
+    public DynamicSimulationRestServiceImpl(ObjectMapper objectMapper,
+                                            TimeSeriesClient timeSeriesClient,
+                                            DynamicSimulationClient dynamicSimulationClient) {
         this.objectMapper = objectMapper;
         this.timeSeriesClient = timeSeriesClient;
         this.dynamicSimulationClient = dynamicSimulationClient;
+    }
+
+    @Override
+    public String getProviders() {
+        return dynamicSimulationClient.getProviders();
     }
 
     @Override
@@ -176,15 +183,15 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
 
                 // get first element to check type
                 if (!CollectionUtils.isEmpty(timelines) &&
-                    !(timelines.get(0) instanceof StringTimeSeries)) {
+                    !(timelines.getFirst() instanceof StringTimeSeries)) {
                     throw new StudyException(TIME_SERIES_BAD_TYPE, "Timelines can not be a type: "
-                                                                                       + timelines.get(0).getClass().getSimpleName()
+                                                                                       + timelines.getFirst().getClass().getSimpleName()
                                                                                        + ", expected type: " + StringTimeSeries.class.getSimpleName());
                 }
 
                 // convert {@link StringTimeSeries} to {@link TimelineEventInfos}
                 // note that each {@link StringTimeSeries} corresponds to an array of {@link TimelineEventInfos}
-                return timelines.stream()
+                return CollectionUtils.emptyIfNull(timelines).stream()
                         .flatMap(series -> Stream.of(((StringTimeSeries) series).toArray()))
                         .map(eventJson -> {
                             try {
@@ -233,4 +240,10 @@ public class DynamicSimulationServiceImpl implements DynamicSimulationService {
             throw new StudyException(COMPUTATION_RUNNING);
         }
     }
+
+    @Override
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return dynamicSimulationClient.downloadDebugFile(resultUuid);
+    }
+
 }

@@ -18,6 +18,7 @@ import org.springframework.http.MediaType;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 
 import static org.gridsuite.study.server.utils.SendInput.POST_ACTION_SEND_INPUT;
 
@@ -49,7 +50,7 @@ public class LoadflowServerStubs {
         );
     }
 
-    public void stubRunLoadflowFailed(UUID networkUuid, UUID nodeUuid, String responseBody) {
+    public void stubRunLoadflowFailed(UUID networkUuid, UUID nodeUuid, String responseBody, CountDownLatch countDownLatch) {
         MappingBuilder mappingBuilder = WireMock.post(WireMock.urlMatching("/v1/networks/" + networkUuid
                 + "/run-and-save\\?withRatioTapChangers=.*&receiver=.*&reportUuid=.*&reporterId=.*&variantId=.*"));
 
@@ -58,8 +59,9 @@ public class LoadflowServerStubs {
                         Map.of(
                                 "payload", "",
                                 "destination", "loadflow.run.dlx",
-                                "receiver", "%7B%22nodeUuid%22%3A%22" + nodeUuid + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + networkUuid + "%22%2C%20%22userId%22%3A%22userId%22%7D"
-
+                                "receiver", "%7B%22nodeUuid%22%3A%22" + nodeUuid + "%22%2C%20%22rootNetworkUuid%22%3A%20%22" + networkUuid + "%22%2C%20%22userId%22%3A%22userId%22%7D",
+                                "latch", countDownLatch,
+                                "waitForLatch", true
                         )
                 )
         );

@@ -1,358 +1,95 @@
 /*
- * Copyright (c) 2022, RTE (http://www.rte-france.com)
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 package org.gridsuite.study.server.service.dynamicsimulation;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.commons.PowsyblException;
-import com.powsybl.timeseries.*;
-import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
-import org.gridsuite.study.server.dto.ComputationType;
-import org.gridsuite.study.server.dto.ReportInfos;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
-import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
-import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
-import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesGroupRest;
-import org.gridsuite.study.server.dto.timeseries.rest.TimeSeriesMetadataRest;
-import org.gridsuite.study.server.error.StudyException;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
-import org.gridsuite.study.server.service.RootNetworkService;
-import org.gridsuite.study.server.service.client.dynamicsimulation.DynamicSimulationClient;
-import org.gridsuite.study.server.service.client.timeseries.TimeSeriesClient;
-import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
+import org.gridsuite.study.server.notification.NotificationService;
+import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 
-import java.util.*;
-import java.util.stream.LongStream;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-/**
- * @author Thang PHAM <quyet-thang.pham at rte-france.com>
- */
-@SpringBootTest
-@DisableElasticsearch
-@ContextConfigurationWithTestChannel
+@ExtendWith(MockitoExtension.class)
 class DynamicSimulationServiceTest {
 
-    private static final String VARIANT_1_ID = "variant_1";
-    private static final String PARAMETERS_JSON = "parametersJson";
-
-    // converged node
-    private static final UUID NETWORK_UUID = UUID.randomUUID();
-    private static final UUID NODE_UUID = UUID.randomUUID();
-    private static final UUID ROOTNETWORK_UUID = UUID.randomUUID();
     private static final UUID PARAMETERS_UUID = UUID.randomUUID();
-    private static final UUID DUPLICATED_PARAMETERS_UUID = UUID.randomUUID();
-    public static final UUID RESULT_UUID = UUID.randomUUID();
-    private static final UUID REPORT_UUID = UUID.randomUUID();
-    private static final UUID TIME_SERIES_UUID = UUID.randomUUID();
-    private static final UUID TIMELINE_UUID = UUID.randomUUID();
+    private static final UUID RESULT_UUID = UUID.randomUUID();
+    private static final String PARAMETERS = "{\"provider\":\"Dynawo\"}";
 
-    // running node
-    private static final UUID NODE_UUID_RUNNING = UUID.randomUUID();
-    private static final UUID RESULT_UUID_RUNNING = UUID.randomUUID();
-
-    private static final String TIME_SERIES_NAME_1 = "NETWORK__BUS____2-BUS____5-1_AC_iSide2";
-    private static final String TIME_SERIES_NAME_2 = "NETWORK__BUS____1_TN_Upu_value";
-    private static final String TIMELINE_NAME = "Timeline";
-
-    @MockitoBean
-    private DynamicSimulationClient dynamicSimulationClient;
-
-    @MockitoBean
-    private TimeSeriesClient timeSeriesClient;
-
-    @MockitoBean
+    @Mock
+    private StudyRepository studyRepository;
+    @Mock
+    private ComputationParametersService computationParametersService;
+    @Mock
+    private NotificationService notificationService;
+    @Mock
+    private DynamicSimulationRestService dynamicSimulationRestService;
+    @Mock
     private NetworkModificationTreeService networkModificationTreeService;
+    @Mock
+    private RootNetworkService rootNetworkService;
+    @Mock
+    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
+    @Mock
+    private UserAdminService userAdminService;
+    @Mock
+    private DynamicSimulationEventService dynamicSimulationEventService;
+    @Mock
+    private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
     private DynamicSimulationService dynamicSimulationService;
 
-    @MockitoBean
-    private RootNetworkService rootNetworkService;
-
-    @MockitoBean
-    private RootNetworkNodeInfoService rootNetworkNodeInfoService;
-
     @BeforeEach
-    void setup() {
-        // setup networkModificationTreeService mock in all normal cases
-        given(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID, ROOTNETWORK_UUID, ComputationType.DYNAMIC_SIMULATION)).willReturn(RESULT_UUID);
-    }
-
-    @Test
-    void testRunDynamicSimulation() {
-        given(rootNetworkService.getNetworkUuid(ROOTNETWORK_UUID)).willReturn(NETWORK_UUID);
-        given(networkModificationTreeService.getVariantId(NODE_UUID, ROOTNETWORK_UUID)).willReturn(VARIANT_1_ID);
-        given(networkModificationTreeService.getReportUuid(NODE_UUID, ROOTNETWORK_UUID)).willReturn(Optional.of(REPORT_UUID));
-
-        // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.run(any(), eq(NETWORK_UUID), eq(VARIANT_1_ID), eq(new ReportInfos(REPORT_UUID, NODE_UUID)), any(), any(), any(), eq(false))).willReturn(RESULT_UUID);
-
-        // call method to be tested
-        UUID resultUuid = dynamicSimulationService.runDynamicSimulation(NODE_UUID, ROOTNETWORK_UUID, NETWORK_UUID, VARIANT_1_ID, REPORT_UUID, PARAMETERS_UUID, null, "testUserId", false);
-
-        // check result
-        assertThat(resultUuid).isEqualTo(RESULT_UUID);
-    }
-
-    @Test
-    void testGetTimeSeriesMetadataList() throws Exception {
-        // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
-
-        // setup timeSeriesClient mock
-        // timeseries metadata
-        TimeSeriesGroupRest timeSeriesGroupMetadata = new TimeSeriesGroupRest();
-        timeSeriesGroupMetadata.setId(TIME_SERIES_UUID);
-        timeSeriesGroupMetadata.setMetadatas(List.of(new TimeSeriesMetadataRest(TIME_SERIES_NAME_1), new TimeSeriesMetadataRest(TIME_SERIES_NAME_2)));
-
-        given(timeSeriesClient.getTimeSeriesGroupMetadata(TIME_SERIES_UUID)).willReturn(timeSeriesGroupMetadata);
-
-        // call method to be tested
-        List<TimeSeriesMetadataInfos> resultTimeSeriesMetadataList = dynamicSimulationService.getTimeSeriesMetadataList(RESULT_UUID);
-
-        // check result
-        // metadata must be identical to expected
-        List<TimeSeriesMetadataInfos> expectedTimeSeriesMetadataList = timeSeriesGroupMetadata.getMetadatas().stream().map(TimeSeriesMetadataInfos::fromRest).toList();
-        String expectedTimeSeriesMetadataListJson = objectMapper.writeValueAsString(expectedTimeSeriesMetadataList);
-        String resultTimeSeriesMetadataListJson = objectMapper.writeValueAsString(resultTimeSeriesMetadataList);
-        assertThat(objectMapper.readTree(resultTimeSeriesMetadataListJson)).isEqualTo(objectMapper.readTree(expectedTimeSeriesMetadataListJson));
-    }
-
-    @Test
-    void testGetTimeSeriesResult() {
-        // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
-
-        // setup timeSeriesClient mock
-        // timeseries
-        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{32, 64, 128, 256});
-        List<TimeSeries> timeSeries = new ArrayList<>(Arrays.asList(
-                TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259),
-                TimeSeries.createDouble(TIME_SERIES_NAME_2, index, 1.059970, 1.059970, 1.059970, 1.059970)
-        ));
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
-
-        // call method to be tested
-        List<DoubleTimeSeries> timeSeriesResult = dynamicSimulationService.getTimeSeriesResult(RESULT_UUID, null);
-
-        // check result
-        // must contain two elements
-        assertThat(timeSeriesResult).hasSize(2);
-    }
-
-    @Test
-    void testGetTimeSeriesResultGivenBadType() {
-        // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.getTimeSeriesResult(RESULT_UUID)).willReturn(TIME_SERIES_UUID);
-
-        // setup timeSeriesClient mock
-        // create a bad type timeseries
-        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        List<TimeSeries> timeSeries = List.of(TimeSeries.createString(TIMELINE_NAME, index,
-                "CLA_2_5 - CLA : order to change topology",
-                "_BUS____2-BUS____5-1_AC - LINE : opening both sides",
-                "CLA_2_5 - CLA : order to change topology",
-                "CLA_2_4 - CLA : arming by over-current constraint"));
-        given(timeSeriesClient.getTimeSeriesGroup(TIME_SERIES_UUID, null)).willReturn(timeSeries);
-
-        // call method to be tested
-        assertThrows(StudyException.class, () -> dynamicSimulationService.getTimeSeriesResult(RESULT_UUID, null));
-    }
-
-    @Test
-    void testGetTimelineResult() {
-        // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.getTimelineResult(RESULT_UUID)).willReturn(TIMELINE_UUID);
-
-        // setup timeSeriesClient mock
-        // timeline
-        List<TimelineEventInfos> timelineEventInfosList = List.of(
-                new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
-                new TimelineEventInfos(102479, "_BUS____2-BUS____5-1_AC", "LINE : opening both sides"),
-                new TimelineEventInfos(102479, "CLA_2_5", "CLA : order to change topology"),
-                new TimelineEventInfos(104396, "CLA_2_4", "CLA : arming by over-current constraint")
-        );
-
-        // convert timeline event list to StringTimeSeries
-        long[] timelineIndexes = timelineEventInfosList.stream().mapToLong(event -> (long) event.time()).toArray();
-        String[] timelineValues = timelineEventInfosList.stream().map(event -> {
-            try {
-                return objectMapper.writeValueAsString(event);
-            } catch (JsonProcessingException e) {
-                throw new PowsyblException("Error while serializing timeline event: " + event.toString(), e);
-            }
-        }).toArray(String[]::new);
-        List<TimeSeries> timelineSeries = List.of(TimeSeries.createString("timeline", new IrregularTimeSeriesIndex(timelineIndexes), timelineValues));
-
-        given(timeSeriesClient.getTimeSeriesGroup(TIMELINE_UUID, null)).willReturn(timelineSeries);
-
-        // call method to be tested
-        List<TimelineEventInfos> timelineResult = dynamicSimulationService.getTimelineResult(RESULT_UUID);
-
-        // check result
-        // must contain 4 timeline events
-        assertThat(timelineResult).hasSize(4);
-    }
-
-    @Test
-    void testGetTimelineResultGivenBadType() throws Exception {
-        // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.getTimelineResult(RESULT_UUID)).willReturn(TIMELINE_UUID);
-
-        // setup timeSeriesClient mock
-        // --- create a bad type series --- //
-        TimeSeriesIndex index = new IrregularTimeSeriesIndex(new long[]{102479, 102479, 102479, 104396});
-        List<TimeSeries> timelines = List.of(TimeSeries.createDouble(TIME_SERIES_NAME_1, index, 333.847331, 333.847321, 333.847300, 333.847259));
-
-        given(timeSeriesClient.getTimeSeriesGroup(TIMELINE_UUID, null)).willReturn(timelines);
-
-        // call method to be tested
-        assertThatExceptionOfType(StudyException.class).isThrownBy(() ->
-            dynamicSimulationService.getTimelineResult(RESULT_UUID)
-        ).withMessage("Timelines can not be a type: %s, expected type: %s",
-                        timelines.get(0).getClass().getSimpleName(),
-                        StringTimeSeries.class.getSimpleName());
-
-        // --- create bad type timeline events --- //
-        List<String> timelineEventInfosList = List.of(
-                "CLA : order to change topology",
-                "LINE : opening both sides",
-                "CLA : order to change topology",
-                "CLA : arming by over-current constraint"
-        );
-
-        // collect and convert timeline event list to StringTimeSeries
-        long[] timelineIndexes = LongStream.range(0, timelineEventInfosList.size()).toArray();
-        String[] timelineValues = timelineEventInfosList.stream().map(event -> {
-            try {
-                return objectMapper.writeValueAsString(event);
-            } catch (JsonProcessingException e) {
-                throw new PowsyblException("Error while serializing timeline event: " + event, e);
-            }
-        }).toArray(String[]::new);
-        timelines = List.of(TimeSeries.createString("timeline", new IrregularTimeSeriesIndex(timelineIndexes), timelineValues));
-
-        given(timeSeriesClient.getTimeSeriesGroup(TIMELINE_UUID, null)).willReturn(timelines);
-
-        // call method to be tested
-        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() ->
-            dynamicSimulationService.getTimelineResult(RESULT_UUID)
-        ).withMessage("Error while deserializing timeline event: %s", objectMapper.writeValueAsString(timelineEventInfosList.get(0)));
-    }
-
-    @Test
-    void testGetStatus() {
-        // setup DynamicSimulationClient mock
-        given(dynamicSimulationClient.getStatus(RESULT_UUID)).willReturn(DynamicSimulationStatus.CONVERGED);
-
-        // call method to be tested
-        DynamicSimulationStatus status = dynamicSimulationService.getStatus(RESULT_UUID);
-
-        // check result
-        // status must be "CONVERGED"
-        assertThat(status).isEqualTo(DynamicSimulationStatus.CONVERGED);
-    }
-
-    @Test
-    void testInvalidateStatus() {
-        assertDoesNotThrow(() -> dynamicSimulationService.invalidateStatus(List.of(RESULT_UUID)));
-    }
-
-    @Test
-    void testDeleteResult() {
-        assertDoesNotThrow(() -> dynamicSimulationService.deleteResults(List.of(RESULT_UUID)));
-    }
-
-    @Test
-    void testAssertDynamicSimulationNotRunning() {
-
-        // test not running
-        assertDoesNotThrow(() -> dynamicSimulationService.assertDynamicSimulationNotRunning(RESULT_UUID));
-    }
-
-    @Test
-    void testAssertDynamicSimulationRunning() {
-        // setup for running node
-        given(dynamicSimulationClient.getStatus(RESULT_UUID_RUNNING)).willReturn(DynamicSimulationStatus.RUNNING);
-        given(rootNetworkNodeInfoService.getComputationResultUuid(NODE_UUID_RUNNING, ROOTNETWORK_UUID, ComputationType.DYNAMIC_SIMULATION)).willReturn(RESULT_UUID_RUNNING);
-
-        // test running
-        assertThrows(StudyException.class, () -> dynamicSimulationService.assertDynamicSimulationNotRunning(RESULT_UUID_RUNNING));
+    void setUp() {
+        dynamicSimulationService = new DynamicSimulationService(studyRepository, computationParametersService, notificationService,
+            rootNetworkNodeInfoService, dynamicSimulationRestService, dynamicSecurityAnalysisService, dynamicSimulationEventService,
+            networkModificationTreeService, userAdminService, rootNetworkService);
     }
 
     @Test
     void testGetParameters() {
-        given(dynamicSimulationClient.getParameters(PARAMETERS_UUID)).willReturn(PARAMETERS_JSON);
+        when(dynamicSimulationRestService.getParameters(PARAMETERS_UUID)).thenReturn(PARAMETERS);
 
-        String parametersJson = dynamicSimulationService.getParameters(PARAMETERS_UUID);
-
-        assertThat(parametersJson).isEqualTo(PARAMETERS_JSON);
+        assertThat(dynamicSimulationService.getParameters(PARAMETERS_UUID)).isEqualTo(PARAMETERS);
     }
 
     @Test
-    void testCreateParameters() {
-        given(dynamicSimulationClient.createParameters(PARAMETERS_JSON)).willReturn(PARAMETERS_UUID);
+    void testGetProviders() {
+        String providers = "[\"Dynawo\"]";
+        when(dynamicSimulationRestService.getProviders()).thenReturn(providers);
 
-        UUID parametersUuid = dynamicSimulationService.createParameters(PARAMETERS_JSON);
-
-        assertThat(parametersUuid).isEqualTo(PARAMETERS_UUID);
-    }
-
-    @Test
-    void testCreateDefaultParameters() {
-        given(dynamicSimulationClient.createDefaultParameters()).willReturn(PARAMETERS_UUID);
-
-        UUID parametersUuid = dynamicSimulationService.createDefaultParameters();
-
-        assertThat(parametersUuid).isEqualTo(PARAMETERS_UUID);
+        assertThat(dynamicSimulationService.getProviders()).isEqualTo(providers);
     }
 
     @Test
     void testUpdateParameters() {
-        doNothing().when(dynamicSimulationClient).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
+        dynamicSimulationService.updateParameters(PARAMETERS_UUID, PARAMETERS);
 
-        dynamicSimulationService.updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
-
-        verify(dynamicSimulationClient, times(1)).updateParameters(PARAMETERS_UUID, PARAMETERS_JSON);
+        verify(dynamicSimulationRestService).updateParameters(PARAMETERS_UUID, PARAMETERS);
     }
 
     @Test
-    void testDuplicateParameters() {
-        when(dynamicSimulationClient.duplicateParameters(PARAMETERS_UUID)).thenReturn(DUPLICATED_PARAMETERS_UUID);
+    void testDownloadDebugFile() {
+        ResponseEntity<Resource> response = ResponseEntity.ok(new ByteArrayResource(PARAMETERS.getBytes()));
+        when(dynamicSimulationRestService.downloadDebugFile(RESULT_UUID)).thenReturn(response);
 
-        UUID newParametersUuid = dynamicSimulationService.duplicateParameters(PARAMETERS_UUID);
-
-        assertThat(newParametersUuid).isEqualTo(DUPLICATED_PARAMETERS_UUID);
-    }
-
-    @Test
-    void testDeleteParameters() {
-        doNothing().when(dynamicSimulationClient).deleteParameters(PARAMETERS_UUID);
-
-        dynamicSimulationService.deleteParameters(PARAMETERS_UUID);
-
-        verify(dynamicSimulationClient, times(1)).deleteParameters(PARAMETERS_UUID);
+        assertThat(dynamicSimulationService.downloadDebugFile(RESULT_UUID)).isEqualTo(response);
     }
 }

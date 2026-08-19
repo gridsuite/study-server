@@ -1,121 +1,220 @@
-/*
- * Copyright (c) 2022, RTE (http://www.rte-france.com)
+/**
+ * Copyright (c) 2026, RTE (http://www.rte-france.com)
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
 package org.gridsuite.study.server.service.dynamicsimulation;
 
-import com.powsybl.timeseries.DoubleTimeSeries;
-import org.gridsuite.study.server.dto.dynamicsimulation.DynamicSimulationStatus;
+import lombok.NonNull;
+import org.gridsuite.study.server.dto.QuotaType;
+import org.gridsuite.study.server.dto.UserProfileInfos;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
-import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
-import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
 import org.gridsuite.study.server.error.StudyException;
+import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
-import org.gridsuite.study.server.service.common.ComputationParameters;
+import org.gridsuite.study.server.repository.StudyRepository;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.UserAdminService;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
+import org.gridsuite.study.server.service.common.ComputationParametersService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+import static org.gridsuite.study.server.dto.ComputationType.DYNAMIC_SIMULATION;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWED;
+
 /**
- * @author Thang PHAM <quyet-thang.pham at rte-france.com>
+ * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
  */
-public interface DynamicSimulationService extends ComputationParameters {
 
-    // --- Parameters related methods --- //
+@Service
+public class DynamicSimulationService extends AbstractComputationService {
+    private final DynamicSimulationRestService dynamicSimulationRestService;
+    private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private final DynamicSimulationEventService dynamicSimulationEventService;
+    private final NetworkModificationTreeService networkModificationTreeService;
+    private final UserAdminService userAdminService;
+    private final RootNetworkService rootNetworkService;
 
-    String getProvider(UUID parametersUuid);
+    protected DynamicSimulationService(StudyRepository studyRepository,
+                                       ComputationParametersService computationParametersService,
+                                       NotificationService notificationService,
+                                       RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                                       DynamicSimulationRestService dynamicSimulationRestService,
+                                       DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
+                                       DynamicSimulationEventService dynamicSimulationEventService,
+                                       NetworkModificationTreeService networkModificationTreeService,
+                                       UserAdminService userAdminService,
+                                       RootNetworkService rootNetworkService) {
+        super(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService);
+        this.dynamicSimulationRestService = dynamicSimulationRestService;
+        this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
+        this.dynamicSimulationEventService = dynamicSimulationEventService;
+        this.networkModificationTreeService = networkModificationTreeService;
+        this.userAdminService = userAdminService;
+        this.rootNetworkService = rootNetworkService;
+    }
 
-    String getParameters(UUID parametersUuid);
+    @Transactional
+    public String getDynamicSimulationParameters(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return dynamicSimulationRestService.getParameters(
+                dynamicSimulationRestService.getDynamicSimulationParametersUuidOrElseCreateDefault(studyEntity));
+    }
 
-    UUID createParameters(String parameters);
+    @Transactional
+    public boolean setDynamicSimulationParameters(UUID studyUuid, String dsParameter, String userId) {
+        return setComputationParameters(
+                studyUuid,
+                dsParameter,
+                userId,
+                StudyEntity::getDynamicSimulationParametersUuid,
+                StudyEntity::setDynamicSimulationParametersUuid,
+                UserProfileInfos::getDynamicSimulationParameterId,
+                dynamicSimulationRestService,
+                dynamicSimulationRestService::createParameters,
+                dynamicSimulationRestService::updateParameters,
+                DYNAMIC_SIMULATION,
+                List.of(this::invalidateDynamicSimulationStatusOnAllNodes,
+                        dynamicSecurityAnalysisService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
+                NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS,
+                NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS
+        );
+    }
 
-    UUID createDefaultParameters();
+    public void invalidateDynamicSimulationStatusOnAllNodes(UUID studyUuid) {
+        dynamicSimulationRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SIMULATION));
+    }
 
-    void updateParameters(UUID parametersUuid, String parametersInfos);
+    public String getDynamicSimulationProvider(UUID studyUuid) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        return dynamicSimulationRestService.getProvider(studyEntity.getDynamicSimulationParametersUuid());
+    }
 
-    UUID duplicateParameters(UUID sourceParameterId);
+    @Transactional
+    public UUID runDynamicSimulation(@NonNull UUID studyUuid, @NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid,
+                                     String userId, boolean debug) {
+        StudyEntity studyEntity = getStudy(studyUuid);
+        networkModificationTreeService.blockNode(rootNetworkUuid, nodeUuid);
 
-    void deleteParameters(UUID parametersUuid);
+        UUID result = handleDynamicSimulationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-    UUID getDynamicSimulationParametersUuidOrElseCreateDefault(StudyEntity studyEntity);
+        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_SIMULATION), result);
+        return result;
+    }
 
-    // --- Run computation related methods --- //
+    private UUID handleDynamicSimulationRequest(StudyEntity studyEntity, UUID nodeUuid, UUID rootNetworkUuid, boolean debug, String userId) {
+        // pre-condition check
+        if (!rootNetworkNodeInfoService.isLoadflowConverged(nodeUuid, rootNetworkUuid)) {
+            throw new StudyException(NOT_ALLOWED, "Load flow must run successfully before running dynamic simulation");
+        }
 
-    /**
-     * Run a dynamic simulation from a given study, node UUID and some configured parameters
-     * @param nodeUuid node uuid
-     * @param rootNetworkUuid root network uuid
-     * @param networkUuid network uuid
-     * @param variantId variant id
-     * @param reportUuid report uuid
-     * @param parametersUuid parameters uuid of dynamic simulation
-     * @param events list of events to be used in the simulation
-     * @param userId id of user
-     * @param debug run in debug mode
-     * @return the UUID of the dynamic simulation
-     */
-    UUID runDynamicSimulation(UUID nodeUuid, UUID rootNetworkUuid, UUID networkUuid, String variantId,
-                              UUID reportUuid, UUID parametersUuid, List<EventInfos> events, String userId, boolean debug);
+        // clean previous result if exist
+        UUID prevResultUuid = rootNetworkNodeInfoService.getComputationResultUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION);
+        if (prevResultUuid != null) {
+            dynamicSimulationRestService.deleteResults(List.of(prevResultUuid));
+        }
 
-    /**
-     * Get a list of curves from a given result UUID
-     *
-     * @param resultUuid a given result UUID
-     * @param timeSeriesNames a given list of time-series names
-     * @return a list of curves
-     */
-    List<DoubleTimeSeries> getTimeSeriesResult(UUID resultUuid, List<String> timeSeriesNames);
+        // get dynamic simulation result uuid
+        UUID dynamicSimulationParametersUuid = studyEntity.getDynamicSimulationParametersUuid();
 
-    /**
-     * Get timeline from a given result UUID
-     *
-     * @param resultUuid a given result UUID
-     * @return a list of {@link TimelineEventInfos}
-     */
-    List<TimelineEventInfos> getTimelineResult(UUID resultUuid);
+        // load configured events persisted in the study server DB
+        List<EventInfos> events = dynamicSimulationEventService.getEventsByNodeId(nodeUuid);
 
-    /**
-     * Get the current status of the simulation
-     * @param resultUuid a given result UUID
-     * @return the status of the dynamic simulation
-     */
-    DynamicSimulationStatus getStatus(UUID resultUuid);
+        UUID reportUuid = networkModificationTreeService.getComputationReports(nodeUuid, rootNetworkUuid).getOrDefault(DYNAMIC_SIMULATION.name(), UUID.randomUUID());
+        networkModificationTreeService.updateComputationReportUuid(nodeUuid, rootNetworkUuid, DYNAMIC_SIMULATION, reportUuid);
 
-    /**
-     * invalidate status of the simulation results
-     * @param resultUuids a given list of result UUIDs
-     */
-    void invalidateStatus(List<UUID> resultUuids);
+        // launch dynamic simulation
+        UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
+        String variantId = networkModificationTreeService.getVariantId(nodeUuid, rootNetworkUuid);
+        UUID dynamicSimulationResultUuid = dynamicSimulationRestService.runDynamicSimulation(nodeUuid, rootNetworkUuid,
+                networkUuid, variantId, reportUuid, dynamicSimulationParametersUuid, events, userId, debug);
 
-    /**
-     * Delete results
-     * @param resultsUuids a given results UUID
-     */
-    void deleteResults(List<UUID> resultsUuids);
+        // update result uuid and notification
+        updateComputationResultUuid(nodeUuid, rootNetworkUuid, dynamicSimulationResultUuid, DYNAMIC_SIMULATION);
+        notificationService.emitStudyChanged(studyEntity.getId(), nodeUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+        notificationService.emitElementUpdated(studyEntity.getId(), userId);
 
-    /**
-     * Delete all results
-     */
-    void deleteAllResults();
+        return dynamicSimulationResultUuid;
+    }
 
-    /**
-     * Get results count
-     */
-    Integer getResultsCount();
+    @Transactional(readOnly = true)
+    public List<EventInfos> getDynamicSimulationEvents(UUID nodeUuid) {
+        return dynamicSimulationEventService.getEventsByNodeId(nodeUuid);
+    }
 
-    /**
-     * @param resultUuid a given result UUID
-     * @throws StudyException with type DYNAMIC_SIMULATION_RUNNING if this node is in RUNNING status
-     */
-    void assertDynamicSimulationNotRunning(UUID resultUuid);
+    @Transactional(readOnly = true)
+    public EventInfos getDynamicSimulationEvent(UUID nodeUuid, String equipmentId) {
+        return dynamicSimulationEventService.getEventByNodeIdAndEquipmentId(nodeUuid, equipmentId);
+    }
 
-    /**
-     * Get list of time-series metadata
-     * @param resultUuid a given result UUID
-     * @return a list of time-series metadata
-     */
-    List<TimeSeriesMetadataInfos> getTimeSeriesMetadataList(UUID resultUuid);
+    @Transactional
+    public void createDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
+        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_CREATING_IN_PROGRESS);
+        try {
+            dynamicSimulationEventService.saveEvent(nodeUuid, event);
+        } finally {
+            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+        }
+        postProcessEventCrud(studyUuid, nodeUuid);
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    private void postProcessEventCrud(UUID studyUuid, UUID nodeUuid) {
+        // for delete old result and refresh dynamic simulation run button in UI
+        invalidateDynamicSimulationStatusOnAllNodes(studyUuid);
+        notificationService.emitStudyChanged(studyUuid, nodeUuid, null, NotificationService.UPDATE_TYPE_DYNAMIC_SIMULATION_STATUS);
+    }
+
+    @Transactional
+    public void updateDynamicSimulationEvent(UUID studyUuid, UUID nodeUuid, String userId, EventInfos event) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
+        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_UPDATING_IN_PROGRESS);
+        try {
+            dynamicSimulationEventService.saveEvent(nodeUuid, event);
+        } finally {
+            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+        }
+        postProcessEventCrud(studyUuid, nodeUuid);
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    @Transactional
+    public void deleteDynamicSimulationEvents(UUID studyUuid, UUID nodeUuid, String userId, List<UUID> eventUuids) {
+        List<UUID> childrenUuids = networkModificationTreeService.getChildrenUuids(nodeUuid);
+        notificationService.emitStartEventCrudNotification(studyUuid, nodeUuid, childrenUuids, NotificationService.EVENTS_CRUD_DELETING_IN_PROGRESS);
+        try {
+            dynamicSimulationEventService.deleteEvents(eventUuids);
+        } finally {
+            notificationService.emitEndEventCrudNotification(studyUuid, nodeUuid, childrenUuids);
+        }
+        postProcessEventCrud(studyUuid, nodeUuid);
+        notificationService.emitElementUpdated(studyUuid, userId);
+    }
+
+    public String getParameters(UUID parametersUuid) {
+        return dynamicSimulationRestService.getParameters(parametersUuid);
+    }
+
+    public String getProviders() {
+        return dynamicSimulationRestService.getProviders();
+    }
+
+    public void updateParameters(UUID parametersUuid, String parametersInfos) {
+        dynamicSimulationRestService.updateParameters(parametersUuid, parametersInfos);
+    }
+
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        return dynamicSimulationRestService.downloadDebugFile(resultUuid);
+    }
 }

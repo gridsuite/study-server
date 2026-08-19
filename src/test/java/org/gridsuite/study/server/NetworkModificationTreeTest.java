@@ -270,15 +270,15 @@ class NetworkModificationTreeTest {
         singleLineDiagramService.setSingleLineDiagramServerBaseUri(baseUrl);
         geoDataService.setGeoDataServerBaseUri(baseUrl);
         networkMapService.setNetworkMapServerBaseUri(baseUrl);
-        loadflowRestService.setLoadFlowServerBaseUri(baseUrl);
-        securityAnalysisService.setSecurityAnalysisServerBaseUri(baseUrl);
+        loadflowRestService.setBaseUri(baseUrl);
+        securityAnalysisService.setBaseUri(baseUrl);
         actionsService.setActionsServerBaseUri(baseUrl);
         networkModificationService.setNetworkModificationServerBaseUri(baseUrl);
         reportService.setReportServerBaseUri(baseUrl);
-        sensitivityAnalysisService.setSensitivityAnalysisServerBaseUri(baseUrl);
-        shortCircuitService.setShortCircuitServerBaseUri(baseUrl);
-        stateEstimationService.setStateEstimationServerServerBaseUri(baseUrl);
-        pccMinService.setPccMinServerBaseUri(baseUrl);
+        sensitivityAnalysisService.setBaseUri(baseUrl);
+        shortCircuitService.setBaseUri(baseUrl);
+        stateEstimationService.setBaseUri(baseUrl);
+        pccMinService.setBaseUri(baseUrl);
 
         doReturn(baseUrl).when(dynamicSimulationClient).getBaseUri();
         doReturn(baseUrl).when(dynamicSecurityAnalysisClient).getBaseUri();

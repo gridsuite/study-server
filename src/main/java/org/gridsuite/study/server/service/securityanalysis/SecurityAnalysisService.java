@@ -15,6 +15,7 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -121,6 +122,22 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
     public void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
         securityAnalysisRestService.invalidateSaStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
+    }
+
+    public String getProviders() {
+        return securityAnalysisRestService.getProviders();
+    }
+
+    public String getSecurityAnalysisParameters(UUID parameterUuid) {
+        return securityAnalysisRestService.getParameters(parameterUuid);
+    }
+
+    public String getDefaultLimitReductions() {
+        return securityAnalysisRestService.getDefaultLimitReductions();
+    }
+
+    public void updateSecurityAnalysisParameters(UUID parameterUuid, String parameters) {
+        securityAnalysisRestService.updateParameters(parameterUuid, parameters);
     }
 
 }

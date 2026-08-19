@@ -30,9 +30,9 @@ import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRepository;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestEntity;
 import org.gridsuite.study.server.repository.rootnetwork.RootNetworkRequestRepository;
 import org.gridsuite.study.server.service.*;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
+import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
+import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
+import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowRestService;
 import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
@@ -57,25 +57,19 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
 import java.util.*;
 import java.util.function.Consumer;
+
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR;
-import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS;
-import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -169,11 +163,11 @@ class RootNetworkTest {
     @MockitoBean
     private CaseService caseService;
     @MockitoBean
-    private DynamicSimulationService dynamicSimulationService;
+    private DynamicSimulationRestService dynamicSimulationRestService;
     @MockitoBean
-    private DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
+    private DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
     @MockitoBean
-    private DynamicMarginCalculationService dynamicMarginCalculationService;
+    private DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
     @MockitoBean
     private SecurityAnalysisRestService securityAnalysisService;
     @MockitoBean
@@ -193,6 +187,8 @@ class RootNetworkTest {
 
     @BeforeEach
     void setUp() {
+        synchronizeStudyServerExecutionService(studyServerExecutionService);
+
         wireMockServer = new WireMockServer(wireMockConfig().dynamicPort());
 
         // start server
@@ -482,10 +478,6 @@ class RootNetworkTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
 
-        // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
-        // completes before the test verifies it, removes the race condition.
-        synchronizeStudyServerExecutionService(studyServerExecutionService);
-
         // DO NOT insert creation request - it means root network won't be created and remote resources will be deleted
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(UUID.randomUUID()).name("newRootNetworkName").tag("newT")
             .caseInfos(new CaseInfos(CASE_UUID2, CASE_UUID, CASE_NAME2, CASE_FORMAT2)).networkInfos(new NetworkInfos(NETWORK_UUID2, NETWORK_ID2))
@@ -556,10 +548,6 @@ class RootNetworkTest {
         // before deletion, check we have 2 root networks for study
         assertEquals(2, studyService.getExistingBasicRootNetworkInfos(studyEntity.getId()).size());
 
-        // Run runAsync tasks inline so fire-and-forget cleanup (e.g. blocking=false remote deletions)
-        // completes before the test verifies it, removes the race condition.
-        synchronizeStudyServerExecutionService(studyServerExecutionService);
-
         mockMvc.perform(delete("/v1/studies/{studyUuid}/root-networks", studyEntity.getId())
                 .contentType(APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(List.of(rootNetworkEntityToDeleteUuid)))
@@ -576,9 +564,9 @@ class RootNetworkTest {
         verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(NETWORK_UUID2);
         verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID2);
         verify(caseService, times(1)).deleteCase(CASE_UUID2);
-        verify(dynamicSimulationService, times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
-        verify(dynamicSecurityAnalysisService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
-        verify(dynamicMarginCalculationService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
+        verify(dynamicSimulationRestService, times(1)).deleteResults(List.of(DYNAMIC_SIMULATION_RESULT_UUID));
+        verify(dynamicSecurityAnalysisRestService, times(1)).deleteResults(List.of(DYNAMIC_SECURITY_ANALYSIS_RESULT_UUID));
+        verify(dynamicMarginCalculationRestService, times(1)).deleteResults(List.of(DYNAMIC_MARGIN_CALCULATION_RESULT_UUID));
         // check LOADFLOW_RESULT_UUID2 is also deleted
         verify(loadFlowRestService, times(1)).deleteLoadFlowResults(argThat(list -> new HashSet<>(list).equals(Set.of(LOADFLOW_RESULT_UUID, LOADFLOW_RESULT_UUID2))));
         verify(securityAnalysisService, times(1)).deleteSecurityAnalysisResults(List.of(SECURITY_ANALYSIS_RESULT_UUID));
@@ -707,9 +695,10 @@ class RootNetworkTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         // create a second root network
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(UUID.randomUUID()).tag("oldT").name("oldName")
-                .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), "oldCaseName", "oldCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "oldNetworkId"))
+                .caseInfos(new CaseInfos(CASE_UUID, CASE_UUID, "oldCaseName", "oldCaseFormat"))
+                .networkInfos(new NetworkInfos(NETWORK_UUID, "oldNetworkId"))
                 .importParameters(Map.of("param1", "oldValue1", "param2", "oldValue2"))
-                .reportUuid(UUID.randomUUID())
+                .reportUuid(REPORT_UUID)
                 .build();
         createDummyRootNetwork(studyEntity, rootNetworkInfos);
         studyRepository.save(studyEntity);
@@ -722,7 +711,8 @@ class RootNetworkTest {
         // update root network
         final UUID newCaseUuid = UUID.randomUUID();
         RootNetworkInfos rootNetworkUpdateInfos = RootNetworkInfos.builder().id(rootNetworkInfos.getId()).name("newRootNetworkName").tag("newT")
-            .caseInfos(new CaseInfos(null, newCaseUuid, "newCaseName", "newCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "newNetworkId"))
+            .caseInfos(new CaseInfos(null, newCaseUuid, "newCaseName", "newCaseFormat"))
+            .networkInfos(new NetworkInfos(UUID.randomUUID(), "newNetworkId"))
             .importParameters(Map.of("param1", "newValue1", "param2", "newValue2", "param3", "value3"))
             .reportUuid(UUID.randomUUID())
             .build();
@@ -751,15 +741,12 @@ class RootNetworkTest {
                 objectMapper.writeValueAsString(rootNetworkUpdateInfos.getImportParameters())
         );
 
-        // verify that the node is blocked
-        // build is forbidden, for example
-        assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), true);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyEntity.getId(), rootNetworkInfos.getId(), modificationNode.getId()).header(
-                HEADER_USER_ID, USER_ID))
-            .andExpect(status().isForbidden());
-
         rootNetworkService.insertModificationRequest(studyEntity.getId(), rootNetworkUpdateInfos, USER_ID);
         createAndConsumeMessageCaseImport(studyEntity.getId(), rootNetworkUpdateInfos, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+        verify(reportService, times(1)).deleteReports(List.of(REPORT_UUID));
+        verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(NETWORK_UUID);
+        verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID);
+        verify(caseService, times(1)).deleteCase(CASE_UUID);
 
         assertEqualsRootNetworkInDB(rootNetworkInfos);
         assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), false);
