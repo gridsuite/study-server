@@ -126,6 +126,7 @@ public class RootNetworkService {
             updateNetworkInfos(rootNetworkEntity, rootNetworkInfos.getNetworkInfos());
             rootNetworkEntity.setImportParameters(JsonUtils.serializeImportParameters(rootNetworkInfos.getImportParameters(), objectMapper));
             rootNetworkEntity.setReportUuid(rootNetworkInfos.getReportUuid());
+            rootNetworkEntity.setIndexationStatus(RootNetworkIndexationStatus.INDEXED);
         }
 
         if (rootNetworkInfos.getName() != null) {
