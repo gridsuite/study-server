@@ -740,6 +740,7 @@ public class StudyService {
 
         return studyRepository.save(StudyEntity.builder()
             .id(newStudyId)
+            .networkLoadStatus(sourceStudyEntity.getNetworkLoadStatus())
             .loadFlowParametersUuid(duplicatedComputationParameterUUIDs.loadFlowParametersUuid())
             .securityAnalysisParametersUuid(duplicatedComputationParameterUUIDs.securityAnalysisParametersUuid())
             .dynamicSimulationParametersUuid(duplicatedComputationParameterUUIDs.dynamicSimulationParametersUuid())

@@ -260,6 +260,21 @@ class RootNetworkTest {
     }
 
     @Test
+    void testDuplicateStudyRootNetworksWhenNetworkNotLoaded() {
+        StudyEntity sourceStudy = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
+        studyRepository.save(sourceStudy);
+        Mockito.when(networkService.doesNetworkExist(NETWORK_UUID)).thenReturn(false);
+        Mockito.when(caseService.duplicateCase(CASE_UUID, false)).thenReturn(DUPLICATE_CASE_UUID);
+        Mockito.when(reportService.duplicateReport(REPORT_UUID)).thenReturn(UUID.randomUUID());
+        StudyEntity newStudy = studyRepository.save(StudyEntity.builder().id(UUID.randomUUID()).build());
+        rootNetworkService.duplicateStudyRootNetworks(newStudy, sourceStudy);
+        verify(networkService, Mockito.never()).getNetworkVariants(any());
+        RootNetworkEntity duplicatedRootNetwork = testUtils.getOneRootNetwork(newStudy.getId());
+        assertEquals(NETWORK_UUID, duplicatedRootNetwork.getNetworkUuid());
+        assertEquals(DUPLICATE_CASE_UUID, duplicatedRootNetwork.getCaseUuid());
+    }
+
+    @Test
     void testCreateRootNetworkRequestWithError() throws Exception {
         // create study with first root network
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
