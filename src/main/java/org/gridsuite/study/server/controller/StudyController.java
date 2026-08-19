@@ -664,6 +664,7 @@ public class StudyController {
                 if (!studyUuid.equals(originStudyUuid)) {
                     throw new StudyException(MOVE_NETWORK_MODIFICATION_FORBIDDEN);
                 }
+                ///// ???????
                 studyService.assertNoBlockedNodeInStudy(studyUuid, originNodeUuid);
                 studyService.assertNoBlockedNodeInStudy(studyUuid, nodeUuid);
                 rebuildNodeService.moveNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
