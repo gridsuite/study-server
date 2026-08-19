@@ -404,7 +404,7 @@ public class SupervisionService {
         startTime.set(System.nanoTime());
         try {
             rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId ->
-                    studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER)
+                    studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false)
             );
         } finally {
             var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
