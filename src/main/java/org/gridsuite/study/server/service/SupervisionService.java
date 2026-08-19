@@ -382,8 +382,6 @@ public class SupervisionService {
             var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);
             studyService.unblockNodeTree(studyUuid, rootNodeUuid);
         }
-        // Note: we voluntarily don't call notificationService.emitElementUpdated here, so that invalidating
-        // a study doesn't bump its last modification date in directory-server
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));
     }
 
