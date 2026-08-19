@@ -32,7 +32,7 @@ import static org.gridsuite.study.server.dto.ComputationType.ASYMMETRICAL_LOAD;
  */
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/asymmetrical-load")
-@Tag(name = "Study server - Asymmetrical load parameters")
+@Tag(name = "Study server - Asymmetrical load")
 public class AsymmetricalLoadController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final StudyService studyService;
@@ -56,15 +56,7 @@ public class AsymmetricalLoadController {
             @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
             @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
             Sort sort, @RequestBody String csvHeaders) {
-        byte[] result = rootNetworkNodeInfoService.exportAsymmetricalLoadResultsAsCsv(nodeUuid, rootNetworkUuid, csvHeaders, sort, filters, globalFilters);
-        HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        responseHeaders.setContentDispositionFormData("attachment", "asymmetrical_load_results.csv");
-
-        return ResponseEntity
-                .ok()
-                .headers(responseHeaders)
-                .body(result);
+        return rootNetworkNodeInfoService.exportAsymmetricalLoadResultsAsCsv(nodeUuid, rootNetworkUuid, csvHeaders, sort, filters, globalFilters);
     }
 
     @PostMapping(value = "/run")

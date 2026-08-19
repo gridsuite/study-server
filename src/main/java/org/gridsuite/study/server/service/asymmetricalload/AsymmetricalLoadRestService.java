@@ -24,10 +24,7 @@ import org.gridsuite.study.server.utils.StudyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -271,7 +268,7 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         return restTemplate.exchange(baseUri + path, HttpMethod.POST, httpEntity, UUID.class).getBody();
     }
 
-    public byte[] exportAsymmetricalLoadResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
+    public ResponseEntity<byte[]> exportAsymmetricalLoadResultsAsCsv(UUID resultUuid, String csvHeaders, UUID networkUuid, String variantId, Sort sort, String filters, String globalFilters) {
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result of asymmetrical load was not found");
         }
@@ -297,6 +294,6 @@ public class AsymmetricalLoadRestService extends AbstractComputationRestService 
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<String> httpEntity = new HttpEntity<>(csvHeaders, headers);
-        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
+        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class);
     }
 }

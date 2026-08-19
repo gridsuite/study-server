@@ -25,7 +25,7 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 
 @RestController
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/asymmetrical-load")
-@Tag(name = "Study server - Asymmetrical Load")
+@Tag(name = "Study server - Asymmetrical load parameters")
 public class AsymmetricalLoadParametersController {
 
     private final AsymmetricalLoadService asymmetricalLoadService;
