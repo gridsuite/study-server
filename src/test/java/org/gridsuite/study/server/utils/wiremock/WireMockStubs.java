@@ -231,6 +231,16 @@ public class WireMockStubs {
         ).getId();
     }
 
+    public UUID stubImportNetworkModifications(String responseBody) {
+        return wireMock.stubFor(WireMock.post(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + "/.*/network-modifications/import"))
+            .willReturn(WireMock.ok().withBody(responseBody).withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+        ).getId();
+    }
+
+    public void verifyImportNetworkModifications(UUID stubId, int nbRequests) {
+        verifyPostRequest(wireMock, stubId, URI_NETWORK_MODIFICATION_GROUPS + "/.*/network-modifications/import", true, Map.of(), nbRequests);
+    }
+
     public UUID stubNetworkModificationDeleteGroup() {
         return wireMock.stubFor(WireMock.delete(WireMock.urlPathMatching(URI_NETWORK_MODIFICATION_GROUPS + DELIMITER + ".*"))
             .willReturn(WireMock.ok())
