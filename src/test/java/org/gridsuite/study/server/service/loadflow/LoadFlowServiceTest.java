@@ -51,10 +51,7 @@ class LoadFlowServiceTest {
     @BeforeEach
     void setUp() {
         loadFlowService = new LoadFlowService(studyRepository, loadFlowRestService, notificationService, computationParametersService,
-            rootNetworkNodeInfoService, networkModificationTreeService, rootNetworkService,
-            null, null,
-            null, null, null,
-            null);
+            rootNetworkNodeInfoService, networkModificationTreeService, rootNetworkService, null);
     }
 
     @Test

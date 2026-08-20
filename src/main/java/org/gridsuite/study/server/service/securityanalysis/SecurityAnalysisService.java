@@ -37,6 +37,8 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
     private final ObjectMapper objectMapper;
 
+    private final SecurityAnalysisRestService securityAnalysisRestService;
+
     public SecurityAnalysisService(StudyRepository studyRepository,
                                    ComputationParametersService computationParametersService,
                                    NotificationService notificationService,

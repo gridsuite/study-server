@@ -33,6 +33,7 @@ import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSI
 public class SensitivityAnalysisService extends AbstractComputationService {
 
     private final DirectoryService directoryService;
+    private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
 
     protected SensitivityAnalysisService(StudyRepository studyRepository,
                                          ComputationParametersService computationParametersService,

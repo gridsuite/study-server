@@ -13,7 +13,10 @@ import org.gridsuite.study.server.dto.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.slf4j.Logger;
@@ -35,8 +38,10 @@ import static org.gridsuite.study.server.dto.ComputationType.PCC_MIN;
 
 @Service
 public class PccMinService extends AbstractComputationService {
-    private final ObjectMapper objectMapper;
     private static final Logger LOGGER = LoggerFactory.getLogger(PccMinService.class);
+
+    private final ObjectMapper objectMapper;
+    private final PccMinRestService pccMinRestService;
 
     protected PccMinService(StudyRepository studyRepository,
                             ComputationParametersService computationParametersService,

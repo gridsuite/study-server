@@ -14,7 +14,10 @@ import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
-import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.NetworkModificationTreeService;
+import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
+import org.gridsuite.study.server.service.RootNetworkService;
+import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.springframework.core.io.Resource;
@@ -34,6 +37,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWE
 
 @Service
 public class DynamicMarginCalculationService extends AbstractComputationService {
+    private final DynamicMarginCalculationRestService dynamicMarginCalculationRestService;
 
     protected DynamicMarginCalculationService(StudyRepository studyRepository,
                                               ComputationParametersService computationParametersService,

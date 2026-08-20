@@ -17,12 +17,6 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
-import org.gridsuite.study.server.service.pccmin.PccMinRestService;
-import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
-import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -47,13 +41,6 @@ public abstract class AbstractComputationService {
     protected final RootNetworkService rootNetworkService;
     protected final ComputationParametersService computationParametersService;
     protected final UserAdminService userAdminService;
-
-    protected SecurityAnalysisRestService securityAnalysisRestService = null;
-    protected SensitivityAnalysisRestService sensitivityAnalysisRestService = null;
-    protected PccMinRestService pccMinRestService = null;
-    protected DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService = null;
-    protected DynamicSimulationRestService dynamicSimulationRestService = null;
-    protected DynamicMarginCalculationRestService dynamicMarginCalculationRestService = null;
 
     protected AbstractComputationService(StudyRepository studyRepository, NotificationService notificationService,
                                          NetworkModificationTreeService networkModificationTreeService,

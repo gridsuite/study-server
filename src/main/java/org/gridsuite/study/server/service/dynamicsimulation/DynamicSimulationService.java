@@ -39,6 +39,7 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWE
 @Service
 public class DynamicSimulationService extends AbstractComputationService {
     private final DynamicSimulationEventService dynamicSimulationEventService;
+    private final DynamicSimulationRestService dynamicSimulationRestService;
 
     protected DynamicSimulationService(StudyRepository studyRepository,
                                        ComputationParametersService computationParametersService,
@@ -53,7 +54,6 @@ public class DynamicSimulationService extends AbstractComputationService {
         super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
             rootNetworkService, computationParametersService, userAdminService);
         this.dynamicSimulationRestService = dynamicSimulationRestService;
-        this.dynamicSecurityAnalysisRestService = dynamicSecurityAnalysisRestService;
         this.dynamicSimulationEventService = dynamicSimulationEventService;
     }
 
