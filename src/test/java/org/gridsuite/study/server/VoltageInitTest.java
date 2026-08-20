@@ -765,7 +765,7 @@ class VoltageInitTest {
                 .header("userId", "userId"));
     }
 
-    private void assertRunAndSaveRequestDone(final MockWebServer server, String variantId) throws Exception {
+    private void assertRunAndSaveRequestDone(final MockWebServer server, String variantId) {
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(
                 "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + variantId
                         + "&rootNetworkName=.*&nodeName=.*")));
