@@ -37,6 +37,8 @@ public class SecurityAnalysisService extends AbstractComputationService {
 
     private final ObjectMapper objectMapper;
 
+    private final SecurityAnalysisRestService securityAnalysisRestService;
+
     public SecurityAnalysisService(StudyRepository studyRepository,
                                    ComputationParametersService computationParametersService,
                                    NotificationService notificationService,
@@ -109,7 +111,7 @@ public class SecurityAnalysisService extends AbstractComputationService {
                 securityAnalysisRestService::createSecurityAnalysisParameters,
                 securityAnalysisRestService::updateSecurityAnalysisParameters,
                 SECURITY_ANALYSIS,
-                List.of(this::invalidateSecurityAnalysisStatusOnAllNodes),
+                List.of(rootNetworkNodeInfoService::invalidateSecurityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS
         );
     }

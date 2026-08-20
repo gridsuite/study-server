@@ -17,23 +17,15 @@ import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
-import org.gridsuite.study.server.service.pccmin.PccMinRestService;
-import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
-import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static org.gridsuite.study.server.dto.ComputationType.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
@@ -49,13 +41,6 @@ public abstract class AbstractComputationService {
     protected final RootNetworkService rootNetworkService;
     protected final ComputationParametersService computationParametersService;
     protected final UserAdminService userAdminService;
-
-    protected SecurityAnalysisRestService securityAnalysisRestService = null;
-    protected SensitivityAnalysisRestService sensitivityAnalysisRestService = null;
-    protected PccMinRestService pccMinRestService = null;
-    protected DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService = null;
-    protected DynamicSimulationRestService dynamicSimulationRestService = null;
-    protected DynamicMarginCalculationRestService dynamicMarginCalculationRestService = null;
 
     protected AbstractComputationService(StudyRepository studyRepository, NotificationService notificationService,
                                          NetworkModificationTreeService networkModificationTreeService,
@@ -135,35 +120,5 @@ public abstract class AbstractComputationService {
 
     protected void updateComputationResultUuid(UUID nodeUuid, UUID rootNetworkUuid, UUID computationResultUuid, ComputationType computationType) {
         rootNetworkNodeInfoService.updateComputationResultUuid(nodeUuid, rootNetworkUuid, computationResultUuid, computationType);
-    }
-
-    protected void invalidateSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        Objects.requireNonNull(securityAnalysisRestService);
-        securityAnalysisRestService.invalidateSaStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SECURITY_ANALYSIS));
-    }
-
-    public void invalidateSensitivityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        Objects.requireNonNull(sensitivityAnalysisRestService);
-        sensitivityAnalysisRestService.invalidateSensitivityAnalysisStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, SENSITIVITY_ANALYSIS));
-    }
-
-    public void invalidateDynamicSecurityAnalysisStatusOnAllNodes(UUID studyUuid) {
-        Objects.requireNonNull(dynamicSecurityAnalysisRestService);
-        dynamicSecurityAnalysisRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SECURITY_ANALYSIS));
-    }
-
-    public void invalidatePccMinStatusOnAllNodes(UUID studyUuid) {
-        Objects.requireNonNull(pccMinRestService);
-        pccMinRestService.invalidatePccMinStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, PCC_MIN));
-    }
-
-    public void invalidateDynamicSimulationStatusOnAllNodes(UUID studyUuid) {
-        Objects.requireNonNull(dynamicSimulationRestService);
-        dynamicSimulationRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_SIMULATION));
-    }
-
-    public void invalidateDynamicMarginCalculationStatusOnAllNodes(UUID studyUuid) {
-        Objects.requireNonNull(dynamicMarginCalculationRestService);
-        dynamicMarginCalculationRestService.invalidateStatus(rootNetworkNodeInfoService.getComputationResultUuids(studyUuid, DYNAMIC_MARGIN_CALCULATION));
     }
 }

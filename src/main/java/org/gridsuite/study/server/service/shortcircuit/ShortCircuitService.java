@@ -17,7 +17,6 @@ import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
-import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
@@ -47,12 +46,10 @@ public class ShortCircuitService extends AbstractComputationService {
                                   ShortCircuitRestService shortCircuitServicerRest,
                                   NetworkModificationTreeService networkModificationTreeService,
                                   UserAdminService userAdminService,
-                                  RootNetworkService rootNetworkService,
-                                  PccMinRestService pccMinRestService) {
+                                  RootNetworkService rootNetworkService) {
         super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
             rootNetworkService, computationParametersService, userAdminService);
         this.shortCircuitRestService = shortCircuitServicerRest;
-        this.pccMinRestService = pccMinRestService;
     }
 
     @Transactional
@@ -108,7 +105,7 @@ public class ShortCircuitService extends AbstractComputationService {
                 shortCircuitRestService::createParameters,
                 shortCircuitRestService::updateParameters,
                 SHORT_CIRCUIT,
-                List.of(this::invalidateShortCircuitStatusOnAllNodes, this::invalidatePccMinStatusOnAllNodes),
+                List.of(this::invalidateShortCircuitStatusOnAllNodes, rootNetworkNodeInfoService::invalidatePccMinStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SHORT_CIRCUIT_STATUS,
                 NotificationService.UPDATE_TYPE_ONE_BUS_SHORT_CIRCUIT_STATUS,
                 NotificationService.UPDATE_TYPE_PCC_MIN_STATUS

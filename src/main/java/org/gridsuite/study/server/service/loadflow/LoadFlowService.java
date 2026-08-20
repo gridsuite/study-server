@@ -21,11 +21,6 @@ import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
-import org.gridsuite.study.server.service.dynamicmargincalculation.DynamicMarginCalculationRestService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
-import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationRestService;
-import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisRestService;
-import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,20 +44,10 @@ public class LoadFlowService extends AbstractComputationService {
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            NetworkModificationTreeService networkModificationTreeService,
                            RootNetworkService rootNetworkService,
-                           SecurityAnalysisRestService securityAnalysisRestService,
-                           SensitivityAnalysisRestService sensitivityAnalysisRestService,
-                           DynamicSimulationRestService dynamicSimulationRestService,
-                           DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService,
-                           DynamicMarginCalculationRestService dynamicMarginCalculationRestService,
                            UserAdminService userAdminService) {
         super(studyRepository, notificationService, networkModificationTreeService, rootNetworkNodeInfoService,
             rootNetworkService, computationParametersService, userAdminService);
         this.loadflowRestService = loadflowRestService;
-        this.securityAnalysisRestService = securityAnalysisRestService;
-        this.sensitivityAnalysisRestService = sensitivityAnalysisRestService;
-        this.dynamicSimulationRestService = dynamicSimulationRestService;
-        this.dynamicSecurityAnalysisRestService = dynamicSecurityAnalysisRestService;
-        this.dynamicMarginCalculationRestService = dynamicMarginCalculationRestService;
     }
 
     @Transactional
@@ -192,11 +177,11 @@ public class LoadFlowService extends AbstractComputationService {
             LOAD_FLOW,
             List.of(
                 this::invalidateAllStudyLoadFlowStatus,
-                this::invalidateSecurityAnalysisStatusOnAllNodes,
-                this::invalidateSensitivityAnalysisStatusOnAllNodes,
-                this::invalidateDynamicSimulationStatusOnAllNodes,
-                this::invalidateDynamicSecurityAnalysisStatusOnAllNodes,
-                this::invalidateDynamicMarginCalculationStatusOnAllNodes
+                rootNetworkNodeInfoService::invalidateSecurityAnalysisStatusOnAllNodes,
+                rootNetworkNodeInfoService::invalidateSensitivityAnalysisStatusOnAllNodes,
+                rootNetworkNodeInfoService::invalidateDynamicSimulationStatusOnAllNodes,
+                rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes,
+                rootNetworkNodeInfoService::invalidateDynamicMarginCalculationStatusOnAllNodes
             ),
             NotificationService.UPDATE_TYPE_LOADFLOW_STATUS,
             NotificationService.UPDATE_TYPE_SECURITY_ANALYSIS_STATUS,

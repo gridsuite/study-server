@@ -13,7 +13,6 @@ import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
-import org.gridsuite.study.server.service.pccmin.PccMinRestService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,15 +51,13 @@ class ShortCircuitServiceTest {
     private UserAdminService userAdminService;
     @Mock
     private RootNetworkService rootNetworkService;
-    @Mock
-    private PccMinRestService pccMinRestService;
 
     private ShortCircuitService shortCircuitService;
 
     @BeforeEach
     void setUp() {
         shortCircuitService = new ShortCircuitService(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService,
-            shortCircuitRestService, networkModificationTreeService, userAdminService, rootNetworkService, pccMinRestService);
+            shortCircuitRestService, networkModificationTreeService, userAdminService, rootNetworkService);
     }
 
     @Test

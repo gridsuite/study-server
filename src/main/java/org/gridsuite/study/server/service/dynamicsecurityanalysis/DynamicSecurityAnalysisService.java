@@ -40,6 +40,8 @@ import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_ALLOWE
 @Service
 public class DynamicSecurityAnalysisService extends AbstractComputationService {
 
+    private final DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService;
+
     protected DynamicSecurityAnalysisService(StudyRepository studyRepository,
                                              ComputationParametersService computationParametersService,
                                              NotificationService notificationService,
@@ -77,7 +79,7 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
                 dynamicSecurityAnalysisRestService::createParameters,
                 dynamicSecurityAnalysisRestService::updateParameters,
                 DYNAMIC_SECURITY_ANALYSIS,
-                List.of(this::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
+                List.of(rootNetworkNodeInfoService::invalidateDynamicSecurityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_DYNAMIC_SECURITY_ANALYSIS_STATUS
         );
     }

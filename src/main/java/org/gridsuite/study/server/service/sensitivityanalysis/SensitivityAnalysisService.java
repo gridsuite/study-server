@@ -33,6 +33,7 @@ import static org.gridsuite.study.server.dto.ComputationType.SENSITIVITY_ANALYSI
 public class SensitivityAnalysisService extends AbstractComputationService {
 
     private final DirectoryService directoryService;
+    private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
 
     protected SensitivityAnalysisService(StudyRepository studyRepository,
                                          ComputationParametersService computationParametersService,
@@ -69,7 +70,7 @@ public class SensitivityAnalysisService extends AbstractComputationService {
                 sensitivityAnalysisRestService::createSensitivityAnalysisParameters,
                 sensitivityAnalysisRestService::updateSensitivityAnalysisParameters,
                 SENSITIVITY_ANALYSIS,
-                List.of(this::invalidateSensitivityAnalysisStatusOnAllNodes),
+                List.of(rootNetworkNodeInfoService::invalidateSensitivityAnalysisStatusOnAllNodes),
                 NotificationService.UPDATE_TYPE_SENSITIVITY_ANALYSIS_STATUS
         );
     }
