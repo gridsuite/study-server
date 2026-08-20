@@ -108,7 +108,9 @@ public class DynamicSimulationService extends AbstractComputationService {
 
         UUID result = handleDynamicSimulationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_SIMULATION), result);
+        QuotaType quotaType = QuotaType.mapFromComputationType(DYNAMIC_SIMULATION);
+        userAdminService.startOperationWithQuota(userId, quotaType, result);
+        notificationService.emitQuotaChange(userId, quotaType);
         return result;
     }
 

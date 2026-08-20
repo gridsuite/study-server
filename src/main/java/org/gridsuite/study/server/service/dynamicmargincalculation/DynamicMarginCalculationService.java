@@ -95,7 +95,9 @@ public class DynamicMarginCalculationService extends AbstractComputationService 
 
         UUID result = handleDynamicMarginCalculationRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_MARGIN_CALCULATION), result);
+        QuotaType quotaType = QuotaType.mapFromComputationType(DYNAMIC_MARGIN_CALCULATION);
+        userAdminService.startOperationWithQuota(userId, quotaType, result);
+        notificationService.emitQuotaChange(userId, quotaType);
         return result;
     }
 

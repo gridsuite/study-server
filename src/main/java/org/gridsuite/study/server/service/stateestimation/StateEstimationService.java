@@ -64,7 +64,9 @@ public class StateEstimationService extends AbstractComputationService {
 
         UUID result = handleStateEstimationRequest(studyEntity, nodeUuid, rootNetworkUuid, userId, debug);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(STATE_ESTIMATION), result);
+        QuotaType quotaType = QuotaType.mapFromComputationType(STATE_ESTIMATION);
+        userAdminService.startOperationWithQuota(userId, quotaType, result);
+        notificationService.emitQuotaChange(userId, quotaType);
         return result;
     }
 

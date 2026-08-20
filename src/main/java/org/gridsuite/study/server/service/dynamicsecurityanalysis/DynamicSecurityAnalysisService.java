@@ -99,7 +99,9 @@ public class DynamicSecurityAnalysisService extends AbstractComputationService {
 
         UUID result = handleDynamicSecurityAnalysisRequest(studyEntity, nodeUuid, rootNetworkUuid, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(DYNAMIC_SECURITY_ANALYSIS), result);
+        QuotaType quotaType = QuotaType.mapFromComputationType(DYNAMIC_SECURITY_ANALYSIS);
+        userAdminService.startOperationWithQuota(userId, quotaType, result);
+        notificationService.emitQuotaChange(userId, quotaType);
         return result;
     }
 

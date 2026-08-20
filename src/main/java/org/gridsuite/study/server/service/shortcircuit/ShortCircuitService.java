@@ -75,7 +75,9 @@ public class ShortCircuitService extends AbstractComputationService {
 
         UUID result = handleShortCircuitRequest(studyEntity, nodeUuid, rootNetworkUuid, busId, debug, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SHORT_CIRCUIT), result);
+        QuotaType quotaType = QuotaType.mapFromComputationType(SHORT_CIRCUIT);
+        userAdminService.startOperationWithQuota(userId, quotaType, result);
+        notificationService.emitQuotaChange(userId, quotaType);
         return result;
     }
 

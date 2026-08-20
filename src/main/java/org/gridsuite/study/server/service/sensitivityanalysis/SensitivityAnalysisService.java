@@ -91,7 +91,9 @@ public class SensitivityAnalysisService extends AbstractComputationService {
 
         UUID result = handleSensitivityAnalysisRequest(study, nodeUuid, rootNetworkUuid, userId);
 
-        userAdminService.startOperationWithQuota(userId, QuotaType.mapFromComputationType(SENSITIVITY_ANALYSIS), result);
+        QuotaType quotaType = QuotaType.mapFromComputationType(SENSITIVITY_ANALYSIS);
+        userAdminService.startOperationWithQuota(userId, quotaType, result);
+        notificationService.emitQuotaChange(userId, quotaType);
         return result;
     }
 
