@@ -383,7 +383,7 @@ public class SupervisionService {
             // remove all stashed nodes and network modifications
             networkModificationTreeService.deleteAllStashedElements(studyUuid);
             rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId ->
-                    studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER)
+                    studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false)
             );
         } finally {
             var rootNodeUuid = networkModificationTreeService.getStudyRootNodeUuid(studyUuid);

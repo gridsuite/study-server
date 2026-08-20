@@ -57,25 +57,19 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
 import java.util.*;
 import java.util.function.Consumer;
+
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR;
-import static org.gridsuite.study.server.StudyConstants.HEADER_IMPORT_PARAMETERS;
-import static org.gridsuite.study.server.StudyConstants.HEADER_RECEIVER;
-import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.StudyConstants.*;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAXIMUM_ROOT_NETWORK_BY_STUDY_REACHED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 import static org.gridsuite.study.server.utils.TestUtils.createModificationNodeInfo;
 import static org.gridsuite.study.server.utils.TestUtils.synchronizeStudyServerExecutionService;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -701,9 +695,10 @@ class RootNetworkTest {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         // create a second root network
         RootNetworkInfos rootNetworkInfos = RootNetworkInfos.builder().id(UUID.randomUUID()).tag("oldT").name("oldName")
-                .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), "oldCaseName", "oldCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "oldNetworkId"))
+                .caseInfos(new CaseInfos(CASE_UUID, CASE_UUID, "oldCaseName", "oldCaseFormat"))
+                .networkInfos(new NetworkInfos(NETWORK_UUID, "oldNetworkId"))
                 .importParameters(Map.of("param1", "oldValue1", "param2", "oldValue2"))
-                .reportUuid(UUID.randomUUID())
+                .reportUuid(REPORT_UUID)
                 .build();
         createDummyRootNetwork(studyEntity, rootNetworkInfos);
         studyRepository.save(studyEntity);
@@ -716,7 +711,8 @@ class RootNetworkTest {
         // update root network
         final UUID newCaseUuid = UUID.randomUUID();
         RootNetworkInfos rootNetworkUpdateInfos = RootNetworkInfos.builder().id(rootNetworkInfos.getId()).name("newRootNetworkName").tag("newT")
-            .caseInfos(new CaseInfos(null, newCaseUuid, "newCaseName", "newCaseFormat")).networkInfos(new NetworkInfos(UUID.randomUUID(), "newNetworkId"))
+            .caseInfos(new CaseInfos(null, newCaseUuid, "newCaseName", "newCaseFormat"))
+            .networkInfos(new NetworkInfos(UUID.randomUUID(), "newNetworkId"))
             .importParameters(Map.of("param1", "newValue1", "param2", "newValue2", "param3", "value3"))
             .reportUuid(UUID.randomUUID())
             .build();
@@ -745,15 +741,12 @@ class RootNetworkTest {
                 objectMapper.writeValueAsString(rootNetworkUpdateInfos.getImportParameters())
         );
 
-        // verify that the node is blocked
-        // build is forbidden, for example
-        assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), true);
-        mockMvc.perform(post("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/build", studyEntity.getId(), rootNetworkInfos.getId(), modificationNode.getId()).header(
-                HEADER_USER_ID, USER_ID))
-            .andExpect(status().isForbidden());
-
         rootNetworkService.insertModificationRequest(studyEntity.getId(), rootNetworkUpdateInfos, USER_ID);
         createAndConsumeMessageCaseImport(studyEntity.getId(), rootNetworkUpdateInfos, CaseImportAction.ROOT_NETWORK_MODIFICATION);
+        verify(reportService, times(1)).deleteReports(List.of(REPORT_UUID));
+        verify(equipmentInfosService, times(1)).deleteEquipmentIndexes(NETWORK_UUID);
+        verify(networkStoreService, times(1)).deleteNetwork(NETWORK_UUID);
+        verify(caseService, times(1)).deleteCase(CASE_UUID);
 
         assertEqualsRootNetworkInDB(rootNetworkInfos);
         assertNodeBlocked(modificationNode.getId(), rootNetworkInfos.getId(), false);
