@@ -32,13 +32,13 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_A
 @Tag(name = "Study server - Load flow parameters")
 public class LoadFlowStudyParametersController {
     private final StudyService studyService;
-    private final NodeActivityRunnerService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
     private final LoadFlowService loadFlowService;
 
     public LoadFlowStudyParametersController(StudyService studyService,
-                                             NodeActivityRunnerService nodeActivityService, LoadFlowService loadFlowService) {
+                                             NodeActivityRunnerService nodeActivityRunnerService, LoadFlowService loadFlowService) {
         this.studyService = studyService;
-        this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.loadFlowService = loadFlowService;
     }
 
@@ -51,9 +51,10 @@ public class LoadFlowStudyParametersController {
             @RequestBody(required = false) String lfParameter,
             @RequestHeader(HEADER_USER_ID) String userId) {
         // only what this actually unbuilds: the security nodes holding a loadflow result, and their children
-        boolean userProfileIssue = nodeActivityService.runWithNodeActivity(UNBUILD_ALL, studyUuid,
-            studyService.getNodesInvalidatedByLoadFlowParameters(studyUuid),
-            () -> studyService.setLoadFlowParameters(studyUuid, lfParameter, userId));
+        boolean userProfileIssue = nodeActivityRunnerService.runWithNodeActivity(
+            UNBUILD_ALL, studyUuid, studyService.getNodesInvalidatedByLoadFlowParameters(studyUuid),
+            () -> studyService.setLoadFlowParameters(studyUuid, lfParameter, userId)
+        );
         return userProfileIssue ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 

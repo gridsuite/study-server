@@ -37,14 +37,14 @@ public class StateEstimationController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final StateEstimationService stateEstimationService;
-    private final NodeActivityRunnerService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
     public StateEstimationController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                     StateEstimationService stateEstimationService, NodeActivityRunnerService nodeActivityService) {
+                                     StateEstimationService stateEstimationService, NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.stateEstimationService = stateEstimationService;
-        this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @PostMapping(value = "/run")
@@ -57,7 +57,7 @@ public class StateEstimationController {
                                                    @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(STATE_ESTIMATION, userId);
-        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> stateEstimationService.runStateEstimation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().build();
     }

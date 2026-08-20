@@ -40,13 +40,14 @@ public class PccMinController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final StudyService studyService;
     private final PccMinService pccMinService;
-    private final NodeActivityRunnerService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
-    public PccMinController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService, PccMinService pccMinService, NodeActivityRunnerService nodeActivityService) {
+    public PccMinController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService,
+                            PccMinService pccMinService, NodeActivityRunnerService nodeActivityRunnerService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.studyService = studyService;
         this.pccMinService = pccMinService;
-        this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @PostMapping(value = "/result/csv", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -74,7 +75,7 @@ public class PccMinController {
 
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(PCC_MIN, userId);
-        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> pccMinService.runPccMin(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }

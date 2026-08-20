@@ -43,14 +43,14 @@ public class ShortCircuitController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final ShortCircuitService shortCircuitService;
-    private final NodeActivityRunnerService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
     public ShortCircuitController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                  ShortCircuitService shortCircuitService, NodeActivityRunnerService nodeActivityService) {
+                                  ShortCircuitService shortCircuitService, NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.shortCircuitService = shortCircuitService;
-        this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @PutMapping(value = "/run")
@@ -65,7 +65,7 @@ public class ShortCircuitController {
             @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(SHORT_CIRCUIT, userId);
-        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> shortCircuitService.runShortCircuit(studyUuid, nodeUuid, rootNetworkUuid, busId, debug, userId));
         return ResponseEntity.ok().build();
     }

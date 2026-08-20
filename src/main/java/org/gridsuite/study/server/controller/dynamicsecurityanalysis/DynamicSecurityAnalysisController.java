@@ -38,16 +38,16 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 public class DynamicSecurityAnalysisController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    private final NodeActivityRunnerService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
 
     public DynamicSecurityAnalysisController(StudyService studyService,
                                              RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                              DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                                             NodeActivityRunnerService nodeActivityService) {
+                                             NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
-        this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.dynamicSecurityAnalysisService = dynamicSecurityAnalysisService;
     }
 
@@ -62,7 +62,7 @@ public class DynamicSecurityAnalysisController {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(DYNAMIC_SECURITY_ANALYSIS, userId);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSecurityAnalysisService::getDynamicSecurityAnalysisProvider);
-        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> dynamicSecurityAnalysisService.runDynamicSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }

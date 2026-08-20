@@ -43,14 +43,14 @@ public class DynamicSimulationController {
 
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    private final NodeActivityRunnerService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
     private final DynamicSimulationService dynamicSimulationService;
 
     public DynamicSimulationController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService, DynamicSimulationService dynamicSimulationService,
-                                       NodeActivityRunnerService nodeActivityService) {
+                                       NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
-        this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.dynamicSimulationService = dynamicSimulationService;
     }
 
@@ -65,7 +65,7 @@ public class DynamicSimulationController {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(DYNAMIC_SIMULATION, userId);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicSimulationService::getDynamicSimulationProvider);
-        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.runDynamicSimulation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }

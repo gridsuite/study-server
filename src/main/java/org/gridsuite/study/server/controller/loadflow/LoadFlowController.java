@@ -45,17 +45,17 @@ public class LoadFlowController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final LoadFlowService loadFlowService;
     private final NetworkModificationTreeService networkModificationTreeService;
-    private final NodeActivityRunnerService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
     public LoadFlowController(StudyService studyService,
                               RootNetworkNodeInfoService rootNetworkNodeInfoService, LoadFlowService loadFlowService,
                               NetworkModificationTreeService networkModificationTreeService,
-                              NodeActivityRunnerService nodeActivityService) {
+                              NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.loadFlowService = loadFlowService;
         this.networkModificationTreeService = networkModificationTreeService;
-        this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @PutMapping(value = "/run")
@@ -74,13 +74,13 @@ public class LoadFlowController {
         // a loadflow on a security node writes solved values onto its own variant and invalidates its children
         NodeActivityType activityType = networkModificationTreeService.isSecurityNode(nodeUuid)
             ? COMPUTE_AND_UNBUILD_CHILDREN : COMPUTE;
-        nodeActivityService.runWithNodeActivity(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid), () -> {
-            if (prevResultUuid != null) {
-                handleRerunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers, userId);
-            } else {
-                studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, userId);
-            }
-        });
+        if (prevResultUuid != null) {
+            nodeActivityRunnerService.runWithNodeActivity(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                () -> handleRerunLoadFlow(studyUuid, nodeUuid, rootNetworkUuid, prevResultUuid, withRatioTapChangers, userId));
+        } else {
+            nodeActivityRunnerService.runWithNodeActivity(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+                () -> studyService.sendLoadflowRequest(studyUuid, nodeUuid, rootNetworkUuid, null, withRatioTapChangers, userId));
+        }
         return ResponseEntity.ok().build();
     }
 

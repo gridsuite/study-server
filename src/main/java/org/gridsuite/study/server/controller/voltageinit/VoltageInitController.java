@@ -40,14 +40,14 @@ public class VoltageInitController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
-    private final NodeActivityRunnerService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
     public VoltageInitController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                 VoltageInitService voltageInitService, NodeActivityRunnerService nodeActivityService) {
+                                 VoltageInitService voltageInitService, NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;
-        this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @PutMapping(value = "/run")
@@ -65,7 +65,7 @@ public class VoltageInitController {
         // applying the modifications inserts them into the node, which invalidates its children
         NodeActivityType activityType = studyService.shouldApplyModifications(studyUuid)
             ? COMPUTE_AND_UNBUILD_CHILDREN : COMPUTE;
-        nodeActivityService.runWithNodeActivity(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWithNodeActivity(activityType, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> voltageInitService.runVoltageInit(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().build();
     }

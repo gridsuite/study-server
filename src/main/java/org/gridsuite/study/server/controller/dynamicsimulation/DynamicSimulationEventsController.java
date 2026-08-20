@@ -35,13 +35,13 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_EVEN
 public class DynamicSimulationEventsController {
     private final StudyService studyService;
     private final DynamicSimulationService dynamicSimulationService;
-    private final NodeActivityRunnerService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
     public DynamicSimulationEventsController(StudyService studyService, DynamicSimulationService dynamicSimulationService,
-                                             NodeActivityRunnerService nodeActivityService) {
+                                             NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyService = studyService;
         this.dynamicSimulationService = dynamicSimulationService;
-        this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @GetMapping(value = "/events")
@@ -78,7 +78,7 @@ public class DynamicSimulationEventsController {
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityService.runWithNodeActivity(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWithNodeActivity(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.createDynamicSimulationEvent(studyUuid, nodeUuid, userId, event));
         return ResponseEntity.ok().build();
     }
@@ -93,7 +93,7 @@ public class DynamicSimulationEventsController {
                                                              @RequestBody EventInfos event,
                                                              @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityService.runWithNodeActivity(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWithNodeActivity(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.updateDynamicSimulationEvent(studyUuid, nodeUuid, userId, event));
         return ResponseEntity.ok().build();
     }
@@ -108,7 +108,7 @@ public class DynamicSimulationEventsController {
                                                               @Parameter(description = "Dynamic simulation event UUIDs") @RequestParam("eventUuids") List<UUID> eventUuids,
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
-        nodeActivityService.runWithNodeActivity(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWithNodeActivity(EDIT_EVENTS, studyUuid, List.of(nodeUuid),
             () -> dynamicSimulationService.deleteDynamicSimulationEvents(studyUuid, nodeUuid, userId, eventUuids));
         return ResponseEntity.ok().build();
     }

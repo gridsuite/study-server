@@ -41,14 +41,14 @@ public class SecurityAnalysisController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final SecurityAnalysisService securityAnalysisService;
-    private final NodeActivityRunnerService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
     public SecurityAnalysisController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                      SecurityAnalysisService securityAnalysisService, NodeActivityRunnerService nodeActivityService) {
+                                      SecurityAnalysisService securityAnalysisService, NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.securityAnalysisService = securityAnalysisService;
-        this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @PostMapping(value = "/run")
@@ -60,7 +60,7 @@ public class SecurityAnalysisController {
                                                     @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(SECURITY_ANALYSIS, userId);
-        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> securityAnalysisService.runSecurityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }

@@ -39,16 +39,16 @@ public class DynamicMarginCalculationController {
 
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    private final NodeActivityRunnerService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
     private final DynamicMarginCalculationService dynamicMarginCalculationService;
 
     public DynamicMarginCalculationController(StudyService studyService,
                                               RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                               DynamicMarginCalculationService dynamicMarginCalculationService,
-                                              NodeActivityRunnerService nodeActivityService) {
+                                              NodeActivityRunnerService nodeActivityRunnerService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
-        this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.dynamicMarginCalculationService = dynamicMarginCalculationService;
     }
 
@@ -63,7 +63,7 @@ public class DynamicMarginCalculationController {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(DYNAMIC_MARGIN_CALCULATION, userId);
         studyService.assertCanRunOnConstructionNode(studyUuid, nodeUuid, List.of(DYNAWO_PROVIDER), dynamicMarginCalculationService::getDynamicMarginCalculationProvider);
-        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> dynamicMarginCalculationService.runDynamicMarginCalculation(studyUuid, nodeUuid, rootNetworkUuid, userId, debug));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).build();
     }

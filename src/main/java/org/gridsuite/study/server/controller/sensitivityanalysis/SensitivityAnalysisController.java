@@ -45,7 +45,7 @@ public class SensitivityAnalysisController {
     private final NetworkModificationTreeService networkModificationTreeService;
     private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
     private final RootNetworkService rootNetworkService;
-    private final NodeActivityRunnerService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
 
     public SensitivityAnalysisController(RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                          StudyService studyService,
@@ -53,14 +53,14 @@ public class SensitivityAnalysisController {
                                          NetworkModificationTreeService networkModificationTreeService,
                                          SensitivityAnalysisRestService sensitivityAnalysisRestService,
                                          RootNetworkService rootNetworkService,
-                                         NodeActivityRunnerService nodeActivityService) {
+                                         NodeActivityRunnerService nodeActivityRunnerService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.studyService = studyService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.sensitivityAnalysisRestService = sensitivityAnalysisRestService;
         this.rootNetworkService = rootNetworkService;
-        this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @PostMapping(value = "/run")
@@ -73,7 +73,7 @@ public class SensitivityAnalysisController {
                                                        @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeUuid);
         studyService.assertOnQuotasAvailability(SENSITIVITY_ANALYSIS, userId);
-        nodeActivityService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
+        nodeActivityRunnerService.runWithNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(nodeUuid),
             () -> sensitivityAnalysisService.runSensitivityAnalysis(studyUuid, nodeUuid, rootNetworkUuid, userId));
         return ResponseEntity.ok().build();
     }
