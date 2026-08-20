@@ -475,7 +475,7 @@ public class NetworkModificationService {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups/{uuid}/duplicate")
-                .queryParam("groupUuid", groupUuid)
+                .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
                 .buildAndExpand(sourceGroupUuid)
                 .toUriString();
 
