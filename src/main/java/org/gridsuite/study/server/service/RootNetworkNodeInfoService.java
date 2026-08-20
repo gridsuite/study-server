@@ -44,6 +44,7 @@ import org.gridsuite.study.server.service.voltageinit.VoltageInitRestService;
 import org.gridsuite.study.server.utils.ResultParameters;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -721,7 +722,8 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public byte[] getSecurityAnalysisResultCsv(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType, String globalFilters, String filters, Sort sort, String csvTranslations) {
+    public ResponseEntity<byte[]> getSecurityAnalysisResultCsv(UUID nodeUuid, UUID rootNetworkUuid, SecurityAnalysisResultType resultType,
+                                                               String globalFilters, String filters, Sort sort, String csvTranslations) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(()
                 -> new StudyException(NOT_FOUND, ROOT_NETWORK_NOT_FOUND));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
@@ -759,7 +761,7 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public byte[] exportSensitivityResultsAsCsv(UUID nodeUuid, UUID rootNetworkUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos, String selector, String filters,
+    public ResponseEntity<byte[]> exportSensitivityResultsAsCsv(UUID nodeUuid, UUID rootNetworkUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos, String selector, String filters,
             String globalFilters) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND,
                 ROOT_NETWORK_NOT_FOUND));
@@ -770,7 +772,7 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public byte[] exportPccMinResultsAsCsv(UUID nodeUuid, UUID rootNetworkUuid, String csvHeaders, Sort sort, String filters, String globalFilters) {
+    public ResponseEntity<byte[]> exportPccMinResultsAsCsv(UUID nodeUuid, UUID rootNetworkUuid, String csvHeaders, Sort sort, String filters, String globalFilters) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND,
                 ROOT_NETWORK_NOT_FOUND));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
@@ -800,7 +802,9 @@ public class RootNetworkNodeInfoService {
     }
 
     @Transactional(readOnly = true)
-    public byte[] getShortCircuitAnalysisCsvResult(UUID nodeUuid, UUID rootNetworkUuid, ShortcircuitAnalysisType type, String filters, String globalFilters, Sort sort, String headerCsv) {
+    public ResponseEntity<byte[]> getShortCircuitAnalysisCsvResult(UUID nodeUuid, UUID rootNetworkUuid,
+                                                                   ShortcircuitAnalysisType type, String filters, String globalFilters,
+                                                                   Sort sort, String headerCsv) {
         RootNetworkNodeInfoEntity rootNetworkNodeInfoEntity = rootNetworkNodeInfoRepository.findByNodeInfoIdAndRootNetworkId(nodeUuid, rootNetworkUuid).orElseThrow(() -> new StudyException(NOT_FOUND,
                 ROOT_NETWORK_NOT_FOUND));
         String variantId = rootNetworkNodeInfoEntity.getVariantId();
