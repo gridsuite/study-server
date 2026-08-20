@@ -2184,7 +2184,7 @@ public class StudyService {
      * Moves a composite modification of a node out of the study : it is stored as an element in the directory server,
      * and replaced in the node by a reference to this now shared composite modification.
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public void shareCompositeNetworkModification(
         UUID studyUuid,
         UUID nodeUuid,
