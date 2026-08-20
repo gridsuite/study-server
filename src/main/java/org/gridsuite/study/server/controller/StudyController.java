@@ -18,11 +18,14 @@ import org.gridsuite.filter.globalfilter.GlobalFilter;
 import org.gridsuite.filter.utils.EquipmentType;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.*;
+import org.gridsuite.study.server.dto.caseimport.CaseImportAction;
 import org.gridsuite.study.server.dto.elasticsearch.EquipmentInfos;
 import org.gridsuite.study.server.dto.modification.*;
 import org.gridsuite.study.server.dto.networkexport.ExportNetworkStatus;
 import org.gridsuite.study.server.dto.networkexport.NodeExportInfos;
 import org.gridsuite.study.server.dto.sequence.NodeSequenceType;
+import org.gridsuite.study.server.dto.studyexport.NetworkModificationExportInfos;
+import org.gridsuite.study.server.dto.studyexport.TreeExportInfos;
 import org.gridsuite.study.server.elasticsearch.EquipmentInfosService;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.exception.PartialResultException;
@@ -62,6 +65,7 @@ public class StudyController {
     private final RootNetworkService rootNetworkService;
     private final RebuildNodeService rebuildNodeService;
     private final StudyExportService studyExportService;
+    private final StudyImportService studyImportService;
 
     public StudyController(StudyService studyService,
                            NetworkService networkStoreService,
@@ -72,7 +76,8 @@ public class StudyController {
                            RemoteServicesInspector remoteServicesInspector,
                            RootNetworkService rootNetworkService,
                            RebuildNodeService rebuildNodeService,
-                           StudyExportService studyExportService) {
+                           StudyExportService studyExportService,
+                           StudyImportService studyImportService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.networkStoreService = networkStoreService;
@@ -83,6 +88,7 @@ public class StudyController {
         this.rootNetworkService = rootNetworkService;
         this.rebuildNodeService = rebuildNodeService;
         this.studyExportService = studyExportService;
+        this.studyImportService = studyImportService;
     }
 
     @InitBinder
@@ -175,7 +181,8 @@ public class StudyController {
     public ResponseEntity<RootNetworkRequestInfos> createRootNetwork(@PathVariable("studyUuid") UUID studyUuid,
                                                                      @RequestBody RootNetworkInfos rootNetworkInfos,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, rootNetworkInfos, userId));
+        rootNetworkInfos.setId(null);
+        return ResponseEntity.ok().body(studyService.createRootNetworkRequest(studyUuid, rootNetworkInfos, userId, CaseImportAction.ROOT_NETWORK_CREATION));
     }
 
     @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}")
@@ -948,8 +955,8 @@ public class StudyController {
     @Operation(summary = "Get network modifications to export for a given node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modifications to export was returned"), @ApiResponse(responseCode = "404",
             description = "The study/node is not found")})
-    public ResponseEntity<String> getExportedNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                          @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
+    public ResponseEntity<NetworkModificationExportInfos> getExportedNetworkModifications(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+                                                                                          @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
         studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getExportedNetworkModifications(studyUuid, nodeUuid));
     }
@@ -1614,5 +1621,14 @@ public class StudyController {
         headers.setContentDisposition(contentDisposition);
         headers.setContentType(MediaType.parseMediaType("application/zip"));
         return ResponseEntity.ok().headers(headers).body(studyExportService.exportStudy(studyUuid, userId));
+    }
+
+    @PostMapping(value = "/studies/import")
+    @Operation(summary = "Create a study and its root networks from a previously exported study archive")
+    @ApiResponse(responseCode = "200", description = "Study import initiated successfully")
+    public ResponseEntity<Void> importStudy(@RequestBody TreeExportInfos treeExportInfos,
+                                            @RequestHeader(HEADER_USER_ID) String userId) {
+        studyImportService.importStudy(treeExportInfos, userId);
+        return ResponseEntity.ok().build();
     }
 }
