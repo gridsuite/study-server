@@ -66,10 +66,10 @@ public class ConsumerService {
 
     private final NotificationService notificationService;
     private final StudyService studyService;
+    private final StudyImportService studyImportService;
     private final CaseService caseService;
     private final LoadFlowRestService loadFlowRestService;
     private final NetworkModificationTreeService networkModificationTreeService;
-    private final StudyConfigService studyConfigService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final DirectoryService directoryService;
     private final ComputationParametersService computationParametersService;
@@ -79,10 +79,10 @@ public class ConsumerService {
     public ConsumerService(ObjectMapper objectMapper,
                            NotificationService notificationService,
                            StudyService studyService,
+                           StudyImportService studyImportService,
                            CaseService caseService,
                            LoadFlowRestService loadFlowRestService,
                            NetworkModificationTreeService networkModificationTreeService,
-                           StudyConfigService studyConfigService,
                            RootNetworkNodeInfoService rootNetworkNodeInfoService,
                            DirectoryService directoryService,
                            ComputationParametersService computationParametersService,
@@ -91,10 +91,10 @@ public class ConsumerService {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
         this.studyService = studyService;
+        this.studyImportService = studyImportService;
         this.caseService = caseService;
         this.loadFlowRestService = loadFlowRestService;
         this.networkModificationTreeService = networkModificationTreeService;
-        this.studyConfigService = studyConfigService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.directoryService = directoryService;
         this.computationParametersService = computationParametersService;
@@ -250,6 +250,20 @@ public class ConsumerService {
                     .networkInfos(networkInfos)
                     .importParameters(importParameters)
                     .build());
+                case ROOT_NETWORK_CREATION_FOR_STUDY_IMPORT -> {
+                    try {
+                        studyService.createRootNetwork(studyUuid, RootNetworkInfos.builder()
+                            .id(rootNetworkUuid)
+                            .caseInfos(caseInfos)
+                            .reportUuid(importReportUuid)
+                            .networkInfos(networkInfos)
+                            .importParameters(importParameters)
+                            .build());
+                    } finally {
+                        studyService.deleteRootNetworkRequest(rootNetworkUuid);
+                        studyImportService.checkFinishedStudyImport(studyUuid, userId);
+                    }
+                }
                 case NETWORK_RECREATION -> studyService.updateNetwork(studyUuid, rootNetworkUuid, networkInfos, userId);
                 case ROOT_NETWORK_MODIFICATION -> studyService.modifyRootNetwork(studyUuid, RootNetworkInfos.builder()
                     .id(rootNetworkUuid)
@@ -281,71 +295,13 @@ public class ConsumerService {
         UserProfileInfos userProfileInfos = studyService.getUserProfile(userId);
 
         ComputationParameterUUIDs computationParameterUUIDs = computationParametersService.createDefaultComputationParameters(userId, userProfileInfos);
-        UUID networkVisualizationParametersUuid = createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
-        UUID spreadsheetConfigCollectionUuid = createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
-        UUID workspacesConfigUuid = createWorkspacesConfig(userProfileInfos);
+        UUID networkVisualizationParametersUuid = studyService.createDefaultNetworkVisualizationParameters(userId, userProfileInfos);
+        UUID spreadsheetConfigCollectionUuid = studyService.createDefaultSpreadsheetConfigCollection(userId, userProfileInfos);
+        UUID workspacesConfigUuid = studyService.createWorkspacesConfig(userProfileInfos);
 
         studyService.insertStudy(studyUuid, userId, networkInfos, caseInfos, computationParameterUUIDs,
             networkVisualizationParametersUuid, spreadsheetConfigCollectionUuid, workspacesConfigUuid,
             importParameters, importReportUuid);
-    }
-
-    private UUID createDefaultNetworkVisualizationParameters(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getNetworkVisualizationParameterId() != null) {
-            // try to access/duplicate the user profile network visualization parameters
-            try {
-                return studyConfigService.duplicateNetworkVisualizationParameters(userProfileInfos.getNetworkVisualizationParameterId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate network visualization parameters with id '%s' from user/profile '%s/%s'. Using default parameters",
-                    userProfileInfos.getNetworkVisualizationParameterId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad network visualization parameters in profile => use default values
-        try {
-            return studyConfigService.createDefaultNetworkVisualizationParameters();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating network visualization default parameters", e);
-            return null;
-        }
-    }
-
-    private UUID createDefaultSpreadsheetConfigCollection(String userId, UserProfileInfos userProfileInfos) {
-        if (userProfileInfos != null && userProfileInfos.getSpreadsheetConfigCollectionId() != null) {
-            // try to access/duplicate the user profile spreadsheet config collection
-            try {
-                return studyConfigService.duplicateSpreadsheetConfigCollection(userProfileInfos.getSpreadsheetConfigCollectionId());
-            } catch (Exception e) {
-                // TODO try to report a log in Root subreporter ?
-                LOGGER.error(String.format("Could not duplicate spreadsheet config collection with id '%s' from user/profile '%s/%s'. Using default spreadsheet config collection",
-                    userProfileInfos.getSpreadsheetConfigCollectionId(), userId, userProfileInfos.getName()), e);
-            }
-        }
-        // no profile, or no/bad spreadsheet config collection in profile => use default values
-        try {
-            return studyConfigService.createDefaultSpreadsheetConfigCollection();
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating default spreadsheet config collection", e);
-            return null;
-        }
-    }
-
-    @SuppressWarnings("checkstyle:LambdaBodyLength")
-    private UUID createWorkspacesConfig(UserProfileInfos userProfileInfos) {
-        try {
-            List<UUID> workspaceIds = new ArrayList<>();
-            if (userProfileInfos != null && userProfileInfos.getWorkspaceId() != null) {
-                // Create config with profile workspace as first, and two empty workspaces
-                workspaceIds.add(userProfileInfos.getWorkspaceId());
-                workspaceIds.add(null);
-                workspaceIds.add(null);
-            }
-            // Empty list will create default config
-            return studyConfigService.createWorkspacesConfigFromWorkspaces(workspaceIds);
-        } catch (final Exception e) {
-            LOGGER.error("Error while creating workspace collection", e);
-            return null;
-        }
     }
 
     @Bean
@@ -364,12 +320,16 @@ public class ConsumerService {
                     String userId = receiver.getUserId();
                     UUID rootNetworkUuid = receiver.getRootNetworkUuid();
 
-                    if (receiver.getCaseImportAction() == CaseImportAction.STUDY_CREATION) {
+                    CaseImportAction caseImportAction = receiver.getCaseImportAction();
+                    if (caseImportAction == CaseImportAction.STUDY_CREATION) {
                         studyService.deleteStudyIfNotCreationInProgress(studyUuid, userId);
                         notificationService.emitStudyCreationError(studyUuid, userId, errorMessage);
                     } else {
                         if (receiver.getCaseImportAction() == CaseImportAction.ROOT_NETWORK_CREATION) {
                             studyService.deleteRootNetworkRequest(rootNetworkUuid);
+                        } else if (caseImportAction == CaseImportAction.ROOT_NETWORK_CREATION_FOR_STUDY_IMPORT) {
+                            studyService.deleteRootNetworkRequest(rootNetworkUuid);
+                            studyImportService.checkFinishedStudyImport(studyUuid, userId);
                         }
                         notificationService.emitRootNetworksUpdateFailed(studyUuid, errorMessage);
                     }
