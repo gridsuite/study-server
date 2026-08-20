@@ -414,22 +414,22 @@ public class NetworkModificationService {
 
     /**
      * Asks the network modification server to take a composite modification out of its group, replacing it in the group
-     * by a reference to it, so that it can be stored as an element in the directory server.
-     * @return the uuid of the extracted composite modification
+     * by a reference to it, so that it can be stored as an element in the directory server. The composite modification
+     * keeps its own uuid.
      */
-    public UUID extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {
+    public void extractCompositeModificationToShare(@NonNull UUID groupUuid, @NonNull UUID modificationUuid, @NonNull String name) {
         String path = UriComponentsBuilder.fromPath(COMPOSITE_PATH + "{modificationUuid}" + DELIMITER + "share")
                 .queryParam(QUERY_PARAM_NAME, name)
                 .queryParam(QUERY_PARAM_GROUP_UUID, groupUuid)
                 .buildAndExpand(modificationUuid)
                 .toUriString();
 
-        return restTemplate.exchange(
+        restTemplate.exchange(
                 getNetworkModificationServerURI(false) + path,
                 HttpMethod.POST,
                 null,
-                UUID.class
-        ).getBody();
+                Void.class
+        );
     }
 
     public UUID assembleModificationsIntoComposite(@NonNull List<UUID> modificationsUuids) {

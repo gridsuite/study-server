@@ -2294,9 +2294,7 @@ class NetworkModificationTest {
         // the composite modification is taken out of the node group, then stored as an element of the directory
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo(
                         "/v1/network-composite-modifications/" + compositeUuid + "/share"))
-                .willReturn(WireMock.ok()
-                        .withBody(mapper.writeValueAsString(compositeUuid))
-                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+                .willReturn(WireMock.ok()));
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/directories/" + directoryUuid + "/elements"))
                 .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
         wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/elements/" + compositeUuid + "/references"))
