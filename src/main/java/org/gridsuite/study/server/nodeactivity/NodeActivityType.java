@@ -19,17 +19,17 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityLabel.*;
 @AllArgsConstructor
 public enum NodeActivityType {
     // label, invalidates children, affects all root networks, removed by a result message
-    BUILD(BUILDING, false, false, true),
-    UNBUILD(UNBUILDING, false, false, false),
-    UNBUILD_CHILDREN(UNBUILDING, true, false, false),
-    UNBUILD_ALL(UNBUILDING, true, true, false),
-    COMPUTE(COMPUTING, false, false, true),
-    COMPUTE_AND_UNBUILD_CHILDREN(COMPUTING, true, false, true),
-    REIMPORT_CASE(UPDATING, true, false, true),
-    EDIT_TREE(UPDATING, true, true, false),
-    EDIT_MODIFICATIONS(UPDATING, true, true, false),
-    DELETE_NODES(DELETING, true, true, false),
-    EDIT_EVENTS(UPDATING, false, true, false);
+    BUILD(BUILDING, false, false, false),
+    UNBUILD(UNBUILDING, false, false, true),
+    UNBUILD_CHILDREN(UNBUILDING, true, false, true),
+    UNBUILD_ALL(UNBUILDING, true, true, true),
+    COMPUTE(COMPUTING, false, false, false),
+    COMPUTE_AND_UNBUILD_CHILDREN(COMPUTING, true, false, false),
+    REIMPORT_CASE(UPDATING, true, false, false),
+    EDIT_TREE(UPDATING, true, true, true),
+    EDIT_MODIFICATIONS(UPDATING, true, true, true),
+    DELETE_NODES(DELETING, true, true, true),
+    EDIT_EVENTS(UPDATING, false, true, true);
 
     private final NodeActivityLabel label;
 
@@ -39,9 +39,5 @@ public enum NodeActivityType {
     @Accessors(fluent = true)
     private final boolean affectsAllRootNetworks;
 
-    /**
-     * The row outlives the request, so every path a result message can take through ConsumerService
-     * must remove the activity. When false the row goes as soon as the call returns.
-     */
-    private final boolean removedByResultMessage;
+    private final boolean synchronous;
 }

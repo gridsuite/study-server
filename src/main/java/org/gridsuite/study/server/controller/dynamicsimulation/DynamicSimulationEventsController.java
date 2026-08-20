@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.dynamicsimulation.event.EventInfos;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
 import org.springframework.http.MediaType;
@@ -35,10 +35,10 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_EVEN
 public class DynamicSimulationEventsController {
     private final StudyService studyService;
     private final DynamicSimulationService dynamicSimulationService;
-    private final NodeActivityService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityService;
 
     public DynamicSimulationEventsController(StudyService studyService, DynamicSimulationService dynamicSimulationService,
-                                             NodeActivityService nodeActivityService) {
+                                             NodeActivityRunnerService nodeActivityService) {
         this.studyService = studyService;
         this.dynamicSimulationService = dynamicSimulationService;
         this.nodeActivityService = nodeActivityService;

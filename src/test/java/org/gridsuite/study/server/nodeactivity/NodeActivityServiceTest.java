@@ -229,7 +229,7 @@ class NodeActivityServiceTest {
     void theCleanupLeavesActivitiesYoungerThanTheCutoff() {
         nodeActivityService.setNodeActivity(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
 
-        assertThat(nodeActivityService.removeAbandonedNodeActivities(Instant.now().minus(1, ChronoUnit.HOURS))).isEmpty();
+        assertThat(nodeActivityService.removeNodeActivities(Instant.now().minus(1, ChronoUnit.HOURS))).isEmpty();
         assertThat(nodeActivityRepository.findAllByStudyId(studyUuid)).hasSize(1);
     }
 
@@ -239,7 +239,7 @@ class NodeActivityServiceTest {
         nodeActivityService.setNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(childUuid));
 
         List<NodeActivityEntity> released =
-            nodeActivityService.removeAbandonedNodeActivities(Instant.now().plus(1, ChronoUnit.HOURS));
+            nodeActivityService.removeNodeActivities(Instant.now().plus(1, ChronoUnit.HOURS));
 
         assertThat(released).extracting(NodeActivityEntity::getNodeId).containsExactlyInAnyOrder(nodeUuid, childUuid);
         assertThat(nodeActivityRepository.findAllByStudyId(studyUuid)).isEmpty();
@@ -271,7 +271,7 @@ class NodeActivityServiceTest {
         nodeActivityService.setNodeActivity(COMPUTE, studyUuid, rootNetworkUuid, List.of(childUuid));
         output.clear(STUDY_UPDATE_DESTINATION);
 
-        nodeActivityService.removeAbandonedNodeActivities(Instant.now().plus(1, ChronoUnit.HOURS));
+        nodeActivityService.removeNodeActivities(Instant.now().plus(1, ChronoUnit.HOURS));
 
         // two rows of the same study, so the study is notified once
         assertNodeActivitiesNotified();

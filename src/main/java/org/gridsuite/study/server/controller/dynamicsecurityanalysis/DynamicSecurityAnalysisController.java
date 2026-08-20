@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisService;
@@ -38,13 +38,13 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 public class DynamicSecurityAnalysisController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    private final NodeActivityService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityService;
     private final DynamicSecurityAnalysisService dynamicSecurityAnalysisService;
 
     public DynamicSecurityAnalysisController(StudyService studyService,
                                              RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                              DynamicSecurityAnalysisService dynamicSecurityAnalysisService,
-                                             NodeActivityService nodeActivityService) {
+                                             NodeActivityRunnerService nodeActivityService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.nodeActivityService = nodeActivityService;

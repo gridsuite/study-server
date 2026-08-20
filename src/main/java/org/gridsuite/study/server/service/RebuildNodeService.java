@@ -10,7 +10,7 @@ import org.gridsuite.study.server.dto.modification.ModificationContainerInfos;
 import org.gridsuite.study.server.dto.modification.ModificationContainerType;
 import org.gridsuite.study.server.dto.modification.MoveModificationInfos;
 import org.gridsuite.study.server.dto.modification.NetworkModificationMetadata;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,10 +29,10 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_MODI
 public class RebuildNodeService {
     private final StudyService studyService;
     private final NetworkModificationTreeService networkModificationTreeService;
-    private final NodeActivityService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityService;
 
     public RebuildNodeService(StudyService studyService, NetworkModificationTreeService networkModificationTreeService,
-                              NodeActivityService nodeActivityService) {
+                              NodeActivityRunnerService nodeActivityService) {
         this.studyService = studyService;
         this.networkModificationTreeService = networkModificationTreeService;
         this.nodeActivityService = nodeActivityService;

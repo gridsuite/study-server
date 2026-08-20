@@ -115,7 +115,7 @@ class NodeActivityRulesTest {
 
     @Test
     void theTypesRemovedByAResultMessage() {
-        assertThat(Arrays.stream(NodeActivityType.values()).filter(NodeActivityType::isRemovedByResultMessage))
+        assertThat(Arrays.stream(NodeActivityType.values()).filter(a -> !a.isSynchronous()))
             .as("each of these needs a removeNodeActivity in ConsumerService")
             .containsExactlyInAnyOrder(BUILD, COMPUTE, COMPUTE_AND_UNBUILD_CHILDREN, REIMPORT_CASE);
     }

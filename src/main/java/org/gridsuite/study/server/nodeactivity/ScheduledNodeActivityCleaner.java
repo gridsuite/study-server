@@ -40,7 +40,7 @@ public class ScheduledNodeActivityCleaner {
     @Scheduled(cron = "${study.cron.node-activity-cleanup:-}", zone = "UTC")
     public void removeAbandonedNodeActivities() {
         List<NodeActivityEntity> abandoned =
-            nodeActivityService.removeAbandonedNodeActivities(Instant.now().minus(abandonedAfter));
+            nodeActivityService.removeNodeActivities(Instant.now().minus(abandonedAfter));
         if (abandoned.isEmpty()) {
             return;
         }

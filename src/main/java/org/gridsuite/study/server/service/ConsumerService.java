@@ -24,6 +24,7 @@ import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
@@ -75,6 +76,7 @@ public class ConsumerService {
     private final ComputationParametersService computationParametersService;
     private final UserAdminService userAdminService;
     private final LoadFlowService loadFlowService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
     private final NodeActivityService nodeActivityService;
 
     public ConsumerService(ObjectMapper objectMapper,
@@ -89,6 +91,7 @@ public class ConsumerService {
                            ComputationParametersService computationParametersService,
                            UserAdminService userAdminService,
                            LoadFlowService loadFlowService,
+                           NodeActivityRunnerService nodeActivityRunnerService,
                            NodeActivityService nodeActivityService) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
@@ -103,6 +106,7 @@ public class ConsumerService {
         this.userAdminService = userAdminService;
         this.loadFlowService = loadFlowService;
         this.nodeActivityService = nodeActivityService;
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
     }
 
     @Bean
@@ -555,7 +559,7 @@ public class ConsumerService {
             LoadFlowStatus loadFlowStatus = loadFlowRestService.getLoadFlowStatus(resultUuid);
             if (loadFlowStatus == LoadFlowStatus.CONVERGED) {
                 List<UUID> childrenToBuild = studyService.getFirstLevelChildrenToBuild(studyUuid, nodeUuid, rootNetworkUuid, userId);
-                nodeActivityService.runWithNodeActivity(BUILD, studyUuid, rootNetworkUuid, childrenToBuild,
+                nodeActivityRunnerService.runWithNodeActivity(BUILD, studyUuid, rootNetworkUuid, childrenToBuild,
                     () -> studyService.buildNodes(studyUuid, childrenToBuild, rootNetworkUuid, userId));
             }
         }

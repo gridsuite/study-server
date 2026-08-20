@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.shortcircuit.FaultResultsMode;
@@ -43,9 +43,10 @@ public class ShortCircuitController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final ShortCircuitService shortCircuitService;
-    private final NodeActivityService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityService;
 
-    public ShortCircuitController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService, ShortCircuitService shortCircuitService, NodeActivityService nodeActivityService) {
+    public ShortCircuitController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                                  ShortCircuitService shortCircuitService, NodeActivityRunnerService nodeActivityService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.shortCircuitService = shortCircuitService;

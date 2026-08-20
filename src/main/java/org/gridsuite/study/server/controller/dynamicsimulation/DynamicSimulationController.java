@@ -15,7 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.timeseries.TimeSeriesMetadataInfos;
 import org.gridsuite.study.server.dto.timeseries.TimelineEventInfos;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.dynamicsimulation.DynamicSimulationService;
@@ -43,11 +43,11 @@ public class DynamicSimulationController {
 
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
-    private final NodeActivityService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityService;
     private final DynamicSimulationService dynamicSimulationService;
 
     public DynamicSimulationController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService, DynamicSimulationService dynamicSimulationService,
-                                       NodeActivityService nodeActivityService) {
+                                       NodeActivityRunnerService nodeActivityService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.nodeActivityService = nodeActivityService;

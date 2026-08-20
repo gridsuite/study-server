@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.sensianalysis.SensitivityAnalysisCsvFileInfos;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.RootNetworkService;
@@ -46,7 +46,7 @@ public class SensitivityAnalysisController {
     private final NetworkModificationTreeService networkModificationTreeService;
     private final SensitivityAnalysisRestService sensitivityAnalysisRestService;
     private final RootNetworkService rootNetworkService;
-    private final NodeActivityService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityService;
 
     public SensitivityAnalysisController(RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                          StudyService studyService,
@@ -54,7 +54,7 @@ public class SensitivityAnalysisController {
                                          NetworkModificationTreeService networkModificationTreeService,
                                          SensitivityAnalysisRestService sensitivityAnalysisRestService,
                                          RootNetworkService rootNetworkService,
-                                         NodeActivityService nodeActivityService) {
+                                         NodeActivityRunnerService nodeActivityService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.studyService = studyService;
         this.sensitivityAnalysisService = sensitivityAnalysisService;

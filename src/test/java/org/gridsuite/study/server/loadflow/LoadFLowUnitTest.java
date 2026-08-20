@@ -14,7 +14,7 @@ import org.gridsuite.study.server.dto.InvalidateNodeTreeParameters;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -64,7 +64,7 @@ class LoadFLowUnitTest {
     UUID loadflowResultUuid = UUID.randomUUID();
 
     @MockitoBean
-    private NodeActivityService nodeActivityService;
+    private NodeActivityRunnerService nodeActivityService;
     @MockitoBean
     RootNetworkNodeInfoService rootNetworkNodeInfoService;
     @MockitoBean

@@ -7,7 +7,7 @@
 package org.gridsuite.study.server.controller.loadflow;
 
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +48,7 @@ class LoadFlowStudyParametersControllerTest {
     private StudyService studyService;
 
     @Mock
-    private NodeActivityService nodeActivityService;
+    private NodeActivityRunnerService nodeActivityService;
 
     @Mock
     private LoadFlowService loadFlowService;

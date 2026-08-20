@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.computation.LoadFlowComputationInfos;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.nodeactivity.NodeActivityType;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
@@ -45,12 +45,12 @@ public class LoadFlowController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final LoadFlowService loadFlowService;
     private final NetworkModificationTreeService networkModificationTreeService;
-    private final NodeActivityService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityService;
 
     public LoadFlowController(StudyService studyService,
                               RootNetworkNodeInfoService rootNetworkNodeInfoService, LoadFlowService loadFlowService,
                               NetworkModificationTreeService networkModificationTreeService,
-                              NodeActivityService nodeActivityService) {
+                              NodeActivityRunnerService nodeActivityService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.loadFlowService = loadFlowService;

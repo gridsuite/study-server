@@ -12,18 +12,12 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.function.Supplier;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -41,51 +35,22 @@ public class NodeActivityService {
     private final NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository;
     private final NotificationService notificationService;
 
-    private final NodeActivityService self;
-
     public NodeActivityService(NodeActivityRepository nodeActivityRepository,
                                NodeRepository nodeRepository,
                                NetworkModificationNodeInfoRepository networkModificationNodeInfoRepository,
-                               NotificationService notificationService,
-                               @Lazy NodeActivityService self) {
+                               NotificationService notificationService) {
         this.nodeActivityRepository = nodeActivityRepository;
         this.nodeRepository = nodeRepository;
         this.networkModificationNodeInfoRepository = networkModificationNodeInfoRepository;
         this.notificationService = notificationService;
-        this.self = self;
-    }
-
-    public void runWithNodeActivity(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid,
-                                    List<UUID> nodeUuids, Runnable action) {
-        runWithNodeActivity(type, studyUuid, rootNetworkUuid, nodeUuids, asSupplier(action));
-    }
-
-    public void runWithNodeActivity(NodeActivityType type, UUID studyUuid, List<UUID> nodeUuids, Runnable action) {
-        runWithNodeActivity(type, studyUuid, null, nodeUuids, action);
-    }
-
-    public <T> T runWithNodeActivity(NodeActivityType type, UUID studyUuid, List<UUID> nodeUuids, Supplier<T> action) {
-        return runWithNodeActivity(type, studyUuid, null, nodeUuids, action);
-    }
-
-    public <T> T runWithNodeActivity(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid,
-                                     List<UUID> nodeUuids, Supplier<T> action) {
-        UUID activityRootNetworkUuid = type.affectsAllRootNetworks() ? null : rootNetworkUuid;
-        self.setNodeActivity(type, studyUuid, activityRootNetworkUuid, nodeUuids);
-        boolean succeeded = false;
-        try {
-            T result = action.get();
-            succeeded = true;
-            return result;
-        } finally {
-            if (!succeeded || !type.isRemovedByResultMessage()) {
-                self.removeNodeActivity(studyUuid, activityRootNetworkUuid, nodeUuids);
-            }
-        }
     }
 
     @Transactional
     public void setNodeActivity(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
+        doSetNodeActivity(type, studyUuid, rootNetworkUuid, nodeUuids);
+    }
+
+    private void doSetNodeActivity(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
         List<UUID> nodes = nodeUuids.stream().distinct().toList();
         if (nodes.isEmpty()) {
             return;
@@ -140,6 +105,10 @@ public class NodeActivityService {
 
     @Transactional
     public void removeNodeActivity(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
+        doRemoveNodeActivity(studyUuid, rootNetworkUuid, nodeUuids);
+    }
+
+    private void doRemoveNodeActivity(UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
         if (nodeUuids.isEmpty()) {
             return;
         }
@@ -152,11 +121,15 @@ public class NodeActivityService {
     }
 
     private void notifyNodeActivities(UUID studyUuid) {
-        notificationService.emitNodeActivityUpdated(studyUuid, () -> self.getNodeActivities(studyUuid));
+        notificationService.emitNodeActivityUpdated(studyUuid, () -> doGetNodeActivities(studyUuid));
     }
 
     @Transactional(readOnly = true)
     public List<NodeActivityInfos> getNodeActivities(UUID studyUuid) {
+        return doGetNodeActivities(studyUuid);
+    }
+
+    private List<NodeActivityInfos> doGetNodeActivities(UUID studyUuid) {
         return nodeActivityRepository.findAllByStudyId(studyUuid).stream()
             .map(NodeActivityInfos::from)
             .toList();
@@ -176,24 +149,16 @@ public class NodeActivityService {
     }
 
     @Transactional
-    public List<NodeActivityEntity> removeAbandonedNodeActivities(Instant startedBefore) {
-        List<NodeActivityEntity> abandonedActivities = nodeActivityRepository.findAllByStartedAtBefore(startedBefore);
-        if (abandonedActivities.isEmpty()) {
+    public List<NodeActivityEntity> removeNodeActivities(Instant startedBefore) {
+        List<NodeActivityEntity> nodeActivities = nodeActivityRepository.findAllByStartedAtBefore(startedBefore);
+        if (nodeActivities.isEmpty()) {
             return List.of();
         }
-        nodeActivityRepository.deleteAllInBatch(abandonedActivities);
-        abandonedActivities.stream()
+        nodeActivityRepository.deleteAllInBatch(nodeActivities);
+        nodeActivities.stream()
             .map(NodeActivityEntity::getStudyId)
             .distinct()
             .forEach(this::notifyNodeActivities);
-        return abandonedActivities;
+        return nodeActivities;
     }
-
-    private static <T> Supplier<T> asSupplier(Runnable action) {
-        return () -> {
-            action.run();
-            return null;
-        };
-    }
-
 }

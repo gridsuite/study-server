@@ -12,7 +12,7 @@ import org.gridsuite.study.server.dto.NodeReceiver;
 import org.gridsuite.study.server.dto.modification.NetworkModificationResult;
 import org.gridsuite.study.server.dto.workflow.RerunLoadFlowInfos;
 import org.gridsuite.study.server.dto.workflow.WorkflowType;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.service.ConsumerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
@@ -60,7 +60,7 @@ class WorkflowTest {
     @MockitoBean
     private LoadFlowService loadFlowService;
     @MockitoBean
-    private NodeActivityService nodeActivityService;
+    private NodeActivityRunnerService nodeActivityService;
 
     @Test
     void testConsumeBuildResultInRerunLoadFlowWorkflow() throws JsonProcessingException {

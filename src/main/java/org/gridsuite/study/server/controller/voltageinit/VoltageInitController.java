@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.voltageinit.VoltageInitService;
@@ -38,9 +38,10 @@ public class VoltageInitController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final VoltageInitService voltageInitService;
-    private final NodeActivityService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityService;
 
-    public VoltageInitController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService, VoltageInitService voltageInitService, NodeActivityService nodeActivityService) {
+    public VoltageInitController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService,
+                                 VoltageInitService voltageInitService, NodeActivityRunnerService nodeActivityService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.voltageInitService = voltageInitService;

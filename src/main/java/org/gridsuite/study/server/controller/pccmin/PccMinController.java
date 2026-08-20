@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.pccmin.PccMinService;
@@ -41,9 +41,9 @@ public class PccMinController {
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final StudyService studyService;
     private final PccMinService pccMinService;
-    private final NodeActivityService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityService;
 
-    public PccMinController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService, PccMinService pccMinService, NodeActivityService nodeActivityService) {
+    public PccMinController(RootNetworkNodeInfoService rootNetworkNodeInfoService, StudyService studyService, PccMinService pccMinService, NodeActivityRunnerService nodeActivityService) {
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.studyService = studyService;
         this.pccMinService = pccMinService;

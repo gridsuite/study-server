@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
-import org.gridsuite.study.server.nodeactivity.NodeActivityService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.RootNetworkNodeInfoService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.securityanalysis.SecurityAnalysisResultType;
@@ -41,10 +41,10 @@ public class SecurityAnalysisController {
     private final StudyService studyService;
     private final RootNetworkNodeInfoService rootNetworkNodeInfoService;
     private final SecurityAnalysisService securityAnalysisService;
-    private final NodeActivityService nodeActivityService;
+    private final NodeActivityRunnerService nodeActivityService;
 
     public SecurityAnalysisController(StudyService studyService, RootNetworkNodeInfoService rootNetworkNodeInfoService,
-                                      SecurityAnalysisService securityAnalysisService, NodeActivityService nodeActivityService) {
+                                      SecurityAnalysisService securityAnalysisService, NodeActivityRunnerService nodeActivityService) {
         this.studyService = studyService;
         this.rootNetworkNodeInfoService = rootNetworkNodeInfoService;
         this.securityAnalysisService = securityAnalysisService;
