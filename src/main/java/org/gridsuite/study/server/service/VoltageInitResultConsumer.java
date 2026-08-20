@@ -6,6 +6,7 @@
  */
 package org.gridsuite.study.server.service;
 
+import org.gridsuite.study.server.nodeactivity.NodeActivityService;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.notification.dto.AlertLevel;
 import org.gridsuite.study.server.notification.dto.StudyAlert;
@@ -13,12 +14,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 import static org.gridsuite.study.server.dto.ComputationType.VOLTAGE_INITIALIZATION;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_MODIFICATIONS;
 
 /**
  * @author Joris Mancini <joris.mancini_externe at rte-france.com>
@@ -32,16 +35,20 @@ public class VoltageInitResultConsumer {
 
     private final NotificationService notificationService;
 
+    private final NodeActivityService nodeActivityService;
+
     public static final String HEADER_REACTIVE_SLACKS_OVER_THRESHOLD = "REACTIVE_SLACKS_OVER_THRESHOLD";
     public static final String HEADER_REACTIVE_SLACKS_THRESHOLD_VALUE = "reactiveSlacksThreshold";
     public static final String HEADER_VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE = "VOLTAGE_LEVEL_LIMITS_OUT_OF_NOMINAL_VOLTAGE_RANGE";
 
     public VoltageInitResultConsumer(StudyService studyService,
                                      ConsumerService consumerService,
-                                     NotificationService notificationService) {
+                                     NotificationService notificationService,
+                                     NodeActivityService nodeActivityService) {
         this.studyService = studyService;
         this.consumerService = consumerService;
         this.notificationService = notificationService;
+        this.nodeActivityService = nodeActivityService;
     }
 
     private void checkReactiveSlacksOverThreshold(Message<String> msg, UUID studyUuid) {
@@ -77,7 +84,9 @@ public class VoltageInitResultConsumer {
                 if (studyService.shouldApplyModifications(studyUuid)) {
                     consumerService.getNodeReceiver(message).ifPresent(nodeReceiver -> {
                         String userId = message.getHeaders().get(HEADER_USER_ID, String.class);
-                        studyService.insertVoltageInitModifications(studyUuid, nodeReceiver.getNodeUuid(), nodeReceiver.getRootNetworkUuid(), userId);
+                        // the compute activity is already released, and this insert invalidates the node tree
+                        nodeActivityService.runWithNodeActivity(EDIT_MODIFICATIONS, studyUuid, List.of(nodeReceiver.getNodeUuid()),
+                            () -> studyService.insertVoltageInitModifications(studyUuid, nodeReceiver.getNodeUuid(), nodeReceiver.getRootNetworkUuid(), userId));
                     });
                 }
             });

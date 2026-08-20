@@ -84,6 +84,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
 
 import java.util.*;
 import java.util.stream.IntStream;
@@ -722,6 +723,52 @@ class VoltageInitTest {
                 .andExpect(status().isOk());
         assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches("/v1/results/" + VOLTAGE_INIT_CANCEL_FAILED_UUID + "/stop\\?receiver=.*nodeUuid.*")));
         checkCancelFailedMessagesReceived(studyNameUserIdUuid, modificationNode4Uuid, "userId");
+    }
+
+    @Test
+    void testVoltageInitApplyingModificationsBlocksItsChildren(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID_STRING), true);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        UUID parentNodeUuid = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1").getId();
+        UUID childNodeUuid = createNetworkModificationNode(studyUuid, parentNodeUuid, UUID.randomUUID(), VARIANT_ID_2, "node 2").getId();
+
+        runVoltageInit(studyUuid, rootNetworkUuid, parentNodeUuid).andExpect(status().isOk());
+        assertRunAndSaveRequestDone(server, VARIANT_ID);
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+
+        // the parent's apply would invalidate a child still computing
+        runVoltageInit(studyUuid, rootNetworkUuid, childNodeUuid).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testVoltageInitNotApplyingModificationsLeavesItsChildrenFree(final MockWebServer server) throws Exception {
+        StudyEntity studyEntity = insertDummyStudy(NETWORK_UUID, CASE_UUID, UUID.fromString(VOLTAGE_INIT_PARAMETERS_UUID_STRING), false);
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        UUID parentNodeUuid = createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "node 1").getId();
+        UUID childNodeUuid = createNetworkModificationNode(studyUuid, parentNodeUuid, UUID.randomUUID(), VARIANT_ID_2, "node 2").getId();
+
+        runVoltageInit(studyUuid, rootNetworkUuid, parentNodeUuid).andExpect(status().isOk());
+        assertRunAndSaveRequestDone(server, VARIANT_ID);
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+
+        runVoltageInit(studyUuid, rootNetworkUuid, childNodeUuid).andExpect(status().isOk());
+        assertRunAndSaveRequestDone(server, VARIANT_ID_2);
+        checkUpdateModelStatusMessagesReceived(studyUuid, rootNetworkUuid, NotificationService.UPDATE_TYPE_VOLTAGE_INIT_STATUS);
+    }
+
+    private ResultActions runVoltageInit(UUID studyUuid, UUID rootNetworkUuid, UUID nodeUuid) throws Exception {
+        return mockMvc.perform(put("/v1/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/voltage-init/run", studyUuid, rootNetworkUuid, nodeUuid)
+                .header("userId", "userId"));
+    }
+
+    private void assertRunAndSaveRequestDone(final MockWebServer server, String variantId) throws Exception {
+        assertTrue(TestUtils.getRequestsDone(1, server).stream().anyMatch(r -> r.matches(
+                "/v1/networks/" + NETWORK_UUID_STRING + "/run-and-save\\?receiver=.*&reportUuid=.*&reporterId=.*&variantId=" + variantId
+                        + "&rootNetworkName=.*&nodeName=.*")));
     }
 
     @Test
