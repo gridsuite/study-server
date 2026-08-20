@@ -12,7 +12,6 @@ import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.networkmodificationtree.NetworkModificationNodeInfoRepository;
 import org.gridsuite.study.server.repository.networkmodificationtree.NodeRepository;
 import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +21,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NODE_ACTIVITY_CONFLICT;
+import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
  * @author Ayoub Labidi <ayoub.labidi_externe at rte-france.com>
@@ -66,28 +66,22 @@ public class NodeActivityService {
                     throw throwConflict(newActivity, conflictingActivity);
                 }));
         }
-        try {
-            nodeActivityRepository.saveAllAndFlush(newActivities);
-        } catch (DataIntegrityViolationException _) {
-            // someone wrote the same node between the read above and this insert
-            throw new StudyException(NODE_ACTIVITY_CONFLICT,
-                "%s refused: another activity started on one of the nodes %s".formatted(type, nodes));
-        }
+        nodeActivityRepository.saveAll(newActivities);
         notifyNodeActivities(studyUuid);
     }
 
-    private StudyException throwConflict(NodeActivityEntity requested, NodeActivityEntity running) {
-        String requestedNodeName = getNodeName(requested.getNodeId());
-        String runningNodeName = getNodeName(running.getNodeId());
+    private StudyException throwConflict(NodeActivityEntity newActivityEntity, NodeActivityEntity conflictingActivity) {
+        String requestedNodeName = getNodeName(newActivityEntity.getNodeId());
+        String conflictingNodeName = getNodeName(conflictingActivity.getNodeId());
         return new StudyException(NODE_ACTIVITY_CONFLICT,
             "%s on node %s refused: %s is running on node %s"
-                .formatted(requested.getType(), requested.getNodeId(), running.getType(), running.getNodeId()),
-            Map.of("requestedLabel", requested.getType().getLabel().name(),
+                .formatted(newActivityEntity.getType(), newActivityEntity.getNodeId(), conflictingActivity.getType(), conflictingActivity.getNodeId()),
+            Map.of("requestedLabel", newActivityEntity.getType().getLabel().name(),
                    "requestedNodeName", requestedNodeName,
                    "requestedOnRootNode", String.valueOf(requestedNodeName.isEmpty()),
-                   "label", running.getType().getLabel().name(),
-                   "nodeName", runningNodeName,
-                   "onRootNode", String.valueOf(runningNodeName.isEmpty())));
+                   "label", conflictingActivity.getType().getLabel().name(),
+                   "nodeName", conflictingNodeName,
+                   "onRootNode", String.valueOf(conflictingNodeName.isEmpty())));
     }
 
     private String getNodeName(UUID nodeUuid) {
@@ -98,7 +92,7 @@ public class NodeActivityService {
 
     private void assertNodesExistInStudy(UUID studyUuid, List<UUID> nodes) {
         if (nodeRepository.countByIdNodeInAndStudyId(nodes, studyUuid) != nodes.size()) {
-            throw new StudyException(NODE_NOT_FOUND, "Nodes %s not all found in study %s".formatted(nodes, studyUuid));
+            throw new StudyException(NOT_FOUND, "Nodes %s not all found in study %s".formatted(nodes, studyUuid));
         }
     }
 

@@ -18,7 +18,7 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityLabel.*;
 @Getter
 @AllArgsConstructor
 public enum NodeActivityType {
-    // label, invalidates children, affects all root networks, removed by a result message
+    // label, invalidates children, affects all root networks, synchronous
     BUILD(BUILDING, false, false, false),
     UNBUILD(UNBUILDING, false, false, true),
     UNBUILD_CHILDREN(UNBUILDING, true, false, true),
