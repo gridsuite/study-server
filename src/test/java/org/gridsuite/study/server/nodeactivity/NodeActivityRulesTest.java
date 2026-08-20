@@ -19,7 +19,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityRules.findConflict;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityRules.findActivityConflict;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.BUILD;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE_AND_UNBUILD_CHILDREN;
@@ -82,7 +82,7 @@ class NodeActivityRulesTest {
                                    NodeActivityType requestedType, UUID requestedNode, UUID requestedRootNetwork) {
         List<NodeActivityEntity> running =
             List.of(NodeActivityEntity.from(runningType, STUDY, runningRootNetwork, runningNode));
-        return findConflict(running,
+        return findActivityConflict(running,
             NodeActivityEntity.from(requestedType, STUDY, requestedRootNetwork, requestedNode), ANCESTORS).isPresent();
     }
 
@@ -207,7 +207,7 @@ class NodeActivityRulesTest {
     void nothingIsRefusedWhenNoActivityIsRunning() {
         List<NodeActivityEntity> nothingRunning = List.of();
         EVERY_NODE.forEach(nodeUuid ->
-            assertThat(findConflict(nothingRunning, NodeActivityEntity.from(EDIT_TREE, STUDY, null, nodeUuid), ANCESTORS))
+            assertThat(findActivityConflict(nothingRunning, NodeActivityEntity.from(EDIT_TREE, STUDY, null, nodeUuid), ANCESTORS))
                 .isEmpty());
     }
 
@@ -215,6 +215,6 @@ class NodeActivityRulesTest {
     void theConflictNamesTheActivityHoldingTheNode() {
         NodeActivityEntity unbuildingChildren = NodeActivityEntity.from(UNBUILD_CHILDREN, STUDY, ROOT_NETWORK, NODE);
         NodeActivityEntity requested = NodeActivityEntity.from(BUILD, STUDY, ROOT_NETWORK, GRANDCHILD);
-        assertThat(findConflict(List.of(unbuildingChildren), requested, ANCESTORS)).contains(unbuildingChildren);
+        assertThat(findActivityConflict(List.of(unbuildingChildren), requested, ANCESTORS)).contains(unbuildingChildren);
     }
 }

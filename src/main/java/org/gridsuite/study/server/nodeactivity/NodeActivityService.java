@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NODE_ACTIVITY_CONFLICT;
-import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
 
 /**
  * @author Ayoub Labidi <ayoub.labidi_externe at rte-france.com>
@@ -56,19 +55,19 @@ public class NodeActivityService {
             return;
         }
         assertNodesExistInStudy(studyUuid, nodes);
-        List<NodeActivityEntity> requested = nodes.stream()
+        List<NodeActivityEntity> newActivities = nodes.stream()
             .map(nodeUuid -> NodeActivityEntity.from(type, studyUuid, rootNetworkUuid, nodeUuid))
             .toList();
-        List<NodeActivityEntity> running = nodeActivityRepository.findAllByStudyId(studyUuid);
-        if (!running.isEmpty()) {
-            Map<UUID, Set<UUID>> ancestorsByNode = getAncestorsByNode(type, running, nodes);
-            requested.forEach(activity -> NodeActivityRules.findConflict(running, activity, ancestorsByNode)
-                .ifPresent(conflicting -> {
-                    throw conflict(activity, conflicting);
+        List<NodeActivityEntity> currentActivities = nodeActivityRepository.findAllByStudyId(studyUuid);
+        if (!currentActivities.isEmpty()) {
+            Map<UUID, Set<UUID>> ancestorsByNode = getAncestorsByNode(type, currentActivities, nodes);
+            newActivities.forEach(newActivity -> NodeActivityRules.findActivityConflict(currentActivities, newActivity, ancestorsByNode)
+                .ifPresent(conflictingActivity -> {
+                    throw throwConflict(newActivity, conflictingActivity);
                 }));
         }
         try {
-            nodeActivityRepository.saveAllAndFlush(requested);
+            nodeActivityRepository.saveAllAndFlush(newActivities);
         } catch (DataIntegrityViolationException _) {
             // someone wrote the same node between the read above and this insert
             throw new StudyException(NODE_ACTIVITY_CONFLICT,
@@ -77,9 +76,9 @@ public class NodeActivityService {
         notifyNodeActivities(studyUuid);
     }
 
-    private StudyException conflict(NodeActivityEntity requested, NodeActivityEntity running) {
-        String requestedNodeName = nodeName(requested.getNodeId());
-        String runningNodeName = nodeName(running.getNodeId());
+    private StudyException throwConflict(NodeActivityEntity requested, NodeActivityEntity running) {
+        String requestedNodeName = getNodeName(requested.getNodeId());
+        String runningNodeName = getNodeName(running.getNodeId());
         return new StudyException(NODE_ACTIVITY_CONFLICT,
             "%s on node %s refused: %s is running on node %s"
                 .formatted(requested.getType(), requested.getNodeId(), running.getType(), running.getNodeId()),
@@ -91,7 +90,7 @@ public class NodeActivityService {
                    "onRootNode", String.valueOf(runningNodeName.isEmpty())));
     }
 
-    private String nodeName(UUID nodeUuid) {
+    private String getNodeName(UUID nodeUuid) {
         return networkModificationNodeInfoRepository.findById(nodeUuid)
             .map(NetworkModificationNodeInfoEntity::getName)
             .orElse("");
@@ -99,7 +98,7 @@ public class NodeActivityService {
 
     private void assertNodesExistInStudy(UUID studyUuid, List<UUID> nodes) {
         if (nodeRepository.countByIdNodeInAndStudyId(nodes, studyUuid) != nodes.size()) {
-            throw new StudyException(NOT_FOUND, "Nodes %s not all found in study %s".formatted(nodes, studyUuid));
+            throw new StudyException(NODE_NOT_FOUND, "Nodes %s not all found in study %s".formatted(nodes, studyUuid));
         }
     }
 

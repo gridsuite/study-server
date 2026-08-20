@@ -20,23 +20,24 @@ public final class NodeActivityRules {
     private NodeActivityRules() {
     }
 
-    static Optional<NodeActivityEntity> findConflict(List<NodeActivityEntity> runningActivities,
-                                                     NodeActivityEntity requested,
-                                                     Map<UUID, Set<UUID>> ancestorsByNode) {
+    static Optional<NodeActivityEntity> findActivityConflict(List<NodeActivityEntity> runningActivities,
+                                                             NodeActivityEntity requested,
+                                                             Map<UUID, Set<UUID>> ancestorsByNode) {
         return runningActivities.stream()
-            .filter(running -> sharesARootNetwork(running, requested)
-                && (isOnTheSameNode(running, requested)
+            .filter(
+                running -> hasCommonRootNetwork(running, requested)
+                && (isSameNode(running, requested)
                     || invalidates(running, requested, ancestorsByNode)
                     || invalidates(requested, running, ancestorsByNode)))
             .findFirst();
     }
 
-    private static boolean sharesARootNetwork(NodeActivityEntity one, NodeActivityEntity other) {
+    private static boolean hasCommonRootNetwork(NodeActivityEntity one, NodeActivityEntity other) {
         return one.getType().affectsAllRootNetworks() || other.getType().affectsAllRootNetworks()
             || one.getRootNetworkId().equals(other.getRootNetworkId());
     }
 
-    private static boolean isOnTheSameNode(NodeActivityEntity one, NodeActivityEntity other) {
+    private static boolean isSameNode(NodeActivityEntity one, NodeActivityEntity other) {
         return one.getNodeId().equals(other.getNodeId());
     }
 
