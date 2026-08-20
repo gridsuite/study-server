@@ -380,7 +380,7 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId ->
-                studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER)
+                studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false)
         );
         notificationService.emitElementUpdated(studyUuid, SUPERVISION_USER);
         LOGGER.trace("Study {} nodes builds deleted and root node invalidated in : {} milliseconds", studyUuid, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime.get()));

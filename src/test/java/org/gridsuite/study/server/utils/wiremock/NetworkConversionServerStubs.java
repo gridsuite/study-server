@@ -145,7 +145,7 @@ public class NetworkConversionServerStubs {
             .withQueryParam("reportUuid", WireMock.matching(".*"))
             .withQueryParam("receiver", WireMock.matching(".*"))
             .withPostServeAction(POST_ACTION_SEND_INPUT, Parameters.from(postActionParams))
-            .willReturn(WireMock.serverError());
+            .willReturn(WireMock.ok());
 
         return wireMock.stubFor(mappingBuilder).getId();
     }

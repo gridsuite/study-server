@@ -133,6 +133,6 @@ public class ShortCircuitController {
             @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
             @Parameter(description = "headersCsv") @RequestBody String headersCsv,
             Sort sort) {
-        return ResponseEntity.ok().body(rootNetworkNodeInfoService.getShortCircuitAnalysisCsvResult(nodeUuid, rootNetworkUuid, type, filters, globalFilters, sort, headersCsv));
+        return rootNetworkNodeInfoService.getShortCircuitAnalysisCsvResult(nodeUuid, rootNetworkUuid, type, filters, globalFilters, sort, headersCsv);
     }
 }

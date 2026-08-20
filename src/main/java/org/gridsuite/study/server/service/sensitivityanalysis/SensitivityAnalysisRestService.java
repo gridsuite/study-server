@@ -18,10 +18,7 @@ import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.common.AbstractComputationRestService;
 import org.gridsuite.study.server.service.common.ComputationParameters;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -126,8 +123,9 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         return restTemplate.getForObject(uri, String.class);
     }
 
-    public byte[] exportSensitivityResultsAsCsv(UUID resultUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos, UUID networkUuid, String variantId, String selector, String filters,
-            String globalFilters) {
+    public ResponseEntity<byte[]> exportSensitivityResultsAsCsv(UUID resultUuid, SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos,
+                                                                UUID networkUuid, String variantId, String selector, String filters,
+                                                                String globalFilters) {
         if (resultUuid == null) {
             throw new StudyException(NOT_FOUND, "Result of sensitivity analysis was not found");
         }
@@ -151,7 +149,7 @@ public class SensitivityAnalysisRestService extends AbstractComputationRestServi
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<SensitivityAnalysisCsvFileInfos> httpEntity = new HttpEntity<>(sensitivityAnalysisCsvFileInfos, headers);
-        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class).getBody();
+        return restTemplate.exchange(uri, HttpMethod.POST, httpEntity, byte[].class);
     }
 
     public String getSensitivityResultsFilterOptions(UUID resultUuid, String selector) {

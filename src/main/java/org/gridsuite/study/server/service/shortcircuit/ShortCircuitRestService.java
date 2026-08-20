@@ -141,14 +141,14 @@ public class ShortCircuitRestService extends AbstractComputationRestService impl
         return UriComponentsBuilder.fromPath(path).buildAndExpand(resultUuid).toUriString();
     }
 
-    public byte[] getShortCircuitAnalysisCsvResultResource(URI resourcePath, String headersCsv) {
+    public ResponseEntity<byte[]> getShortCircuitAnalysisCsvResultResource(URI resourcePath, String headersCsv) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headersCsv, headers);
-        return restTemplate.exchange(resourcePath, HttpMethod.POST, entity, byte[].class).getBody();
+        return restTemplate.exchange(resourcePath, HttpMethod.POST, entity, byte[].class);
     }
 
-    public byte[] getShortCircuitAnalysisCsvResult(UUID resultUuid, UUID networkUuid, String variantId, String filters, String globalFilters, Sort sort, String headersCsv) {
+    public ResponseEntity<byte[]> getShortCircuitAnalysisCsvResult(UUID resultUuid, UUID networkUuid, String variantId, String filters, String globalFilters, Sort sort, String headersCsv) {
         String resultPath = getShortCircuitAnalysisCsvResultResourcePath(resultUuid);
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUri + resultPath)
                 .queryParam(QUERY_PARAM_NETWORK_UUID, networkUuid)
