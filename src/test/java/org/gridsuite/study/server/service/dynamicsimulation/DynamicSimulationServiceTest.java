@@ -62,7 +62,7 @@ class DynamicSimulationServiceTest {
     @BeforeEach
     void setUp() {
         dynamicSimulationService = new DynamicSimulationService(studyRepository, computationParametersService, notificationService,
-            rootNetworkNodeInfoService, dynamicSimulationRestService, dynamicSecurityAnalysisRestService, dynamicSimulationEventService,
+            rootNetworkNodeInfoService, dynamicSimulationRestService, dynamicSimulationEventService,
             networkModificationTreeService, userAdminService, rootNetworkService);
     }
 

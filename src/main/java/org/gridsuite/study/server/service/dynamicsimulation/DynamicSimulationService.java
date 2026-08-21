@@ -20,7 +20,6 @@ import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.UserAdminService;
 import org.gridsuite.study.server.service.common.AbstractComputationService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
-import org.gridsuite.study.server.service.dynamicsecurityanalysis.DynamicSecurityAnalysisRestService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -46,7 +45,6 @@ public class DynamicSimulationService extends AbstractComputationService {
                                        NotificationService notificationService,
                                        RootNetworkNodeInfoService rootNetworkNodeInfoService,
                                        DynamicSimulationRestService dynamicSimulationRestService,
-                                       DynamicSecurityAnalysisRestService dynamicSecurityAnalysisRestService,
                                        DynamicSimulationEventService dynamicSimulationEventService,
                                        NetworkModificationTreeService networkModificationTreeService,
                                        UserAdminService userAdminService, RootNetworkService rootNetworkService
