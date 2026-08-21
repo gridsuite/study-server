@@ -276,7 +276,8 @@ class NetworkModificationUnitTest {
         studyController.unbuildAllNodes(studyUuid, USER_ID_HEADER);
 
         ArgumentCaptor<UUID> rootNetworkUuidCaptor = ArgumentCaptor.forClass(UUID.class);
-        verify(networkModificationTreeService, times(2)).invalidateNodeTree(eq(rootNodeUuid), rootNetworkUuidCaptor.capture(), eq(InvalidateNodeTreeParameters.ALL));
+        verify(networkModificationTreeService, times(2))
+            .invalidateNodeTree(eq(studyUuid), eq(rootNodeUuid), rootNetworkUuidCaptor.capture(), eq(InvalidateNodeTreeParameters.ALL), eq(false));
         assertThat(rootNetworkUuids).usingRecursiveComparison().ignoringCollectionOrder().isEqualTo(rootNetworkUuidCaptor.getAllValues());
 
         // one for each root network

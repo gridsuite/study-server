@@ -133,7 +133,7 @@ public class ConsumerService {
 
         if (rerunLoadFlowInfos.isPresent()) {
             RerunLoadFlowInfos workflowInfos = rerunLoadFlowInfos.get();
-            studyService.sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId());
+            loadFlowService.sendLoadflowRequestWorflow(studyUuid, nodeUuid, rootNetworkUuid, workflowInfos.getLoadflowResultUuid(), workflowInfos.isWithRatioTapChangers(), workflowInfos.getUserId());
         } else {
             // a rerun's loadflow removes the activity when its own result arrives
             nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));

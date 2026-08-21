@@ -71,9 +71,9 @@ class LoadFlowStudyParametersControllerTest {
     void testSetLoadflowParameters() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         List<UUID> invalidatedNodes = List.of(UUID.randomUUID());
-        when(studyService.getNodesInvalidatedByLoadFlowParameters(studyUuid)).thenReturn(invalidatedNodes);
+        when(loadFlowService.getNodesInvalidatedByLoadFlowParameters(studyUuid)).thenReturn(invalidatedNodes);
         runTheActionOf(invalidatedNodes, studyUuid);
-        when(studyService.setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
+        when(loadFlowService.setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID)).thenReturn(false);
 
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID)
@@ -82,20 +82,20 @@ class LoadFlowStudyParametersControllerTest {
             .andExpect(status().isOk())
             .andExpect(content().string(""));
 
-        InOrder inOrder = inOrder(studyService, nodeActivityService);
-        inOrder.verify(studyService).getNodesInvalidatedByLoadFlowParameters(studyUuid);
+        InOrder inOrder = inOrder(loadFlowService, nodeActivityService);
+        inOrder.verify(loadFlowService).getNodesInvalidatedByLoadFlowParameters(studyUuid);
         inOrder.verify(nodeActivityService).runWith(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
             ArgumentMatchers.<Supplier<Boolean>>any());
-        inOrder.verify(studyService).setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID);
+        inOrder.verify(loadFlowService).setLoadFlowParameters(studyUuid, PARAMETERS, USER_ID);
     }
 
     @Test
     void testSetLoadflowParametersReturnsNoContent() throws Exception {
         UUID studyUuid = UUID.randomUUID();
         List<UUID> invalidatedNodes = List.of(UUID.randomUUID());
-        when(studyService.getNodesInvalidatedByLoadFlowParameters(studyUuid)).thenReturn(invalidatedNodes);
+        when(loadFlowService.getNodesInvalidatedByLoadFlowParameters(studyUuid)).thenReturn(invalidatedNodes);
         runTheActionOf(invalidatedNodes, studyUuid);
-        when(studyService.setLoadFlowParameters(studyUuid, null, USER_ID)).thenReturn(true);
+        when(loadFlowService.setLoadFlowParameters(studyUuid, null, USER_ID)).thenReturn(true);
 
         mockMvc.perform(post(BASE_URL + "/parameters", studyUuid)
                 .header(HEADER_USER_ID, USER_ID))
@@ -104,7 +104,7 @@ class LoadFlowStudyParametersControllerTest {
 
         verify(nodeActivityService).runWith(eq(UNBUILD_ALL), eq(studyUuid), eq(invalidatedNodes),
             ArgumentMatchers.<Supplier<Boolean>>any());
-        verify(studyService).setLoadFlowParameters(studyUuid, null, USER_ID);
+        verify(loadFlowService).setLoadFlowParameters(studyUuid, null, USER_ID);
     }
 
     @Test
