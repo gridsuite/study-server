@@ -9,6 +9,7 @@ package org.gridsuite.study.server.service.shortcircuit;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyRepository;
 import org.gridsuite.study.server.service.*;
+import org.gridsuite.study.server.service.asymmetricalload.AsymmetricalLoadService;
 import org.gridsuite.study.server.service.common.ComputationParametersService;
 import org.gridsuite.study.server.service.pccmin.PccMinService;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,13 +52,15 @@ class ShortCircuitServiceTest {
     private RootNetworkService rootNetworkService;
     @Mock
     private PccMinService pccMinService;
+    @Mock
+    private AsymmetricalLoadService asymmetricalLoadService;
 
     private ShortCircuitService shortCircuitService;
 
     @BeforeEach
     void setUp() {
         shortCircuitService = new ShortCircuitService(studyRepository, computationParametersService, notificationService, rootNetworkNodeInfoService,
-            shortCircuitRestService, networkModificationTreeService, userAdminService, rootNetworkService, pccMinService);
+            shortCircuitRestService, networkModificationTreeService, userAdminService, rootNetworkService, pccMinService, asymmetricalLoadService);
     }
 
     @Test
