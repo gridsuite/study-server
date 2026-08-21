@@ -467,7 +467,7 @@ public class NetworkModificationService {
         ).getBody();
     }
 
-    public Map<UUID, UUID> duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid) {
+    public void duplicateModificationsGroup(UUID sourceGroupUuid, UUID groupUuid) {
         Objects.requireNonNull(groupUuid);
         Objects.requireNonNull(sourceGroupUuid);
         var path = UriComponentsBuilder.fromPath("groups/{uuid}/duplicate")
@@ -478,12 +478,12 @@ public class NetworkModificationService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        return restTemplate.exchange(
+        restTemplate.exchange(
             getNetworkModificationServerURI(false) + path,
             HttpMethod.POST,
             new HttpEntity<>(headers),
-            new ParameterizedTypeReference<Map<UUID, UUID>>() { }
-        ).getBody();
+            Void.class
+        );
     }
 
     public NetworkModificationsResult duplicateModificationsFromGroup(UUID groupUuid, UUID originGroupUuid, Pair<List<UUID>, List<ModificationApplicationContext>> modificationContextInfos) {
