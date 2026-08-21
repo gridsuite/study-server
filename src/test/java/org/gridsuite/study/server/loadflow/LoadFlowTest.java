@@ -1006,7 +1006,7 @@ class LoadFlowTest {
         mnBodyJson = jsonObject.toString();
 
         reset(studyService);
-        doReturn(List.of()).when(studyService).getRootNetworksToBuildAfterCreation(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
+        doReturn(List.of()).when(studyService).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         mockMvc.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid).content(mnBodyJson).contentType(MediaType.APPLICATION_JSON).header("userId", "userId"))
                 .andExpect(status().isOk());
@@ -1018,7 +1018,7 @@ class LoadFlowTest {
         rootNetworkNodeInfoService.updateRootNetworkNode(modificationNode.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid),
             RootNetworkNodeInfo.builder().variantId(variantId).build());
 
-        verify(studyService, times(1)).getRootNetworksToBuildAfterCreation(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
+        verify(studyService, times(1)).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         return modificationNode;
     }

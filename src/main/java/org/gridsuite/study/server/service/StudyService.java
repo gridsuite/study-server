@@ -2687,7 +2687,7 @@ public class StudyService {
     }
 
     @Transactional(readOnly = true)
-    public List<UUID> getRootNetworksToBuildAfterCreation(UUID studyUuid, UUID parentNodeUuid, NetworkModificationNode newNode) {
+    public List<UUID> getRootNetworksToBuildNewNode(UUID studyUuid, UUID parentNodeUuid, NetworkModificationNode newNode) {
         if (!newNode.isSecurityNode() || !networkModificationTreeService.isRootOrConstructionNode(parentNodeUuid)) {
             return List.of();
         }

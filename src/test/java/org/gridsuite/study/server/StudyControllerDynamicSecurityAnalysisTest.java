@@ -203,7 +203,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
                 .children(Collections.emptyList()).build();
 
         reset(spyStudyService);
-        doReturn(List.of()).when(spyStudyService).getRootNetworksToBuildAfterCreation(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
+        doReturn(List.of()).when(spyStudyService).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         studyClient.perform(post("/v1/studies/{studyUuid}/tree/nodes/{id}", studyUuid, parentNodeUuid)
                         .content(objectMapper.writeValueAsString(modificationNode))
@@ -219,7 +219,7 @@ class StudyControllerDynamicSecurityAnalysisTest {
 
         rootNetworkNodeInfoService.updateRootNetworkNode(newNodeId, studyTestUtils.getOneRootNetworkUuid(studyUuid), RootNetworkNodeInfo.builder().variantId(variantId).build());
 
-        verify(spyStudyService, times(1)).getRootNetworksToBuildAfterCreation(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
+        verify(spyStudyService, times(1)).getRootNetworksToBuildNewNode(eq(studyUuid), eq(parentNodeUuid), any(NetworkModificationNode.class));
 
         return modificationNode;
     }

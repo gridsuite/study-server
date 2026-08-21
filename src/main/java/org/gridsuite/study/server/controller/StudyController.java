@@ -249,7 +249,7 @@ public class StudyController {
                                                   @RequestParam(name = "insertMode") InsertMode insertMode,
                                               @RequestHeader(HEADER_USER_ID) String userId) {
         //if the source study is not set we assume it's the same as the target study
-        nodeActivityRunnerService.runWith(EDIT_TREE, targetStudyUuid, reparentedNodes(referenceNodeUuid, insertMode),
+        nodeActivityRunnerService.runWith(EDIT_TREE, targetStudyUuid, insertMode.isChild() ? List.of() : List.of(referenceNodeUuid),
             () -> studyService.duplicateStudyNode(sourceStudyUuid == null ? targetStudyUuid : sourceStudyUuid, targetStudyUuid, nodeToCopyUuid, referenceNodeUuid, insertMode, userId));
         return ResponseEntity.ok().build();
     }
@@ -268,7 +268,7 @@ public class StudyController {
                                               @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertIsNodeNotReadOnly(nodeToCutUuid);
         // the node leaves its former parent, so its own children are reparented there whatever the insert mode
-        List<UUID> heldNodes = Stream.concat(Stream.of(nodeToCutUuid), reparentedNodes(referenceNodeUuid, insertMode).stream()).distinct().toList();
+        List<UUID> heldNodes = Stream.concat(Stream.of(nodeToCutUuid), insertMode.isChild() ? Stream.empty() : Stream.of(referenceNodeUuid)).distinct().toList();
         nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, heldNodes,
             () -> studyService.moveStudyNode(studyUuid, nodeToCutUuid, referenceNodeUuid, insertMode, userId));
         return ResponseEntity.ok().build();
@@ -1095,12 +1095,8 @@ public class StudyController {
                 .body(studyService.searchModifications(rootNetworkUuid, userInput));
     }
 
-    private static List<UUID> reparentedNodes(UUID referenceNodeUuid, InsertMode insertMode) {
-        return insertMode == InsertMode.CHILD ? List.of() : List.of(referenceNodeUuid);
-    }
-
-    private void buildCreatedNode(UUID studyUuid, UUID referenceId, NetworkModificationNode createdNode, String userId) {
-        studyService.getRootNetworksToBuildAfterCreation(studyUuid, referenceId, createdNode).forEach(rootNetworkUuid ->
+    private void buildNewNode(UUID studyUuid, UUID referenceId, NetworkModificationNode createdNode, String userId) {
+        studyService.getRootNetworksToBuildNewNode(studyUuid, referenceId, createdNode).forEach(rootNetworkUuid ->
             nodeActivityRunnerService.runWith(BUILD, studyUuid, rootNetworkUuid, List.of(createdNode.getId()),
                 () -> studyService.buildNode(studyUuid, createdNode.getId(), rootNetworkUuid, userId)));
     }
@@ -1128,9 +1124,9 @@ public class StudyController {
                                                                  defaultValue = "CHILD") InsertMode insertMode,
                                                          @RequestHeader(HEADER_USER_ID) String userId) {
 
-        NetworkModificationNode newNode = nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, reparentedNodes(referenceId, insertMode),
+        NetworkModificationNode newNode = nodeActivityRunnerService.runWith(EDIT_TREE, studyUuid, insertMode.isChild() ? List.of() : List.of(referenceId),
             () -> studyService.createNode(studyUuid, referenceId, node, insertMode, userId));
-        buildCreatedNode(studyUuid, referenceId, newNode, userId);
+        buildNewNode(studyUuid, referenceId, newNode, userId);
 
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(newNode);
     }
@@ -1147,7 +1143,7 @@ public class StudyController {
                                                               @RequestHeader(HEADER_USER_ID) String userId) {
         // a sequence is added as a child at every level, so it reparents nothing and holds nothing
         NetworkModificationNode sequenceParentNode = studyService.createSequence(studyUuid, referenceId, nodeSequenceType, userId);
-        buildCreatedNode(studyUuid, referenceId, sequenceParentNode, userId);
+        buildNewNode(studyUuid, referenceId, sequenceParentNode, userId);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sequenceParentNode);
     }
 

@@ -252,7 +252,3 @@ gridsuite:
 study:
   max-root-network-by-study: 4
   enable-operation-quotas: false
-  node-activity:
-    abandoned-after: PT30M
-  cron:
-    node-activity-cleanup: 0 */10 * * * ?
