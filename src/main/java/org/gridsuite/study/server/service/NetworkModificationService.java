@@ -306,6 +306,31 @@ public class NetworkModificationService {
     }
 
     /**
+     * @return modification uuid -> uuid of the composite currently containing it; modifications sitting directly
+     * under a group (or not found) have no entry
+     */
+    public Map<UUID, UUID> findParentComposites(List<UUID> modificationsUuids) {
+        Objects.requireNonNull(modificationsUuids);
+        var path = UriComponentsBuilder
+                .fromUriString(getNetworkModificationServerURI(false) + "network-modifications/parent-composites")
+                .queryParam(UUIDS, modificationsUuids)
+                .buildAndExpand()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+        return restTemplate.exchange(
+                path,
+                HttpMethod.GET,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { }
+        ).getBody();
+    }
+
+    /**
      * @return one {@link ReferenceData} per modification-reference found in the group
      */
     public List<ReferenceData> getReferencesFromGroup(UUID groupUuid) {

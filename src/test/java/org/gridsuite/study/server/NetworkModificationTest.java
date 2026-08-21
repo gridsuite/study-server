@@ -2129,6 +2129,14 @@ class NetworkModificationTest {
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         ).getId();
 
+        // source omitted both times -> studyService looks up modification1's parent composite; it sits directly
+        // in the node's own group, so no entry is returned and the fallback (the node's group) is used
+        UUID parentCompositesStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/network-modifications/parent-composites"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(Map.of()))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+        ).getId();
+
         // switch the 2 modifications order (modification1 is set at the end, after modification2)
         // Same-container reorder: no source/target params -> controller resolves both to the node's group.
         MoveModificationInfos moveToEnd = new MoveModificationInfos(null, null, null);
@@ -2178,6 +2186,8 @@ class NetworkModificationTest {
                 2);
         WireMockUtils.verifyGetRequest(wireMockServer, referencesStubId, "/v1/references",
                 Map.of("uuids", WireMock.matching(".*")), 2);
+        WireMockUtils.verifyGetRequest(wireMockServer, parentCompositesStubId, "/v1/network-modifications/parent-composites",
+                Map.of("uuids", WireMock.containing(modification1.toString())), 2);
 
     }
 
@@ -2337,7 +2347,8 @@ class NetworkModificationTest {
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
         List<UUID> modificationUuids = List.of(modification1, modification2);
-        String modificationUuidListBody = mapper.writeValueAsString(modificationUuids);
+        String modificationUuidListBody = mapper.writeValueAsString(
+                modificationUuids.stream().map(uuid -> new ModificationMoveOrCopyInfos(uuid, null)).toList());
 
         List<UUID> copyUuids = List.of(UUID.randomUUID(), UUID.randomUUID());
         wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/containers/.*"))
@@ -2427,7 +2438,8 @@ class NetworkModificationTest {
 
         UUID modification1 = UUID.randomUUID();
         List<UUID> modificationUuids = List.of(modification1);
-        String modificationUuidListBody = mapper.writeValueAsString(modificationUuids);
+        String modificationUuidListBody = mapper.writeValueAsString(
+                modificationUuids.stream().map(uuid -> new ModificationMoveOrCopyInfos(uuid, null)).toList());
 
         UUID copyUuid1 = UUID.randomUUID();
         List<UUID> copyUuids = List.of(copyUuid1);
@@ -2504,7 +2516,8 @@ class NetworkModificationTest {
 
         List<UUID> modifications = List.of(UUID.randomUUID());
         List<UUID> copyUuids = List.of(UUID.randomUUID());
-        String modificationUuidListBody = mapper.writeValueAsString(modifications);
+        String modificationUuidListBody = mapper.writeValueAsString(
+                modifications.stream().map(uuid -> new ModificationMoveOrCopyInfos(uuid, null)).toList());
 
         wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/containers/.*"))
             .withQueryParam("action", WireMock.equalTo("COPY"))
@@ -2562,7 +2575,8 @@ class NetworkModificationTest {
         createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "New node 1", "userId");
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
-        String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
+        String modificationUuidListBody = mapper.writeValueAsString(
+                List.of(modification1, modification2).stream().map(uuid -> new ModificationMoveOrCopyInfos(uuid, null)).toList());
 
         // Random/bad studyId error case
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
@@ -2597,7 +2611,8 @@ class NetworkModificationTest {
         UUID nodeUuid2 = node2.getId();
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
-        String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
+        String modificationUuidListBody = mapper.writeValueAsString(
+                Arrays.asList(modification1, modification2).stream().map(uuid -> new ModificationMoveOrCopyInfos(uuid, null)).toList());
 
         UUID childrenStubId = wireMockServer.stubFor(
                 WireMock.get(WireMock.urlPathEqualTo("/v1/network-composite-modifications/children-uuids"))
@@ -2612,6 +2627,14 @@ class NetworkModificationTest {
                 .willReturn(WireMock.ok()
                         .withBody(mapper.writeValueAsString(new NetworkModificationsResult(Arrays.asList(modification1, modification2), List.of(Optional.empty()))))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))).getId();
+
+        // both modifications' source is omitted -> studyService looks up their parent composite; neither is
+        // nested in one, so no entries are returned and the fallback (the origin node's group) is used
+        UUID parentCompositesStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/network-modifications/parent-composites"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(Map.of()))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+        ).getId();
 
         // none of the moved modifications is a shared-composite reference
         UUID referencesStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
@@ -2674,6 +2697,8 @@ class NetworkModificationTest {
         // references are looked up before every move, regardless of whether the target node differs from the origin node
         WireMockUtils.verifyGetRequest(wireMockServer, referencesStubId, "/v1/references",
                 Map.of("uuids", WireMock.matching(".*")), 2);
+        WireMockUtils.verifyGetRequest(wireMockServer, parentCompositesStubId, "/v1/network-modifications/parent-composites",
+                Map.of("uuids", WireMock.matching(".*")), 2);
 
         // move modification without defining originNodeUuid
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?action=MOVE",
@@ -2694,7 +2719,8 @@ class NetworkModificationTest {
         createNetworkModificationNode(studyUuid, rootNodeUuid, UUID.randomUUID(), VARIANT_ID, "New node 2", userId);
         UUID modification1 = UUID.randomUUID();
         UUID modification2 = UUID.randomUUID();
-        String modificationUuidListBody = mapper.writeValueAsString(Arrays.asList(modification1, modification2));
+        String modificationUuidListBody = mapper.writeValueAsString(
+                Arrays.asList(modification1, modification2).stream().map(uuid -> new ModificationMoveOrCopyInfos(uuid, null)).toList());
 
         // Random/bad studyId error case
         mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=MOVE",
@@ -3531,6 +3557,13 @@ class NetworkModificationTest {
                         .withBody(mapper.writeValueAsString(List.of()))
                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
 
+        // source omitted -> studyService looks up the modification's parent composite; it sits directly in the
+        // node's own group, so no entry is returned and the fallback (the node's group) is used
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/network-modifications/parent-composites"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(Map.of()))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
         MoveModificationInfos moveInfosCase3 = new MoveModificationInfos(
                 null,
                 new ModificationContainerInfos(targetContainerId, ModificationContainerType.GROUP),
@@ -3555,6 +3588,8 @@ class NetworkModificationTest {
                 "uuids", WireMock.matching(".*")), 1);
         WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/references", Map.of(
                 "uuids", WireMock.matching(".*")), 3);
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/network-modifications/parent-composites", Map.of(
+                "uuids", WireMock.matching(".*")), 1);
     }
 
     @Test
@@ -3574,7 +3609,7 @@ class NetworkModificationTest {
         // modification1 IS the directory-server element that carries the reference - same UUID,
         // matching the pattern in deleteModificationRequest where the delete path uses modificationUuid directly
         UUID modification1 = UUID.randomUUID();
-        String modificationUuidListBody = mapper.writeValueAsString(List.of(modification1));
+        String modificationUuidListBody = mapper.writeValueAsString(List.of(new ModificationMoveOrCopyInfos(modification1, null)));
 
         UUID childrenStubId = wireMockServer.stubFor(
                 WireMock.get(WireMock.urlPathEqualTo("/v1/network-composite-modifications/children-uuids"))
@@ -3582,6 +3617,14 @@ class NetworkModificationTest {
                         .willReturn(WireMock.ok()
                                 .withBody(mapper.writeValueAsString(List.of()))
                                 .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+        ).getId();
+
+        // source omitted -> studyService looks up the modification's parent composite; modification1 sits directly
+        // in node1's own group, so no entry is returned and the fallback (node1's group) is used
+        UUID parentCompositesStubId = wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/network-modifications/parent-composites"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(Map.of()))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
         ).getId();
 
         UUID groupStubId = wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/containers/.*"))
@@ -3637,6 +3680,9 @@ class NetworkModificationTest {
 
         WireMockUtils.verifyGetRequest(wireMockServer, referencesStubId, "/v1/references",
                 Map.of("uuids", WireMock.matching(".*")));
+
+        WireMockUtils.verifyGetRequest(wireMockServer, parentCompositesStubId, "/v1/network-modifications/parent-composites",
+                Map.of("uuids", WireMock.containing(modification1.toString())));
 
         WireMockUtils.verifyPutRequest(wireMockServer, updateReferencesStubId, "/v1/elements/references", true,
                 Map.of("ids", WireMock.equalTo(modification1.toString()),
