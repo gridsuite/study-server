@@ -85,6 +85,7 @@ import java.util.stream.Collectors;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.gridsuite.study.server.StudyConstants.HEADER_ERROR_MESSAGE;
 import static org.gridsuite.study.server.StudyConstants.QUERY_PARAM_RECEIVER;
+import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.NETWORK_MODIFICATION;
 import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.MAX_NODE_BUILDS_EXCEEDED;
 import static org.gridsuite.study.server.error.StudyBusinessErrorCode.NOT_FOUND;
@@ -2500,6 +2501,108 @@ class NetworkModificationTest {
                 argThat((Map<UUID, UUID> mapping) ->
                         copyUuid1.equals(mapping.get(modification1))
                                 && copyChild.equals(mapping.get(originalChild))));
+    }
+
+    @Test
+    void testDuplicateModificationCreatesReferencesToSharedComposites() throws Exception {
+        // Verifies createReferencesToSharedComposites correctly splits references in two:
+        // - a duplicated modification that IS itself a reference -> new reference points to the target node (STUDY_NODE)
+        // - a reference nested inside a duplicated composite -> new reference points to the composite's copy (NETWORK_MODIFICATION)
+        String userId = "userId";
+        StudyEntity studyEntity = insertDummyStudy(UUID.fromString(NETWORK_UUID_STRING), CASE_UUID, "UCTE");
+        UUID studyUuid = studyEntity.getId();
+        UUID rootNodeUuid = getRootNode(studyUuid).getId();
+        NetworkModificationNode node1 = createNetworkModificationNode(studyUuid, rootNodeUuid,
+                UUID.randomUUID(), VARIANT_ID, "node for reference splitting", userId);
+        UUID nodeUuid1 = node1.getId();
+        UUID firstRootNetworkUuid = studyTestUtils.getOneRootNetworkUuid(studyUuid);
+
+        // modification1 is itself a modification-reference (root level); modification2 is a composite containing
+        // originalChild, itself a modification-reference nested inside modification2
+        UUID modification1 = UUID.randomUUID();
+        UUID modification2 = UUID.randomUUID();
+        List<UUID> modificationUuids = List.of(modification1, modification2);
+        String modificationUuidListBody = mapper.writeValueAsString(
+                modificationUuids.stream().map(uuid -> new ModificationMoveOrCopyInfos(uuid, null)).toList());
+
+        UUID copy1 = UUID.randomUUID();
+        UUID copy2 = UUID.randomUUID();
+        List<UUID> copyUuids = List.of(copy1, copy2);
+        UUID originalChild = UUID.randomUUID();
+        UUID copyChild = UUID.randomUUID();
+        UUID sharedComposite1 = UUID.randomUUID();
+        UUID sharedComposite2 = UUID.randomUUID();
+
+        wireMockServer.stubFor(WireMock.any(WireMock.urlPathMatching("/v1/containers/.*"))
+                .withQueryParam("action", WireMock.equalTo("COPY"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(new NetworkModificationsResult(copyUuids, List.of())))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
+        // first call (originals) returns originalChild (nested under modification2); second call (copies) returns copyChild
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/network-composite-modifications/children-uuids"))
+                .inScenario("referenceSplitMapping")
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(List.of(originalChild)))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE))
+                .willSetStateTo("secondCall"));
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathMatching("/v1/network-composite-modifications/children-uuids"))
+                .inScenario("referenceSplitMapping")
+                .whenScenarioStateIs("secondCall")
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(List.of(copyChild)))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
+        // modification1 is a direct reference (containerId null); originalChild is a reference nested in modification2
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/v1/references"))
+                .willReturn(WireMock.ok()
+                        .withBody(mapper.writeValueAsString(List.of(
+                                new ReferenceData(modification1, sharedComposite1, null),
+                                new ReferenceData(originalChild, sharedComposite2, modification2))))
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/elements/" + sharedComposite1 + "/references"))
+                .withHeader(USER_ID_HEADER, WireMock.equalTo(userId))
+                .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+        wireMockServer.stubFor(WireMock.post(WireMock.urlPathEqualTo("/v1/elements/" + sharedComposite2 + "/references"))
+                .withHeader(USER_ID_HEADER, WireMock.equalTo(userId))
+                .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+
+        mockMvc.perform(put("/v1/studies/{studyUuid}/nodes/{nodeUuid}?originStudyUuid={originStudyUuid}&originNodeUuid={originNodeUuid}&action=COPY",
+                        studyUuid, nodeUuid1, studyUuid, nodeUuid1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(modificationUuidListBody)
+                        .header(USER_ID_HEADER, userId))
+                .andExpect(status().isOk());
+        checkUpdateStatusMessagesReceived(studyUuid, nodeUuid1, output);
+        checkEquipmentUpdatingMessagesReceived(studyUuid, nodeUuid1);
+        checkEquipmentUpdatingFinishedMessagesReceived(studyUuid, nodeUuid1);
+        checkElementUpdatedMessageSent(studyUuid, userId);
+
+        Pair<List<UUID>, List<ModificationApplicationContext>> modificationBody = Pair.of(modificationUuids,
+                List.of(rootNetworkNodeInfoService.getNetworkModificationApplicationContext(firstRootNetworkUuid, node1.getId(), NETWORK_UUID)));
+        String expectedBody = mapper.writeValueAsString(modificationBody);
+        String url = "/v1/containers/" + node1.getModificationGroupUuid();
+        WireMockUtilsCriteria.verifyPutRequest(wireMockServer, url, Map.of("action", WireMock.equalTo("COPY")), expectedBody);
+
+        // Verify both findAllChildrenUuids calls were made (originals + copies)
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/network-composite-modifications/children-uuids", Map.of("uuids", WireMock.matching(".*")), 2);
+        WireMockUtilsCriteria.verifyGetRequest(wireMockServer, "/v1/references", Map.of("uuids", WireMock.matching(".*")), 1);
+
+        // modification1 IS the requested reference -> new reference targets the node it was pasted into
+        WireMockUtilsCriteria.verifyPostRequest(
+                wireMockServer,
+                "/v1/elements/" + sharedComposite1 + "/references",
+                Map.of(),
+                mapper.writeValueAsString(new ReferenceAttributes(nodeUuid1, STUDY_NODE)));
+
+        // originalChild's reference is nested inside modification2 -> new reference targets modification2's copy
+        WireMockUtilsCriteria.verifyPostRequest(
+                wireMockServer,
+                "/v1/elements/" + sharedComposite2 + "/references",
+                Map.of(),
+                mapper.writeValueAsString(new ReferenceAttributes(copy2, NETWORK_MODIFICATION)));
     }
 
     @Test

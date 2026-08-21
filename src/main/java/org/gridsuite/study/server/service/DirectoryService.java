@@ -24,7 +24,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.*;
 
 import static org.gridsuite.study.server.StudyConstants.*;
-import static org.gridsuite.study.server.dto.ReferenceAttributes.ReferenceType.STUDY_NODE;
 
 /**
  * @author David Braquart <david.braquart at rte-france.com>
@@ -115,9 +114,9 @@ public class DirectoryService {
      * creates references and add them to shared composite modifications stored in directory server
      * @param elementsUuids element uuids of the shared composites in directory server
      * @param userId id of the user who creates the references
-     * @param targetNodeUuid where the new references will point
+     * @param targetReferenceUuid where the new references will point
      */
-    public void createsReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, UUID targetNodeUuid) {
+    public void createsReferencesToSharedComposites(@NonNull List<UUID> elementsUuids, String userId, UUID targetReferenceUuid, ReferenceAttributes.ReferenceType targetReferenceType) {
         // TODO : instead of multiple calls, an endpoint in directory server should be created to handle multiple references creation
         // OR if not, turn this into simultaneous asynchronous calls
         elementsUuids.forEach(elementUuid -> {
@@ -130,7 +129,7 @@ public class DirectoryService {
             headers.set(HEADER_USER_ID, userId);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            ReferenceAttributes referenceAttributes = new ReferenceAttributes(targetNodeUuid, STUDY_NODE);
+            ReferenceAttributes referenceAttributes = new ReferenceAttributes(targetReferenceUuid, targetReferenceType);
 
             HttpEntity<ReferenceAttributes> requestEntity = new HttpEntity<>(referenceAttributes, headers);
             restTemplate.exchange(getDirectoryServerServerBaseUri() + path, HttpMethod.POST, requestEntity, ElementAttributes.class);
