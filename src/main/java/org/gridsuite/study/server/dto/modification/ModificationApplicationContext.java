@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.dto.modification;
 
-import java.util.Set;
 import java.util.UUID;
 
-public record ModificationApplicationContext(UUID networkUuid, String variantId, UUID reportUuid, UUID reporterId, Set<UUID> excludedModifications) { }
+public record ModificationApplicationContext(UUID networkUuid, String variantId, UUID reportUuid, UUID reporterId, String rootNetworkTag) { }

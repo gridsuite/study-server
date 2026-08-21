@@ -119,11 +119,11 @@ class StudyControllerRebuildNodeTest {
     }
 
     @Test
-    void testUpdateNetworkModificationActivationByRootNetwork() {
+    void testUpdateNetworkModificationApplicabilityByRootNetwork() {
         Set<UUID> modificationUuids = Set.of(UUID.randomUUID());
-        studyController.updateNetworkModificationsActivation(studyUuid, rootNetworkUuid, nodeUuid, modificationUuids, true, userId);
+        studyController.updateNetworkModificationsApplicability(studyUuid, rootNetworkUuid, nodeUuid, modificationUuids, true, userId);
 
-        verify(rebuildNodeService, times(1)).updateNetworkModificationsActivation(studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, userId, true);
+        verify(rebuildNodeService, times(1)).updateNetworkModificationsApplicability(studyUuid, nodeUuid, rootNetworkUuid, modificationUuids, userId, true);
         verify(studyService, times(1)).buildNode(eq(studyUuid), eq(nodeUuid), any(), eq(userId));
     }
 }

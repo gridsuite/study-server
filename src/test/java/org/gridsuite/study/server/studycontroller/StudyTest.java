@@ -1118,7 +1118,7 @@ class StudyTest extends StudyTestBase {
             .whenScenarioStateIs(Scenario.STARTED)
             .willSetStateTo("indexed")
             .willReturn(WireMock.ok())).getId();
-        UUID stubUuid = wireMockStubs.stubDuplicateModificationGroup(mapper.writeValueAsString(Map.of()));
+        UUID stubUuid = wireMockStubs.stubDuplicateModificationGroup();
         UUID stubDuplicateCaseId = wireMockStubs.caseServer.stubDuplicateCaseWithBody(CASE_UUID_STRING, mapper.writeValueAsString(CLONED_CASE_UUID));
         UUID stubReportsDuplicateId = wireMockServer.stubFor(WireMock.post(WireMock.urlPathMatching("/v1/reports/.*/duplicate"))
             .willReturn(WireMock.ok().withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)

@@ -657,7 +657,7 @@ public class StudyController {
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
         switch (action) {
             case COPY:
-                handleDuplicateNetworkModifications(studyUuid, nodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
+                handleDuplicateNetworkModifications(studyUuid, nodeUuid, modificationsToCopyUuidList, userId);
                 break;
             case MOVE:
                 // we don't cut - paste modifications from different studies
@@ -716,11 +716,11 @@ public class StudyController {
         }
     }
 
-    private void handleDuplicateNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, UUID originNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
+    private void handleDuplicateNetworkModifications(UUID targetStudyUuid, UUID targetNodeUuid, List<UUID> modificationsToCopyUuidList, String userId) {
         studyService.assertNoBlockedNodeInStudy(targetStudyUuid, targetNodeUuid);
         studyService.invalidateNodeTreeWithLF(targetStudyUuid, targetNodeUuid);
         try {
-            studyService.duplicateNetworkModifications(targetStudyUuid, targetNodeUuid, originNodeUuid, modificationsToCopyUuidList, userId);
+            studyService.duplicateNetworkModifications(targetStudyUuid, targetNodeUuid, modificationsToCopyUuidList, userId);
         } finally {
             studyService.unblockNodeTree(targetStudyUuid, targetNodeUuid);
         }
@@ -954,17 +954,6 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getExportedNetworkModifications(studyUuid, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/excluded-network-modifications", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get excluded network modifications from a node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The excluded network modifications were returned"), @ApiResponse(responseCode = "404",
-            description = "The study/node is not found")})
-    public ResponseEntity<List<ExcludedNetworkModifications>> getNetworkModificationsToExclude(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                       @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
-
-        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.getModificationsToExclude(nodeUuid));
-    }
-
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
     @Operation(summary = "Create a network modification for a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification was created"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})
@@ -1039,19 +1028,19 @@ public class StudyController {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", params = "activated")
-    @Operation(summary = "Update 'activated' value for a network modifications for a node in a specific root network")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the activation status for network modifications on a node in a specific root network"),
+    @PutMapping(value = "/studies/{studyUuid}/root-networks/{rootNetworkUuid}/nodes/{nodeUuid}/network-modifications", params = "applicable")
+    @Operation(summary = "Update the applicability of network modifications for a node on a specific root network")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Update the applicability of network modifications on a node in a specific root network"),
         @ApiResponse(responseCode = "404", description = "The study/root network/node is not found")})
-    public ResponseEntity<Void> updateNetworkModificationsActivation(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
+    public ResponseEntity<Void> updateNetworkModificationsApplicability(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
                                                                      @Parameter(description = "Root network UUID") @PathVariable("rootNetworkUuid") UUID rootNetworkUuid,
                                                                      @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid,
                                                                      @Parameter(description = "Network modification UUIDs") @RequestParam("uuids") Set<UUID> networkModificationUuids,
-                                                                     @Parameter(description = "New activated value") @RequestParam(name = "activated") Boolean activated,
+                                                                     @Parameter(description = "New applicability value") @RequestParam(name = "applicable") Boolean applicable,
                                                                      @RequestHeader(HEADER_USER_ID) String userId) {
         studyService.assertCanUpdateNodeInStudy(studyUuid, nodeUuid);
         studyService.assertNoBlockedNodeInTree(nodeUuid, rootNetworkUuid);
-        rebuildNodeService.updateNetworkModificationsActivation(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId, activated);
+        rebuildNodeService.updateNetworkModificationsApplicability(studyUuid, nodeUuid, rootNetworkUuid, networkModificationUuids, userId, applicable);
         return ResponseEntity.ok().build();
     }
 
