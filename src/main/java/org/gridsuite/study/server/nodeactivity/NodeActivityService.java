@@ -50,24 +50,33 @@ public class NodeActivityService {
     }
 
     private void doSetNodeActivity(NodeActivityType type, UUID studyUuid, UUID rootNetworkUuid, List<UUID> nodeUuids) {
-        List<UUID> nodes = nodeUuids.stream().distinct().toList();
-        if (nodes.isEmpty()) {
+        List<UUID> nodesUuids = nodeUuids.stream().distinct().toList();
+        if (nodesUuids.isEmpty()) {
             return;
         }
-        assertNodesExistInStudy(studyUuid, nodes);
-        List<NodeActivityEntity> newActivities = nodes.stream()
+        assertNodesExistInStudy(studyUuid, nodesUuids);
+        List<NodeActivityEntity> newActivities = nodesUuids.stream()
             .map(nodeUuid -> NodeActivityEntity.from(type, studyUuid, rootNetworkUuid, nodeUuid))
             .toList();
         List<NodeActivityEntity> currentActivities = nodeActivityRepository.findAllByStudyId(studyUuid);
         if (!currentActivities.isEmpty()) {
-            Map<UUID, Set<UUID>> ancestorsByNode = getAncestorsByNode(type, currentActivities, nodes);
-            newActivities.forEach(newActivity -> NodeActivityRules.findActivityConflict(currentActivities, newActivity, ancestorsByNode)
-                .ifPresent(conflictingActivity -> {
-                    throw throwConflict(newActivity, conflictingActivity);
+            Map<UUID, Set<UUID>> ancestorsByNode = getAncestorsByNode(type, newActivities, currentActivities);
+            newActivities.forEach(newActivity -> findConflictualCurrentActivity(newActivity, currentActivities, ancestorsByNode)
+                .ifPresent(conflictualActivity -> {
+                    throw throwConflict(newActivity, conflictualActivity);
                 }));
         }
         nodeActivityRepository.saveAll(newActivities);
         notifyNodeActivities(studyUuid);
+    }
+
+    private static Optional<NodeActivityEntity> findConflictualCurrentActivity(
+        NodeActivityEntity activity, List<NodeActivityEntity> currentActivities, Map<UUID, Set<UUID>> ancestorsByNode) {
+        return currentActivities.stream()
+            .filter(
+                currentActivity -> activity.hasConflictWith(currentActivity, ancestorsByNode)
+            )
+            .findFirst();
     }
 
     private StudyException throwConflict(NodeActivityEntity newActivityEntity, NodeActivityEntity conflictingActivity) {
@@ -92,7 +101,7 @@ public class NodeActivityService {
 
     private void assertNodesExistInStudy(UUID studyUuid, List<UUID> nodes) {
         if (nodeRepository.countByIdNodeInAndStudyId(nodes, studyUuid) != nodes.size()) {
-            throw new StudyException(NOT_FOUND, "Nodes %s not all found in study %s".formatted(nodes, studyUuid));
+            throw new StudyException(NOT_FOUND, "Activity creation : nodes %s not all found in study %s".formatted(nodes, studyUuid));
         }
     }
 
@@ -128,12 +137,11 @@ public class NodeActivityService {
             .toList();
     }
 
-    private Map<UUID, Set<UUID>> getAncestorsByNode(NodeActivityType requestedType,
-                                                    List<NodeActivityEntity> runningActivities, List<UUID> requestedNodes) {
-        Stream<UUID> involvedNodes = requestedType.invalidatesChildren()
-            ? Stream.concat(requestedNodes.stream(), runningActivities.stream().map(NodeActivityEntity::getNodeId))
-            : requestedNodes.stream();
-        return involvedNodes.distinct()
+    private Map<UUID, Set<UUID>> getAncestorsByNode(NodeActivityType type, List<NodeActivityEntity> newActivities,
+                                                    List<NodeActivityEntity> currentActivities) {
+        Stream<NodeActivityEntity> involvedActivities = type.invalidatesChildren()
+            ? Stream.concat(newActivities.stream(), currentActivities.stream()) : newActivities.stream();
+        return involvedActivities.map(NodeActivityEntity::getNodeId).distinct()
             .collect(Collectors.toMap(nodeUuid -> nodeUuid, this::getAncestors));
     }
 

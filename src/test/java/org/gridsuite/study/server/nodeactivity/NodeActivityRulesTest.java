@@ -11,26 +11,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityRules.findActivityConflict;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.BUILD;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE_AND_UNBUILD_CHILDREN;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.DELETE_NODES;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_EVENTS;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_MODIFICATIONS;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_TREE;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.REIMPORT_CASE;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_ALL;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_CHILDREN;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Ayoub Labidi <ayoub.labidi_externe at rte-france.com>
@@ -80,10 +67,13 @@ class NodeActivityRulesTest {
 
     private static boolean refused(NodeActivityType runningType, UUID runningNode, UUID runningRootNetwork,
                                    NodeActivityType requestedType, UUID requestedNode, UUID requestedRootNetwork) {
-        List<NodeActivityEntity> running =
-            List.of(NodeActivityEntity.from(runningType, STUDY, runningRootNetwork, runningNode));
-        return findActivityConflict(running,
-            NodeActivityEntity.from(requestedType, STUDY, requestedRootNetwork, requestedNode), ANCESTORS).isPresent();
+        List<NodeActivityEntity> activities = List.of(NodeActivityEntity.from(runningType, STUDY, runningRootNetwork, runningNode));
+        NodeActivityEntity activity = NodeActivityEntity.from(requestedType, STUDY, requestedRootNetwork, requestedNode);
+        return hasConflict(activity, activities);
+    }
+
+    private static boolean hasConflict(NodeActivityEntity activity, List<NodeActivityEntity> others) {
+        return others.stream().anyMatch(running -> activity.hasConflictWith(running, ANCESTORS));
     }
 
     @Test
@@ -207,14 +197,13 @@ class NodeActivityRulesTest {
     void nothingIsRefusedWhenNoActivityIsRunning() {
         List<NodeActivityEntity> nothingRunning = List.of();
         EVERY_NODE.forEach(nodeUuid ->
-            assertThat(findActivityConflict(nothingRunning, NodeActivityEntity.from(EDIT_TREE, STUDY, null, nodeUuid), ANCESTORS))
-                .isEmpty());
+            assertFalse(hasConflict(NodeActivityEntity.from(EDIT_TREE, STUDY, null, nodeUuid), nothingRunning)));
     }
 
     @Test
     void theConflictNamesTheActivityHoldingTheNode() {
         NodeActivityEntity unbuildingChildren = NodeActivityEntity.from(UNBUILD_CHILDREN, STUDY, ROOT_NETWORK, NODE);
-        NodeActivityEntity requested = NodeActivityEntity.from(BUILD, STUDY, ROOT_NETWORK, GRANDCHILD);
-        assertThat(findActivityConflict(List.of(unbuildingChildren), requested, ANCESTORS)).contains(unbuildingChildren);
+        NodeActivityEntity activity = NodeActivityEntity.from(BUILD, STUDY, ROOT_NETWORK, GRANDCHILD);
+        assertTrue(hasConflict(activity, List.of(unbuildingChildren)));
     }
 }

@@ -14,7 +14,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -66,5 +68,24 @@ public class NodeActivityEntity {
             .type(type)
             .startedAt(Instant.now())
             .build();
+    }
+
+    public boolean hasConflictWith(NodeActivityEntity other, Map<UUID, Set<UUID>> ancestorsByNode) {
+        return hasSameRootNetwork(other) &&
+            (hasSameNode(other) || invalidates(other, ancestorsByNode) || other.invalidates(this, ancestorsByNode));
+    }
+
+    private boolean hasSameNode(NodeActivityEntity other) {
+        return getNodeId().equals(other.getNodeId());
+    }
+
+    private boolean hasSameRootNetwork(NodeActivityEntity other) {
+        return getType().affectsAllRootNetworks() || other.getType().affectsAllRootNetworks()
+            || getRootNetworkId().equals(other.getRootNetworkId());
+    }
+
+    private boolean invalidates(NodeActivityEntity other, Map<UUID, Set<UUID>> ancestorsByNode) {
+        return getType().invalidatesChildren()
+            && ancestorsByNode.getOrDefault(other.getNodeId(), Set.of()).contains(getNodeId());
     }
 }
