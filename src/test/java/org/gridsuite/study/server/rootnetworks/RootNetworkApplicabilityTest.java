@@ -6,7 +6,6 @@
  */
 package org.gridsuite.study.server.rootnetworks;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.dto.*;
@@ -29,7 +28,6 @@ import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -47,7 +45,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -69,11 +66,8 @@ class RootNetworkApplicabilityTest {
 
     // tag of the root network created by TestUtils.createDummyStudy
     private static final String ROOT_NETWORK_TAG_1 = "dum";
-    private static final String ROOT_NETWORK_TAG_2 = "dum2";
 
     private static final UUID MODIFICATION_1 = UUID.randomUUID();
-    private static final UUID MODIFICATION_2 = UUID.randomUUID();
-    private static final UUID MODIFICATION_3 = UUID.randomUUID();
 
     @Autowired
     private StudyRepository studyRepository;
@@ -164,29 +158,6 @@ class RootNetworkApplicabilityTest {
     }
 
     @Test
-    void testApplicabilitiesAreRelayedToTheFrontEnd() throws Exception {
-        StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
-        createDummyRootNetwork(studyEntity, "secondRootNetwork", ROOT_NETWORK_TAG_2);
-        studyRepository.save(studyEntity);
-
-        NodeEntity rootNode = networkModificationTreeService.createRoot(studyEntity);
-        NetworkModificationNode firstNode = networkModificationTreeService.createNode(studyEntity, rootNode.getIdNode(), createModificationNodeInfo(NODE_1_NAME), InsertMode.AFTER, null);
-
-        Map<UUID, Map<String, Boolean>> applicabilities = Map.of(
-                MODIFICATION_1, Map.of(ROOT_NETWORK_TAG_1, false, ROOT_NETWORK_TAG_2, false),
-                MODIFICATION_2, Map.of(ROOT_NETWORK_TAG_1, true, ROOT_NETWORK_TAG_2, false),
-                MODIFICATION_3, Map.of("ABS", false));
-        doReturn(applicabilities).when(networkModificationService).getRootNetworkApplicabilities(firstNode.getModificationGroupUuid());
-
-        MvcResult result = mockMvc.perform(get("/v1/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/applicability", studyEntity.getId(), firstNode.getId())
-                .header(USER_ID, USER_ID))
-            .andExpect(status().isOk())
-            .andReturn();
-
-        assertEquals(applicabilities, objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<Map<UUID, Map<String, Boolean>>>() { }));
-    }
-
-    @Test
     void testBuildInfosCarryRootNetworkTag() {
         StudyEntity studyEntity = TestUtils.createDummyStudy(NETWORK_UUID, CASE_UUID, CASE_NAME, CASE_FORMAT, REPORT_UUID);
         studyRepository.save(studyEntity);
@@ -216,17 +187,5 @@ class RootNetworkApplicabilityTest {
     @AfterEach
     void tearDown() {
         output.clear();
-    }
-
-    private void createDummyRootNetwork(StudyEntity studyEntity, String name, String tag) {
-        RootNetworkEntity rootNetworkEntity = RootNetworkInfos.builder()
-            .id(UUID.randomUUID())
-            .name(name)
-            .tag(tag)
-            .caseInfos(new CaseInfos(UUID.randomUUID(), UUID.randomUUID(), CASE_NAME, CASE_FORMAT))
-            .networkInfos(new NetworkInfos(UUID.randomUUID(), UUID.randomUUID().toString()))
-            .reportUuid(UUID.randomUUID())
-            .build().toEntity(objectMapper);
-        studyEntity.addRootNetwork(rootNetworkEntity);
     }
 }

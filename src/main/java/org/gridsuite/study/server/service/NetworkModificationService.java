@@ -344,25 +344,6 @@ public class NetworkModificationService {
         restTemplate.exchange(path, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
     }
 
-    /**
-     * @return for each modification of the group, sub modifications included, its applicability per root network tag
-     * (a tag without an entry is applicable)
-     */
-    public Map<UUID, Map<String, Boolean>> getRootNetworkApplicabilities(UUID groupUuid) {
-        Objects.requireNonNull(groupUuid);
-        var path = UriComponentsBuilder.fromPath(GROUP_PATH + DELIMITER + "root-network-applicability");
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        return restTemplate.exchange(
-                getNetworkModificationServerURI(false) + path.buildAndExpand(groupUuid).toUriString(),
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                new ParameterizedTypeReference<Map<UUID, Map<String, Boolean>>>() { }
-        ).getBody();
-    }
-
     public void buildNode(@NonNull UUID nodeUuid, @NonNull UUID rootNetworkUuid, @NonNull BuildInfos buildInfos, AbstractWorkflowInfos workflowInfos) {
         UUID networkUuid = rootNetworkService.getNetworkUuid(rootNetworkUuid);
         String receiver = buildReceiver(nodeUuid, rootNetworkUuid);

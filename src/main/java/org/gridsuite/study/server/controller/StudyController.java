@@ -953,17 +953,6 @@ public class StudyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(studyService.getExportedNetworkModifications(studyUuid, nodeUuid));
     }
 
-    @GetMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications/applicability", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get the applicability per root network tag of the network modifications of a node")
-    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The applicabilities were returned"), @ApiResponse(responseCode = "404",
-            description = "The study/node is not found")})
-    public ResponseEntity<Map<UUID, Map<String, Boolean>>> getNetworkModificationsApplicability(@Parameter(description = "Study UUID") @PathVariable("studyUuid") UUID studyUuid,
-                                                                                                @Parameter(description = "Node UUID") @PathVariable("nodeUuid") UUID nodeUuid) {
-
-        studyService.assertIsStudyAndNodeExist(studyUuid, nodeUuid);
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(networkModificationTreeService.getRootNetworkApplicabilities(nodeUuid));
-    }
-
     @PostMapping(value = "/studies/{studyUuid}/nodes/{nodeUuid}/network-modifications")
     @Operation(summary = "Create a network modification for a node")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The network modification was created"), @ApiResponse(responseCode = "404", description = "The study/node is not found")})

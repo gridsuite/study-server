@@ -779,15 +779,6 @@ public class NetworkModificationTreeService {
         return networkModificationService.getModifications(self.getModificationGroupUuid(nodeUuid), onlyStashed, onlyMetadata);
     }
 
-    /**
-     * @return for each modification of the node, sub modifications included, its applicability per root network tag
-     * (a tag without an entry is applicable)
-     */
-    @Transactional
-    public Map<UUID, Map<String, Boolean>> getRootNetworkApplicabilities(@NonNull UUID nodeUuid) {
-        return networkModificationService.getRootNetworkApplicabilities(self.getModificationGroupUuid(nodeUuid));
-    }
-
     private Integer getNetworkModificationsCount(@NonNull UUID nodeUuid, boolean stashed) {
         return networkModificationService.getModificationsCount(self.getModificationGroupUuid(nodeUuid), stashed);
     }
