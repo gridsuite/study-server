@@ -15,7 +15,6 @@ import org.gridsuite.study.server.repository.nodeactivity.NodeActivityRepository
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -160,17 +159,4 @@ public class NodeActivityService {
         return new HashSet<>(nodeRepository.findAllAncestorsUuids(nodeUuid));
     }
 
-    @Transactional
-    public List<NodeActivityEntity> removeActivities(Instant startedBefore) {
-        List<NodeActivityEntity> nodeActivities = nodeActivityRepository.findAllByStartedAtBefore(startedBefore);
-        if (nodeActivities.isEmpty()) {
-            return List.of();
-        }
-        nodeActivityRepository.deleteAll(nodeActivities);
-        nodeActivities.stream()
-            .map(NodeActivityEntity::getStudyId)
-            .distinct()
-            .forEach(this::notifyActivities);
-        return nodeActivities;
-    }
 }

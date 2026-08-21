@@ -9,7 +9,6 @@ package org.gridsuite.study.server.repository.nodeactivity;
 import org.gridsuite.study.server.nodeactivity.NodeActivityEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,5 +23,4 @@ public interface NodeActivityRepository extends JpaRepository<NodeActivityEntity
 
     void deleteByNodeIdInAndRootNetworkIdIsNull(List<UUID> nodeIds);
 
-    List<NodeActivityEntity> findAllByStartedAtBefore(Instant cutoff);
 }
