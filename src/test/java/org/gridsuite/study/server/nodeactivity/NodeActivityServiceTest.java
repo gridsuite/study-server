@@ -10,12 +10,7 @@ import org.gridsuite.study.server.ContextConfigurationWithTestChannel;
 import org.gridsuite.study.server.error.StudyException;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NetworkModificationNodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.NodeType;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNetworkNodeInfoEntity;
-import org.gridsuite.study.server.networkmodificationtree.entities.RootNodeInfoEntity;
+import org.gridsuite.study.server.networkmodificationtree.entities.*;
 import org.gridsuite.study.server.notification.NotificationService;
 import org.gridsuite.study.server.repository.StudyEntity;
 import org.gridsuite.study.server.repository.StudyRepository;
@@ -44,14 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.BUILD;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.COMPUTE;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.EDIT_TREE;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.REIMPORT_CASE;
-import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_CHILDREN;
+import static org.assertj.core.api.Assertions.*;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.*;
 
 /**
  * @author Ayoub Labidi <ayoub.labidi_externe at rte-france.com>
@@ -243,16 +232,6 @@ class NodeActivityServiceTest {
 
         assertThat(released).extracting(NodeActivityEntity::getNodeId).containsExactlyInAnyOrder(nodeUuid, childUuid);
         assertThat(nodeActivityRepository.findAllByStudyId(studyUuid)).isEmpty();
-    }
-
-    @Test
-    void aReleasedNodeIsPutBackIntoAStateWeCanTrust() {
-        networkModificationTreeService.updateNodeBuildStatus(nodeUuid, rootNetworkUuid, NodeBuildStatus.from(BuildStatus.BUILT));
-        assertThat(networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()).isTrue();
-
-        studyService.invalidateAbandonedNode(studyUuid, nodeUuid, rootNetworkUuid);
-
-        assertThat(networkModificationTreeService.getNodeBuildStatus(nodeUuid, rootNetworkUuid).isBuilt()).isFalse();
     }
 
     /** Notifications tests */

@@ -1685,16 +1685,6 @@ public class StudyService {
         invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ALL);
     }
 
-    /** Nothing said how the abandoned work ended, so the node goes back to a state we can trust */
-    @Transactional
-    public void invalidateAbandonedNode(UUID studyUuid, UUID nodeUuid, UUID rootNetworkUuid) {
-        if (rootNetworkUuid == null) {
-            invalidateNodeTree(studyUuid, nodeUuid, InvalidateNodeTreeParameters.ALL);
-        } else {
-            invalidateNodeTree(studyUuid, nodeUuid, rootNetworkUuid, InvalidateNodeTreeParameters.ALL);
-        }
-    }
-
     private void invalidateNodeTree(UUID studyUuid, UUID nodeUuid, InvalidateNodeTreeParameters invalidateTreeParameters) {
         getStudyRootNetworks(studyUuid).forEach(rootNetworkEntity ->
             invalidateNodeTree(studyUuid, nodeUuid, rootNetworkEntity.getId(), invalidateTreeParameters));

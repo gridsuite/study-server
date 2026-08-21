@@ -166,7 +166,7 @@ public class NodeActivityService {
         if (nodeActivities.isEmpty()) {
             return List.of();
         }
-        nodeActivityRepository.deleteAllInBatch(nodeActivities);
+        nodeActivityRepository.deleteAll(nodeActivities);
         nodeActivities.stream()
             .map(NodeActivityEntity::getStudyId)
             .distinct()
