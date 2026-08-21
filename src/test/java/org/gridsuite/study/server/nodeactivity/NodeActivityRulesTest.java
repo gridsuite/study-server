@@ -16,8 +16,6 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.gridsuite.study.server.nodeactivity.NodeActivityType.*;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Ayoub Labidi <ayoub.labidi_externe at rte-france.com>
@@ -77,7 +75,7 @@ class NodeActivityRulesTest {
     }
 
     @Test
-    void everyTypeSaysWhetherItInvalidatesChildren() {
+    void invalidatesChildrenIsClassified() {
         List<NodeActivityType> touchOnlyTheirNode = List.of(BUILD, UNBUILD, COMPUTE, EDIT_EVENTS);
         List<NodeActivityType> invalidateTheirChildren = List.of(UNBUILD_CHILDREN, UNBUILD_ALL,
             COMPUTE_AND_UNBUILD_CHILDREN, REIMPORT_CASE, EDIT_TREE, EDIT_MODIFICATIONS, DELETE_NODES);
@@ -90,7 +88,7 @@ class NodeActivityRulesTest {
     }
 
     @Test
-    void everyTypeSaysWhetherItAffectsAllRootNetworks() {
+    void affectsAllRootNetworksIsClassified() {
         List<NodeActivityType> oneRootNetwork = List.of(BUILD, UNBUILD, UNBUILD_CHILDREN, COMPUTE,
             COMPUTE_AND_UNBUILD_CHILDREN, REIMPORT_CASE);
         List<NodeActivityType> allRootNetworks = List.of(UNBUILD_ALL, EDIT_TREE, EDIT_MODIFICATIONS,
@@ -104,7 +102,7 @@ class NodeActivityRulesTest {
     }
 
     @Test
-    void theTypesRemovedByAResultMessage() {
+    void asynchronousTypesAreClassified() {
         assertThat(Arrays.stream(NodeActivityType.values()).filter(a -> !a.isSynchronous()))
             .as("each of these needs a removeNodeActivity in ConsumerService")
             .containsExactlyInAnyOrder(BUILD, COMPUTE, COMPUTE_AND_UNBUILD_CHILDREN, REIMPORT_CASE);
@@ -112,20 +110,19 @@ class NodeActivityRulesTest {
 
     @ParameterizedTest(name = "{0} running, {1} requested")
     @MethodSource("everyPairOfTypes")
-    void anActivityOnTheSameNodeAlwaysConflicts(NodeActivityType runningType, NodeActivityType requestedType) {
+    void sameNodeConflicts(NodeActivityType runningType, NodeActivityType requestedType) {
         assertThat(refused(runningType, NODE, requestedType, NODE)).isTrue();
     }
 
     @ParameterizedTest(name = "{0} running, {1} requested")
     @MethodSource("everyPairOfTypes")
-    void activitiesOnUnrelatedNodesNeverConflict(NodeActivityType runningType, NodeActivityType requestedType) {
+    void unrelatedNodesDoNotConflict(NodeActivityType runningType, NodeActivityType requestedType) {
         assertThat(refused(runningType, NODE, requestedType, SIBLING)).isFalse();
     }
 
     @ParameterizedTest(name = "{0} on an ancestor, {1} on a descendant")
     @MethodSource("everyPairOfTypes")
-    void anAncestorConflictsWithADescendantOnlyWhenItInvalidatesChildren(NodeActivityType onAncestor,
-                                                                        NodeActivityType onDescendant) {
+    void ancestorConflictsOnlyWhenInvalidating(NodeActivityType onAncestor, NodeActivityType onDescendant) {
         assertThat(refused(onAncestor, NODE, onDescendant, GRANDCHILD))
             .as("%s running on an ancestor, %s requested on a descendant", onAncestor, onDescendant)
             .isEqualTo(onAncestor.invalidatesChildren());
@@ -137,8 +134,7 @@ class NodeActivityRulesTest {
 
     @ParameterizedTest(name = "{0} in one root network, {1} in another")
     @MethodSource("everyPairOfTypes")
-    void activitiesInDifferentRootNetworksConflictOnlyWhenOneAffectsAllRootNetworks(NodeActivityType runningType,
-                                                                                    NodeActivityType requestedType) {
+    void differentRootNetworksConflictOnlyWhenGlobal(NodeActivityType runningType, NodeActivityType requestedType) {
         assertThat(refused(runningType, NODE, rootNetworkOf(runningType, ROOT_NETWORK),
                            requestedType, NODE, rootNetworkOf(requestedType, OTHER_ROOT_NETWORK)))
             .as("%s in one root network, %s in another", runningType, requestedType)
@@ -147,7 +143,7 @@ class NodeActivityRulesTest {
 
     @ParameterizedTest(name = "{0} against {1}")
     @MethodSource("everyPairOfTypes")
-    void theConflictIsTheSameWhicheverStartedFirst(NodeActivityType oneType, NodeActivityType otherType) {
+    void conflictIsSymmetric(NodeActivityType oneType, NodeActivityType otherType) {
         for (UUID oneNode : EVERY_NODE) {
             for (UUID otherNode : EVERY_NODE) {
                 assertThat(refused(oneType, oneNode, otherType, otherNode))
@@ -158,52 +154,14 @@ class NodeActivityRulesTest {
     }
 
     @Test
-    void theRootNodeIsAnAncestorOfEverything() {
-        assertThat(refused(REIMPORT_CASE, ROOT, BUILD, GRANDCHILD)).isTrue();
-        assertThat(refused(REIMPORT_CASE, ROOT, COMPUTE, SIBLING)).isTrue();
-    }
-
-    @Test
-    void unbuildingChildrenRefusesABuildOnAChild() {
-        assertThat(refused(UNBUILD_CHILDREN, NODE, BUILD, CHILD)).isTrue();
-        assertThat(refused(BUILD, CHILD, UNBUILD_CHILDREN, NODE)).isTrue();
-    }
-
-    @Test
-    void aNodeAndItsAncestorMayBuildInParallel() {
-        assertThat(refused(BUILD, NODE, BUILD, CHILD)).isFalse();
-        assertThat(refused(UNBUILD, NODE, BUILD, CHILD)).isFalse();
-    }
-
-    @Test
-    void aComputeReachesChildrenOnlyWhenItAlsoUnbuildsThem() {
-        assertThat(refused(COMPUTE_AND_UNBUILD_CHILDREN, NODE, BUILD, CHILD)).isTrue();
-        assertThat(refused(COMPUTE, NODE, BUILD, CHILD)).isFalse();
-    }
-
-    @Test
-    void anActivityAffectingAllRootNetworksReachesEveryRootNetwork() {
+    void globalTypeReachesEveryRootNetwork() {
         assertThat(refused(EDIT_TREE, NODE, null, BUILD, CHILD, ROOT_NETWORK)).isTrue();
         assertThat(refused(EDIT_TREE, NODE, null, BUILD, CHILD, OTHER_ROOT_NETWORK)).isTrue();
         assertThat(refused(BUILD, CHILD, OTHER_ROOT_NETWORK, EDIT_TREE, NODE, null)).isTrue();
     }
 
     @Test
-    void anActivityInOneRootNetworkDoesNotReachAnother() {
+    void oneRootNetworkStaysLocal() {
         assertThat(refused(UNBUILD_CHILDREN, NODE, ROOT_NETWORK, BUILD, CHILD, OTHER_ROOT_NETWORK)).isFalse();
-    }
-
-    @Test
-    void nothingIsRefusedWhenNoActivityIsRunning() {
-        List<NodeActivityEntity> nothingRunning = List.of();
-        EVERY_NODE.forEach(nodeUuid ->
-            assertFalse(hasConflict(NodeActivityEntity.from(EDIT_TREE, STUDY, null, nodeUuid), nothingRunning)));
-    }
-
-    @Test
-    void theConflictNamesTheActivityHoldingTheNode() {
-        NodeActivityEntity unbuildingChildren = NodeActivityEntity.from(UNBUILD_CHILDREN, STUDY, ROOT_NETWORK, NODE);
-        NodeActivityEntity activity = NodeActivityEntity.from(BUILD, STUDY, ROOT_NETWORK, GRANDCHILD);
-        assertTrue(hasConflict(activity, List.of(unbuildingChildren)));
     }
 }

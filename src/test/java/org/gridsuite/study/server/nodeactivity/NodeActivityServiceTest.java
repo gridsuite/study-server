@@ -129,7 +129,7 @@ class NodeActivityServiceTest {
     }
 
     @Test
-    void everyNodeAboveThisOneIsAnAncestorIncludingTheRoot() {
+    void ancestorsUpToTheRoot() {
         assertThat(nodeRepository.findAllAncestorsUuids(grandChildUuid))
             .containsExactlyInAnyOrder(childUuid, nodeUuid, rootNodeUuid);
         assertThat(nodeRepository.findAllAncestorsUuids(nodeUuid)).containsExactly(rootNodeUuid);
@@ -137,7 +137,7 @@ class NodeActivityServiceTest {
     }
 
     @Test
-    void anActivityOnTheRootNodeReachesEveryNodeBelowIt() {
+    void refusalMessageNamesHolder() {
         nodeActivityService.addNodeActivities(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
 
         List<UUID> requested = List.of(grandChildUuid);
@@ -147,7 +147,7 @@ class NodeActivityServiceTest {
     }
 
     @Test
-    void theRefusalCarriesWhatTheClientShowsTheUser() {
+    void refusalValuesForNodeHolder() {
         nodeActivityService.addNodeActivities(UNBUILD_CHILDREN, studyUuid, rootNetworkUuid, List.of(nodeUuid));
 
         List<UUID> requested = List.of(grandChildUuid);
@@ -160,7 +160,7 @@ class NodeActivityServiceTest {
     }
 
     @Test
-    void theRefusalSaysWhenTheRootNodeIsHoldingTheStudy() {
+    void refusalValuesForRootHolder() {
         nodeActivityService.addNodeActivities(REIMPORT_CASE, studyUuid, rootNetworkUuid, List.of(rootNodeUuid));
 
         List<UUID> requested = List.of(grandChildUuid);
@@ -173,7 +173,7 @@ class NodeActivityServiceTest {
     }
 
     @Test
-    void anActivityOnANodeLeavesItsAncestorsFree() {
+    void ancestorsStayFree() {
         nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(grandChildUuid));
 
         assertThatCode(() -> nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid)))
@@ -181,7 +181,7 @@ class NodeActivityServiceTest {
     }
 
     @Test
-    void aRequestNamingANodeOfAnotherStudyIsNotFound() {
+    void nodeOfAnotherStudyNotFound() {
         UUID otherStudyUuid = UUID.randomUUID();
         List<UUID> requested = List.of(nodeUuid);
         assertThatThrownBy(() -> nodeActivityService.addNodeActivities(BUILD, otherStudyUuid, rootNetworkUuid, requested))
@@ -190,14 +190,14 @@ class NodeActivityServiceTest {
     }
 
     @Test
-    void theSameNodeTwiceInOneRequestIsOneActivity() {
+    void duplicateNodesAreOneActivity() {
         nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid, nodeUuid));
 
         assertThat(nodeActivityRepository.findAllByStudyId(studyUuid)).hasSize(1);
     }
 
     @Test
-    void theProjectionReportsWhatIsRunning() {
+    void reportsRunningActivities() {
         nodeActivityService.addNodeActivities(COMPUTE, studyUuid, rootNetworkUuid, List.of(childUuid));
         nodeActivityService.addNodeActivities(EDIT_TREE, studyUuid, null, List.of(grandChildUuid));
 
@@ -208,13 +208,13 @@ class NodeActivityServiceTest {
     }
 
     @Test
-    void aStudyWithNothingRunningReportsNoActivity() {
+    void emptyStudyReportsNoActivity() {
         assertThat(nodeActivityService.getActivities(studyUuid)).isEmpty();
     }
 
     /** Notifications tests */
     @Test
-    void takingAndReleasingANodeIsNotified() {
+    void takeAndReleaseAreNotified() {
         nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
         assertNodeActivitiesNotified();
 
