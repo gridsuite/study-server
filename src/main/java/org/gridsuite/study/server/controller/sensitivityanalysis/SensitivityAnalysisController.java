@@ -19,7 +19,6 @@ import org.gridsuite.study.server.service.RootNetworkService;
 import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisRestService;
 import org.gridsuite.study.server.service.sensitivityanalysis.SensitivityAnalysisService;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -103,15 +102,7 @@ public class SensitivityAnalysisController {
             @Parameter(description = "JSON array of filters") @RequestParam(name = "filters", required = false) String filters,
             @Parameter(description = "JSON array of global filters") @RequestParam(name = "globalFilters", required = false) String globalFilters,
             @RequestBody SensitivityAnalysisCsvFileInfos sensitivityAnalysisCsvFileInfos) {
-        byte[] result = rootNetworkNodeInfoService.exportSensitivityResultsAsCsv(nodeUuid, rootNetworkUuid, sensitivityAnalysisCsvFileInfos, selector, filters, globalFilters);
-        HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        responseHeaders.setContentDispositionFormData("attachment", "sensitivity_results.csv");
-
-        return ResponseEntity
-                .ok()
-                .headers(responseHeaders)
-                .body(result);
+        return rootNetworkNodeInfoService.exportSensitivityResultsAsCsv(nodeUuid, rootNetworkUuid, sensitivityAnalysisCsvFileInfos, selector, filters, globalFilters);
     }
 
     @GetMapping(value = "/result/filter-options")
