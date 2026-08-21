@@ -273,7 +273,7 @@ class NodeControllerTest extends StudyTestBase {
         UUID stubDeleteReportsId = wireMockServer.stubFor(WireMock.delete(WireMock.urlPathEqualTo("/v1/reports"))
             .willReturn(WireMock.ok())).getId();
 
-        cutAndPasteNode(study1Uuid, emptyNode, node1.getId(), InsertMode.BEFORE, 1, userId);
+        cutAndPasteNode(study1Uuid, emptyNode, node1.getId(), InsertMode.BEFORE, 1, userId, false);
 
         wireMockStubs.verifyDeleteReports(stubDeleteReportsId, 1);
 
@@ -416,8 +416,13 @@ class NodeControllerTest extends StudyTestBase {
             .header(USER_ID_HEADER, "userId")).andExpect(status().isNotFound());
     }
 
-    @SuppressWarnings("checkstyle:LambdaBodyLength")
     private void cutAndPasteNode(UUID studyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid, InsertMode insertMode, int childCount, String userId) throws Exception {
+        cutAndPasteNode(studyUuid, nodeToCopy, referenceNodeUuid, insertMode, childCount, userId, true);
+    }
+
+    @SuppressWarnings("checkstyle:LambdaBodyLength")
+    private void cutAndPasteNode(UUID studyUuid, NetworkModificationNode nodeToCopy, UUID referenceNodeUuid,
+                                 InsertMode insertMode, int childCount, String userId, boolean checkComputationStatus) throws Exception {
         UUID stubUuid = wireMockStubs.stubNetworkModificationCountGet(nodeToCopy.getModificationGroupUuid().toString(),
             EMPTY_MODIFICATION_GROUP_UUID.equals(nodeToCopy.getModificationGroupUuid()) ? 0 : 1);
         boolean wasBuilt = rootNetworkNodeInfoService.getRootNetworkNodeInfo(nodeToCopy.getId(), studyTestUtils.getOneRootNetworkUuid(studyUuid)).get().getNodeBuildStatus().toDto().isBuilt();
@@ -453,7 +458,9 @@ class NodeControllerTest extends StudyTestBase {
         if (wasBuilt) {
             assertNotNull(output.receive(TIMEOUT, studyUpdateDestination));
         }
-        checkComputationStatusMessageReceived();
+        if (checkComputationStatus) {
+            checkComputationStatusMessageReceived();
+        }
 
         if (!nodeHasModifications) {
             return;
