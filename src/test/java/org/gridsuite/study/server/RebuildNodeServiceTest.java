@@ -11,9 +11,11 @@ import org.gridsuite.study.server.dto.modification.ModificationContainerType;
 import org.gridsuite.study.server.dto.modification.MoveModificationInfos;
 import org.gridsuite.study.server.networkmodificationtree.dto.BuildStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.NodeBuildStatus;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.NetworkModificationTreeService;
 import org.gridsuite.study.server.service.RebuildNodeService;
 import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.utils.TestUtils;
 import org.gridsuite.study.server.utils.elasticsearch.DisableElasticsearch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +44,9 @@ class RebuildNodeServiceTest {
     @MockitoBean
     private StudyService studyService;
 
+    @MockitoBean
+    private NodeActivityRunnerService nodeActivityService;
+
     UUID studyUuid = UUID.randomUUID();
     UUID node1Uuid = UUID.randomUUID();
     UUID node2Uuid = UUID.randomUUID();
@@ -55,6 +60,7 @@ class RebuildNodeServiceTest {
         doReturn(List.of(node1Uuid, node2Uuid)).when(networkModificationTreeService).getHighestNodeUuids(node1Uuid, node2Uuid);
         doReturn(List.of(node1Uuid)).when(networkModificationTreeService).getHighestNodeUuids(node1Uuid, node1Uuid);
         doReturn(false).when(networkModificationTreeService).isRootOrConstructionNode(any());
+        TestUtils.bypassNodeActivities(nodeActivityService);
     }
 
     @Test

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.gridsuite.study.server.dto.ComputationType;
 import org.gridsuite.study.server.dto.RootNetworkIndexationStatus;
 import org.gridsuite.study.server.networkmodificationtree.dto.InsertMode;
+import org.gridsuite.study.server.nodeactivity.NodeActivityInfos;
 import org.gridsuite.study.server.notification.dto.NetworkImpactsInfos;
 import org.gridsuite.study.server.notification.dto.StudyAlert;
 import org.gridsuite.study.server.utils.annotations.PostCompletion;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Supplier;
 
 /**
  * @author Nicolas Noir <nicolas.noir at rte-france.com>
@@ -110,6 +112,7 @@ public class NotificationService {
     public static final String UPDATE_COMPUTATION_RESULT_GLOBAL_FILTER = "computationResultGlobalFilterUpdated";
 
     public static final String UPDATE_NETWORK_VISUALIZATION_PARAMETERS = "networkVisualizationParametersUpdated";
+    public static final String UPDATE_NODE_ACTIVITIES = "nodeActivitiesUpdated";
     public static final String UPDATE_SPREADSHEET_NODE_ALIASES = "nodeAliasesUpdated";
     public static final String UPDATE_SPREADSHEET_TAB = "spreadsheetTabUpdated";
     public static final String UPDATE_SPREADSHEET_COLLECTION = "spreadsheetCollectionUpdated";
@@ -119,17 +122,9 @@ public class NotificationService {
     public static final String DELETE_WORKSPACE_PANELS = "workspacePanelsDeleted";
     public static final String UPDATE_WORKSPACE_NAD_CONFIG = "workspaceNadConfigUpdated";
 
-    public static final String MODIFICATIONS_CREATING_IN_PROGRESS = "creatingInProgress";
-    public static final String MODIFICATIONS_STASHING_IN_PROGRESS = "stashingInProgress";
-    public static final String MODIFICATIONS_RESTORING_IN_PROGRESS = "restoringInProgress";
-    public static final String MODIFICATIONS_DELETING_IN_PROGRESS = "deletingInProgress";
-    public static final String MODIFICATIONS_UPDATING_IN_PROGRESS = "updatingInProgress";
     public static final String MODIFICATIONS_UPDATING_FINISHED = "UPDATE_FINISHED";
     public static final String MODIFICATIONS_DELETING_FINISHED = "DELETE_FINISHED";
 
-    public static final String EVENTS_CRUD_CREATING_IN_PROGRESS = "eventCreatingInProgress";
-    public static final String EVENTS_CRUD_DELETING_IN_PROGRESS = "eventDeletingInProgress";
-    public static final String EVENTS_CRUD_UPDATING_IN_PROGRESS = "eventUpdatingInProgress";
     public static final String EVENTS_CRUD_FINISHED = "EVENT_CRUD_FINISHED";
 
     public static final String HEADER_INSERT_MODE = "insertMode";
@@ -230,6 +225,16 @@ public class NotificationService {
                 .setHeader(HEADER_COMPUTATION_TYPE, computationType)
                 .setHeader(HEADER_COMPUTATION_SUBTYPE, computationSubtype)
         );
+    }
+
+    @PostCompletion
+    public void emitNodeActivitiesUpdated(UUID studyUuid, Supplier<List<NodeActivityInfos>> activities) {
+        try {
+            sendStudyUpdateMessage(studyUuid, UPDATE_NODE_ACTIVITIES,
+                MessageBuilder.withPayload(objectMapper.writeValueAsString(activities.get())));
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Unable to notify on node activities", e);
+        }
     }
 
     @PostCompletion
@@ -443,26 +448,13 @@ public class NotificationService {
         );
     }
 
-    public void emitStartModificationEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids, String modificationType) {
-        emitStartModificationEquipmentNotification(studyUuid, parentNodeUuid, Optional.empty(), childrenUuids, modificationType);
-    }
-
-    public void emitStartModificationEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Optional<UUID> rootNetworkUuid, Collection<UUID> childrenUuids, String modificationType) {
-        MessageBuilder<String> builder = MessageBuilder.withPayload("")
-            .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
-            .setHeader(HEADER_NODES, childrenUuids);
-        rootNetworkUuid.ifPresent(uuid -> builder.setHeader(HEADER_ROOT_NETWORK_UUID, uuid));
-
-        sendStudyUpdateMessage(studyUuid, modificationType, builder);
+    @PostCompletion
+    public void emitModificationsUpdated(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids) {
+        emitModificationsUpdated(studyUuid, parentNodeUuid, Optional.empty(), childrenUuids);
     }
 
     @PostCompletion
-    public void emitEndModificationEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids) {
-        emitEndModificationEquipmentNotification(studyUuid, parentNodeUuid, Optional.empty(), childrenUuids);
-    }
-
-    @PostCompletion
-    public void emitEndModificationEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Optional<UUID> rootNetworkUuid, Collection<UUID> childrenUuids) {
+    public void emitModificationsUpdated(UUID studyUuid, UUID parentNodeUuid, Optional<UUID> rootNetworkUuid, Collection<UUID> childrenUuids) {
         MessageBuilder<String> builder = MessageBuilder.withPayload("")
             .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
             .setHeader(HEADER_NODES, childrenUuids);
@@ -472,22 +464,15 @@ public class NotificationService {
     }
 
     @PostCompletion
-    public void emitEndDeletionEquipmentNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids) {
+    public void emitModificationsDeleted(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids) {
         sendStudyUpdateMessage(studyUuid, MODIFICATIONS_DELETING_FINISHED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
                 .setHeader(HEADER_NODES, childrenUuids)
         );
     }
 
-    public void emitStartEventCrudNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids, String crudType) {
-        sendStudyUpdateMessage(studyUuid, crudType, MessageBuilder.withPayload("")
-                .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
-                .setHeader(HEADER_NODES, childrenUuids)
-        );
-    }
-
     @PostCompletion
-    public void emitEndEventCrudNotification(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids) {
+    public void emitEventsUpdated(UUID studyUuid, UUID parentNodeUuid, Collection<UUID> childrenUuids) {
         sendStudyUpdateMessage(studyUuid, EVENTS_CRUD_FINISHED, MessageBuilder.withPayload("")
                 .setHeader(HEADER_PARENT_NODE, parentNodeUuid)
                 .setHeader(HEADER_NODES, childrenUuids)

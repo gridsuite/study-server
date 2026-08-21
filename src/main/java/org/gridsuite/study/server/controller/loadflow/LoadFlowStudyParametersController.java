@@ -12,8 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
-import org.gridsuite.study.server.service.NetworkModificationTreeService;
-import org.gridsuite.study.server.service.StudyService;
+import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
+import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_ALL;
 
 /**
  * @author Bassel El Cheikh <bassel.el-cheikh_externe at rte-france.com>
@@ -30,26 +30,28 @@ import static org.gridsuite.study.server.StudyConstants.HEADER_USER_ID;
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/loadflow")
 @Tag(name = "Study server - Load flow parameters")
 public class LoadFlowStudyParametersController {
-    private final StudyService studyService;
-    private final NetworkModificationTreeService networkModificationTreeService;
+    private final NodeActivityRunnerService nodeActivityRunnerService;
     private final LoadFlowService loadFlowService;
 
-    public LoadFlowStudyParametersController(StudyService studyService,
-                                             NetworkModificationTreeService networkModificationTreeService, LoadFlowService loadFlowService) {
-        this.studyService = studyService;
-        this.networkModificationTreeService = networkModificationTreeService;
+    public LoadFlowStudyParametersController(NodeActivityRunnerService nodeActivityRunnerService, LoadFlowService loadFlowService) {
+        this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.loadFlowService = loadFlowService;
     }
 
     @PostMapping(value = "/parameters")
     @Operation(summary = "set loadflow parameters on study, reset to default ones if empty body")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "The loadflow parameters are set"),
-        @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
-    public ResponseEntity<Void> setLoadflowParameters(@PathVariable("studyUuid") UUID studyUuid,
-                                                      @RequestBody(required = false) String lfParameter,
-                                                      @RequestHeader(HEADER_USER_ID) String userId) {
-        studyService.assertNoBlockedNodeInStudy(studyUuid, networkModificationTreeService.getStudyRootNodeUuid(studyUuid));
-        return loadFlowService.setLoadFlowParameters(studyUuid, lfParameter, userId) ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
+                           @ApiResponse(responseCode = "204", description = "Reset with user profile cannot be done")})
+    public ResponseEntity<Void> setLoadflowParameters(
+            @PathVariable("studyUuid") UUID studyUuid,
+            @RequestBody(required = false) String lfParameter,
+            @RequestHeader(HEADER_USER_ID) String userId) {
+        // only what this actually unbuilds: the security nodes holding a loadflow result, and their children
+        boolean userProfileIssue = nodeActivityRunnerService.runWith(
+            UNBUILD_ALL, studyUuid, loadFlowService.getNodesInvalidatedByLoadFlowParameters(studyUuid),
+            () -> loadFlowService.setLoadFlowParameters(studyUuid, lfParameter, userId)
+        );
+        return userProfileIssue ? ResponseEntity.noContent().build() : ResponseEntity.ok().build();
     }
 
     @GetMapping(value = "/parameters")
