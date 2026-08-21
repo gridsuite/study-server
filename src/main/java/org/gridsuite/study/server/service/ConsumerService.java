@@ -257,7 +257,7 @@ public class ConsumerService {
                     .caseInfos(caseInfos)
                     .importParameters(importParameters)
                     .reportUuid(importReportUuid)
-                    .build());
+                    .build(), userId);
             }
             caseService.disableCaseExpiration(caseUuid);
         } catch (Exception e) {
@@ -762,6 +762,21 @@ public class ConsumerService {
     @Bean
     public Consumer<Message<String>> consumePccMinFailed() {
         return message -> consumeCalculationFailed(message, PCC_MIN);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeAsymmetricalLoadResult() {
+        return message -> consumeCalculationResult(message, ASYMMETRICAL_LOAD);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeAsymmetricalLoadStopped() {
+        return message -> consumeCalculationStopped(message, ASYMMETRICAL_LOAD);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeAsymmetricalLoadFailed() {
+        return message -> consumeCalculationFailed(message, ASYMMETRICAL_LOAD);
     }
 
     public void consumeNetworkExportFinished(Message<String> msg) {
