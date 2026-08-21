@@ -44,7 +44,8 @@ public class NetworkModificationService {
 
     private static final String DELIMITER = "/";
     private static final String COMPOSITE_PATH = "network-composite-modifications" + DELIMITER;
-    private static final String GROUP_PATH = "groups" + DELIMITER + "{groupUuid}";
+    private static final String GROUPS = "groups";
+    private static final String GROUP_PATH = GROUPS + DELIMITER + "{groupUuid}";
     private static final String CONTAINER_PATH = "containers" + DELIMITER + "{containerId}";
     private static final String NETWORK_MODIFICATIONS_PATH = "network-modifications";
     private static final String NETWORK_MODIFICATIONS_COUNT_PATH = "network-modifications-count";
@@ -176,6 +177,24 @@ public class NetworkModificationService {
             .toUriString();
 
         restTemplate.delete(getNetworkModificationServerURI(false) + path);
+    }
+
+    public void deleteModificationsGroups(List<UUID> groupUuids) {
+        Objects.requireNonNull(groupUuids);
+        if (groupUuids.isEmpty()) {
+            return;
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(toJson(groupUuids), headers);
+        var path = UriComponentsBuilder.fromPath(GROUPS)
+                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+                .toUriString();
+
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path,
+                HttpMethod.DELETE,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
     public void deleteModifications(UUID groupUuid, List<UUID> modificationsUuids) {
@@ -485,6 +504,24 @@ public class NetworkModificationService {
         }
 
         return json;
+    }
+
+    public void deleteStashedModificationsGroups(List<UUID> groupUuids) {
+        Objects.requireNonNull(groupUuids);
+        if (groupUuids.isEmpty()) {
+            return;
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> httpEntity = new HttpEntity<>(toJson(groupUuids), headers);
+        var path = UriComponentsBuilder.fromPath(GROUPS + "/stashed-modifications")
+                .queryParam(QUERY_PARAM_ERROR_ON_GROUP_NOT_FOUND, false)
+                .toUriString();
+
+        restTemplate.exchange(getNetworkModificationServerURI(false) + path,
+                HttpMethod.DELETE,
+                httpEntity,
+                new ParameterizedTypeReference<Map<UUID, UUID>>() { });
     }
 
     public void deleteStashedModifications(UUID groupUUid) {

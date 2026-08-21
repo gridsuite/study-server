@@ -403,6 +403,8 @@ public class SupervisionService {
         AtomicReference<Long> startTime = new AtomicReference<>();
         startTime.set(System.nanoTime());
         try {
+            // remove all stashed nodes and network modifications
+            networkModificationTreeService.deleteAllStashedElements(studyUuid);
             rootNetworkService.getStudyRootNetworkIds(studyUuid).forEach(rnId ->
                     studyService.invalidateStudyRootNetwork(studyUuid, rnId, SUPERVISION_USER, false)
             );
