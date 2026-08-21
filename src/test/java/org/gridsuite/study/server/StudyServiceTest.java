@@ -267,8 +267,4 @@ class StudyServiceTest {
         doReturn(NodeBuildStatus.from(BuildStatus.NOT_BUILT)).when(networkModificationTreeService).getNodeBuildStatus(nodeUuid, rootNetworkUuid);
     }
 
-    // the build itself is NetworkModificationTreeService's job now, so that is the seam
-    private void verifyNodeBuild(UUID nodeUuid, UUID rootNetworkUuid) {
-        verify(networkModificationTreeService, times(1)).buildNode(any(), eq(nodeUuid), eq(rootNetworkUuid), any(), eq(null));
-    }
 }

@@ -57,7 +57,7 @@ class LoadFlowStudyParametersControllerTest {
 
     @BeforeEach
     void setup() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new LoadFlowStudyParametersController(studyService, nodeActivityService, loadFlowService)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new LoadFlowStudyParametersController(nodeActivityService, loadFlowService)).build();
     }
 
     /** The activity is set around the call, so the stub has to run the action for the endpoint to do anything. */

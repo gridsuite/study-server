@@ -13,7 +13,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.gridsuite.study.server.StudyApi;
 import org.gridsuite.study.server.dto.LoadFlowParametersInfos;
 import org.gridsuite.study.server.nodeactivity.NodeActivityRunnerService;
-import org.gridsuite.study.server.service.StudyService;
 import org.gridsuite.study.server.service.loadflow.LoadFlowService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,13 +30,10 @@ import static org.gridsuite.study.server.nodeactivity.NodeActivityType.UNBUILD_A
 @RequestMapping(value = "/" + StudyApi.API_VERSION + "/studies/{studyUuid}/loadflow")
 @Tag(name = "Study server - Load flow parameters")
 public class LoadFlowStudyParametersController {
-    private final StudyService studyService;
     private final NodeActivityRunnerService nodeActivityRunnerService;
     private final LoadFlowService loadFlowService;
 
-    public LoadFlowStudyParametersController(StudyService studyService,
-                                             NodeActivityRunnerService nodeActivityRunnerService, LoadFlowService loadFlowService) {
-        this.studyService = studyService;
+    public LoadFlowStudyParametersController(NodeActivityRunnerService nodeActivityRunnerService, LoadFlowService loadFlowService) {
         this.nodeActivityRunnerService = nodeActivityRunnerService;
         this.loadFlowService = loadFlowService;
     }
