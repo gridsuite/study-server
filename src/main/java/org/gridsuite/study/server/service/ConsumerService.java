@@ -764,6 +764,21 @@ public class ConsumerService {
         return message -> consumeCalculationFailed(message, PCC_MIN);
     }
 
+    @Bean
+    public Consumer<Message<String>> consumeAsymmetricalLoadResult() {
+        return message -> consumeCalculationResult(message, ASYMMETRICAL_LOAD);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeAsymmetricalLoadStopped() {
+        return message -> consumeCalculationStopped(message, ASYMMETRICAL_LOAD);
+    }
+
+    @Bean
+    public Consumer<Message<String>> consumeAsymmetricalLoadFailed() {
+        return message -> consumeCalculationFailed(message, ASYMMETRICAL_LOAD);
+    }
+
     public void consumeNetworkExportFinished(Message<String> msg) {
         String receiverString = msg.getHeaders().get(HEADER_RECEIVER, String.class);
         String s3Key = msg.getHeaders().get(HEADER_S3_KEY, String.class);

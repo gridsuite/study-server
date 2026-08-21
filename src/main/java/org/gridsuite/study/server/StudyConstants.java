@@ -49,6 +49,7 @@ public final class StudyConstants {
     public static final String DELIMITER = "/";
     public static final String QUERY_PARAM_VARIANT_ID = "variantId";
     public static final String QUERY_PARAM_PCC_MIN_UUID = "pccMinParametersUuid";
+    public static final String QUERY_PARAM_ASYMMETRICAL_LOAD_UUID = "asymmetricalLoadParametersUuid";
     public static final String QUERY_PARAM_SHORT_CIRCUIT_UUID = "shortCircuitParametersUuid";
     public static final String QUERY_PARAM_NETWORK_UUID = "networkUuid";
     public static final String QUERY_PARAM_ROOT_NETWORK_UUID = "rootNetworkUuid";
