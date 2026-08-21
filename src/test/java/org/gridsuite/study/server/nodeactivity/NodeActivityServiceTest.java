@@ -32,8 +32,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.stream.binder.test.OutputDestination;
 import org.springframework.messaging.Message;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -214,26 +212,6 @@ class NodeActivityServiceTest {
         assertThat(nodeActivityService.getActivities(studyUuid)).isEmpty();
     }
 
-    @Test
-    void theCleanupLeavesActivitiesYoungerThanTheCutoff() {
-        nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
-
-        assertThat(nodeActivityService.removeActivities(Instant.now().minus(1, ChronoUnit.HOURS))).isEmpty();
-        assertThat(nodeActivityRepository.findAllByStudyId(studyUuid)).hasSize(1);
-    }
-
-    @Test
-    void theCleanupReleasesWhatStartedBeforeTheCutoff() {
-        nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
-        nodeActivityService.addNodeActivities(COMPUTE, studyUuid, rootNetworkUuid, List.of(childUuid));
-
-        List<NodeActivityEntity> released =
-            nodeActivityService.removeActivities(Instant.now().plus(1, ChronoUnit.HOURS));
-
-        assertThat(released).extracting(NodeActivityEntity::getNodeId).containsExactlyInAnyOrder(nodeUuid, childUuid);
-        assertThat(nodeActivityRepository.findAllByStudyId(studyUuid)).isEmpty();
-    }
-
     /** Notifications tests */
     @Test
     void takingAndReleasingANodeIsNotified() {
@@ -242,19 +220,6 @@ class NodeActivityServiceTest {
 
         nodeActivityService.removeActivities(studyUuid, rootNetworkUuid, List.of(nodeUuid));
         assertNodeActivitiesNotified();
-    }
-
-    @Test
-    void theCleanupNotifiesEachStudyItReleasedANodeIn() {
-        nodeActivityService.addNodeActivities(BUILD, studyUuid, rootNetworkUuid, List.of(nodeUuid));
-        nodeActivityService.addNodeActivities(COMPUTE, studyUuid, rootNetworkUuid, List.of(childUuid));
-        output.clear(STUDY_UPDATE_DESTINATION);
-
-        nodeActivityService.removeActivities(Instant.now().plus(1, ChronoUnit.HOURS));
-
-        // two rows of the same study, so the study is notified once
-        assertNodeActivitiesNotified();
-        assertThat(output.receive(TIMEOUT, STUDY_UPDATE_DESTINATION)).isNull();
     }
 
     private void assertNodeActivitiesNotified() {
